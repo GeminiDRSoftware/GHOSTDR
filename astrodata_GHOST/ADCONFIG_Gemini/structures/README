@@ -1,0 +1,3 @@
+The 'structure' feature is still limited both in use and implementation, ie, 
+it can be flaky.  Let us assume for now that no new structure is needed for 
+GHOST.
