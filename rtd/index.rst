@@ -10,7 +10,7 @@ Contents:
 
 .. toctree::
 
-   Programmer's Manual <http://ghostdr.readthedocs.org/projects/ghostdr_progmanual/>
-   User's Manual <http://ghostdr.readthedocs.org/projects/ghostdr_usermanual/>
+   Programmer's Manual <http://ghostdr.readthedocs.org/projects/ghostdr-progmanual/>
+   User's Manual <http://ghostdr.readthedocs.org/projects/ghostdr-usermanual/>
 
 
