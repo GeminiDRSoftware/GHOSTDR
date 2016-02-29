@@ -58,3 +58,6 @@ docs/usermanuals/_build/
 
 # PyBuilder
 target/
+
+# Eclipse
+.project
