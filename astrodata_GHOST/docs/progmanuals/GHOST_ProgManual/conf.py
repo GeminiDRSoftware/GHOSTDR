@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# GHOS Programmer's Manual documentation build configuration file, created by
+# GHOST Programmer's Manual documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb 27 11:51:50 2014.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -40,7 +40,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'GHOS Programmer\'s Manual'
+project = u'GHOST Programmer\'s Manual'
 copyright = u'2014, TBD'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -164,7 +164,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'GHOSProgrammersManualdoc'
+htmlhelp_basename = 'GHOSTProgrammersManualdoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -184,7 +184,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index-latex', 'GHOSProgrammersManual.tex', u'GHOS Programmer\'s Manual',
+  ('index-latex', 'GHOSTProgrammersManual.tex', u'GHOST Programmer\'s Manual',
    u'TBD', 'manual'),
 ]
 
@@ -214,7 +214,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'ghosprogrammersmanual', u'GHOS Programmer\'s Manual',
+    ('index', 'ghostprogrammersmanual', u'GHOST Programmer\'s Manual',
      [u'TBD'], 1)
 ]
 
@@ -228,8 +228,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'GHOSProgrammersManual', u'GHOS Programmer\'s Manual',
-   u'TBD', 'GHOSProgrammersManual', 'One line description of project.',
+  ('index', 'GHOSTProgrammersManual', u'GHOST Programmer\'s Manual',
+   u'TBD', 'GHOSTProgrammersManual', 'One line description of project.',
    'Miscellaneous'),
 ]
 
