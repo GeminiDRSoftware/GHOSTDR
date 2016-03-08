@@ -1,0 +1,7 @@
+The descriptors are inherited from astrodata_Gemini.  Some will need
+to be overridden here to match GHOST header keywords and content.
+
+The list of descriptors is already long.  Completely new descriptors should
+not be needed, but who knows maybe so.  If such a need arises, please 
+discuss the issue with someone at Gemini as there might consequences on 
+internal systems.  The heads-up will help.

@@ -1,0 +1,2 @@
+The AstroDataTypes defined here represent processing steps.  
+The 'status' types already defined in astrodata_Gemini might suffice.
