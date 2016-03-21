@@ -5,7 +5,6 @@ import pywcs
 
 from astrodata import AstroData
 from astrodata.utils import Errors
-from astrodata.utils import Lookups
 from astrodata.utils import logutils
 from astrodata.utils.gemutil import pyrafLoader
 
@@ -15,9 +14,10 @@ from gempy.gemini import gemini_data_calculations as gdc
 ##M Temporary fix
 from gempy.gemini.gmoss_fix_headers import correct_headers
 
+from astrodata_Gemini.ADCONFIG_Gemini.lookups.GMOS import GMOSArrayGaps
 from primitives_GEMINI import GEMINIPrimitives
 
-
+# ------------------------------------------------------------------------------
 class GMOSPrimitives(GEMINIPrimitives):
     """
     This is the class containing all of the primitives for the GMOS level of
@@ -944,7 +944,9 @@ class GMOSPrimitives(GEMINIPrimitives):
                 
                 # Update and attach OBJCAT if needed
                 if ad["OBJCAT"] is not None:
-                    adoutput = _tile_objcat(ad,adoutput,mapping_dict)[0]
+                    adoutput = _tile_objcat(adinput=ad, adoutput=adoutput, 
+                                            mapping_dict=mapping_dict, 
+                                            sx_dict=self.sx_default_dict)[0]
 
                 # Refresh AstroData types in output file (original ones
                 # were lost when new AD was created)
@@ -1114,11 +1116,10 @@ def _obtain_arraygap(adinput=None):
     values in the GMOSArrayGaps.py file in the GMOS
     lookup directory, one for unbinned data and one to be used to calculate
     the chip gap when the data are binned.
+
     """
-    
     # Get the dictionary containing the CCD gaps
-    all_arraygaps_dict = Lookups.get_lookup_table(\
-        "Gemini/GMOS/GMOSArrayGaps.py","gmosArrayGaps")
+    all_arraygaps_dict = GMOSArrayGaps.gmosArrayGaps
     
     # Obtain the X binning and detector type for the ad input
     detector_x_bin = adinput.detector_x_bin()
@@ -1146,7 +1147,7 @@ def _obtain_arraygap(adinput=None):
                                   "found for %s" % (detector_type)) 
     return arraygap
 
-def _tile_objcat(adinput=None,adoutput=None,mapping_dict=None):
+def _tile_objcat(adinput=None, adoutput=None, mapping_dict=None, sx_dict=None):
     """
     This function tiles together separate OBJCAT extensions, converting
     the pixel coordinates to the new WCS.
@@ -1220,7 +1221,7 @@ def _tile_objcat(adinput=None,adoutput=None,mapping_dict=None):
                                           array=col_data[name])
 
             adout = gt.add_objcat(adinput=adout, extver=out_extver,
-                                  columns=columns)[0]
+                        columns=columns, sxdict=sx_dict)[0]
 
         adoutput_list.append(adout)
 

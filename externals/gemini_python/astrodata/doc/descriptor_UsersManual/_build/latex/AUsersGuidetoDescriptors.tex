@@ -3,7 +3,6 @@
 \documentclass[letterpaper,10pt,english]{sphinxmanual}
 \usepackage[utf8]{inputenc}
 \DeclareUnicodeCharacter{00A0}{\nobreakspace}
-\usepackage{cmap}
 \usepackage[T1]{fontenc}
 \usepackage{babel}
 \usepackage{times}
@@ -14,7 +13,7 @@
 \usepackage{appendix} \setcounter{tocdepth}{0}
 
 \title{A User's Guide to Descriptors}
-\date{March 04, 2016}
+\date{April 07, 2014}
 \release{1.0.0}
 \author{Emma Hogan}
 \newcommand{\sphinxlogo}{}
@@ -32,82 +31,75 @@
     \PYG@it{\PYG@bf{\PYG@ff{#1}}}}}}}
 \def\PYG#1#2{\PYG@reset\PYG@toks#1+\relax+\PYG@do{#2}}
 
-\expandafter\def\csname PYG@tok@gd\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.63,0.00,0.00}{##1}}}
-\expandafter\def\csname PYG@tok@gu\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.50,0.00,0.50}{##1}}}
-\expandafter\def\csname PYG@tok@gt\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.27,0.87}{##1}}}
-\expandafter\def\csname PYG@tok@gs\endcsname{\let\PYG@bf=\textbf}
-\expandafter\def\csname PYG@tok@gr\endcsname{\def\PYG@tc##1{\textcolor[rgb]{1.00,0.00,0.00}{##1}}}
-\expandafter\def\csname PYG@tok@cm\endcsname{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.25,0.50,0.56}{##1}}}
-\expandafter\def\csname PYG@tok@vg\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.38,0.84}{##1}}}
-\expandafter\def\csname PYG@tok@m\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
-\expandafter\def\csname PYG@tok@mh\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
-\expandafter\def\csname PYG@tok@cs\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.50,0.56}{##1}}\def\PYG@bc##1{\setlength{\fboxsep}{0pt}\colorbox[rgb]{1.00,0.94,0.94}{\strut ##1}}}
-\expandafter\def\csname PYG@tok@ge\endcsname{\let\PYG@it=\textit}
-\expandafter\def\csname PYG@tok@vc\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.38,0.84}{##1}}}
-\expandafter\def\csname PYG@tok@il\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
-\expandafter\def\csname PYG@tok@go\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.20,0.20,0.20}{##1}}}
-\expandafter\def\csname PYG@tok@cp\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@gi\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.63,0.00}{##1}}}
-\expandafter\def\csname PYG@tok@gh\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.00,0.50}{##1}}}
-\expandafter\def\csname PYG@tok@ni\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.84,0.33,0.22}{##1}}}
-\expandafter\def\csname PYG@tok@nl\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.13,0.44}{##1}}}
-\expandafter\def\csname PYG@tok@nn\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.05,0.52,0.71}{##1}}}
-\expandafter\def\csname PYG@tok@no\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.38,0.68,0.84}{##1}}}
-\expandafter\def\csname PYG@tok@na\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
-\expandafter\def\csname PYG@tok@nb\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@nc\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.05,0.52,0.71}{##1}}}
-\expandafter\def\csname PYG@tok@nd\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.33,0.33,0.33}{##1}}}
-\expandafter\def\csname PYG@tok@ne\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@nf\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.02,0.16,0.49}{##1}}}
-\expandafter\def\csname PYG@tok@si\endcsname{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.44,0.63,0.82}{##1}}}
-\expandafter\def\csname PYG@tok@s2\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
-\expandafter\def\csname PYG@tok@vi\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.38,0.84}{##1}}}
-\expandafter\def\csname PYG@tok@nt\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.02,0.16,0.45}{##1}}}
-\expandafter\def\csname PYG@tok@nv\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.38,0.84}{##1}}}
-\expandafter\def\csname PYG@tok@s1\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
-\expandafter\def\csname PYG@tok@gp\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.78,0.36,0.04}{##1}}}
-\expandafter\def\csname PYG@tok@sh\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
-\expandafter\def\csname PYG@tok@ow\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@sx\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.78,0.36,0.04}{##1}}}
-\expandafter\def\csname PYG@tok@bp\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@c1\endcsname{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.25,0.50,0.56}{##1}}}
-\expandafter\def\csname PYG@tok@kc\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@c\endcsname{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.25,0.50,0.56}{##1}}}
-\expandafter\def\csname PYG@tok@mf\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
-\expandafter\def\csname PYG@tok@err\endcsname{\def\PYG@bc##1{\setlength{\fboxsep}{0pt}\fcolorbox[rgb]{1.00,0.00,0.00}{1,1,1}{\strut ##1}}}
-\expandafter\def\csname PYG@tok@mb\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
-\expandafter\def\csname PYG@tok@ss\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.32,0.47,0.09}{##1}}}
-\expandafter\def\csname PYG@tok@sr\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.14,0.33,0.53}{##1}}}
-\expandafter\def\csname PYG@tok@mo\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
-\expandafter\def\csname PYG@tok@kd\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@mi\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
-\expandafter\def\csname PYG@tok@kn\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@o\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
-\expandafter\def\csname PYG@tok@kr\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@s\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
-\expandafter\def\csname PYG@tok@kp\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@w\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.73,0.73}{##1}}}
-\expandafter\def\csname PYG@tok@kt\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.56,0.13,0.00}{##1}}}
-\expandafter\def\csname PYG@tok@sc\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
-\expandafter\def\csname PYG@tok@sb\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
-\expandafter\def\csname PYG@tok@k\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
-\expandafter\def\csname PYG@tok@se\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
-\expandafter\def\csname PYG@tok@sd\endcsname{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
+\def\PYG@tok@gd{\def\PYG@tc##1{\textcolor[rgb]{0.63,0.00,0.00}{##1}}}
+\def\PYG@tok@gu{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.50,0.00,0.50}{##1}}}
+\def\PYG@tok@gt{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.25,0.82}{##1}}}
+\def\PYG@tok@gs{\let\PYG@bf=\textbf}
+\def\PYG@tok@gr{\def\PYG@tc##1{\textcolor[rgb]{1.00,0.00,0.00}{##1}}}
+\def\PYG@tok@cm{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.25,0.50,0.56}{##1}}}
+\def\PYG@tok@vg{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.38,0.84}{##1}}}
+\def\PYG@tok@m{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
+\def\PYG@tok@mh{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
+\def\PYG@tok@cs{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.50,0.56}{##1}}\def\PYG@bc##1{\colorbox[rgb]{1.00,0.94,0.94}{##1}}}
+\def\PYG@tok@ge{\let\PYG@it=\textit}
+\def\PYG@tok@vc{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.38,0.84}{##1}}}
+\def\PYG@tok@il{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
+\def\PYG@tok@go{\def\PYG@tc##1{\textcolor[rgb]{0.19,0.19,0.19}{##1}}}
+\def\PYG@tok@cp{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@gi{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.63,0.00}{##1}}}
+\def\PYG@tok@gh{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.00,0.50}{##1}}}
+\def\PYG@tok@ni{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.84,0.33,0.22}{##1}}}
+\def\PYG@tok@nl{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.13,0.44}{##1}}}
+\def\PYG@tok@nn{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.05,0.52,0.71}{##1}}}
+\def\PYG@tok@no{\def\PYG@tc##1{\textcolor[rgb]{0.38,0.68,0.84}{##1}}}
+\def\PYG@tok@na{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
+\def\PYG@tok@nb{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@nc{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.05,0.52,0.71}{##1}}}
+\def\PYG@tok@nd{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.33,0.33,0.33}{##1}}}
+\def\PYG@tok@ne{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@nf{\def\PYG@tc##1{\textcolor[rgb]{0.02,0.16,0.49}{##1}}}
+\def\PYG@tok@si{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.44,0.63,0.82}{##1}}}
+\def\PYG@tok@s2{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
+\def\PYG@tok@vi{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.38,0.84}{##1}}}
+\def\PYG@tok@nt{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.02,0.16,0.45}{##1}}}
+\def\PYG@tok@nv{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.38,0.84}{##1}}}
+\def\PYG@tok@s1{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
+\def\PYG@tok@gp{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.78,0.36,0.04}{##1}}}
+\def\PYG@tok@sh{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
+\def\PYG@tok@ow{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@sx{\def\PYG@tc##1{\textcolor[rgb]{0.78,0.36,0.04}{##1}}}
+\def\PYG@tok@bp{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@c1{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.25,0.50,0.56}{##1}}}
+\def\PYG@tok@kc{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@c{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.25,0.50,0.56}{##1}}}
+\def\PYG@tok@mf{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
+\def\PYG@tok@err{\def\PYG@bc##1{\fcolorbox[rgb]{1.00,0.00,0.00}{1,1,1}{##1}}}
+\def\PYG@tok@kd{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@ss{\def\PYG@tc##1{\textcolor[rgb]{0.32,0.47,0.09}{##1}}}
+\def\PYG@tok@sr{\def\PYG@tc##1{\textcolor[rgb]{0.14,0.33,0.53}{##1}}}
+\def\PYG@tok@mo{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
+\def\PYG@tok@mi{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
+\def\PYG@tok@kn{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@o{\def\PYG@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\def\PYG@tok@kr{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@s{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
+\def\PYG@tok@kp{\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@w{\def\PYG@tc##1{\textcolor[rgb]{0.73,0.73,0.73}{##1}}}
+\def\PYG@tok@kt{\def\PYG@tc##1{\textcolor[rgb]{0.56,0.13,0.00}{##1}}}
+\def\PYG@tok@sc{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
+\def\PYG@tok@sb{\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
+\def\PYG@tok@k{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
+\def\PYG@tok@se{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
+\def\PYG@tok@sd{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.25,0.44,0.63}{##1}}}
 
 \def\PYGZbs{\char`\\}
 \def\PYGZus{\char`\_}
 \def\PYGZob{\char`\{}
 \def\PYGZcb{\char`\}}
 \def\PYGZca{\char`\^}
-\def\PYGZam{\char`\&}
-\def\PYGZlt{\char`\<}
-\def\PYGZgt{\char`\>}
 \def\PYGZsh{\char`\#}
 \def\PYGZpc{\char`\%}
 \def\PYGZdl{\char`\$}
-\def\PYGZhy{\char`\-}
-\def\PYGZsq{\char`\'}
-\def\PYGZdq{\char`\"}
 \def\PYGZti{\char`\~}
 % for compatibility with earlier versions
 \def\PYGZat{@}
@@ -143,32 +135,32 @@ entered at an interactive Python prompt (e.g., \code{python}, \code{ipython},
 \code{pyraf}):
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k+kn}{from} \PYG{n+nn}{astrodata} \PYG{k+kn}{import} \PYG{n}{AstroData}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k+kn}{from} \PYG{n+nn}{astrodata} \PYG{k+kn}{import} \PYG{n}{AstroData}
 \PYG{g+go}{\PYGZsh{} Load the fits file into AstroData}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{ad} \PYG{o}{=} \PYG{n}{AstroData}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{N20091027S0137.fits}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{ad} \PYG{o}{=} \PYG{n}{AstroData}\PYG{p}{(}\PYG{l+s}{"}\PYG{l+s}{N20091027S0137.fits}\PYG{l+s}{"}\PYG{p}{)}
 \PYG{g+go}{\PYGZsh{} Count the number of pixel data extensions in the AstroData object}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{p}{)}
 \PYG{g+go}{3}
 \PYG{g+go}{\PYGZsh{} Count the number of science extensions in the AstroData object}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{n}{extname}\PYG{o}{=}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{SCI}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{n}{extname}\PYG{o}{=}\PYG{l+s}{"}\PYG{l+s}{SCI}\PYG{l+s}{"}\PYG{p}{)}
 \PYG{g+go}{3}
 \PYG{g+go}{\PYGZsh{} Get the airmass value using the airmass descriptor}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{airmass} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{airmass}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{airmass}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{airmass} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{airmass}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{airmass}
 \PYG{g+go}{1.327}
 \PYG{g+go}{\PYGZsh{} Get the instrument name using the instrument descriptor}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{l+s}{\PYGZdq{}}\PYG{l+s}{My instrument is }\PYG{l+s+si}{\PYGZpc{}s}\PYG{l+s}{\PYGZdq{}} \PYG{o}{\PYGZpc{}} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{instrument}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+go}{My instrument is GMOS\PYGZhy{}N}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{l+s}{"}\PYG{l+s}{My instrument is }\PYG{l+s+si}{\PYGZpc{}s}\PYG{l+s}{"} \PYG{o}{\PYGZpc{}} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{instrument}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+go}{My instrument is GMOS-N}
 \PYG{g+go}{\PYGZsh{} Get the gain value for each pixel data extension}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{for} \PYG{n}{ext} \PYG{o+ow}{in} \PYG{n}{ad}\PYG{p}{:}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{for} \PYG{n}{ext} \PYG{o+ow}{in} \PYG{n}{ad}\PYG{p}{:}
 \PYG{g+gp}{... }    \PYG{k}{print} \PYG{n}{ext}\PYG{o}{.}\PYG{n}{gain}\PYG{p}{(}\PYG{p}{)}
 \PYG{g+gp}{...}
 \PYG{g+go}{2.1}
 \PYG{g+go}{2.337}
 \PYG{g+go}{2.3}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+go}{\PYGZob{}(\PYGZsq{}SCI\PYGZsq{}, 2): 2.3370000000000002, (\PYGZsq{}SCI\PYGZsq{}, 1): 2.1000000000000001,}
-\PYG{g+go}{(\PYGZsq{}SCI\PYGZsq{}, 3): 2.2999999999999998\PYGZcb{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+go}{\PYGZob{}('SCI', 2): 2.3370000000000002, ('SCI', 1): 2.1000000000000001,}
+\PYG{g+go}{('SCI', 3): 2.2999999999999998\PYGZcb{}}
 \end{Verbatim}
 
 In the examples above, the airmass and instrument apply to the dataset as a
@@ -185,19 +177,19 @@ headers of the pixel data extensions, a value for every pixel data extension in
 the AstroData object is returned by default:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{new\PYGZus{}ad} \PYG{o}{=} \PYG{n}{AstroData}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{stgsS20100223S0042.fits}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{new\PYGZus{}ad} \PYG{o}{=} \PYG{n}{AstroData}\PYG{p}{(}\PYG{l+s}{"}\PYG{l+s}{stgsS20100223S0042.fits}\PYG{l+s}{"}\PYG{p}{)}
 \PYG{g+go}{\PYGZsh{} Count the number of pixel data extensions in the AstroData object}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{new\PYGZus{}ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{new\PYGZus{}ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{p}{)}
 \PYG{g+go}{103}
 \PYG{g+go}{\PYGZsh{} Count the number of science extensions in the AstroData object}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{new\PYGZus{}ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{n}{extname}\PYG{o}{=}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{SCI}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{new\PYGZus{}ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{n}{extname}\PYG{o}{=}\PYG{l+s}{"}\PYG{l+s}{SCI}\PYG{l+s}{"}\PYG{p}{)}
 \PYG{g+go}{34}
 \PYG{g+go}{\PYGZsh{} Get the data section value for each pixel data extension in the form of a}
 \PYG{g+go}{\PYGZsh{} dictionary}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{new\PYGZus{}ad}\PYG{o}{.}\PYG{n}{data\PYGZus{}section}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+go}{\PYGZob{}(\PYGZsq{}SCI\PYGZsq{}, 29): [0, 3108, 0, 22], (\PYGZsq{}DQ\PYGZsq{}, 5): [0, 3108, 0, 21],}
-\PYG{g+go}{(\PYGZsq{}DQ\PYGZsq{}, 9): [0, 3108, 0, 21], (\PYGZsq{}SCI\PYGZsq{}, 15): [0, 3108, 0, 22],}
-\PYG{g+go}{(\PYGZsq{}SCI\PYGZsq{}, 24): [0, 3108, 0, 21], (\PYGZsq{}VAR\PYGZsq{}, 8): [0, 3108, 0, 21],}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{new\PYGZus{}ad}\PYG{o}{.}\PYG{n}{data\PYGZus{}section}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+go}{\PYGZob{}('SCI', 29): [0, 3108, 0, 22], ('DQ', 5): [0, 3108, 0, 21],}
+\PYG{g+go}{('DQ', 9): [0, 3108, 0, 21], ('SCI', 15): [0, 3108, 0, 22],}
+\PYG{g+go}{('SCI', 24): [0, 3108, 0, 21], ('VAR', 8): [0, 3108, 0, 21],}
 \PYG{g+gp}{...}
 \end{Verbatim}
 
@@ -205,13 +197,13 @@ Descriptors can also be used to return values relating to a subset of pixel
 data extensions, i.e., those associated with a particular \code{EXTNAME}:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{new\PYGZus{}ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{n}{extname}\PYG{o}{=}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{DQ}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{new\PYGZus{}ad}\PYG{o}{.}\PYG{n}{count\PYGZus{}exts}\PYG{p}{(}\PYG{n}{extname}\PYG{o}{=}\PYG{l+s}{"}\PYG{l+s}{DQ}\PYG{l+s}{"}\PYG{p}{)}
 \PYG{g+go}{34}
 \PYG{g+go}{\PYGZsh{} Get the data section value for the data quality extensions only}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{new\PYGZus{}ad}\PYG{p}{[}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{DQ}\PYG{l+s}{\PYGZdq{}}\PYG{p}{]}\PYG{o}{.}\PYG{n}{data\PYGZus{}section}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+go}{\PYGZob{}(\PYGZsq{}DQ\PYGZsq{}, 11): [0, 3108, 0, 21], (\PYGZsq{}DQ\PYGZsq{}, 6): [0, 3108, 0, 22],}
-\PYG{g+go}{(\PYGZsq{}DQ\PYGZsq{}, 29): [0, 3108, 0, 22], (\PYGZsq{}DQ\PYGZsq{}, 9): [0, 3108, 0, 21],}
-\PYG{g+go}{(\PYGZsq{}DQ\PYGZsq{}, 4): [0, 3108, 0, 22], (\PYGZsq{}DQ\PYGZsq{}, 19): [0, 3108, 0, 21],}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{new\PYGZus{}ad}\PYG{p}{[}\PYG{l+s}{"}\PYG{l+s}{DQ}\PYG{l+s}{"}\PYG{p}{]}\PYG{o}{.}\PYG{n}{data\PYGZus{}section}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+go}{\PYGZob{}('DQ', 11): [0, 3108, 0, 21], ('DQ', 6): [0, 3108, 0, 22],}
+\PYG{g+go}{('DQ', 29): [0, 3108, 0, 22], ('DQ', 9): [0, 3108, 0, 21],}
+\PYG{g+go}{('DQ', 4): [0, 3108, 0, 22], ('DQ', 19): [0, 3108, 0, 21],}
 \PYG{g+gp}{...}
 \end{Verbatim}
 
@@ -229,47 +221,47 @@ When a descriptor is called, what is actually returned is a \code{DescriptorValu
 (\code{DV}) object:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k+kn}{from} \PYG{n+nn}{astrodata} \PYG{k+kn}{import} \PYG{n}{AstroData}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k+kn}{from} \PYG{n+nn}{astrodata} \PYG{k+kn}{import} \PYG{n}{AstroData}
 \PYG{g+go}{\PYGZsh{} Load the fits file into AstroData}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{ad} \PYG{o}{=} \PYG{n}{AstroData}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{N20091027S0137.fits}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{ad} \PYG{o}{=} \PYG{n}{AstroData}\PYG{p}{(}\PYG{l+s}{"}\PYG{l+s}{N20091027S0137.fits}\PYG{l+s}{"}\PYG{p}{)}
 \PYG{g+go}{\PYGZsh{} Get the airmass value using the airmass descriptor}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{airmass} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{airmass}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{airmass}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{airmass} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{airmass}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{airmass}
 \PYG{g+go}{1.327}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{airmass}\PYG{p}{)}
-\PYG{g+go}{\PYGZlt{}class \PYGZsq{}astrodata.Descriptors.DescriptorValue\PYGZsq{}\PYGZgt{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{airmass}\PYG{p}{)}
+\PYG{g+go}{\textless{}class 'astrodata.Descriptors.DescriptorValue'\textgreater{}}
 \end{Verbatim}
 
 Each descriptor has a default Python type defined:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{airmass}\PYG{p}{(}\PYG{p}{)}\PYG{o}{.}\PYG{n}{pytype}
-\PYG{g+go}{\PYGZlt{}type \PYGZsq{}float\PYGZsq{}\PYGZgt{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{airmass}\PYG{p}{(}\PYG{p}{)}\PYG{o}{.}\PYG{n}{pytype}
+\PYG{g+go}{\textless{}type 'float'\textgreater{}}
 \end{Verbatim}
 
 If any of the following operations are applied to the \code{DV} object, the \code{DV}
 object is automatically cast to the default Python type for that descriptor:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-+   \PYGZhy{}   *   /   //   \PYGZpc{}   **   \PYGZlt{}\PYGZlt{}   \PYGZgt{}\PYGZgt{}   \PYGZca{}   \PYGZlt{}   \PYGZlt{}=   \PYGZgt{}   \PYGZgt{}=   ==
++   -   *   /   //   \%   **   \textless{}\textless{}   \textgreater{}\textgreater{}   \textasciicircum{}   \textless{}   \textless{}=   \textgreater{}   \textgreater{}=   ==
 \end{Verbatim}
 
 For example:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{airmass}\PYG{o}{*}\PYG{l+m+mf}{1.0}\PYG{p}{)}
-\PYG{g+go}{\PYGZlt{}type \PYGZsq{}float\PYGZsq{}\PYGZgt{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{airmass}\PYG{o}{*}\PYG{l+m+mf}{1.0}\PYG{p}{)}
+\PYG{g+go}{\textless{}type 'float'\textgreater{}}
 \end{Verbatim}
 
 The value of the descriptor can be retrieved with the default Python type by
 using \code{as\_pytype()}:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{elevation} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{elevation}\PYG{p}{(}\PYG{p}{)}\PYG{o}{.}\PYG{n}{as\PYGZus{}pytype}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{elevation}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{elevation} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{elevation}\PYG{p}{(}\PYG{p}{)}\PYG{o}{.}\PYG{n}{as\PYGZus{}pytype}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{elevation}
 \PYG{g+go}{48.6889222222}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{elevation}\PYG{p}{)}
-\PYG{g+go}{\PYGZlt{}type \PYGZsq{}float\PYGZsq{}\PYGZgt{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{elevation}\PYG{p}{)}
+\PYG{g+go}{\textless{}type 'float'\textgreater{}}
 \end{Verbatim}
 
 The \code{as\_pytype()} member function of the \code{DV} object should only be
@@ -280,28 +272,28 @@ a Python dictionary, the \code{DV} object can be cast to it's default Python typ
 using \code{as\_pytype()}:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{my\PYGZus{}key} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain\PYGZus{}setting}\PYG{o}{.}\PYG{n}{as\PYGZus{}pytype}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{my\PYGZus{}value} \PYG{o}{=} \PYG{n}{my\PYGZus{}dict}\PYG{p}{[}\PYG{n}{my\PYGZus{}key}\PYG{p}{]}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{my\PYGZus{}key} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain\PYGZus{}setting}\PYG{o}{.}\PYG{n}{as\PYGZus{}pytype}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{my\PYGZus{}value} \PYG{o}{=} \PYG{n}{my\PYGZus{}dict}\PYG{p}{[}\PYG{n}{my\PYGZus{}key}\PYG{p}{]}
 \end{Verbatim}
 
 If an alternative Python type is required for whatever reason, the \code{DV}
 object can be cast to the appropriate Python type as follows:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{elevation\PYGZus{}as\PYGZus{}int} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{ad}\PYG{o}{.}\PYG{n}{elevation}\PYG{p}{(}\PYG{p}{)}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{elevation\PYGZus{}as\PYGZus{}int}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{elevation\PYGZus{}as\PYGZus{}int} \PYG{o}{=} \PYG{n+nb}{int}\PYG{p}{(}\PYG{n}{ad}\PYG{o}{.}\PYG{n}{elevation}\PYG{p}{(}\PYG{p}{)}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{elevation\PYGZus{}as\PYGZus{}int}
 \PYG{g+go}{48}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{elevation\PYGZus{}as\PYGZus{}int}\PYG{p}{)}
-\PYG{g+go}{\PYGZlt{}type \PYGZsq{}int\PYGZsq{}\PYGZgt{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{elevation\PYGZus{}as\PYGZus{}int}\PYG{p}{)}
+\PYG{g+go}{\textless{}type 'int'\textgreater{}}
 \end{Verbatim}
 
 When using operations with a \code{DV} object and a numpy object, care must be
 taken. Consider the following cases:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{ad}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}\PYG{o}{.}\PYG{n}{data} \PYG{o}{/} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{ad}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}\PYG{o}{.}\PYG{n}{data} \PYG{o}{/} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain}\PYG{p}{(}\PYG{p}{)}\PYG{o}{.}\PYG{n}{as\PYGZus{}pytype}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{ad}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}\PYG{o}{.}\PYG{n}{data} \PYG{o}{/} \PYG{l+m+mf}{12.345}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{ad}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}\PYG{o}{.}\PYG{n}{data} \PYG{o}{/} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{ad}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}\PYG{o}{.}\PYG{n}{data} \PYG{o}{/} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain}\PYG{p}{(}\PYG{p}{)}\PYG{o}{.}\PYG{n}{as\PYGZus{}pytype}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{ad}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}\PYG{o}{.}\PYG{n}{data} \PYG{o}{/} \PYG{l+m+mf}{12.345}
 \end{Verbatim}
 
 All the above commands return the same result (assuming that ad.gain() =
@@ -318,9 +310,9 @@ extension), a Python dictionary is used to store the values, where the key of
 the dictionary is the (``\code{EXTNAME}'', \code{EXTVER}) tuple:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+go}{\PYGZob{}(\PYGZsq{}SCI\PYGZsq{}, 2): 2.3370000000000002, (\PYGZsq{}SCI\PYGZsq{}, 1): 2.1000000000000001,}
-\PYG{g+go}{(\PYGZsq{}SCI\PYGZsq{}, 3): 2.2999999999999998\PYGZcb{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{gain}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+go}{\PYGZob{}('SCI', 2): 2.3370000000000002, ('SCI', 1): 2.1000000000000001,}
+\PYG{g+go}{('SCI', 3): 2.2999999999999998\PYGZcb{}}
 \end{Verbatim}
 
 For those descriptors that describe a concept applying specifically to the
@@ -329,25 +321,25 @@ data extension will ``act'' as a single value that has a Python type defined by
 the default Python type of that descriptor:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{xbin} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{detector\PYGZus{}x\PYGZus{}bin}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{xbin}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{xbin} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{detector\PYGZus{}x\PYGZus{}bin}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{xbin}
 \PYG{g+go}{2}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{xbin}\PYG{p}{)}
-\PYG{g+go}{\PYGZlt{}class \PYGZsq{}astrodata.Descriptors.DescriptorValue\PYGZsq{}\PYGZgt{}}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{xbin}\PYG{o}{.}\PYG{n}{pytype}
-\PYG{g+go}{\PYGZlt{}type \PYGZsq{}int\PYGZsq{}\PYGZgt{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{xbin}\PYG{p}{)}
+\PYG{g+go}{\textless{}class 'astrodata.Descriptors.DescriptorValue'\textgreater{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{xbin}\PYG{o}{.}\PYG{n}{pytype}
+\PYG{g+go}{\textless{}type 'int'\textgreater{}}
 \end{Verbatim}
 
 If the original value of the descriptor is required, it can be retrieved by
 using \code{get\_value()}:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{xbin} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{detector\PYGZus{}x\PYGZus{}bin}\PYG{p}{(}\PYG{p}{)}\PYG{o}{.}\PYG{n}{get\PYGZus{}value}\PYG{p}{(}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{xbin}
-\PYG{g+go}{\PYGZob{}(\PYGZsq{}SCI\PYGZsq{}, 2): 2, (\PYGZsq{}SCI\PYGZsq{}, 1): 2, (\PYGZsq{}SCI\PYGZsq{}, 3): 2\PYGZcb{}}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{xbin}\PYG{p}{)}
-\PYG{g+go}{\PYGZlt{}type \PYGZsq{}dict\PYGZsq{}\PYGZgt{}}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{xbin}\PYG{p}{[}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{SCI}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{)}\PYG{p}{]}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{xbin} \PYG{o}{=} \PYG{n}{ad}\PYG{o}{.}\PYG{n}{detector\PYGZus{}x\PYGZus{}bin}\PYG{p}{(}\PYG{p}{)}\PYG{o}{.}\PYG{n}{get\PYGZus{}value}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{xbin}
+\PYG{g+go}{\PYGZob{}('SCI', 2): 2, ('SCI', 1): 2, ('SCI', 3): 2\PYGZcb{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n+nb}{type}\PYG{p}{(}\PYG{n}{xbin}\PYG{p}{)}
+\PYG{g+go}{\textless{}type 'dict'\textgreater{}}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{xbin}\PYG{p}{[}\PYG{p}{(}\PYG{l+s}{"}\PYG{l+s}{SCI}\PYG{l+s}{"}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{)}\PYG{p}{]}
 \PYG{g+go}{2}
 \end{Verbatim}
 
@@ -539,7 +531,7 @@ descriptor class that defines the descriptor functions, in the form
 
 \begin{Verbatim}[commandchars=\\\{\}]
 \PYG{n}{calculatorIndex} \PYG{o}{=} \PYG{p}{\PYGZob{}}
-  \PYG{l+s}{\PYGZdq{}}\PYG{l+s}{\PYGZlt{}INSTRUMENT\PYGZgt{}}\PYG{l+s}{\PYGZdq{}}\PYG{p}{:}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{\PYGZlt{}INSTRUMENT\PYGZgt{}\PYGZus{}Descriptors.\PYGZlt{}INSTRUMENT\PYGZgt{}\PYGZus{}DescriptorCalc()}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}
+  \PYG{l+s}{"}\PYG{l+s}{\textless{}INSTRUMENT\textgreater{}}\PYG{l+s}{"}\PYG{p}{:}\PYG{l+s}{"}\PYG{l+s}{\textless{}INSTRUMENT\textgreater{}\PYGZus{}Descriptors.\textless{}INSTRUMENT\textgreater{}\PYGZus{}DescriptorCalc()}\PYG{l+s}{"}\PYG{p}{,}
   \PYG{p}{\PYGZcb{}}
 \end{Verbatim}
 
@@ -568,10 +560,10 @@ dictionary named \code{GEMINI\_KeyDict}, where the key is a variable in the form
 descriptor \code{\textless{}descriptor\textgreater{}}:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-GEMINI\PYGZus{}KeyDict = \PYGZob{}
-  \PYGZdq{}key\PYGZus{}airmass\PYGZdq{}:\PYGZdq{}AIRMASS\PYGZdq{},
+GEMINI\_KeyDict = \PYGZob{}
+  "key\_airmass":"AIRMASS",
   ...
-  \PYGZdq{}key\PYGZus{}camera\PYGZdq{}:\PYGZdq{}CAMERA\PYGZdq{},
+  "key\_camera":"CAMERA",
   ...
   \PYGZcb{}
 \end{Verbatim}
@@ -588,9 +580,9 @@ names are not hard-coded in the descriptor files, allowing a single variable
 to be used consistently by multiple descriptor functions:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-GEMINI\PYGZus{}KeyDict = \PYGZob{}
+GEMINI\_KeyDict = \PYGZob{}
   ...
-  \PYGZdq{}key\PYGZus{}pwfs1\PYGZdq{}:\PYGZdq{}PWFS1\PYGZus{}ST\PYGZdq{},
+  "key\_pwfs1":"PWFS1\_ST",
   ...
   \PYGZcb{}
 \end{Verbatim}
@@ -614,9 +606,9 @@ the Gemini specific keywords directly associated with the descriptor as defined
 in \code{GEMINI\_Keywords.py}:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-GMOS\PYGZus{}KeyDict = \PYGZob{}
+GMOS\_KeyDict = \PYGZob{}
   ...
-  \PYGZdq{}key\PYGZus{}camera\PYGZdq{}:\PYGZdq{}INSTRUME\PYGZdq{},
+  "key\_camera":"INSTRUME",
   ...
   \PYGZcb{}
 \end{Verbatim}
@@ -634,9 +626,9 @@ allowing a single variable to be used consistently by multiple descriptor
 functions:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-GMOS\PYGZus{}KeyDict = \PYGZob{}
+GMOS\_KeyDict = \PYGZob{}
   ...
-  \PYGZdq{}key\PYGZus{}ccdsum\PYGZdq{}:\PYGZdq{}CCDSUM\PYGZdq{},
+  "key\_ccdsum":"CCDSUM",
   ...
   \PYGZcb{}
 \end{Verbatim}
@@ -662,7 +654,7 @@ directory and contains the code required to automatically generate the
 \code{astrodata\_Gemini/ADCONFIG\_Gemini/descriptors} directory:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{n}{shell}\PYG{o}{\PYGZgt{}} \PYG{n}{mkCalculatorInterface} \PYG{o}{\PYGZgt{}} \PYG{n}{CalculatorInterface\PYGZus{}GEMINI}\PYG{o}{.}\PYG{n}{py}
+\PYG{n}{shell}\PYG{o}{\textgreater{}} \PYG{n}{mkCalculatorInterface} \PYG{o}{\textgreater{}} \PYG{n}{CalculatorInterface\PYGZus{}GEMINI}\PYG{o}{.}\PYG{n}{py}
 \end{Verbatim}
 
 The \code{mkCalculatorInterface} script uses the information in the
@@ -679,7 +671,7 @@ and their default Python type:
 
 \begin{Verbatim}[commandchars=\\\{\}]
 \PYG{p}{[}
-  \PYG{n}{DD}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{airmass}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{pytype}\PYG{o}{=}\PYG{n+nb}{float}\PYG{p}{)}\PYG{p}{,}
+  \PYG{n}{DD}\PYG{p}{(}\PYG{l+s}{"}\PYG{l+s}{airmass}\PYG{l+s}{"}\PYG{p}{,} \PYG{n}{pytype}\PYG{o}{=}\PYG{n+nb}{float}\PYG{p}{)}\PYG{p}{,}
   \PYG{o}{.}\PYG{o}{.}\PYG{o}{.}
 \PYG{p}{]}
 \end{Verbatim}
@@ -712,7 +704,7 @@ the default Python type for the descriptor is defined:
 \begin{Verbatim}[commandchars=\\\{\}]
 [
   ...
-  DD(\PYGZdq{}\PYGZlt{}my\PYGZus{}descriptor\PYGZus{}name\PYGZgt{}\PYGZdq{}, pytype=str),
+  DD("\textless{}my\_descriptor\_name\textgreater{}", pytype=str),
   ...
 ]
 \end{Verbatim}
@@ -726,7 +718,7 @@ that it can be included in the \code{CalculatorInterface\_GEMINI.py} file.
 Regenerate the \code{CalculatorInterface\_GEMINI.py} file:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{n}{shell}\PYG{o}{\PYGZgt{}} \PYG{n}{mkCalculatorInterface} \PYG{o}{\PYGZgt{}} \PYG{n}{CalculatorInterface\PYGZus{}GEMINI}\PYG{o}{.}\PYG{n}{py}
+\PYG{n}{shell}\PYG{o}{\textgreater{}} \PYG{n}{mkCalculatorInterface} \PYG{o}{\textgreater{}} \PYG{n}{CalculatorInterface\PYGZus{}GEMINI}\PYG{o}{.}\PYG{n}{py}
 \end{Verbatim}
 
 \item {} 
@@ -735,19 +727,19 @@ If the new descriptor is for a new, undefined \code{\textless{}INSTRUMENT\textgr
 file:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-from GEMINI\PYGZus{}Descriptors import GEMINI\PYGZus{}DescriptorCalc
-from \PYGZlt{}INSTRUMENT\PYGZgt{}\PYGZus{}Keywords import \PYGZlt{}INSTRUMENT\PYGZgt{}\PYGZus{}KeyDict
+from GEMINI\_Descriptors import GEMINI\_DescriptorCalc
+from \textless{}INSTRUMENT\textgreater{}\_Keywords import \textless{}INSTRUMENT\textgreater{}\_KeyDict
 
-class \PYGZlt{}INSTRUMENT\PYGZgt{}\PYGZus{}DescriptorCalc(GEMINI\PYGZus{}DescriptorCalc):
-    \PYGZsh{} Updating the global key dictionary with the local key dictionary
-    \PYGZsh{} associated with this descriptor class
-    \PYGZus{}update\PYGZus{}stdkey\PYGZus{}dict = \PYGZlt{}INSTRUMENT\PYGZgt{}\PYGZus{}KeyDict
+class \textless{}INSTRUMENT\textgreater{}\_DescriptorCalc(GEMINI\_DescriptorCalc):
+    \# Updating the global key dictionary with the local key dictionary
+    \# associated with this descriptor class
+    \_update\_stdkey\_dict = \textless{}INSTRUMENT\textgreater{}\_KeyDict
 \end{Verbatim}
 
 and an \code{\textless{}INSTRUMENT\textgreater{}\_Keywords.py} file:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYGZlt{}INSTRUMENT\PYGZgt{}\PYGZus{}KeyDict = \PYGZob{}\PYGZcb{}
+\textless{}INSTRUMENT\textgreater{}\_KeyDict = \PYGZob{}\PYGZcb{}
 \end{Verbatim}
 
 In addition, add an appropriate entry to the \code{calculatorIndex.Gemini.py}
@@ -763,8 +755,8 @@ file \code{\textless{}INSTRUMENT\textgreater{}\_Keywords.py}, specifying the new
 associated keyword:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYGZlt{}INSTRUMENT\PYGZgt{}\PYGZus{}KeyDict = \PYGZob{}
-  \PYGZdq{}key\PYGZus{}\PYGZlt{}my\PYGZus{}descriptor\PYGZus{}name\PYGZgt{}\PYGZdq{}:\PYGZdq{}MYKEYWRD\PYGZdq{},
+\textless{}INSTRUMENT\textgreater{}\_KeyDict = \PYGZob{}
+  "key\_\textless{}my\_descriptor\_name\textgreater{}":"MYKEYWRD",
 \PYGZcb{}
 \end{Verbatim}
 
@@ -795,9 +787,9 @@ contain any new keywords required for this new descriptor function.
 Test the descriptor:
 
 \begin{Verbatim}[commandchars=\\\{\}]
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k+kn}{from} \PYG{n+nn}{astrodata} \PYG{k+kn}{import} \PYG{n}{AstroData}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{n}{ad} \PYG{o}{=} \PYG{n}{AstroData}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{N20091027S0137.fits}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}
-\PYG{g+gp}{\PYGZgt{}\PYGZgt{}\PYGZgt{} }\PYG{k}{print} \PYG{n}{ad}\PYG{o}{.}\PYG{o}{\PYGZlt{}}\PYG{n}{my\PYGZus{}descriptor\PYGZus{}name}\PYG{o}{\PYGZgt{}}\PYG{p}{(}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k+kn}{from} \PYG{n+nn}{astrodata} \PYG{k+kn}{import} \PYG{n}{AstroData}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{n}{ad} \PYG{o}{=} \PYG{n}{AstroData}\PYG{p}{(}\PYG{l+s}{"}\PYG{l+s}{N20091027S0137.fits}\PYG{l+s}{"}\PYG{p}{)}
+\PYG{g+gp}{\textgreater{}\textgreater{}\textgreater{} }\PYG{k}{print} \PYG{n}{ad}\PYG{o}{.}\PYG{o}{\textless{}}\PYG{n}{my\PYGZus{}descriptor\PYGZus{}name}\PYG{o}{\textgreater{}}\PYG{p}{(}\PYG{p}{)}
 \end{Verbatim}
 
 \end{enumerate}
@@ -989,6 +981,13 @@ the unbinned section (in the form of a Python list of integers that uses
 \begin{itemize}
 \item {} 
 the azimuth (in degrees between 0 and 360) of the observation
+
+\end{itemize}
+
+\code{bias\_level}
+\begin{itemize}
+\item {} 
+the bias level (in ADU) of the observation
 
 \end{itemize}
 
@@ -1505,7 +1504,7 @@ should never be edited directly.
 
 \begin{Verbatim}[commandchars=\\\{\}]
 def airmass(self, format=None, **args):
-    \PYGZdq{}\PYGZdq{}\PYGZdq{}
+    """
     Return the airmass value
 
     :param dataset: the data set
@@ -1514,46 +1513,46 @@ def airmass(self, format=None, **args):
     :type format: string
     :rtype: float as default (i.e., format=None)
     :return: the mean airmass of the observation
-    \PYGZdq{}\PYGZdq{}\PYGZdq{}
+    """
     try:
-        self.\PYGZus{}lazyloadCalculator()
-        keydict = self.descriptor\PYGZus{}calculator.\PYGZus{}specifickey\PYGZus{}dict
-        key = \PYGZdq{}key\PYGZus{}airmass\PYGZdq{}
+        self.\_lazyloadCalculator()
+        keydict = self.descriptor\_calculator.\_specifickey\_dict
+        key = "key\_airmass"
         keyword = None
         if key in keydict.keys():
             keyword = keydict[key]
 
-        if not hasattr(self.descriptor\PYGZus{}calculator, \PYGZdq{}airmass\PYGZdq{}):
+        if not hasattr(self.descriptor\_calculator, "airmass"):
             if keyword is not None:
-                retval = self.phu\PYGZus{}get\PYGZus{}key\PYGZus{}value(keyword)
+                retval = self.phu\_get\_key\_value(keyword)
                 if retval is None:
-                    if hasattr(self, \PYGZdq{}exception\PYGZus{}info\PYGZdq{}):
-                        raise Errors.DescriptorError(self.exception\PYGZus{}info)
+                    if hasattr(self, "exception\_info"):
+                        raise Errors.DescriptorError(self.exception\_info)
             else:
-                msg = (\PYGZdq{}Unable to find an appropriate descriptor \PYGZdq{}
-                       \PYGZdq{}function or a default keyword for airmass\PYGZdq{})
+                msg = ("Unable to find an appropriate descriptor "
+                       "function or a default keyword for airmass")
                 raise Errors.DescriptorError(msg)
         else:
             try:
-                retval = self.descriptor\PYGZus{}calculator.airmass(self, **args)
+                retval = self.descriptor\_calculator.airmass(self, **args)
             except Exception as e:
                 raise Errors.DescriptorError(e)
 
 
         ret = DescriptorValue( retval,
                                format = format,
-                               name = \PYGZdq{}airmass\PYGZdq{},
+                               name = "airmass",
                                keyword = keyword,
                                ad = self,
                                pytype = float )
         return ret
 
     except Errors.DescriptorError:
-        if self.descriptor\PYGZus{}calculator.throwExceptions == True:
+        if self.descriptor\_calculator.throwExceptions == True:
             raise
         else:
-            if not hasattr(self, \PYGZbs{}\PYGZdq{}exception\PYGZus{}info\PYGZbs{}\PYGZdq{}):
-                setattr(self, \PYGZbs{}\PYGZdq{}exception\PYGZus{}info\PYGZbs{}\PYGZdq{}, sys.exc\PYGZus{}info()[1])
+            if not hasattr(self, \PYGZbs{}"exception\_info\PYGZbs{}"):
+                setattr(self, \PYGZbs{}"exception\_info\PYGZbs{}", sys.exc\_info()[1])
             return None
     except:
         raise
@@ -1582,7 +1581,7 @@ def airmass(self, format=None, **args):
         \PYG{n}{ret\PYGZus{}detector\PYGZus{}x\PYGZus{}bin} \PYG{o}{=} \PYG{p}{\PYGZob{}}\PYG{p}{\PYGZcb{}}
 
         \PYG{c}{\PYGZsh{} Determine the ccdsum keyword from the global keyword dictionary}
-        \PYG{n}{keyword} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{get\PYGZus{}descriptor\PYGZus{}key}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{key\PYGZus{}ccdsum}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}
+        \PYG{n}{keyword} \PYG{o}{=} \PYG{n+nb+bp}{self}\PYG{o}{.}\PYG{n}{get\PYGZus{}descriptor\PYGZus{}key}\PYG{p}{(}\PYG{l+s}{"}\PYG{l+s}{key\PYGZus{}ccdsum}\PYG{l+s}{"}\PYG{p}{)}
 
         \PYG{c}{\PYGZsh{} Get the value of the ccdsum keyword from the header of each pixel}
         \PYG{c}{\PYGZsh{} data extension as a dictionary}
@@ -1590,19 +1589,19 @@ def airmass(self, format=None, **args):
 
         \PYG{k}{if} \PYG{n}{ccdsum\PYGZus{}dict} \PYG{o+ow}{is} \PYG{n+nb+bp}{None}\PYG{p}{:}
             \PYG{c}{\PYGZsh{} The get\PYGZus{}key\PYGZus{}value\PYGZus{}dict() function returns None if a value}
-            \PYG{c}{\PYGZsh{} cannot be found and stores the exception info. Re\PYGZhy{}raise the}
+            \PYG{c}{\PYGZsh{} cannot be found and stores the exception info. Re-raise the}
             \PYG{c}{\PYGZsh{} exception. It will be dealt with by the CalculatorInterface.}
-            \PYG{k}{if} \PYG{n+nb}{hasattr}\PYG{p}{(}\PYG{n}{dataset}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}}\PYG{l+s}{exception\PYGZus{}info}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n+nb}{hasattr}\PYG{p}{(}\PYG{n}{dataset}\PYG{p}{,} \PYG{l+s}{"}\PYG{l+s}{exception\PYGZus{}info}\PYG{l+s}{"}\PYG{p}{)}\PYG{p}{:}
                 \PYG{k}{raise} \PYG{n}{dataset}\PYG{o}{.}\PYG{n}{exception\PYGZus{}info}
 
         \PYG{k}{for} \PYG{n}{ext\PYGZus{}name\PYGZus{}ver}\PYG{p}{,} \PYG{n}{ccdsum} \PYG{o+ow}{in} \PYG{n}{ccdsum\PYGZus{}dict}\PYG{o}{.}\PYG{n}{iteritems}\PYG{p}{(}\PYG{p}{)}\PYG{p}{:}
             \PYG{k}{if} \PYG{n}{ccdsum} \PYG{o+ow}{is} \PYG{n+nb+bp}{None}\PYG{p}{:}
                 \PYG{n}{detector\PYGZus{}x\PYGZus{}bin} \PYG{o}{=} \PYG{n+nb+bp}{None}
             \PYG{k}{else}\PYG{p}{:}
-                \PYG{c}{\PYGZsh{} Use the binning of the x\PYGZhy{}axis integer as the value}
+                \PYG{c}{\PYGZsh{} Use the binning of the x-axis integer as the value}
                 \PYG{n}{detector\PYGZus{}x\PYGZus{}bin}\PYG{p}{,} \PYG{n}{detector\PYGZus{}y\PYGZus{}bin} \PYG{o}{=} \PYG{n}{ccdsum}\PYG{o}{.}\PYG{n}{split}\PYG{p}{(}\PYG{p}{)}
 
-            \PYG{c}{\PYGZsh{} Update the dictionary with the binning of the x\PYGZhy{}axis value}
+            \PYG{c}{\PYGZsh{} Update the dictionary with the binning of the x-axis value}
             \PYG{n}{ret\PYGZus{}detector\PYGZus{}x\PYGZus{}bin}\PYG{o}{.}\PYG{n}{update}\PYG{p}{(}\PYG{p}{\PYGZob{}}\PYG{n}{ext\PYGZus{}name\PYGZus{}ver}\PYG{p}{:}\PYG{n}{detector\PYGZus{}x\PYGZus{}bin}\PYG{p}{\PYGZcb{}}\PYG{p}{)}
 
         \PYG{k}{return} \PYG{n}{ret\PYGZus{}detector\PYGZus{}x\PYGZus{}bin}

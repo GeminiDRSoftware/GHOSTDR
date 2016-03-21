@@ -4,10 +4,10 @@
 #                                                                   gempy.gemini
 #                                                                gemini_tools.py
 # ------------------------------------------------------------------------------
-# $Id: gemini_tools.py 5480 2016-01-08 21:44:18Z lfuhrman $
+# $Id: gemini_tools.py 5616 2016-03-09 20:15:02Z kanderson $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5480 $'[11:-2]
-__version_date__ = '$Date: 2016-01-08 11:44:18 -1000 (Fri, 08 Jan 2016) $'[7:-2]
+__version__      = '$Revision: 5616 $'[11:-2]
+__version_date__ = '$Date: 2016-03-09 10:15:02 -1000 (Wed, 09 Mar 2016) $'[7:-2]
 # ------------------------------------------------------------------------------
 import os
 import re
@@ -46,7 +46,7 @@ keyword_comments = Lookups.get_lookup_table("Gemini/keyword_comments",
 _FOV_lookup = None
 # ------------------------------------------------------------------------------
 
-def add_objcat(adinput=None, extver=1, replace=False, columns=None):
+def add_objcat(adinput=None, extver=1, replace=False, columns=None, sxdict=None):
     """
     Add OBJCAT table if it does not exist, update or replace it if it does.
     
@@ -69,6 +69,13 @@ def add_objcat(adinput=None, extver=1, replace=False, columns=None):
     :type columns: dictionary of Pyfits Column objects with column names
                    as keys
     """
+
+    # ensure caller passes the sextractor default dictionary of parameters.
+    try:
+        assert isinstance(sxdict, dict) and sxdict.has_key('dq')
+    except AssertionError:
+        logutils.error("TypeError: A sextractor dictionary was not received.")
+        raise TypeError("Require sextractor parameter dictionary.")
     
     # Instantiate the log. This needs to be done outside of the try block,
     # since the log object is used in the except block 
@@ -83,7 +90,7 @@ def add_objcat(adinput=None, extver=1, replace=False, columns=None):
     try:
         
         # Parse sextractor parameters for the list of expected columns
-        expected_columns = parse_sextractor_param()
+        expected_columns = parse_sextractor_param(sxdict)
 
         # Append a few more that don't come from directly from sextractor
         expected_columns.extend(["REF_NUMBER","REF_MAG","REF_MAG_ERR",
@@ -1798,12 +1805,9 @@ def obsmode_del(ad):
     return ad
     
 
-def parse_sextractor_param():
-
+def parse_sextractor_param(default_dict):
+    # default_dict used to be made with a get_lookup_table() call.
     # Get path to default sextractor parameter files
-    default_dict = Lookups.get_lookup_table(
-                             "Gemini/source_detection/sextractor_default_dict",
-                             "sextractor_default_dict")
     param_file = lookup_path(default_dict["dq"]["param"])
     if param_file.endswith(".py"):
         param_file = param_file[:-3]
@@ -2022,16 +2026,16 @@ def update_key(adinput=None, keyword=None, value=None, comment=None,
     
     # Validate remaining input parameters
     if keyword is None:
-        raise Errors.Error("No keyword provided")
+        raise Errors.FITSError("No keyword provided")
     if value is None:
-        raise Errors.Error("No value provided")
+        raise Errors.FITSError("No value provided")
     if extname is None:
-        raise Errors.Error("No extension name provided")
-    if extname != "PHU":
+        raise Errors.FITSError("No extension name provided")
+    if extname is not "PHU":
         if extname == "pixel_exts":
             extname = pixel_exts
         if not ad[extname]:
-            raise Errors.Error("Extension %s does not exist in %s"
+            raise Errors.FITSError("Extension %s does not exist in %s"
                                % (extname, ad.filename))
     
     # Get the comment for the keyword, if available
@@ -2039,7 +2043,7 @@ def update_key(adinput=None, keyword=None, value=None, comment=None,
         if keyword in keyword_comments:
             comment = keyword_comments[keyword]
     
-    if extname == "PHU":
+    if extname is "PHU":
         # Check to see whether the keyword is already in the PHU
         original_value = ad.phu_get_key_value(keyword)
         if original_value is not None:
@@ -2076,9 +2080,9 @@ def update_key(adinput=None, keyword=None, value=None, comment=None,
                 elif extver in value:
                     value_for_ext = value[extver]
                 else:
-                    raise Errors.Error(
-                      "The dictionary provided to the 'value' parameter "
-                      "contains an unknown key")
+                    raise Errors.FITSError( "The dictionary provided to the"
+                                " 'value' parameter contains an unknown key")
+
             elif isinstance(value, DescriptorValue):
                 value_for_ext = value.get_value(extver=extver)
             else:
@@ -2089,8 +2093,10 @@ def update_key(adinput=None, keyword=None, value=None, comment=None,
             original_value = ext.get_key_value(keyword)
             if original_value is not None:
                 # The keyword exists
-                log.debug("Keyword %s=%s already exists in extension "
-                          "%s,%s" % (keyword, original_value, extname, extver))
+                log.debug("Keyword %s=%s exists in ext %s,%s" % (keyword, 
+                                                                 original_value, 
+                                                                 extname, 
+                                                                 extver))
                 msg = "updated in"
             else:
                 msg = "added to"

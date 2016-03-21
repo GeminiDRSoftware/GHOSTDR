@@ -78,10 +78,6 @@ specific types of dataset.</p>
 <span id="install"></span><h2>1.2. Installing AstroData<a class="headerlink" href="#installing-astrodata" title="Permalink to this headline">¶</a></h2>
 <p>The <tt class="docutils literal"><span class="pre">astrodata</span></tt> package has several dependencies like <tt class="docutils literal"><span class="pre">numpy</span></tt>, <tt class="docutils literal"><span class="pre">astropy</span></tt>, and others.
 The best way to get everything you need is to install Ureka, <a class="reference external" href="http://ssb.stsci.edu/ureka/">http://ssb.stsci.edu/ureka/</a>.</p>
-<p>Make that you launch Ureka after you have installed it.:</p>
-<div class="highlight-python"><div class="highlight"><pre>$ ur_setup
-</pre></div>
-</div>
 <p>WARNING:  The Ureka installation script will not set up IRAF for you. You need to do
 that yourself. Here&#8217;s how:</p>
 <div class="highlight-python"><div class="highlight"><pre>$ cd ~
@@ -102,12 +98,6 @@ distributed as part of the <tt class="docutils literal"><span class="pre">gemini
 <div><a class="reference external" href="http://www.gemini.edu/sciops/data-and-results/processing-software">http://www.gemini.edu/sciops/data-and-results/processing-software</a></div></blockquote>
 <div class="section" id="recommended-installation">
 <h3>1.2.1. Recommended installation<a class="headerlink" href="#recommended-installation" title="Permalink to this headline">¶</a></h3>
-<p>Note:  Before you do these steps, make sure Ureka has been launched.  A sure way
-to check is to do:</p>
-<div class="highlight-python"><div class="highlight"><pre>$ which python
-</pre></div>
-</div>
-<p>Does it point to the Ureka version of Python?  If not, type <tt class="docutils literal"><span class="pre">ur_setup</span></tt>.</p>
 <p>It is recommended to install the software in a location other than the standard python
 location for modules (the default <tt class="docutils literal"><span class="pre">site-packages</span></tt>). This is also the only solution if
 you do not have write permission to the default <tt class="docutils literal"><span class="pre">site-packages</span></tt>.  Here is how you

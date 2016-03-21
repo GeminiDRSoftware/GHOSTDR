@@ -4,26 +4,14 @@
 #                                                                astrodata.utils
 #                                                                      Errors.py
 # ------------------------------------------------------------------------------
-# $Id: Errors.py 5274 2015-06-11 14:39:37Z kanderson $
+# $Id: Errors.py 5600 2016-03-08 01:42:32Z klabrie $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5274 $'[11:-2]
-__version_date__ = '$Date: 2015-06-11 04:39:37 -1000 (Thu, 11 Jun 2015) $'[7:-2]
+__version__      = '$Revision: 5600 $'[11:-2]
+__version_date__ = '$Date: 2016-03-07 15:42:32 -1000 (Mon, 07 Mar 2016) $'[7:-2]
 # ------------------------------------------------------------------------------
 
 class Error(Exception):
     """Base class for exceptions in this module."""
-    def __init__(self, message=None):
-        if message != None:
-            self.message = message
-    
-    def __str__(self):
-        return self.message
-    
-    def __repr__(self):
-        return self.__class__.__name__+"(%s)" % repr(self.message)
-
-    def add_msg(self, msg):
-        self.message += ("\n"+msg)
 
 class FatalDeprecation(Error):
     pass
@@ -86,6 +74,11 @@ class FatalDeprecation(Error):
     Raised when code that isn't supposed to be called anymore is called anyway.
     """
     message = "Fatal Deprecation"
+
+class FITSError(Error):
+    """ Raised when errors arise working on FITS files.
+    """
+    message = "Exception in working on FITS file."
 
 class gemutilError(Error):
     """

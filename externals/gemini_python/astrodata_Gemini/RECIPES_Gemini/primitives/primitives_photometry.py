@@ -5,22 +5,26 @@ import subprocess
 import numpy as np
 import pyfits as pf
 import pywcs
+
 #from itertools import compress
 from copy import deepcopy
+
 from astrodata import AstroData
 from astrodata.utils import Errors
 from astrodata.utils import Lookups
 from astrodata.utils import logutils
 from astrodata.utils.ConfigSpace import lookup_path
+
 from gempy.library import astrotools as at
 from gempy.gemini import gemini_tools as gt
 from gempy.gemini.gemini_catalog_client import get_fits_table
+
 from primitives_GENERAL import GENERALPrimitives
 
-# Define the earliest acceptable SExtractor version
-# Currently: 2.8.6
+# Define the earliest acceptable SExtractor version, currently: 2.8.6
 SEXTRACTOR_VERSION = [2,8,6]
 
+# ------------------------------------------------------------------------------
 class PhotometryPrimitives(GENERALPrimitives):
     """
     This is the class containing all of the photometry primitives for
@@ -263,7 +267,7 @@ class PhotometryPrimitives(GENERALPrimitives):
                     method="daofind"
                 else:
                     try:
-                        ad = _sextractor(ad, seeing_est)
+                        ad = _sextractor(ad,seeing_est,sxdict=self.sx_default_dict)
                     except Errors.ScienceError:
                         log.warning("SExtractor failed. "\
                                     "Setting method=daofind")
@@ -322,8 +326,8 @@ class PhotometryPrimitives(GENERALPrimitives):
 
                 
                     # Add OBJCAT
-                    ad = gt.add_objcat(adinput=ad, extver=extver, 
-                                       replace=True, columns=columns)[0]
+                    ad = gt.add_objcat(adinput=ad, extver=extver, replace=True,
+                            columns=columns, sxdict=self.sx_default_dict)[0]
             
                 # Do some simple photometry on all
                 # extensions to get fwhm, ellipticity
@@ -1145,15 +1149,13 @@ def _average_each_cluster( xyArray, pixApart=10.0 ):
     return newXYArray
 
 
-def _sextractor(ad=None,seeing_estimate=None):
+def _sextractor(ad=None, seeing_estimate=None, sxdict=None):
 
     # Get the log
     log = logutils.get_logger(__name__)
 
     # Get path to default sextractor parameter files
-    default_dict = Lookups.get_lookup_table(
-                             "Gemini/source_detection/sextractor_default_dict",
-                             "sextractor_default_dict")
+    default_dict = sxdict
     
     # Write the AD instance to a temporary FITS file on disk
     tmpfn = "tmp%ssx%s" % (str(os.getpid()),
@@ -1260,8 +1262,8 @@ def _sextractor(ad=None,seeing_estimate=None):
             # Otherwise, if the observation is AO, then set a static low 
             # starting value
             elif ad.phu_get_key_value('AOFOLD') == "IN":
-#                ao_seeing_est = ad.pixel_scale().as_pytype() * 3.0
-#                extend_line = ("-SEEING_FWHM", str(ao_seeing_est))                
+                # ao_seeing_est = ad.pixel_scale().as_pytype() * 3.0
+                # extend_line = ("-SEEING_FWHM", str(ao_seeing_est))                
                 extend_line = ("-SEEING_FWHM", "0.4")
                 sx_cmd.extend(extend_line)       
                
@@ -1367,8 +1369,8 @@ def _sextractor(ad=None,seeing_estimate=None):
                         (nobj,ad.filename,extver))
 
             # Add OBJCAT
-            ad = gt.add_objcat(adinput=ad, extver=extver, 
-                               replace=True, columns=columns)[0]
+            ad = gt.add_objcat(adinput=ad, extver=extver, replace=True, 
+                               columns=columns, sxdict=sxdict)[0]
 
             # Read in object mask
             # >>>> *** WARNING:: The FITS  file  objtmpfn does not

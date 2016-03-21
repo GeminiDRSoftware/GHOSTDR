@@ -14,7 +14,7 @@
 \usepackage{appendix} \setcounter{tocdepth}{0}
 
 \title{AstroData Users Manual}
-\date{March 04, 2016}
+\date{November 14, 2014}
 \release{X1.0.1}
 \author{Kathleen Labrie}
 \newcommand{\sphinxlogo}{}
@@ -75,11 +75,10 @@
 \expandafter\def\csname PYG@tok@c\endcsname{\let\PYG@it=\textit\def\PYG@tc##1{\textcolor[rgb]{0.25,0.50,0.56}{##1}}}
 \expandafter\def\csname PYG@tok@mf\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
 \expandafter\def\csname PYG@tok@err\endcsname{\def\PYG@bc##1{\setlength{\fboxsep}{0pt}\fcolorbox[rgb]{1.00,0.00,0.00}{1,1,1}{\strut ##1}}}
-\expandafter\def\csname PYG@tok@mb\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
+\expandafter\def\csname PYG@tok@kd\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
 \expandafter\def\csname PYG@tok@ss\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.32,0.47,0.09}{##1}}}
 \expandafter\def\csname PYG@tok@sr\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.14,0.33,0.53}{##1}}}
 \expandafter\def\csname PYG@tok@mo\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
-\expandafter\def\csname PYG@tok@kd\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
 \expandafter\def\csname PYG@tok@mi\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.13,0.50,0.31}{##1}}}
 \expandafter\def\csname PYG@tok@kn\endcsname{\let\PYG@bf=\textbf\def\PYG@tc##1{\textcolor[rgb]{0.00,0.44,0.13}{##1}}}
 \expandafter\def\csname PYG@tok@o\endcsname{\def\PYG@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
@@ -156,12 +155,6 @@ specific types of dataset.
 The \code{astrodata} package has several dependencies like \code{numpy}, \code{astropy}, and others.
 The best way to get everything you need is to install Ureka, \href{http://ssb.stsci.edu/ureka/}{http://ssb.stsci.edu/ureka/}.
 
-Make that you launch Ureka after you have installed it.:
-
-\begin{Verbatim}[commandchars=\\\{\}]
-\PYGZdl{} ur\PYGZus{}setup
-\end{Verbatim}
-
 WARNING:  The Ureka installation script will not set up IRAF for you. You need to do
 that yourself. Here's how:
 
@@ -188,15 +181,6 @@ distributed as part of the \code{gemini\_python} package.  The \code{gemini\_pyt
 
 \subsection{Recommended installation}
 \label{intro:recommended-installation}
-Note:  Before you do these steps, make sure Ureka has been launched.  A sure way
-to check is to do:
-
-\begin{Verbatim}[commandchars=\\\{\}]
-\PYGZdl{} which python
-\end{Verbatim}
-
-Does it point to the Ureka version of Python?  If not, type \code{ur\_setup}.
-
 It is recommended to install the software in a location other than the standard python
 location for modules (the default \code{site-packages}). This is also the only solution if
 you do not have write permission to the default \code{site-packages}.  Here is how you
@@ -3327,21 +3311,21 @@ Write examples that use the DQ plane.  Eg. transform DQ plane in a numpy
 mask and do statistics.
 \end{notice}
 
-(The {\hyperref[data:index-0]{\emph{original entry}}} is located in  /data/giraf/gemini\_python-trunk20160304\_r5599/gemini\_python/astrodata/doc/ad\_UsersManual/data.rst, line 579.)
+(The {\hyperref[data:index-0]{\emph{original entry}}} is located in  /data/eclipse/workspace/gemini\_python/astrodata/doc/ad\_UsersManual/data.rst, line 579.)
 
 \begin{notice}{note}{Todo}
 
 Primer on Descriptor definitions for new instrument.
 \end{notice}
 
-(The {\hyperref[headers:index-0]{\emph{original entry}}} is located in  /data/giraf/gemini\_python-trunk20160304\_r5599/gemini\_python/astrodata/doc/ad\_UsersManual/headers.rst, line 279.)
+(The {\hyperref[headers:index-0]{\emph{original entry}}} is located in  /data/eclipse/workspace/gemini\_python/astrodata/doc/ad\_UsersManual/headers.rst, line 279.)
 
 \begin{notice}{note}{Todo}
 
 Primer on creating new AstroDataTypes.
 \end{notice}
 
-(The {\hyperref[types:index-0]{\emph{original entry}}} is located in  /data/giraf/gemini\_python-trunk20160304\_r5599/gemini\_python/astrodata/doc/ad\_UsersManual/types.rst, line 152.)
+(The {\hyperref[types:index-0]{\emph{original entry}}} is located in  /data/eclipse/workspace/gemini\_python/astrodata/doc/ad\_UsersManual/types.rst, line 152.)
 
 
 

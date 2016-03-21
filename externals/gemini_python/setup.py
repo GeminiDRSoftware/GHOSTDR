@@ -28,6 +28,7 @@ import sys
 from distutils.core import setup
 
 svndir = re.compile('.svn')
+fitsfile = re.compile('.fits$')
 
 PACKAGENAME = 'gemini_python'
 
@@ -58,6 +59,7 @@ RS_MODULES = ['recipe_system',
 ADLIB_PACKAGES = ['FITS','Gemini']   # This is be used to form 'astrodata_Gemini' and 'astrodata_FITS'
 RECIPE_MODULES=[]
 PIF_MODULES=[]
+ADCONFIG_MODULES=[]
 slash = re.compile('/')
 for p in ADLIB_PACKAGES:
     if os.path.isdir(os.path.join('astrodata_'+p,'RECIPES_'+p)): 
@@ -72,6 +74,20 @@ for p in ADLIB_PACKAGES:
                 pifmodules = map((lambda d: slash.sub('.','/'.join([root,d]))),\
                                  filter((lambda d: not svndir.search(d)), dirs))
                 PIF_MODULES.extend( pifmodules )
+    if os.path.isdir(os.path.join('astrodata_'+p, 'ADCONFIG_'+p)):
+        ADCONFIG_MODULES.append('astrodata_'+p+'.ADCONFIG_'+p)
+        ADCONFIG_MODULES.append('astrodata_'+p+'.ADCONFIG_'+p+'.descriptors')
+        if os.path.isdir(os.path.join('astrodata_'+p, 'ADCONFIG_'+p, 'lookups')):
+            ADCONFIG_MODULES.append('astrodata_'+p+'.ADCONFIG_'+p+'.lookups')
+            LUTROOT = os.path.join('astrodata_'+p,'ADCONFIG_'+p,'lookups')
+            print LUTROOT
+            for root, dirs, files in os.walk(LUTROOT):
+                print root, dirs, files
+                if not svndir.search(root) and len(files) > 0:
+                    lutmodules = map((lambda d: slash.sub('.','/'.join([root,d]))),\
+                                     filter((lambda d: not svndir.search(d)), dirs))
+                    ADCONFIG_MODULES.extend( lutmodules )
+
 
 SUBMODULES = []
 SUBMODULES.extend(ASTRODATA_MODULES)
@@ -79,6 +95,7 @@ SUBMODULES.extend(RS_MODULES)
 SUBMODULES.extend(GEMPY_MODULES)
 SUBMODULES.extend(RECIPE_MODULES)
 SUBMODULES.extend(PIF_MODULES)
+SUBMODULES.extend(ADCONFIG_MODULES)
 #SUBMODULES.extend(IQTOOL_MODULES)
 
 
@@ -108,6 +125,7 @@ for p in ADLIB_PACKAGES:
     PACKAGE_DATA['astrodata_'+p] = []
     for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'ADCONFIG_'+p,'lookups')):
         if not svndir.search(root) and len(files) > 0:
+            files = [f for f in files if fitsfile.search(f)]
             dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
             PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
     for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'ADCONFIG_'+p,'descriptors')):
@@ -115,10 +133,6 @@ for p in ADLIB_PACKAGES:
             dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
             PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
     for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'ADCONFIG_'+p,'classifications')):
-        if not svndir.search(root) and len(files) > 0:
-            dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
-            PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
-    for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'ADCONFIG_'+p,'structures')):
         if not svndir.search(root) and len(files) > 0:
             dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
             PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
