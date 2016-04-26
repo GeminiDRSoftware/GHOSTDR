@@ -17,8 +17,8 @@ blue.simulate_frame()
 
 import math
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+# import matplotlib.pyplot as plt
+# import matplotlib.cm as cm
 import optics
 import os
 import pdb
@@ -202,7 +202,7 @@ class Arm():
         x_int = np.zeros( (nm,self.szy) )
         wave_int = np.zeros((nm,self.szy) )
         blaze_int = np.zeros((nm,self.szy) )
-        plt.clf()
+        # plt.clf()
         for m in range(self.m_min,self.m_max+1):
             ww = np.where(ms == m)[0]
             y_int_m = np.arange( np.max([np.min(ypx[ww]).astype(int),-self.szy/2]),\
@@ -211,9 +211,9 @@ class Arm():
             x_int[m-self.m_min,ix] = np.interp(y_int_m,ypx[ww],xpx[ww])
             wave_int[m-self.m_min,ix] = np.interp(y_int_m,ypx[ww],wave[ww])
             blaze_int[m-self.m_min,ix] = np.interp(y_int_m,ypx[ww],np.sinc(order_frac[ww])**2)
-            plt.plot(x_int[m-self.m_min,ix],y_int_m)
-        plt.axis( (-self.szx/2,self.szx/2,-self.szx/2,self.szx/2) )
-        plt.draw()
+            # plt.plot(x_int[m-self.m_min,ix],y_int_m)
+        # plt.axis( (-self.szx/2,self.szx/2,-self.szx/2,self.szx/2) )
+        # plt.draw()
         return x_int,wave_int,blaze_int,{'ccdx':ccdx,'ccdy':ccdy,'xpix_offset':xpix_offset,'mean_v':mean_v}
 
     def spectral_format_with_matrix(self):
