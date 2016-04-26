@@ -10,5 +10,8 @@ set -e
 # If this is a release version then use a real version number, otherwise make up a fake one to identify the build.
 cd ${WORKSPACE}/hg
 
+# Run pylint over our codebase
+/usr/local/python-2.7.1/bin/pylint simulator/pyghost/pyghost
+
 # Now we build everything
 # make
