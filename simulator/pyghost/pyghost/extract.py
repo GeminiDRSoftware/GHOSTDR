@@ -134,7 +134,7 @@ class Extractor():
                 print("ERROR: Must input data or file")
             else:
                 #Transpose the data from the start.
-                data = pyfits.getdata(file).T
+                data = np.array(pyfits.getdata(file)).T
         
         ny = self.x_map.shape[1]
         nm = self.x_map.shape[0]
@@ -238,7 +238,7 @@ class Extractor():
                 print("ERROR: Must input data or file")
             else:
                 #Transpose the data from the start.
-                data = pyfits.getdata(file).T
+                data = np.array(pyfits.getdata(file)).T
 
         ny = self.x_map.shape[1]
         nm = self.x_map.shape[0]
@@ -264,9 +264,10 @@ class Extractor():
                 profile = self.sim_profile
             else:
                 print("Only sim lenslet profile available for 2D extraction so far...")
-                raise userwarning
+                raise UserWarning
             nx_cutout = 2*int( (np.max(offsets) - np.min(offsets))/2 ) + 2
             ny_cutout = 2*int(nx_cutout * np.nanmax(np.abs(self.slit_tilt)) / 2) + 3
+            last_pixel_weights = None
             for j in range(ny):
                 phi = np.zeros( (ny_cutout,nx_cutout,no) )
                 phi1d = np.zeros( (ny_cutout,nx_cutout,no) )
