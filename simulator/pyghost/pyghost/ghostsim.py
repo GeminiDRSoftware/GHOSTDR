@@ -444,7 +444,7 @@ class Arm(object):
                                 xoffset[i], axis=1) * h_long
             im_cutout = im_cutout[szy/2-cutout_hw:szy/2+cutout_hw,
                                   szx/2-cutout_hw:szx/2+cutout_hw]
-            prof = optics.azimuthalAverage(im_cutout, returnradii=True,
+            prof = optics.azimuthal_average(im_cutout, returnradii=True,
                                            binsize=1)
             prof = (prof[0], prof[1] * flux)
             xprof = np.append(np.append(0, prof[0]), np.max(prof[0])*2)
@@ -563,8 +563,9 @@ class Arm(object):
         thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))
         thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
                                 mode='same')
-        # Make the peak flux equal to 10
-        thar_flux /= 0.1*np.max(thar_flux)
+        # Make the peak flux equal to 3
+        # FIXME I don't know the real flux of the ThAr lamp
+        thar_flux /= np.max(thar_flux) / 3.0
         return np.array([thar_wave/1e4, thar_flux])
 
     def sky_background(self, mode):
@@ -616,7 +617,8 @@ class Arm(object):
                        rv_thar=0.0, flux=1e2, rnoise=3.0, gain=[1.0],
                        bias_level=10, overscan=32, namps=[1, 1],
                        use_thar=True, mode='high', add_cosmic=True,
-                       add_sky=True, return_image=False, thar_flatlamp=False):
+                       add_sky=True, return_image=False, thar_flatlamp=False,
+                       obstype=None):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -701,6 +703,10 @@ class Arm(object):
         if np.isscalar(rnoise):
             rnoise = np.ones(namps[0]*namps[1]) * rnoise
 
+        # Make sure duration is a float so that it doesn't mess
+        # up our calculations later on
+        duration = float(duration)
+
         if mode == 'high':
             slit_fluxes = np.ones(19)*0.37
             slit_fluxes[6:13] = 0.78
@@ -771,6 +777,7 @@ class Arm(object):
             # A shield that only allows rays that originate within 10 degrees
             # of the zenith.
             # Pixel size of 15 x 15 x 16 um
+            # FIXME Mike says the red detector is 4x thicker than the blue
             image += cosmic.cosmic(image.shape, duration, 10, 2.0, False,
                                    [15, 15, 16])
 
@@ -794,7 +801,7 @@ class Arm(object):
             ccdsecy[i, 0] = current_size
             current_size += im_amp.shape[0]
             ccdsecy[i, 1] = current_size
-            newimages.extend(np.array_split(image, namps[1], axis=1))
+            newimages.extend(np.array_split(im_amp, namps[1], axis=1))
         images = newimages
         current_size = 0
         for i, im_amp in enumerate(images[0:namps[1]]):
@@ -826,13 +833,21 @@ class Arm(object):
                 newimages.append(i)
             images = newimages
 
-        # FIXME should convert to unsigned short here,
-        # and deal with saturation.
+        # Convert to unsigned short, and deal with saturation
+        newimages = []
+        saturation = np.iinfo(np.uint16).max
+        for im_amp in images:
+            im_amp[im_amp > saturation] = saturation
+            newimages.append(np.asarray(im_amp, dtype=np.uint16))
+        images = newimages
 
         # Now create our fits image!
         # By adding the DETSIZE and DETSEC keywords we can open the
         # raw image in ds9 as an IRAF mosaic.
         hdr = pf.Header()
+        hdr['INSTRUME'] = 'GHOST'
+        hdr['CAMERA'] = self.arm.upper()
+        hdr['OBSTYPE'] = obstype
         hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
         for i, im_amp in enumerate(images):
