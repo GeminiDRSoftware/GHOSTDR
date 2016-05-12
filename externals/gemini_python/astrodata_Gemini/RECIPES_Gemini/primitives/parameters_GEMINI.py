@@ -16,6 +16,13 @@
         "userOverride"  : True,
         "uiLevel"       : "UIBASIC",
         },
+    "illum_mask":{
+        "default"       : False,
+        "type"          : "bool",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
     },
  "addMDF":{
     "suffix":{
@@ -158,6 +165,29 @@
     "trim_data":{
         "default"       : False,
         "type"          : "bool",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    },
+ "applyDQPlane":{
+    "suffix":{
+        "default"       : "_dqPlaneApplied",
+        "type"          : "str",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    "replace_flags":{
+        "default"       : 255,
+        "type"          : "int",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    "replace_value":{
+        "default"       : "median",
+        "type"          : "str",
         "recipeOverride": True,
         "userOverride"  : True,
         "uiLevel"       : "UIBASIC",
@@ -351,6 +381,13 @@
         "userOverride"  : True, 
         "uiLevel"       : "UIBASIC",
         },
+    "mask":{
+        "default"       : False,
+        "type"          : "bool",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
     "max_sources":{
         "default"       : 50,
         "type"          : "int",
@@ -375,6 +412,13 @@
     "threshold":{
         "default"       : 3.0,
         "type"          : "float",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    "set_saturation":{
+        "default"       : False,
+        "type"          : "bool",
         "recipeOverride": True,
         "userOverride"  : True,
         "uiLevel"       : "UIBASIC",

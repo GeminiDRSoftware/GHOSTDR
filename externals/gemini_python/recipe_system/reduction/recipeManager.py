@@ -4,10 +4,10 @@
 #                                                        recipe_system.reduction
 #                                                               RecipeManager.py
 # ------------------------------------------------------------------------------
-# $Id: recipeManager.py 5201 2015-04-06 16:28:32Z kanderson $
+# $Id: recipeManager.py 5714 2016-04-09 02:03:47Z klabrie $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5201 $'[11:-2]
-__version_date__ = '$Date: 2015-04-06 06:28:32 -1000 (Mon, 06 Apr 2015) $'[7:-2]
+__version__      = '$Revision: 5714 $'[11:-2]
+__version_date__ = '$Date: 2016-04-09 12:03:47 +1000 (Sat, 09 Apr 2016) $'[7:-2]
 # ------------------------------------------------------------------------------
 # This module operates like a singleton
 import os
@@ -184,7 +184,7 @@ class RecipeLibrary(object):
 
         elif dataset != None:
             gd, bnc = open_if_name(dataset)
-            types = gd.type()
+            types = gd.type(prune=True)
             rec = None
             for typ in types:
                 rec = self.retrieve_recipe(name, astrotype=typ, inherit=False)
@@ -210,43 +210,35 @@ class RecipeLibrary(object):
         Get list of recipes associated with all the types that apply to this 
         dataset.
         """
-        if dataset != None and astrotype != None:
+        if dataset is not None and astrotype is not None:
             raise RecipeError("dataset AND astrotype set not allowed")
-        if dataset == None and astrotype == None:
+        if dataset is None and astrotype is None:
             raise RecipeError("must pass dataset OR explicit astrotype")
-        byfname = False
-        if dataset:
-            if  type(dataset) == str:
-                astrod = AstroData(dataset)
-                byfname = True
-            elif type(dataset) == AstroData:
-                byfname = False
-                astrod = dataset
+
+        if dataset is not None:
+            if isinstance(dataset, str):
+                ad = AstroData(dataset)
+                types = ad.type(prune=True)
+                ad.close()
+            elif isinstance(dataset, AstroData):
+                types = dataset.type(prune=True)
             else:
                 raise BadArgument()
-            # get the types
-            types = astrod.type(prune=True)
         else:
             types = [astrotype]
+
         # look up recipes, fill list
         reclist = []
         recdict = {}
 
         for typ in types:
-            if False:
-                if typ in centralAstroTypeRecipeIndex.keys():
-                    recnames = centralAstroTypeRecipeIndex[typ]
-
             recnames = inherit_index(typ, centralAstroTypeRecipeIndex)
-
             if recnames:
                 reclist.extend(recnames[1])
                 recdict.update({recnames[0]: recnames[1]})
+
         reclist = list(set(reclist))
 
-        if byfname:
-            astrod.close()
-        
         if collate == False:
             return reclist
         else:
@@ -461,8 +453,11 @@ def %(name)s(self,cfgObj):
         for line in recipelines:
             line = re.sub("#.*?$", "",line)
             line = line.strip()
+            if not line:
+                continue
+
             # PARSE PRIMITIVE ARGUMENT LIST
-            # take parenthesis off, make arg dict with it
+            # remove parens, make arg dict with it
             m = re.match("(?P<prim>.*?)\((?P<args>.*?)\)$", line)
             d = {}
             if m:
@@ -484,18 +479,13 @@ def %(name)s(self,cfgObj):
                         if len(selem)>0:
                             d.update({selem:True})
                 line = prim
-            # need to add dictionary to context
-            
-            if line == "" or line[0] == "#":
-                continue
 
+            # need to add dictionary to context
             newl = newl_str % {"parms":repr(d),"line":line}
             lines += newl
-            
-        rets = templ % { "name" : name,
-                         "lines" : lines,
-                       }
+        rets = templ % { "name" : name, "lines" : lines, }
         return rets
+
         
     def compile_recipe(self, name, recipeinpython):
         exec(recipeinpython)

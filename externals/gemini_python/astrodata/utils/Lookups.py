@@ -4,10 +4,10 @@
 #                                                                astrodata.utils
 #                                                                     Lookups.py
 # ------------------------------------------------------------------------------
-# $Id: Lookups.py 5274 2015-06-11 14:39:37Z kanderson $
+# $Id: Lookups.py 5716 2016-04-11 21:49:47Z klabrie $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5274 $'[11:-2]
-__version_date__ = '$Date: 2015-06-11 04:39:37 -1000 (Thu, 11 Jun 2015) $'[7:-2]
+__version__      = '$Revision: 5716 $'[11:-2]
+__version_date__ = '$Date: 2016-04-12 07:49:47 +1000 (Tue, 12 Apr 2016) $'[7:-2]
 # ------------------------------------------------------------------------------
 import os
 import pyfits
@@ -41,8 +41,12 @@ def get_lookup_table(modname, *lookup):
     modname = ConfigSpace.lookup_path(modname)
     if ".py" in modname:
         f = file(modname)
-      
-        exec(f)
+        try:
+            exec(f)
+        except:
+            import traceback
+            traceback.print_exc()
+            raise
         f.close()
 
         if len(lookup) == 1:

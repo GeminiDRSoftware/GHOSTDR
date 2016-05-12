@@ -188,7 +188,7 @@ class GMOSPrimitives(GEMINIPrimitives):
                     ext.set_key_value("DATASEC",new_datasec,
                                       comment=self.keyword_comments["DATASEC"])
 
-            gt.mark_history(adinput=ad_out, keyword=timestamp_key)
+            gt.mark_history(adinput=ad_out, primname=self.myself(), keyword=timestamp_key)
             adoutput_list.append(ad_out)
         rc.report_output(adoutput_list)
         yield rc
@@ -244,21 +244,25 @@ class GMOSPrimitives(GEMINIPrimitives):
                                 correct_image_extensions=False)
 
             # Pixel scale
-            gt.update_key_from_descriptor(
-              adinput=ad, descriptor="pixel_scale()", extname="pixel_exts")
+            gt.update_key_from_descriptor(adinput=ad, descriptor="pixel_scale()",
+                                          extname="pixel_exts",
+                                          keyword_comments=self.keyword_comments)
             
             # Read noise
-            gt.update_key_from_descriptor(
-              adinput=ad, descriptor="read_noise()", extname="pixel_exts")
+            gt.update_key_from_descriptor(adinput=ad, descriptor="read_noise()",
+                                          extname="pixel_exts",
+                                          keyword_comments=self.keyword_comments)
             
             # Gain setting
-            gt.update_key_from_descriptor(
-              adinput=ad, descriptor="gain_setting()", extname="pixel_exts")
+            gt.update_key_from_descriptor(adinput=ad,descriptor="gain_setting()",
+                                          extname="pixel_exts",
+                                          keyword_comments=self.keyword_comments)
             
             # Gain
-            gt.update_key_from_descriptor(
-              adinput=ad, descriptor="gain()", extname="pixel_exts")
-            
+            gt.update_key_from_descriptor(adinput=ad, descriptor="gain()", 
+                                          extname="pixel_exts",
+                                          keyword_comments=self.keyword_comments)
+
             # Bias level
             if "qa" in rc.context:
                 # Determine an estimate of the bias level
@@ -267,19 +271,22 @@ class GMOSPrimitives(GEMINIPrimitives):
                 bias_level = gdc.get_bias_level(adinput=ad, estimate=False)
             
             gt.update_key(adinput=ad, keyword="RAWBIAS", value=bias_level,
-                          comment=None, extname="pixel_exts")
+                          comment=None, extname="pixel_exts",
+                          keyword_comments=self.keyword_comments)
             
             # Saturation level
-            gt.update_key_from_descriptor(
-              adinput=ad, descriptor="saturation_level()", extname="SCI")
+            gt.update_key_from_descriptor(adinput=ad, extname="SCI", 
+                                          descriptor="saturation_level()",
+                                          keyword_comments=self.keyword_comments)
             
             # Dispersion axis
             if "SPECT" in ad.types:
-                gt.update_key_from_descriptor(
-                  adinput=ad, descriptor="dispersion_axis()", extname="SCI")
+                gt.update_key_from_descriptor(adinput=ad, extname="SCI",
+                                              descriptor="dispersion_axis()", 
+                                              keyword_comments=self.keyword_comments)
             
             # Add the appropriate time stamps to the PHU
-            gt.mark_history(adinput=ad, keyword=timestamp_key)
+            gt.mark_history(adinput=ad, primname=self.myself(), keyword=timestamp_key)
             
             # Change the filename
             ad.filename = gt.filename_updater(adinput=ad, suffix=rc["suffix"], 
@@ -360,7 +367,7 @@ class GMOSPrimitives(GEMINIPrimitives):
                 attach_mdf = False
             
             # Add the appropriate time stamps to the PHU
-            gt.mark_history(adinput=ad, keyword=timestamp_key)
+            gt.mark_history(adinput=ad, primname=self.myself(), keyword=timestamp_key)
             
             # Change the filename
             ad.filename = gt.filename_updater(adinput=ad, suffix=rc["suffix"], 
@@ -462,8 +469,8 @@ class GMOSPrimitives(GEMINIPrimitives):
                 # the science data
                 # For a GMOS example, this allows a full frame bias to
                 # be used for a CCD2-only science frame. 
-                bias = gt.clip_auxiliary_data(adinput=ad, aux=bias, 
-                                              aux_type="cal")[0]
+                bias = gt.clip_auxiliary_data(adinput=ad, aux=bias, aux_type="cal",
+                                        keyword_comments=self.keyword_comments)[0]
 
                 # Check again, but allow it to fail if they still don't match
                 gt.check_inputs_match(ad1=ad, ad2=bias, 
@@ -481,7 +488,7 @@ class GMOSPrimitives(GEMINIPrimitives):
                                  comment=self.keyword_comments["BIASIM"])
             
             # Add the appropriate time stamps to the PHU
-            gt.mark_history(adinput=ad, keyword=timestamp_key)
+            gt.mark_history(adinput=ad, primname=self.myself(), keyword=timestamp_key)
             
             # Change the filename
             ad.filename = gt.filename_updater(adinput=ad, suffix=rc["suffix"], 
@@ -564,7 +571,7 @@ class GMOSPrimitives(GEMINIPrimitives):
             if objmask is not None:
                 adout.append(objmask)
             
-            gt.mark_history(adinput=adout, keyword=timestamp_key)
+            gt.mark_history(adinput=adout, primname=self.myself(), keyword=timestamp_key)
             adout.refresh_types()
             adoutput_list.append(adout)
         
@@ -613,7 +620,8 @@ class GMOSPrimitives(GEMINIPrimitives):
             log.fullinfo("Trimming data to data section:")
             old_shape = " ".join(
                 ["%i,%i" % ext.data.shape for ext in ad["SCI"]])
-            ad = gt.trim_to_data_section(adinput=ad)[0]
+            ad = gt.trim_to_data_section(adinput=ad, 
+                                         keyword_comments=self.keyword_comments)[0]
             new_shape = " ".join(
                 ["%i,%i" % ext.data.shape for ext in ad["SCI"]])
             if old_shape!=new_shape:
@@ -697,9 +705,9 @@ class GMOSPrimitives(GEMINIPrimitives):
                                     chip_gap.astype(np.float32))
                             if dqext is not None:
                                 # For the DQ plane, set the gap value
-                                # to 1 (bad pixel)
+                                # to 16 (no data)
                                 dq_data_list.append(
-                                    chip_gap.astype(np.int16)+1)
+                                    chip_gap.astype(np.int16)+16)
                             if maskext is not None:
                                 mask_data_list.append(
                                     chip_gap.astype(np.int16))
@@ -947,13 +955,17 @@ class GMOSPrimitives(GEMINIPrimitives):
                     adoutput = _tile_objcat(adinput=ad, adoutput=adoutput, 
                                             mapping_dict=mapping_dict, 
                                             sx_dict=self.sx_default_dict)[0]
+                    
+                # Attach MDF if it exists
+                if ad["MDF"] is not None:
+                    adoutput.append(ad["MDF"])
 
                 # Refresh AstroData types in output file (original ones
                 # were lost when new AD was created)
                 adoutput.refresh_types()
             
             # Add the appropriate time stamps to the PHU
-            gt.mark_history(adinput=adoutput, keyword=timestamp_key)
+            gt.mark_history(adinput=adoutput, primname=self.myself(), keyword=timestamp_key)
 
             # Change the filename
             adoutput.filename = gt.filename_updater(
@@ -1002,14 +1014,16 @@ class GMOSPrimitives(GEMINIPrimitives):
             
             # Trim the data to its data_section descriptor and update
             # keywords to match
-            ad = gt.trim_to_data_section(ad)[0]
+            ad = gt.trim_to_data_section(adinput=ad, 
+                                         keyword_comments=self.keyword_comments)[0]
             
             # Set 'TRIMMED' to 'yes' in the PHU and update the log
             ad.phu_set_key_value("TRIMMED","yes",
                                  comment=self.keyword_comments["TRIMMED"])
 
             # Add the appropriate time stamps to the PHU
-            gt.mark_history(adinput=ad, keyword=timestamp_key)
+            gt.mark_history(adinput=ad, primname=self.myself(), keyword=timestamp_key)
+            ad.refresh_types()
 
             # Change the filename
             ad.filename = gt.filename_updater(adinput=ad, suffix=rc["suffix"], 
@@ -1061,6 +1075,15 @@ class GMOSPrimitives(GEMINIPrimitives):
                 adoutput_list.append(ad)
                 continue
             
+            # Issue a warning message if the data is an image with non-square
+            # binning
+            if 'GMOS_IMAGE' in ad.type():
+                xbin = ad.detector_x_bin()
+                ybin = ad.detector_y_bin()
+                if xbin != ybin:
+                    log.warning("Image {} is {} x {} binned data"
+                                "".format(ad.filename, xbin, ybin))
+                                
             # Get the repair parameter from the reduction context
             repair = rc["repair"]
             
@@ -1090,7 +1113,7 @@ class GMOSPrimitives(GEMINIPrimitives):
                              "contains %d extensions" % (ad.filename, num_ext))
             
             # Add the appropriate time stamps to the PHU
-            gt.mark_history(adinput=ad, keyword=timestamp_key)
+            gt.mark_history(adinput=ad, primname=self.myself(), keyword=timestamp_key)
             
             # Change the filename
             ad.filename = gt.filename_updater(adinput=ad, suffix=rc["suffix"], 

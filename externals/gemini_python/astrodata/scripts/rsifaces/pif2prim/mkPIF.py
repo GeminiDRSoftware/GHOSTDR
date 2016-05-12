@@ -73,7 +73,7 @@ def %(pifname)s(*args, **argv):
             initpy = os.path.join(curpath,"__init__.py")
             if not os.path.exists(initpy):
                 ipf = open(initpy, "w+")
-                ipf.write('#test\nfrom astrodata.mkro import *\n\n')
+                ipf.write('#test\nfrom recipe_system.reduction.mkro import *\n\n')
                 ipf.close()
                 
                 pipf = open(os.path.join(parpath, "__init__.py"), "a+")

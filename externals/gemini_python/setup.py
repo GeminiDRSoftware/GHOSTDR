@@ -29,6 +29,7 @@ from distutils.core import setup
 
 svndir = re.compile('.svn')
 fitsfile = re.compile('.fits$')
+dotpy = re.compile('.py$')
 
 PACKAGENAME = 'gemini_python'
 
@@ -53,9 +54,9 @@ RS_MODULES = ['recipe_system',
               'recipe_system.reduction'
              ]
 # IQTOOL NOT FOR PUBLIC RELEASE, YET
-#IQTOOL_MODULES = ['iqtool',
-#                  'iqtool.iq',
-#                  'iqtool.gemplotlib']
+IQTOOL_MODULES = ['iqtool',
+                  'iqtool.iq',
+                  'iqtool.gemplotlib']
 ADLIB_PACKAGES = ['FITS','Gemini']   # This is be used to form 'astrodata_Gemini' and 'astrodata_FITS'
 RECIPE_MODULES=[]
 PIF_MODULES=[]
@@ -96,7 +97,7 @@ SUBMODULES.extend(GEMPY_MODULES)
 SUBMODULES.extend(RECIPE_MODULES)
 SUBMODULES.extend(PIF_MODULES)
 SUBMODULES.extend(ADCONFIG_MODULES)
-#SUBMODULES.extend(IQTOOL_MODULES)
+SUBMODULES.extend(IQTOOL_MODULES)
 
 
 PACKAGES = []
@@ -126,6 +127,11 @@ for p in ADLIB_PACKAGES:
     for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'ADCONFIG_'+p,'lookups')):
         if not svndir.search(root) and len(files) > 0:
             files = [f for f in files if fitsfile.search(f)]
+            dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
+            PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
+    for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'ADCONFIG_'+p,'lookups','source_detection')):
+        if not svndir.search(root) and len(files) > 0:
+            files = [f for f in files if not dotpy.search(f)]
             dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
             PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
     for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'ADCONFIG_'+p,'descriptors')):

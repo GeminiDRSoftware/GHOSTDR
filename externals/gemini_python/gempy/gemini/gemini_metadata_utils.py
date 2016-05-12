@@ -5,10 +5,10 @@
 #                                                       gemini_metadata_utils.py
 
 # ------------------------------------------------------------------------------
-# $Id: gemini_metadata_utils.py 5313 2015-09-03 19:14:11Z kanderson $
+# $Id: gemini_metadata_utils.py 5716 2016-04-11 21:49:47Z klabrie $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5313 $'[11:-2]
-__version_date__ = '$Date: 2015-09-03 09:14:11 -1000 (Thu, 03 Sep 2015) $'[7:-2]
+__version__      = '$Revision: 5716 $'[11:-2]
+__version_date__ = '$Date: 2016-04-12 07:49:47 +1000 (Tue, 12 Apr 2016) $'[7:-2]
 # ------------------------------------------------------------------------------
 """ Module provides utility functions to manipulate Gemini specific metadata 
 strings. Eg., filter names, time strings, etc.
@@ -233,8 +233,15 @@ def get_key_value_dict(adinput=None, keyword=None, dict_key_extver=False):
             dv = DescriptorValue(keyword_value_dict)
             
             # Create a new dictionary where the key of the dictionary is an
-            # EXTVER integer
-            extver_dict = dv.collapse_by_extver()
+            # EXTVER integer. If the value is a float, hand a precision to 
+            # this function to ensure that the values have not been truncated 
+            # in the last significant figure (as can happen in pyfits and 
+            # astropy.io), making these not match when they do refer to the 
+            # same value
+            if type(keyword_value_dict.values()[0]) is float:
+                extver_dict = dv.collapse_by_extver(precision=10)
+            else:
+                extver_dict = dv.collapse_by_extver()
             
             if not dv.validate_collapse_by_extver(extver_dict):
                 # The validate_collapse_by_extver function returns False if the

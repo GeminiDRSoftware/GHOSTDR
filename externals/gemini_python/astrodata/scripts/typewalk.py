@@ -7,7 +7,7 @@
 # $Id: typewalk.py 5121 2015-02-02 18:10:28Z klabrie $
 # ------------------------------------------------------------------------------
 __version__      = '$Revision: 5121 $'[11:-2]
-__version_date__ = '$Date: 2015-02-02 08:10:28 -1000 (Mon, 02 Feb 2015) $'[7:-2]
+__version_date__ = '$Date: 2015-02-03 05:10:28 +1100 (Tue, 03 Feb 2015) $'[7:-2]
 # ------------------------------------------------------------------------------
 # this script was developed to exercise the AstroDataType class but now serves a
 # general purpose and as  demo for AstroData... see options documentation.

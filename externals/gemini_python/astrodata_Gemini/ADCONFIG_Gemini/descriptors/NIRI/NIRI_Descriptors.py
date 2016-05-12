@@ -94,14 +94,22 @@ class NIRI_DescriptorCalc(GEMINI_DescriptorCalc):
             if count == 0:
                 raise Errors.TableKeyError()
             
-            # Use the utilities function convert_units to convert the central
-            # wavelength value from the input units to the output units
-            ret_central_wavelength = GemCalcUtil.convert_units(
-                input_units=input_units,
-                input_value=float(raw_central_wavelength),
-                output_units=output_units)
         else:
-            raise Errors.DescriptorTypeError()
+            # If imaging, associate the filter name with a central wavelength
+            input_units = "micrometers"
+            filter_table = NIRIFilterWavelength.filter_wavelength
+            filter = str(dataset.filter_name(pretty=True))
+            if filter in filter_table:
+                raw_central_wavelength = filter_table[filter]
+            else:
+                raise Errors.DescriptorTypeError()
+            
+        # Use the utilities function convert_units to convert the central
+        # wavelength value from the input units to the output units
+        ret_central_wavelength = GemCalcUtil.convert_units(
+            input_units=input_units,
+            input_value=float(raw_central_wavelength),
+            output_units=output_units)
         
         # Instantiate the return DescriptorValue (DV) object
         ret_dv = DescriptorValue(ret_central_wavelength,
@@ -660,7 +668,7 @@ class NIRI_DescriptorCalc(GEMINI_DescriptorCalc):
     def wavelength_band(self, dataset, **args):
         if "IMAGE" in dataset.types:
             # If imaging, associate the filter name with a central wavelength
-            filter_table = NIRIFilterWavelength,filter_wavelength
+            filter_table = NIRIFilterWavelength.filter_wavelength
             filter = str(dataset.filter_name(pretty=True))
             if filter in filter_table:
                 ctrl_wave = filter_table[filter]

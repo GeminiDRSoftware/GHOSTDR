@@ -4,7 +4,6 @@ import numpy as np
 from copy import deepcopy
 
 from astrodata.utils import Errors
-from astrodata.utils import Lookups
 from astrodata.utils import logutils
 
 from gempy.gemini import gemini_tools as gt
@@ -15,6 +14,8 @@ from astrodata_Gemini.ADCONFIG_Gemini.lookups import CCConstraints
 from astrodata_Gemini.ADCONFIG_Gemini.lookups import IQConstraints
 
 from primitives_GENERAL import GENERALPrimitives
+from scipy.special import j1
+from astropy.stats import sigma_clip
 
 # ------------------------------------------------------------------------------
 class QAPrimitives(GENERALPrimitives):
@@ -107,6 +108,8 @@ class QAPrimitives(GENERALPrimitives):
             # Get the filter name and the corresponding BG band definition
             # and the requested band
             filter = str(ad.filter_name(pretty=True))
+            if filter in ['k(short)', 'kshort', 'K(short)', 'Kshort']:
+                filter = 'Ks'
             if filter in bgConstraints:
                 bg_band_limits = bgConstraints[filter]
             else:
@@ -276,7 +279,7 @@ class QAPrimitives(GENERALPrimitives):
                 else:
                     log.stdinfo("No nominal photometric zeropoint "
                                  "available for %s[SCI,%d], filter %s" %
-                                 (ad.filename,sciext.extver(),filter))
+                                 (ad.filename,sciext.extver(),ad.filter_name(pretty=True)))
                     bg_am = None
                     std_am = None
 
@@ -354,7 +357,7 @@ class QAPrimitives(GENERALPrimitives):
                                  (sci_bg,sci_std,bunit)).rjust(rlen))
                     if bg_am is not None:
                         log.stdinfo(ind + ("Mag / sq arcsec in %s:" % 
-                                     filter).ljust(llen) + 
+                                     ad.filter_name(pretty=True)).ljust(llen) + 
                                     ("%.2f +/- %.2f" % 
                                      (bg_am,std_am)).rjust(rlen))
                     log.stdinfo(ind + bg_str)
@@ -392,7 +395,7 @@ class QAPrimitives(GENERALPrimitives):
                                  (all_bg,all_std,bunit)).rjust(rlen))
                     if all_bg_am is not None:
                         log.stdinfo(ind + ("Mag / sq arcsec in %s:"% 
-                                     filter).ljust(llen) + 
+                                     ad.filter_name(pretty=True)).ljust(llen) + 
                                     ("%.2f +/- %.2f" % 
                                      (all_bg_am, all_std_am)).rjust(rlen))
                     log.stdinfo(ind + bg_str)
@@ -415,10 +418,11 @@ class QAPrimitives(GENERALPrimitives):
                     rc.report_qametric(ad, "bg", qad)
 
             # Report measurement to fitsstore
-            fitsdict = gt.fitsstore_report(ad,rc,"sb",info_dict)
+            fitsdict = gt.fitsstore_report(ad, rc, "sb", info_dict, 
+                                           self.calurl_dict)
 
             # Add the appropriate time stamps to the PHU
-            gt.mark_history(adinput=ad, keyword=timestamp_key)
+            gt.mark_history(adinput=ad, primname=self.myself(), keyword=timestamp_key)
 
             # Change the filename
             ad.filename = gt.filename_updater(adinput=ad, suffix=rc["suffix"], 
@@ -520,35 +524,37 @@ class QAPrimitives(GENERALPrimitives):
             # To pass to fitsstore report function
             info_dict = {}
 
+            # Need to get the nominal atmospheric extinction AS PYTYPE!
+            nom_at_ext = ad.nominal_atmospheric_extinction().as_pytype()
+
+            # Need to correct the mags for the exposure time
+            et = ad.exposure_time().as_pytype()
+
+            # If it's a funky nod-and-shuffle imaging acquistion,
+            # then need to scale exposure time
+            if "GMOS_NODANDSHUFFLE" in ad.types:
+                log.warning("Imaging Nod-And-Shuffle. Photometry may be dubious")
+                # AFAIK the number of nod_cycles isn't actually relevant -
+                # there's always 2 nod positions, thus the exposure
+                # time for any given star is half the total
+                et /= 2.0
+                
             for objcat in objcats:
                 extver = objcat.extver()
                 mags = objcat.data["MAG_AUTO"]
                 mag_errs = objcat.data["MAGERR_AUTO"]
                 flags = objcat.data["FLAGS"]
                 iflags = objcat.data["IMAFLAGS_ISO"]
+                niflags = objcat.data["NIMAFLAGS_ISO"]
                 isoarea = objcat.data["ISOAREA_IMAGE"]
-                ids = objcat.data["NUMBER"]
+                ids = objcat.data["REF_NUMBER"]
                 if np.all(mags==-999):
                     log.warning("No magnitudes found in %s[OBJCAT,%d]"%
                                 (ad.filename,extver))
                     continue
 
-                # Need to correct the mags for the exposure time
-                et = ad.exposure_time()
-
-                # If it's a funky nod-and-shuffle imaging acquistion,
-                # then need to scale exposure time
-                if "GMOS_NODANDSHUFFLE" in ad.types:
-                    log.warning("Imaging Nod-And-Shuffle. Photometry may be dubious")
-                    # AFAIK the number of nod_cycles isn't actually relevant -
-                    # there's always 2 nod positions, thus the exposure
-                    # time for any given star is half the total
-                    et /= 2.0
                 magcor = 2.5*math.log10(et)
                 mags = np.where(mags==-999,mags,mags+magcor)
-
-                # Need to get the nominal atmospheric extinction
-                nom_at_ext = ad.nominal_atmospheric_extinction()
 
                 refmags = objcat.data["REF_MAG"]
                 refmag_errs = objcat.data["REF_MAG_ERR"]
@@ -559,59 +565,43 @@ class QAPrimitives(GENERALPrimitives):
 
                 zps_type = type(refmags[0]) 
 
+                # Calculate zeropoints for each object
                 zps = refmags - mags - nom_at_ext
 
                 # Is this mathematically correct? These are logarithmic
                 # values... (PH)
                 # It'll do for now as an estimate at least
-                zperrs = np.sqrt((refmag_errs * refmag_errs) + (mag_errs * mag_errs))
+                zperrs = np.sqrt((refmag_errs * refmag_errs) +
+                                 (mag_errs * mag_errs))
  
-                # OK, trim out bad values
-                zps = np.where(isoarea >= 30, zps, None)
-                zps = np.where((zps > -500), zps, None)
-                zps = np.where((flags == 0), zps, None)
-                zps = np.where((mags < 90), zps, None)
-                zperrs = np.where(isoarea >= 30, zperrs, None)
-                zperrs = np.where((zps > -500), zperrs, None)
-                zperrs = np.where((flags == 0), zperrs, None)
-                ids = np.where(isoarea >= 30, ids, None)
-                ids = np.where((zps > -500), ids, None)
-                ids = np.where((flags == 0), ids, None)
-                if not np.all(iflags==-999):
-                    # All DQ flags are -999 if sextractor was run without
-                    # a DQ plane; don't use them in this case
-                    zps = np.where((iflags == 0), zps, None)
-                    zperrs = np.where((iflags == 0), zperrs, None)
-                    ids = np.where((iflags == 0), ids, None)
+                # Requirements for an object to be used
+                # NaNs in zps get converted to zero here to avoid an error
+                # but will be eliminated at the end
+                ok = np.logical_and.reduce((np.nan_to_num(zps)>-500,
+                                            flags==0, mags<90))
+                if not np.all(iflags == -999):
+                    # Keep objects if pristine or <2% bad/non-linear pixels
+                    ok2 = np.logical_or(iflags==0,
+                        np.logical_and((iflags & 4)==0, niflags<0.02*isoarea))
+                    ok = np.logical_and(ok, ok2)
+                # Get rid of NaNs
+                ok = np.logical_and(ok, np.logical_not(
+                            np.logical_or(np.isnan(zperrs), np.isnan(zps))))
+                zps = zps[ok]
+                zperrs = zperrs[ok]
+                ids = ids[ok]
 
                 # Trim out where zeropoint error > err_threshold
                 if len(filter(lambda z: z is not None, zps)) <= 5:
                     # 5 sources or less.  Beggars are not choosers.
                     # Raise the threshold a bit
-                    err_threshold = 0.2
+                    ok = zperrs<0.2
                 else:
                     # Use the default threshold
-                    err_threshold = 0.1
-                zps = np.where((zperrs < err_threshold), zps, None)
-                zperrs = np.where((zperrs < err_threshold), zperrs, None)
-                ids = np.where((zperrs < err_threshold), ids, None)
-                
-                # Discard the None values we just patched in
-                zps = zps[np.flatnonzero(zps)]
-                # While all the elements in zps are now 'float', the
-                # array dtype remains 'object'.  (Note that the type
-                # is set to 'object' by np.where because of the 'None's
-                # that are being put in zps.)  It is not clear why the
-                # array stays of dtype 'object' once the 'None's are gone.
-                # When something similar is done from the Python interactive
-                # shell, once the 'None's are gone, the array dtype gets
-                # automatically set to np.float64.
-                # All this is important because zps.mean() will fail later
-                # if zps is dtype 'object' and the elements are Python
-                # 'float's.
-                zps = np.asarray(zps, dtype=zps_type)
-                zperrs = zperrs[np.flatnonzero(zperrs)]
-                ids = ids[np.flatnonzero(ids)]
+                    ok = zperrs<0.1
+                zps = zps[ok]
+                zperrs = zperrs[ok]
+                ids = ids[ok]
 
                 # OK, at this point, zps and zperrs are arrays of all
                 # the zeropoints and their errors from this OBJCAT
@@ -689,6 +679,10 @@ class QAPrimitives(GENERALPrimitives):
                              (cloud, zpe)).rjust(rlen))
 
                 # Store the number in the QA dictionary to report to the RC
+                # Ensure these are regular floats for JSON (thanks to PH)
+                zp = float(zp)
+                zpe = float(zpe)
+                cloud = float(cloud)
                 if not qad.has_key("zeropoint"):
                     qad["zeropoint"] = {}
                 ampname = ad["SCI", extver].get_key_value("AMPNAME")
@@ -861,7 +855,8 @@ class QAPrimitives(GENERALPrimitives):
                     info_dict[key]["comment"] = qad["comment"]
 
                 # Also report to fitsstore
-                fitsdict = gt.fitsstore_report(ad,rc,"zp",info_dict)
+                fitsdict = gt.fitsstore_report(ad, rc, "zp", info_dict, 
+                                               self.calurl_dict)
 
             else:
                 ind = " " * rc["logindent"]
@@ -869,7 +864,7 @@ class QAPrimitives(GENERALPrimitives):
                 log.stdinfo(ind+"Could not measure zeropoint - no catalog sources associated")
 
             # Add the appropriate time stamps to the PHU
-            gt.mark_history(adinput=ad, keyword=timestamp_key)
+            gt.mark_history(adinput=ad, primname=self.myself(), keyword=timestamp_key)
 
             # Change the filename
             ad.filename = gt.filename_updater(adinput=ad, suffix=rc["suffix"], 
@@ -988,6 +983,19 @@ class QAPrimitives(GENERALPrimitives):
         mean_ellips = []
         for ad in rc.get_inputs_as_astrodata():
 
+            # Check that the data is not an image with non-square binning
+            if 'IMAGE' in ad.type():
+                xbin = ad.detector_x_bin()
+                ybin = ad.detector_y_bin()
+                if xbin != ybin:
+                    log.warning("No IQ measurement possible, image {} is {} x "
+                                "{} binned data".format(ad.filename, xbin, ybin))
+                    if display:
+                        iq_overlays.append(None)
+                    mean_fwhms.append(None)
+                    mean_ellips.append(None)
+                    continue
+
             airmass = ad.airmass()
             wvband = ad.wavelength_band()
 
@@ -1019,6 +1027,7 @@ class QAPrimitives(GENERALPrimitives):
             strehl = None
             is_ao = ad.is_ao().as_pytype()
             if is_ao:
+                wvband = "AO"
                 ao_seeing = ad.ao_seeing().as_pytype()
                 if not ao_seeing:
                     log.warning("No AO-estimated seeing found for this AO "
@@ -1029,8 +1038,10 @@ class QAPrimitives(GENERALPrimitives):
                                 "calculation")
 
                 ao_insts = {'GSAOI_IMAGE', 'NIRI_IMAGE', 'GNIRS_IMAGE'}
-                if (typ in ao_insts for typ in ad.types):
-                    strehl, strehl_std = _strehl(ad, good_source)
+                if any(typ in ao_insts for typ in ad.types):
+                    if len(good_source) > 0:
+                        #strehl, strehl_std = _lucas_strehl(ad, good_source)
+                        strehl, strehl_std = _strehl(ad, good_source)
             else:
                 ao_seeing = None
 
@@ -1070,19 +1081,33 @@ class QAPrimitives(GENERALPrimitives):
                         continue
                     else:
                         ell_warn = ""
+                        single_warn = ""
                 else:
                 # Mean of clipped FWHM and ellipticity
-                    mean_fwhm = src["fwhm_arcsec"].mean()
-                    std_fwhm = src["fwhm_arcsec"].std()
+                    # Use weights if they exist
+                    if "weight" in src.dtype.names:
+                        mean_fwhm = np.average(src["fwhm_arcsec"],
+                                                  weights=src["weight"])
+                        std_fwhm = np.sqrt(np.average((src["fwhm_arcsec"] -
+                                    mean_fwhm)**2, weights=src["weight"]))
+                    else:
+                        mean_fwhm = src["fwhm_arcsec"].mean()
+                        std_fwhm = src["fwhm_arcsec"].std()
                     if is_image:
                         mean_ellip = src["ellipticity"].mean()
                         std_ellip = src["ellipticity"].std()
                     else:
                         mean_ellip = None
                         std_ellip = None
+                    
+                    # Warn if the IQ measurement is taken from a single source    
                     if len(src)==1:
                         log.warning("Only one source found. IQ numbers may "
                                     "not be accurate.")
+                        single_warn = "\n    " + \
+                        "WARNING: single source IQ measurement - no error available".rjust(dlen)
+                    else:
+                        single_warn = ""                    
 
                     # Warn if high ellipticity
                     if is_image and mean_ellip>0.1:
@@ -1095,11 +1120,6 @@ class QAPrimitives(GENERALPrimitives):
                     else:
                         ell_warn = ""                    
 
-                # Apply the horrible 8% sextractor -> imexam kludge
-                #log.warning("Applying scale factor of 1:/1.08 to scale from "\
-                #            "sextractor value to profile fit (imexam) value")
-                #mean_fwhm /= 1.08
-                
                 # Find the corrected FWHM. For AO observations, the IQ 
                 # constraint band is taken from the AO-estimated seeing
                 #KL TODO: This below is a messy bit of logic.  Needs to be
@@ -1108,7 +1128,26 @@ class QAPrimitives(GENERALPrimitives):
                     uncorr_iq = float(mean_fwhm)
                     uncorr_iq_std = float(std_fwhm)
                 else:
-                    uncorr_iq = ao_seeing
+                    if "GSAOI_IMAGE" in ad.types:
+                        if len(src) == 0:
+                            continue
+                        wavelength = ad.central_wavelength(asMicrometers=True)
+                        magic_number = np.log10(strehl *  mean_fwhm**1.5 /
+                                                wavelength**2.285)
+                        # Final constant is ln(10)
+                        magic_number_std = np.sqrt((strehl_std/strehl)**2 +
+                             (1.5*std_fwhm/mean_fwhm)**2 + 0.15**2) / 2.3026
+                        if magic_number_std == 0.0:
+                            magic_number_std = 0.1
+                        #log.fullinfo("MAGIC: %f %f %f %f %f" % (magic_number, magic_number_std, mean_fwhm, strehl))
+                        if mean_fwhm > 0.2:
+                            log.warning("Very poor image quality")
+                        elif abs((magic_number + 3.00) / magic_number_std) > 3:
+                            log.warning("Strehl and FWHM estimates are inconsistent")
+                        # More investigation required here
+                        uncorr_iq = float(7.0*mean_fwhm)
+                    else:
+                        uncorr_iq = ao_seeing
                     uncorr_iq_std = None
                 if airmass.is_none():
                     log.warning("Airmass not found, not correcting to zenith")
@@ -1148,8 +1187,8 @@ class QAPrimitives(GENERALPrimitives):
                                  ).ljust(llen) + ("%.3f %s %.3f" % (
                                 mean_ellip, pm, std_ellip)).rjust(rlen)
                     else:
-                        srcStr = "Spectrum centered at row %d used to measure " \
-                                 "IQ." % p.mean(src["y"])                             
+                        srcStr = "IQ measured from spectra centered at rows " \
+                                 + str(np.unique(src["y"]))
                 if corr_iq is not None:
                     if corr_iq_std is not None:
                         csStr = ("Zenith-corrected FWHM (AM %.2f):" % airmass
@@ -1166,9 +1205,11 @@ class QAPrimitives(GENERALPrimitives):
                     aoStr = ("AO-estimated seeing:").ljust(llen) + \
                             ("%.3f arcsec" % ao_seeing).rjust(rlen)
                     if strehl:
-                        strehlStr = (("Strehl (r0):").ljust(llen) +
-                                     ("%.3f +/- %.3f" % (strehl,
-                                      strehl_std)).rjust(rlen))
+                        strehlStr = (("Strehl Mean %s Sigma:" % pm
+                                      ).ljust(llen) + ("%.3f +/- %.3f" % (
+                                    strehl, strehl_std)).rjust(rlen))
+                    else:
+                        strehlStr = ("(Strehl could not be determined)")
 
                 iq_warn = ""
                 if iq_band is not None:                    
@@ -1209,15 +1250,16 @@ class QAPrimitives(GENERALPrimitives):
                 log.stdinfo(ind + fnStr)
                 if len(src)!=0:
                     log.stdinfo(ind + srcStr)
-                    log.stdinfo(ind + "-"*dlen)
+                log.stdinfo(ind + "-"*dlen)
+                if len(src) != 0:
                     log.stdinfo(ind + fmStr)
                     if is_image:
                         log.stdinfo(ind + emStr)
+                        if is_ao:
+                            log.stdinfo(ind + strehlStr)
                 log.stdinfo(ind + csStr)
                 log.stdinfo(ind + iqStr)
-                if is_ao and strehl:
-                    log.stdinfo(ind + strehlStr)
-                log.stdinfo(ind + reqStr + ell_warn + iq_warn)
+                log.stdinfo(ind + reqStr + ell_warn + iq_warn + single_warn)
                 log.stdinfo(ind + "-"*dlen)
                 log.stdinfo("")
 
@@ -1227,6 +1269,8 @@ class QAPrimitives(GENERALPrimitives):
                     comment.append("IQ requirement not met")
                 if ell_warn:
                     comment.append("High ellipticity")
+                if single_warn:
+                    comment.append("Single source IQ measurement, no error available")
                 if len(src)!=0:
                     mean_fwhm = float(mean_fwhm)
                     std_fwhm = float(std_fwhm)
@@ -1287,14 +1331,14 @@ class QAPrimitives(GENERALPrimitives):
                             overlays_exist = True
                         else:
                             data_shape=ad[key].data.shape
-                            iqmask = _iq_overlay([{"x":data_shape[1]/2,
-                                               "y":np.mean(src["y"])}],data_shape)
+                            iqmask = _iq_overlay(src,data_shape)
                             iq_overlays.append(iqmask)
                             overlays_exist = True
 
             # Build a report to send to fitsstore
             if info_dict:
-                fitsdict = gt.fitsstore_report(ad, rc, "iq", info_dict)
+                fitsdict = gt.fitsstore_report(ad, rc, "iq", info_dict, 
+                                               self.calurl_dict)
 
         # Display image with stars used circled
         if display:
@@ -1340,7 +1384,7 @@ class QAPrimitives(GENERALPrimitives):
                     comment=self.keyword_comments["MEANELLP"])
 
             # Add the appropriate time stamps to the PHU
-            gt.mark_history(adinput=ad, keyword=timestamp_key)
+            gt.mark_history(adinput=ad, primname=self.myself(), keyword=timestamp_key)
 
             # Change the filename
             ad.filename = gt.filename_updater(adinput=ad, suffix=rc["suffix"], 
@@ -1666,8 +1710,82 @@ def _iq_overlay(stars,data_shape):
     iqmask = (np.array(yind),np.array(xind))
     return iqmask
 
-
 def _strehl(ad, sources):
+    """
+    Calculate the mean Strehl ratio and its standard deviation.
+    Weights are used, with brighter sources being more heavily weighted.
+    This is not simply because they will have better measurements, but
+    because there is a bias in SExtractor's FLUX_AUTO measurement, which
+    underestimates the total flux for fainter sources (this is due to
+    its extrapolation of the source profile; the apparent profile varies
+    depending on how much of the uncorrected psf is detected).
+    """
+    
+    # Instantiate the log
+    log = logutils.get_logger(__name__)
+
+    wavelength = ad.central_wavelength(asMicrometers=True) * 1.0e-6
+    # Leave if there's no wavelength information
+    if wavelength == 0.0 or wavelength is None:
+        return None, None
+    strehl_list = []
+    strehl_weights = []
+    
+    for ext in sources:
+        pixel_scale = ad[ext].pixel_scale().as_pytype()
+        for source in sources[ext]:
+            psf = _quick_psf(source.x, source.y, pixel_scale, wavelength, 8.1, 0.2)
+            strehl = float(((source.flux_max) / source.flux) / psf)
+            #print source.x, source.y, source.flux_max, source.flux, psf, strehl
+            if strehl < 0.6:
+                strehl_list.append(strehl)
+                strehl_weights.append(source.flux)
+
+    # Compute statistics with sigma-clipping and weights
+    if len(strehl_list) > 0:
+        data = np.array(strehl_list)
+        weights = np.array(strehl_weights)
+        strehl_array = sigma_clip(data)
+        strehl = float(np.average(data, weights=weights))
+        strehl_std = float(np.sqrt(np.average((strehl_array-strehl)**2, weights=weights)))
+    else:
+        strehl = None
+        strehl_std = None
+
+    return strehl, strehl_std
+
+def _quick_psf(xc,yc, pixscale, wavelength, diameter, obsc_diam=0.0):
+    """
+    Calculate the peak pixel flux (normalized to total flux) for a perfect
+    diffraction pattern due by a circular aperture of a given diameter
+    with a central obscuration.
+    
+    :param xc,yc: pixel center (only subpixel location matters)
+    :param pixscale: pixel scale in arcseconds
+    :param wavelength: wavelength in metres
+    :param diameter: diameter of aperture in metres
+    :param obsc_diam: diameter of central obscuration in metres
+    """
+    xfrac = np.modf(float(xc))[0]
+    yfrac = np.modf(float(yc))[0]
+    if xfrac > 0.5:
+        xfrac -= 1.0
+    if yfrac > 0.5:
+        yfrac -= 1.0
+    # Accuracy improves with increased resolution, but subdiv=5
+    # appears to give within 0.5% (always underestimated)
+    subdiv = 5
+    obsc = obsc_diam / diameter
+    xgrid, ygrid = (np.mgrid[0:subdiv,0:subdiv]+0.5)/subdiv-0.5
+    dr = np.sqrt((xfrac-xgrid)**2 + (yfrac-ygrid)**2)
+    x = np.pi* diameter / wavelength * dr * pixscale / 206264.8
+    sum = np.sum(np.where(x==0, 1.0, 2*(j1(x)-obsc*j1(obsc*x))/x)**2)
+    sum *= (pixscale/(206264.8*subdiv) * (1-obsc*obsc))**2
+    return sum / (4*(wavelength/diameter)**2/np.pi)
+
+# Everything below here is Lucas's Strehl code, and is not used elsewhere
+
+def _lucas_strehl(ad, sources):
     """
     Measure the Strehl Ratio (r0) on an input image.
 
@@ -1678,8 +1796,12 @@ def _strehl(ad, sources):
     # reasonable upper strehl limit,  number of sources to use
     STREHL_LIMIT = 0.6
     RADIAN_ARCSEC = 206265
-    PSF_SKY = 0.0
     PUPIL_FILE = '.strehl_pupil.npz'
+
+    # number of sources to use
+    allow_nsources = 16
+    # len(sources) here is basically the number of extensions
+    allow_nsources /= len(sources)
 
     all_strehl = []
     pupil = np.array([])
@@ -1693,16 +1815,15 @@ def _strehl(ad, sources):
     inst = ad.instrument().as_pytype()
     filt = ad.filter_name(pretty=True).as_pytype()
 
-    div_n = 1.0
-    # for large arrays,  for speed approximate strehl by 'binning' pixels
-    if n_pixels > 1024:
-        div_n = 10.0
+    # for speed - reduce the array size for strehl by 'binning' pixels
+    div_n = n_pixels / 256.0
 
     n_pixels /= int(div_n)
 
     # phase parameters
     vv_array = np.arange(0, n_pixels, 1, dtype=float).reshape((1, n_pixels))
     uu_array = np.arange(0, n_pixels, 1, dtype=float).reshape((n_pixels, 1))
+
     phase_param = {'vv': _rebin(vv_array, n_pixels, n_pixels),
                    'uu': _rebin(uu_array, n_pixels, n_pixels)}
 
@@ -1721,40 +1842,47 @@ def _strehl(ad, sources):
         meter_pixel = ((effective_wavelength * 1e-6) /
                        (n_pixels * pixel_radians))
 
+        # use only brightest nsources in field
+        if sources[ext].size > allow_nsources:
+            sources[ext].sort(order='flux_max')
+            sources[ext] = sources[ext][-allow_nsources:]
+
         if pupil.size == 0:
             pupil = _pupil(n_pixels, meter_pixel, inst, pupil_key, PUPIL_FILE)
-
+            
         for source in sources[ext]:
 
-            source_flx = source.flux - source.background
-            source_pos = {'x': source.x / div_n - n_pixels / 2.,
-                          'y': source.y / div_n - n_pixels / 2.}
+            # for binned pixels,  keep location in the pixel
+            x_decimal = source.x - np.fix(source.x)
+            y_decimal = source.y - np.fix(source.y)
+
+            x_binned = int(source.x / div_n) + x_decimal
+            y_binned = int(source.y / div_n) + y_decimal
+
+            # position calculated from the center
+            source_pos = {'x': x_binned - n_pixels / 2.,
+                          'y': y_binned - n_pixels / 2.}
 
             # compute perfect PSF at position of source
             psf = _perfect_psf(n_pixels, source_pos, phase_param, pupil)
+            strehl = (source.flux_max / source.flux) / np.amax(psf)
 
-            source_pos = {'x': source.x / div_n, 'y': source.y / div_n}
-
-            psf_flx, psf_peak = _psf_phot(psf, source.flux_radius, source_pos,
-                                          PSF_SKY, n_pixels)
-
-            strehl = float((source.flux_max / source_flx) /
-                           (psf_peak / psf_flx))
-
+            #print source.x, source.y, source.flux_max, source.flux, source.flux_max/source.flux, psf, strehl
             if strehl <= STREHL_LIMIT:
                 all_strehl.append(strehl)
+                
+            #print source.x, source.y, source.flux_max, source.flux, strehl, psf
 
     if len(all_strehl) != 0:
         strehl = np.average(all_strehl).item()
         strehl_std = np.std(all_strehl)
-        log.stdinfo("Strehl (average) for %s: %s +/- %s" % (ad.filename, strehl,
-                                                            strehl_std))
+        #log.stdinfo("Strehl (average) for %s: %s +/- %s" % (ad.filename, strehl,
+        #                                                    strehl_std))
     else:
         strehl = None
         strehl_std = None
 
     return strehl, strehl_std
-
 
 def _perfect_psf(n_pixels, center, phase_param, pupil):
     """
@@ -1808,7 +1936,7 @@ def _pupil(n_pixels, meter_pixel, inst, pupil_key, PUPIL_FILE):
         PUPIL_DIMENSION = [1.223, 7.695]
 
     pupil = np.zeros((n_pixels, n_pixels))
-    center_point = n_pixels / 2.0
+    center_point = n_pixels / 2.0 - 0.5
     center = {'x': center_point, 'y': center_point}
 
     radial_array = _dist_circle(n_pixels, center, int(n_pixels / 2))
@@ -1873,39 +2001,6 @@ def _dist_circle(array_size, center, radius):
             output_array[x, y] = np.sqrt(squared['x'][x] + squared['y'][y])
 
     return output_array
-
-
-def _psf_phot(pixel_data, aperture, center, sky_value, n_pixels):
-    """
-    Simple aperture photometry of a numpy array of values.
-    For use in calculating the ideal psf for a Strehl calculation
-
-    :param pixel_data: an array containing pixel values
-    :param aperture: pixel radius of aperture to use
-    :param center: x,y coordinates of center of aperture
-    :param sky_value: value of sky background
-    :param n_pixels: number of pixels in one coordinate
-    :return: total flux within aperture and peak flux
-    """
-
-    phot = 0
-    values = [0]
-
-    if np.size(aperture) > 1:
-        aperture = np.ceil(aperture[0])
-
-    radial_array = _dist_circle(n_pixels, center, aperture)
-
-    (x, y) = np.where((radial_array <= aperture) & (radial_array != 0.0))
-
-    num_elements = len(x)
-
-    if num_elements > 0:
-        for k in range(0, num_elements):
-            values.append(pixel_data[x[k], y[k]] - sky_value)
-            phot += (pixel_data[x[k], y[k]] - sky_value)
-
-    return phot, max(values)
 
 
 def _save_pupil(pupil, pupil_key, PUPIL_FILE):

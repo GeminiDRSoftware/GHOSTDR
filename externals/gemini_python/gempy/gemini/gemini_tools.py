@@ -4,17 +4,16 @@
 #                                                                   gempy.gemini
 #                                                                gemini_tools.py
 # ------------------------------------------------------------------------------
-# $Id: gemini_tools.py 5616 2016-03-09 20:15:02Z kanderson $
+# $Id: gemini_tools.py 5736 2016-04-16 02:09:53Z csimpson $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5616 $'[11:-2]
-__version_date__ = '$Date: 2016-03-09 10:15:02 -1000 (Wed, 09 Mar 2016) $'[7:-2]
+__version__      = '$Revision: 5736 $'[11:-2]
+__version_date__ = '$Date: 2016-04-16 12:09:53 +1000 (Sat, 16 Apr 2016) $'[7:-2]
 # ------------------------------------------------------------------------------
 import os
 import re
 import sys
 import json
 import urllib2
-import math
 import numbers
 
 import pyfits as pf
@@ -22,13 +21,16 @@ import numpy  as np
 
 from copy import deepcopy
 from datetime import datetime
+from importlib import import_module
 
 from ..library import astrotools as at
+
+from astropy.modeling import models, fitting
+from astropy import stats
 
 from astrodata import AstroData
 from astrodata import __version__ as ad_version
 from astrodata.utils import Errors
-from astrodata.utils import Lookups
 from astrodata.utils import logutils
 from astrodata.utils.ConfigSpace import lookup_path
 from astrodata.utils.gemconstants import SCI, VAR, DQ
@@ -36,16 +38,9 @@ from astrodata.interface.slices import pixel_exts
 from astrodata.interface.Descriptors import DescriptorValue
 from astrodata.utils.Errors import DescriptorValueTypeError
 
-# ------------------------------------------------------------------------------
-# Load the standard comments for header keywords that will be updated
-# in these functions
-keyword_comments = Lookups.get_lookup_table("Gemini/keyword_comments",
-                                            "keyword_comments")
+#import matplotlib.pyplot as plt
 
-# Initialize pointing_in_field() caching of FOV table look-ups:
-_FOV_lookup = None
 # ------------------------------------------------------------------------------
-
 def add_objcat(adinput=None, extver=1, replace=False, columns=None, sxdict=None):
     """
     Add OBJCAT table if it does not exist, update or replace it if it does.
@@ -69,17 +64,17 @@ def add_objcat(adinput=None, extver=1, replace=False, columns=None, sxdict=None)
     :type columns: dictionary of Pyfits Column objects with column names
                    as keys
     """
+    
+    # Instantiate the log. This needs to be done outside of the try block,
+    # since the log object is used in the except block 
+    log = logutils.get_logger(__name__)
 
     # ensure caller passes the sextractor default dictionary of parameters.
     try:
         assert isinstance(sxdict, dict) and sxdict.has_key('dq')
     except AssertionError:
-        logutils.error("TypeError: A sextractor dictionary was not received.")
+        log.error("TypeError: A sextractor dictionary was not received.")
         raise TypeError("Require sextractor parameter dictionary.")
-    
-    # Instantiate the log. This needs to be done outside of the try block,
-    # since the log object is used in the except block 
-    log = logutils.get_logger(__name__)
     
     # The validate_input function ensures that the input is not None and
     # returns a list containing one or more inputs
@@ -590,8 +585,8 @@ def matching_inst_config(ad1=None, ad2=None, check_exposure=False):
     return result
 
 
-def clip_auxiliary_data(adinput=None, aux=None, aux_type=None,
-                        return_dtype=None):
+def clip_auxiliary_data(adinput=None, aux=None, aux_type=None, 
+                        return_dtype=None, keyword_comments=None):
     """
     This function clips auxiliary data like calibration files or BPMs
     to the size of the data section in the science. It will pad auxiliary
@@ -602,6 +597,13 @@ def clip_auxiliary_data(adinput=None, aux=None, aux_type=None,
     # Instantiate the log. This needs to be done outside of the try block,
     # since the log object is used in the except block 
     log = logutils.get_logger(__name__)
+
+    # ensure caller passes the sextractor default dictionary of parameters.
+    try:
+        assert isinstance(keyword_comments, dict)
+    except AssertionError:
+        log.error("TypeError: keyword comments dict was not received.")
+        raise TypeError("keyword comments dict required")
 
     # The validate_input function ensures that the input is not None and
     # returns a list containing one or more inputs
@@ -701,7 +703,10 @@ def clip_auxiliary_data(adinput=None, aux=None, aux_type=None,
                   science_array_section[3] / science_detector_y_bin]
                 
                 # Check whether science data has been overscan-trimmed
-                science_shape = sciext.data.shape
+                # CJS EMERGENCY FIX! Unprepared F2 data are 3D, but later
+                # code assumes science_shape[0:2] is the array shape.
+                # So only take the last 2 elements of data.shape
+                science_shape = sciext.data.shape[-2:]
                 if (science_shape[1] == science_data_section[1] and
                     science_shape[0] == science_data_section[3] and
                     science_data_section[0] == 0 and
@@ -812,115 +817,47 @@ def clip_auxiliary_data(adinput=None, aux=None, aux_type=None,
                     
                     # Clip all relevant extensions
                     for ext in ext_to_clip:
-                        
-                        # Pull out specified region
-                        clipped = ext.data[region[0]:region[1],
-                                           region[2]:region[3]]
-                        
-                        # Stack with overscan region if needed
-                        if aux_trimmed and not science_trimmed:
-                            
-                            # Pad DQ planes with zeros to match
-                            # science shape
-                            # Note: this only allows an overscan
-                            # region at one edge of the data array.
-                            # If there ends up being more
-                            # than one for some instrument, this code
-                            # will have to be revised.
-                            if aux_type == "bpm":
-                                if science_offsets[0] > 0:
-                                    # Left-side overscan
-                                    overscan = np.zeros((science_shape[0],
-                                                         science_offsets[0]),
-                                                        dtype=np.int16)
-                                    ext.data = np.hstack([overscan,clipped])
-                                elif science_offsets[1] > 0:
-                                    # Right-side overscan
-                                    overscan = np.zeros((science_shape[0],
-                                                         science_offsets[1]),
-                                                        dtype=np.int16)
-                                    ext.data = np.hstack([clipped,overscan])
-                                elif science_offsets[2] > 0:
-                                    # Bottom-side overscan
-                                    overscan = np.zeros((science_offsets[2],
-                                                         science_shape[1]),
-                                                        dtype=np.int16)
-                                    ext.data = np.vstack([clipped,overscan])
-                                elif science_offsets[3] > 0:
-                                    # Top-side overscan
-                                    overscan = np.zeros((science_offsets[3],
-                                                         science_shape[1]),
-                                                        dtype=np.int16)
-                                    ext.data = np.vstack([overscan,clipped])
-                            else:
-                                # Science decision: trimmed calibrations
-                                # can't be meaningfully matched to untrimmed
-                                # science data
+
+                        # Pull out specified data region:
+                        if science_trimmed or aux_trimmed:
+                            clipped = ext.data[region[0]:region[1],
+                                               region[2]:region[3]]
+
+                        # Where no overscan is needed, just use the data region:
+                        if science_trimmed:
+                            ext.data = clipped
+
+                        # Pad trimmed aux arrays with zeros to match untrimmed
+                        # science data:
+                        elif aux_trimmed:
+
+                            # Science decision: trimmed calibrations can't be
+                            # meaningfully matched to untrimmed science data
+                            if aux_type != 'bpm':
                                 raise Errors.ScienceError(
                                     "Auxiliary data %s is trimmed, but "
                                     "science data %s is untrimmed." %
-                                    (auxext.filename,sciext.filename))
-                        
-                        elif not science_trimmed:
-                            
-                            # Pick out overscan region corresponding
-                            # to data section from auxiliary data
-                            if aux_offsets[0] > 0:
-                                if aux_offsets[0] != science_offsets[0]:
-                                    raise Errors.ScienceError(
-                                        "Overscan regions do not match in "
-                                        "%s, %s" % 
-                                        (auxext.filename,sciext.filename))
-                                
-                                # Left-side overscan: height is full ylength,
-                                # width comes from 0 -> offset
-                                overscan = ext.data[region[0]:region[1],
-                                                    0:aux_offsets[0]]
-                                ext.data = np.hstack([overscan,clipped])
-                            
-                            elif aux_offsets[1] > 0:
-                                if aux_offsets[1] != science_offsets[1]:
-                                    raise Errors.ScienceError(
-                                        "Overscan regions do not match in "
-                                        "%s, %s" % 
-                                        (auxext.filename,sciext.filename))
-                                
-                                # Right-side overscan: height is full ylength,
-                                # width comes from xlength-offset -> xlength
-                                overscan = ext.data[region[0]:region[1],
-                                    aux_shape[1] - aux_offsets[1]:aux_shape[1]]
-                                ext.data = np.hstack([clipped,overscan])
-                            
-                            elif aux_offsets[2] > 0: 
-                                if aux_offsets[2]!=science_offsets[2]:
-                                    raise Errors.ScienceError(
-                                        "Overscan regions do not match in "
-                                        "%s, %s" % 
-                                        (auxext.filename,sciext.filename))
-                                
-                                # Bottom-side overscan: width is full xlength,
-                                # height comes from 0 -> offset
-                                overscan = ext.data[0:aux_offsets[2],
-                                                    region[2]:region[3]]
-                                ext.data = np.vstack([clipped,overscan])
-                            
-                            elif aux_offsets[3] > 0:
-                                if aux_offsets[3] != science_offsets[3]:
-                                    raise Errors.ScienceError(
-                                        "Overscan regions do not match in "
-                                        "%s, %s" % 
-                                        (auxext.filename,sciext.filename))
-                                
-                                # Top-side overscan: width is full xlength,
-                                # height comes from ylength-offset -> ylength
-                                overscan = ext.data[
-                                    aux_shape[0] - aux_offsets[3]:aux_shape[0],
-                                    region[2]:region[3]]
-                                ext.data = np.vstack([overscan,clipped])
-                        
-                        else:
-                            # No overscan needed, just use the clipped region
-                            ext.data = clipped
+                                    (auxext.filename, sciext.filename))
+
+                            # Use duplicate iterators over the reversed
+                            # science_offsets list to unpack its values in
+                            # pairs and reverse them:
+                            padding = tuple((bef, aft) for aft, bef in \
+                                            zip(*[reversed(science_offsets)]*2))
+
+                            # Replace the array with one that's padded with the
+                            # appropriate number of zeros at each edge:
+                            ext.data = np.pad(clipped, padding, 'constant',
+                                              constant_values=0)
+
+                        # If nothing is trimmed, just use the unmodified data
+                        # after checking that the regions match (a condition
+                        # preserved from r5564 without revisiting its logic):
+                        elif not all(off1 == off2 for off1, off2 in \
+                                     zip(aux_offsets, science_offsets)):
+                            raise Errors.ScienceError(
+                                "Overscan regions do not match in %s, %s" % \
+                                (auxext.filename, sciext.filename))
 
                         # Convert the dtype if requested
                         if return_dtype is not None:
@@ -965,6 +902,269 @@ def clip_auxiliary_data(adinput=None, aux=None, aux_type=None,
                                            ad.filename, SCI, sciext.extver()))
             
             new_aux.refresh_types()
+            log.stdinfo("Clipping {} to match science data.".
+                        format(os.path.basename(new_aux.filename)))
+            aux_output_list.append(new_aux)
+        
+        return aux_output_list
+    
+    except:
+        # Log the message from the exception
+        log.critical(repr(sys.exc_info()[1]))
+        raise
+
+def clip_auxiliary_data_GSAOI(adinput=None, aux=None, aux_type=None, 
+                        return_dtype=None, keyword_comments=None):
+    """
+    This function clips auxiliary data like calibration files or BPMs
+    to the size of the data section in the science. It will pad auxiliary
+    data if required to match un-overscan-trimmed data, but otherwise
+    requires that the auxiliary data contain the science data.
+    
+    """
+    # Instantiate the log. This needs to be done outside of the try block,
+    # since the log object is used in the except block 
+    log = logutils.get_logger(__name__)
+
+    # The validate_input function ensures that the input is not None and
+    # returns a list containing one or more inputs
+    adinput_list = validate_input(input=adinput)
+    aux_list = validate_input(input=aux)
+    
+    # Create a dictionary that has the AstroData objects specified by adinput
+    # as the key and the AstroData objects specified by aux as the value
+    aux_dict = make_dict(key_list=adinput_list, value_list=aux_list)
+    
+    # Initialize the list of output AstroData objects
+    aux_output_list = []
+    
+    try:
+        # Check aux_type parameter for valid value
+        if aux_type is None:
+            raise Errors.InputError("The aux_type parameter must not be None")
+        
+        # If dealing with BPMs, relevant extensions are DQ; otherwise use SCI
+        aux_type = aux_type.lower()
+        if aux_type == "bpm":
+            extname = DQ
+        else:
+            extname = SCI
+        
+        # Loop over each input AstroData object in the input list
+        for ad in adinput_list:
+            science_detector_section_dv = ad.detector_section()
+            science_data_section_dv = ad.data_section()
+            science_array_section_dv = ad.array_section()
+            
+            # Get the associated auxiliary file
+            this_aux = aux_dict[ad]
+            
+            # Make a new blank auxiliary file for appending to
+            new_aux = AstroData()
+            new_aux.filename = this_aux.filename
+            new_aux.phu = this_aux.phu
+                       
+            # Get the associated keyword for the detector section, data
+            # section and array section from the DescriptorValue (DV) object
+            detector_section_keyword = science_detector_section_dv.keyword
+            data_section_keyword     = science_data_section_dv.keyword
+            array_section_keyword    = science_array_section_dv.keyword
+
+            aux_data_section_dv     = this_aux[extname].data_section()
+            aux_array_section_dv    = this_aux[extname].array_section()
+
+            for sciext in ad[SCI]:
+                # Retrieve the extension number for this extension
+                science_extver = sciext.extver()
+                science_frameid = sciext.get_key_value("FRAMEID")
+                
+                science_data_section = (
+                  science_data_section_dv.get_value(extver=science_extver))
+                science_array_section = (
+                  science_array_section_dv.get_value(extver=science_extver))
+                
+                # Check whether science data has been overscan-trimmed
+                science_shape = sciext.data.shape
+                if (science_shape[1] == science_data_section[1] and
+                    science_shape[0] == science_data_section[3] and
+                    science_data_section[0] == 0 and
+                    science_data_section[2] == 0):
+                    
+                    science_trimmed = True
+                    science_offsets = [0,0,0,0]
+                else:
+                    science_trimmed = False
+                    # Offsets give overscan regions on either side of data:
+                    # [left offset, right offset, bottom offset, top offset]
+                    science_offsets = [
+                      science_data_section[0],
+                      science_shape[1] - science_data_section[1],
+                      science_data_section[2],
+                      science_shape[0] - science_data_section[3]]
+                
+                found = False
+                for auxext in this_aux[extname]:
+                    # Retrieve the extension number for this extension
+                    aux_extver = auxext.extver()
+                    aux_frameid = auxext.get_key_value("FRAMEID")
+                    aux_shape = auxext.data.shape
+                    
+                    if (aux_frameid == science_frameid and
+                        aux_shape[0] >= science_shape[0] and
+                        aux_shape[1] >= science_shape[1]):
+                    
+                        # Auxiliary data is big enough as has right FRAMEID
+                        found = True
+                    else:
+                        continue
+                    
+                    aux_data_section = (
+                      aux_data_section_dv.get_value(extver=aux_extver))
+                    aux_array_section = (
+                      aux_array_section_dv.get_value(extver=aux_extver))
+
+                    # Check whether auxiliary data has been overscan-trimmed
+                    if (aux_shape[1] == aux_data_section[1] and 
+                        aux_shape[0] == aux_data_section[3] and
+                        aux_data_section[0] == 0 and
+                        aux_data_section[2] == 0):
+                        
+                        aux_trimmed = True
+                        aux_offsets = [0,0,0,0]
+                    else:
+                        aux_trimmed = False
+                        
+                        # Offsets give overscan regions on either side of data:
+                        # [left offset, right offset, bottom offset, top
+                        # offset]
+                        aux_offsets = [aux_data_section[0],
+                                       aux_shape[1] - aux_data_section[1],
+                                       aux_data_section[2],
+                                       aux_shape[0] - aux_data_section[3]]
+                    
+                    # Define data extraction region corresponding to science
+                    # data section (not including overscan)
+                    x_translation = (
+                      science_array_section[0] - science_data_section[0] -
+                      aux_array_section[0] + aux_data_section[0])
+                    y_translation = (
+                      science_array_section[2] - science_data_section[2] -
+                      aux_array_section[2] + aux_data_section[2])
+                    region = [science_data_section[2] + y_translation,
+                              science_data_section[3] + y_translation,
+                              science_data_section[0] + x_translation,
+                              science_data_section[1] + x_translation]
+                    
+                    # Deepcopy auxiliary SCI plane
+                    # and auxiliary VAR/DQ planes if they exist
+                    # (in the non-BPM case)
+                    # This must be done here so that the same
+                    # auxiliary extension can be used for a
+                    # different science extension; without the
+                    # deepcopy, the original auxiliary extension
+                    # gets clipped
+                    ext_to_clip = [deepcopy(auxext)]
+                    if aux_type != "bpm":
+                        varext = this_aux[VAR,aux_extver]
+                        if varext is not None:
+                            ext_to_clip.append(deepcopy(varext))
+                            
+                        dqext = this_aux[DQ,aux_extver]
+                        if dqext is not None:
+                            ext_to_clip.append(deepcopy(dqext))
+                    
+                    # Clip all relevant extensions
+                    for ext in ext_to_clip:
+
+                        # Pull out specified data region:
+                        if science_trimmed or aux_trimmed:
+                            clipped = ext.data[region[0]:region[1],
+                                               region[2]:region[3]]
+
+                        # Where no overscan is needed, just use the data region:
+                        if science_trimmed:
+                            ext.data = clipped
+
+                        # Pad trimmed aux arrays with zeros to match untrimmed
+                        # science data:
+                        # CJS: left over from standard clip_auxiliary_data()
+                        # even though not used by GSAOI
+                        elif aux_trimmed:
+
+                            # Science decision: trimmed calibrations can't be
+                            # meaningfully matched to untrimmed science data
+                            if aux_type != 'bpm':
+                                raise Errors.ScienceError(
+                                    "Auxiliary data %s is trimmed, but "
+                                    "science data %s is untrimmed." %
+                                    (auxext.filename, sciext.filename))
+
+                            # Use duplicate iterators over the reversed
+                            # science_offsets list to unpack its values in
+                            # pairs and reverse them:
+                            padding = tuple((bef, aft) for aft, bef in \
+                                            zip(*[reversed(science_offsets)]*2))
+
+                            # Replace the array with one that's padded with the
+                            # appropriate number of zeros at each edge:
+                            # CJS: pad with ones if it's a BPM
+                            ext.data = np.pad(clipped, padding, 'constant',
+                                    constant_values=1 if aux_type=="bpm" else 0)
+
+                        # If nothing is trimmed, just use the unmodified data
+                        # after checking that the regions match (a condition
+                        # preserved from r5564 without revisiting its logic):
+                        elif not all(off1 == off2 for off1, off2 in \
+                                     zip(aux_offsets, science_offsets)):
+                            raise Errors.ScienceError(
+                                "Overscan regions do not match in %s, %s" % \
+                                (auxext.filename, sciext.filename))
+
+                        # Convert the dtype if requested
+                        if return_dtype is not None:
+                            new_data = ext.data.astype(return_dtype)
+                            ext.data = new_data
+                            del new_data
+                            
+                        # Set the section keywords as appropriate
+                        data_section_value = sciext.get_key_value(
+                          data_section_keyword)
+                        if data_section_value is not None:
+                            ext.set_key_value(
+                              data_section_keyword,
+                              sciext.header[data_section_keyword],
+                              keyword_comments[data_section_keyword])
+                        
+                        detector_section_value = sciext.get_key_value(
+                          detector_section_keyword)
+                        if detector_section_value is not None:
+                            ext.set_key_value(
+                              detector_section_keyword,
+                              sciext.header[detector_section_keyword],
+                              keyword_comments[detector_section_keyword])
+                        
+                        array_section_value = sciext.get_key_value(
+                          array_section_keyword)
+                        if array_section_value is not None:
+                            ext.set_key_value(
+                              array_section_keyword,
+                              sciext.header[array_section_keyword],
+                              keyword_comments[array_section_keyword])
+                        
+                        # Rename the auxext to the science extver
+                        ext.rename_ext(name=ext.extname(),ver=science_extver)
+                        new_aux.append(ext)
+                
+                if not found:
+                    raise Errors.ScienceError(
+                      "No auxiliary data in %s matches the detector section "
+                      "%s in %s[%s,%d]" % (this_aux.filename,
+                        science_detector_section_dv.get_value(science_extver),
+                                           ad.filename, SCI, sciext.extver()))
+            
+            new_aux.refresh_types()
+            log.stdinfo("Clipping {} to match science data.".
+                        format(os.path.basename(new_aux.filename)))
             aux_output_list.append(new_aux)
         
         return aux_output_list
@@ -1020,14 +1220,21 @@ def clip_sources(ad):
         semiminor_axis = objcat.data.field("B_IMAGE")
         background = objcat.data.field("BACKGROUND")
 
+        # CJS: This should all be tidied up with a
+        # good = np.logical_and.reduce() statement
         # Source is good if fwhm is defined
         fwflag = np.where(fwhm_pix==-999,1,0)
 
         # Source is good if ellipticity defined and <0.5
         eflag = np.where((ellip>0.5)|(ellip==-999),1,0)
 
-        # Source is good if probability of being a star >0.9
-        sflag = np.where(class_star<0.9,1,0)
+        # Stellarity test
+        is_ao = ad.is_ao().as_pytype()
+        if is_ao:
+            sflag = np.where(np.fabs(isofwhm_pix/1.08-fwhm_pix) >
+                             0.2*isofwhm_pix,1,0)
+        else:
+            sflag = np.where(class_star<0.9,1,0)
 
         # Source is good if semi-minor axis is greater than 1.1 pixels
         # (less indicates a cosmic ray)
@@ -1043,20 +1250,19 @@ def clip_sources(ad):
 
         # Source is good if signal to noise ratio > 50
         if not np.all(fluxerr==-999):
-            snflag = np.where(flux < 50*fluxerr, 1, 0)
+            snlimit = 25 if is_ao else 50
+            snflag = np.where(flux < snlimit*fluxerr, 1, 0)
             flags |= snflag
 
-        # Source is good if not flagged in DQ plane
-        # Ignore criterion if all undefined (-999)
-        if not np.all(dqflag==-999):
-            is_odd=np.mod(dqflag, 2)
-            modified_dqflag=np.where(np.logical_not(is_odd), 0, dqflag)
-            flags |= modified_dqflag
+        # Allow up to 2% BPM/non-linear bad pixels but no saturated pixels
+        max_bad_pix = np.where(dqflag & 4, 0, 0.02*area)
 
         # Ignore source that hae too many flagged pixels in them
         if not np.all(ndqflag==-999):
-            toobadflags = np.where(ndqflag > 4, 1, 0)
+            toobadflags = np.where(ndqflag > max_bad_pix, 1, 0)
             flags |= toobadflags
+            
+        flags |= np.where(ee50d_pix<fwhm_pix, 1, 0)
 
         # Use flags=0 to find good data
         good = (flags==0)
@@ -1086,7 +1292,7 @@ def clip_sources(ad):
     return good_source
 
 
-def convert_to_cal_header(adinput=None, caltype=None):
+def convert_to_cal_header(adinput=None, caltype=None, keyword_comments=None):
     """
     This function replaces position, object, and program information 
     in the headers of processed calibration files that are generated
@@ -1104,6 +1310,12 @@ def convert_to_cal_header(adinput=None, caltype=None):
     # Instantiate the log. This needs to be done outside of the try block,
     # since the log object is used in the except block 
     log = logutils.get_logger(__name__)
+
+    try:
+        assert isinstance(keyword_comments, dict)
+    except AssertionError:
+        log.error("TypeError: keyword comments dict was not received.")
+        raise TypeError("keyword comments dict required")
     
     # The validate_input function ensures that the input is not None and
     # returns a list containing one or more inputs
@@ -1357,19 +1569,19 @@ def fit_continuum(ad):
     :param ad: input image
     :type ad: AstroData instance
     """
-
-    import scipy.optimize
+    log = logutils.get_logger(__name__)
+    import warnings
 
     good_source = {}
     
     # Get the pixel scale
     pixel_scale = ad.pixel_scale().as_pytype()
     
-    # Set full aperture to 5 arcsec
-    ybox = int(2.5 / pixel_scale)
+    # Set full aperture to 4 arcsec
+    ybox = int(2.0 / pixel_scale)
 
-    # Average 8 unbinned columns together
-    xbox = 4 / int(ad.detector_x_bin())
+    # Average 512 unbinned columns together
+    xbox = 256 / int(ad.detector_x_bin())
 
     # Average 16 unbinned background rows together
     bgbox = 8 / int(ad.detector_x_bin())
@@ -1385,102 +1597,187 @@ def fit_continuum(ad):
 
     for sciext in ad[SCI]:
         extver = sciext.extver()
+        data = sciext.data
 
         if ad[DQ,extver] is not None:
             dqdata = ad[DQ,extver].data
         else:
             dqdata = None
 
-        data = sciext.data
+        if ad[VAR,extver] is not None:
+            vardata = ad[VAR,extver].data
+        else:
+            vardata = None
 
         ####here - dispersion axis
-        sumdata = np.sum(np.where(dqdata==0, data, 0), axis=1)
-        center = np.argmax(sumdata)
+        # Taking the 95th percentile should remove CRs
+        signal = np.percentile(np.where(dqdata==0, data, 0), 95, axis=1)
+        acq_star_positions = ad.phu_get_key_value("ACQSLITS")
+        if acq_star_positions is None:
+            if 'MOS' in ad.types:
+                log.warning("%s is MOS but has no acquisition slits. "
+                            "Not trying to find spectra." % ad.filename)
+                if ad['MDF'] is None:
+                    log.warning("No MDF is attached. Did addMDF find one?\n") 
+                continue
 
-        #print 'ctr', center
-        #print 'sum ctr',sumdata[center]
-
-        if center+ybox+bgbox>data.shape[0]:
-            #print 'too high'
-            continue
-        if center-ybox-bgbox<0:
-            #print 'too low'
-            continue
-
-        bg_mean = np.mean([data[center - ybox - bgbox:center-ybox],
-                           data[center + ybox:center + ybox + bgbox]], dtype=np.float64)
-
-        ctr_mean = np.mean(data[center], dtype=np.float64)
-        ctr_std = np.std(data[center])
-
-        #print 'mean ctr',ctr_mean,ctr_std
-        #print 'mean bg',bg_mean
-
-        if ctr_mean < s2n_bg * bg_mean:
-            #print 'too faint'
-            continue
-        if ctr_mean < s2n_self * ctr_std:
-            #print 'too noisy'
-            continue
+                continue
+            else:
+                shuffle = int(ad.nod_pixels() / ad.detector_y_bin())
+                centers = [shuffle + np.argmax(signal[shuffle:shuffle*2])]
+                half_widths = [ybox]
+        else:
+            try:
+                centers = []
+                half_widths = []
+                for x in acq_star_positions.split():
+                    c,w = x.split(':')
+                    # The -1 here because of python's 0-count
+                    centers.append(int(c)-1)
+                    half_widths.append(int(0.5*int(w)))
+            except ValueError:
+                log.warning("Image %s has unparseable ACQSLITS keyword"
+                            % ad.filename)
+                centers = [np.argmax(signal)]
+                half_widths = [ybox]
         
         fwhm_list = []
         y_list = []
         x_list = []
-        for i in range(xbox, data.shape[1]-xbox, xbox):
-
-            dqcol = dqdata[center-ybox:center+ybox,i-xbox:i+xbox]
-            if np.any(dqcol):
+        weight_list = []
+                
+        for center,hwidth in zip(centers,half_widths):
+            if center+hwidth>data.shape[0]:
+                #print 'too high'
                 continue
-
-            col = data[center-ybox:center+ybox,i-xbox:i+xbox]
-            col = np.mean(col,axis=1, dtype=np.float64)
-            maxflux = col[ybox]
-
-            bg = np.mean([data[center-ybox-bgbox:center-ybox,i-xbox:i+xbox],
-                          data[center+ybox:center+ybox+bgbox,i-xbox:i+xbox]], 
-                         dtype=np.float64)
-
-            pars = (bg, maxflux, ybox, init_width)
-            fit_obj = at.GaussFit(col)
-            # least squares fit of model to data
-            try:
-                # for scipy versions < 0.9
-                new_pars, success = scipy.optimize.leastsq(fit_obj.calc_diff, pars,
-                                                           maxfev=100, 
-                                                           warning=False)
-            except:
-                # for scipy versions >= 0.9
-                import warnings
-                warnings.simplefilter("ignore")
-                new_pars, success = scipy.optimize.leastsq(fit_obj.calc_diff, pars,
-                                                           maxfev=100)
-            if success>3:
+            if center-hwidth<0:
+                #print 'too low'
                 continue
-            else:
-                width = new_pars[3]
-                fwhm = abs(2*np.sqrt(2*np.log(2))*width)
-                fwhm_list.append(fwhm)
-                y_list.append(center - ybox + new_pars[2])
-                x_list.append(i)
+            
+            # Don't think it needs to do an overall check for each object
+            #bg_mean = np.mean([data[center - ybox - bgbox:center-ybox],
+            #                   data[center + ybox:center + ybox + bgbox]], dtype=np.float64)
+            #ctr_mean = np.mean(data[center,dqdata[center]==0], dtype=np.float64)
+            #ctr_std = np.std(data[center,dqdata[center]==0])
+    
+            #print 'mean ctr',ctr_mean,ctr_std
+            #print 'mean bg',bg_mean
+    
+            #if ctr_mean < s2n_bg * bg_mean:
+            #    print 'too faint'
+            #    continue
+            #if ctr_mean < s2n_self * ctr_std:
+            #    print 'too noisy'
+            #    continue
+            
+            for i in range(xbox, data.shape[1]-xbox, xbox):
+                databox = data[center-hwidth-1:center+hwidth,i-xbox:i+xbox]
+                if dqdata is None:
+                    dqbox = np.zeros_like(databox)
+                else:
+                    dqbox = dqdata[center-hwidth-1:center+hwidth,i-xbox:i+xbox]
+                if vardata is None:
+                    varbox = databox # Any better ideas?
+                else:
+                    varbox = vardata[center-hwidth-1:center+hwidth,i-xbox:i+xbox]
 
+                # Collapse in dispersion direction, using good pixels only
+                dqcol = np.sum(dqbox==0, axis=1)
+                if np.any(dqcol==0):
+                    continue
+                col = np.sum(databox, axis=1) / dqcol
+                maxflux = np.max(abs(col))
+                
+                # Crude SNR test; is target bright enough in this wavelength range?
+                if np.percentile(col,90)*xbox < np.mean(databox[dqbox==0]) \
+                            + 10*np.sqrt(np.median(varbox)):
+                    continue
+
+                # Check that the spectrum looks like a continuum source.
+                # This is needed to avoid cases where another slit is shuffled onto
+                # the acquisition slit, resulting in an edge that the code tries
+                # to fit with a Gaussian. That's not good, but if source is very
+                # bright and dominates spectrum, then it doesn't matter.
+                # All non-N&S data should pass this step, which checks whether 80%
+                # of the spectrum has SNR>2
+                spectrum = databox[np.argmax(col),:]
+                if np.percentile(spectrum,20) < 2*np.sqrt(np.median(varbox)):
+                    continue
+                
+                if 'GMOS_NODANDSHUFFLE' in ad.types:
+                    # N&S; background should be close to zero
+                    bg = models.Const1D(0.)
+                    # Fix background=0 if slit is in region where sky-subtraction will occur 
+                    if center > ad.nod_pixels()/ad.detector_y_bin():
+                            bg.amplitude.fixed = True
+                else:
+                    # Not N&S; background estimated from image
+                    bg = models.Const1D(
+                            amplitude=np.median([data[center-ybox-bgbox:center-ybox],
+                            data[center+ybox:center+ybox+bgbox,i-xbox:i+xbox]], 
+                            dtype=np.float64))
+                g_init = models.Gaussian1D(amplitude=maxflux, mean=np.argmax(col), 
+                            stddev=init_width) + models.Gaussian1D(amplitude=-maxflux,
+                                mean=np.argmin(col), stddev=init_width) + bg
+                # Set one profile to be +ve, one -ve, and widths equal
+                g_init.amplitude_0.min = 0.
+                g_init.amplitude_1.max = 0.
+                g_init.stddev_1.tied = lambda f: f.stddev_0
+                fit_g = fitting.LevMarLSQFitter()
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    g = fit_g(g_init, np.arange(len(col)), col)
+                
+                #print g
+                #x = np.arange(len(col))
+                #plt.plot(x, col)
+                #plt.plot(x, g(x))
+                #plt.show()
+                if fit_g.fit_info['ierr']<5:
+                    # This is kind of ugly and empirical; philosophy is that peak should
+                    # be away from the edge and should be similar to the maximum
+                    if (g.amplitude_0>0.5*maxflux and
+                        g.mean_0>1 and g.mean_0<len(col)-2):
+                        fwhm = abs(2*np.sqrt(2*np.log(2))*g.stddev_0)
+                        fwhm_list.append(fwhm)
+                        y_list.append(center)
+                        x_list.append(i)
+                        # Add a "weight" (multiply by 1. to convert to float
+                        # If only one spectrum, all weights will be basically the same
+                        if g.mean_1 > g.mean_0:
+                            weight_list.append(1.*max(g.mean_0,
+                                                      2*hwidth-g.mean_1))
+                        else:
+                            weight_list.append(1.*max(g.mean_1,
+                                                      2*hwidth-g.mean_0))
+
+
+        # Now do something with the list of measurements
         fwhm_pix = np.array(fwhm_list)
         fwhm_arcsec = pixel_scale * fwhm_pix
-        rec = np.rec.fromarrays([x_list,y_list,fwhm_pix,fwhm_arcsec],
-                                names=["x","y","fwhm","fwhm_arcsec"])
+        
+        rec = np.rec.fromarrays([x_list,y_list,fwhm_pix,
+                                 fwhm_arcsec,weight_list],
+                    names=["x","y","fwhm","fwhm_arcsec","weight"])
+        #plt.hist(rec["fwhm_arcsec"], 10)
+        #plt.show()
+        #print rec
 
-        # Clip outliers in FWHM - single 1-sigma clip if more than 3 sources.
+        # Clip outliers in FWHM
         num_total = len(rec)
         if num_total>=3:
             data = rec["fwhm_arcsec"]
-            mean = data.mean()
-            sigma = data.std()
-            rec = rec[(data<mean+sigma) & (data>mean-sigma)]
+            #mean = data.mean()
+            #sigma = data.std()
+            mean, sigma = at.clipped_mean(data)
+            rec = rec[(data<mean+2*sigma) & (data>mean-2*sigma)]
         # Store data
+        
         good_source[(SCI,extver)] = rec
     return good_source
 
 
-def fitsstore_report(ad, rc, metric, info_dict):
+def fitsstore_report(ad, rc, metric, info_dict, calurl_dict):
     if metric not in ["iq","zp","sb","pe"]:
         raise Errors.InputError("Unknown metric %s" % metric )
     
@@ -1619,13 +1916,11 @@ def fitsstore_report(ad, rc, metric, info_dict):
     # I suspect that rc will return a boolean when reduce is called from the 
     # command line.
     if rc["upload_metrics"] == 'True' or rc["upload_metrics"] == True:  
-        send_fitsstore_report(qareport)
+        send_fitsstore_report(qareport, calurl_dict)
     return qareport
 
 
-def send_fitsstore_report(qareport):
-    # from astrodata_Gemini/ADCONFIG_Gemini/lookups/calurl_dict.py    
-    calurl_dict = Lookups.get_lookup_table("Gemini/calurl_dict", "calurl_dict")
+def send_fitsstore_report(qareport, calurl_dict):
     qalist = [qareport]
     req = urllib2.Request(url=calurl_dict["QAMETRICURL"], data=json.dumps(qalist))
     f = urllib2.urlopen(req)
@@ -1692,7 +1987,7 @@ def make_dict(key_list=None, value_list=None):
     
     return ret_dict
 
-def mark_history(adinput=None, keyword=None, comment=None):
+def mark_history(adinput=None, keyword=None, primname=None, comment=None):
     """
     Add or update a keyword with the UT time stamp as the value (in the form
     <YYYY>-<MM>-<DD>T<HH>:<MM>:<SS>) to the header of the PHU of the AstroData
@@ -1715,6 +2010,16 @@ def mark_history(adinput=None, keyword=None, comment=None):
                     comment 'UT time stamp for <keyword>' will instead be used.
     :type comment: string
     """
+    # Instantiate the log. This needs to be done outside of the try block,
+    # since the log object is used in the except block 
+    log = logutils.get_logger(__name__)
+
+    try:
+        assert keyword
+    except AssertionError:
+        log.error("TypeError: A keyword was not received.")
+        raise TypeError("argument 'keyword' required")
+
     # The validate_input function ensures that the input is not None and
     # returns a list containing one or more inputs
     adinput_list = validate_input(input=adinput)
@@ -1723,16 +2028,12 @@ def mark_history(adinput=None, keyword=None, comment=None):
     tlm = datetime.now().isoformat()[0:-7]
     
     # Construct the default comment
-    timestamp_keys = None
     if comment is None:
-        timestamp_keys = Lookups.get_lookup_table("Gemini/timestamp_keywords",
-                                                  "timestamp_keys")
-        comment_suffix = keyword
-        if timestamp_keys is not None:
-            for primitive_name, key in timestamp_keys.iteritems():
-                if key == keyword:
-                    comment_suffix = primitive_name
-        
+        if primname:
+            comment_suffix = primname
+        else:
+            comment_suffix = keyword
+
         final_comment = "UT time stamp for %s" % comment_suffix
     else:
         final_comment = comment
@@ -1806,7 +2107,7 @@ def obsmode_del(ad):
     
 
 def parse_sextractor_param(default_dict):
-    # default_dict used to be made with a get_lookup_table() call.
+    # default_dict formerly made with a get_lookup_table() call.
     # Get path to default sextractor parameter files
     param_file = lookup_path(default_dict["dq"]["param"])
     if param_file.endswith(".py"):
@@ -1858,7 +2159,7 @@ def read_database(ad, database_name=None, input_name=None, output_name=None):
         ad.append(table_ad)
     return ad
 
-def trim_to_data_section(adinput=None):
+def trim_to_data_section(adinput=None, keyword_comments=None):
     """
     This function trims the data in each SCI extension to the
     the section returned by its data_section descriptor.  VAR and DQ
@@ -1870,6 +2171,12 @@ def trim_to_data_section(adinput=None):
     # Instantiate the log. This needs to be done outside of the try block,
     # since the log object is used in the except block 
     log = logutils.get_logger(__name__)
+
+    try:
+        assert isinstance(keyword_comments, dict)
+    except AssertionError:
+        log.error("TypeError: keyword comments dict was not received.")
+        raise TypeError("keyword comments dict required")
     
     # The validate_input function ensures that the input is not None and
     # returns a list containing one or more inputs
@@ -1992,7 +2299,7 @@ def trim_to_data_section(adinput=None):
         raise
 
 def update_key(adinput=None, keyword=None, value=None, comment=None,
-               extname=None):
+               extname=None, keyword_comments=None):
     """
     Add or update a keyword in the specified header of the AstroData object.
     
@@ -2011,10 +2318,17 @@ def update_key(adinput=None, keyword=None, value=None, comment=None,
     :param extname: Name of the extension to add or update the keyword, e.g.,
                    'PHU', 'SCI', 'VAR', 'DQ'
     :type extname: string
+
     """
-    # Instantiate the log
+    # Instantiate the log. This needs to be done outside of the try block,
+    # since the log object is used in the except block 
     log = logutils.get_logger(__name__)
-    
+
+    if keyword_comments is None and comment is None:
+        log.error("TypeError: One of comment or keyword_comments"
+                       "must be passed.")
+        raise TypeError("Missing parameter: comment or keyword_comments")
+                            
     # The validate_input function ensures that the input is not None and
     # returns a list containing one or more inputs
     adinput_list = validate_input(input=adinput)
@@ -2108,7 +2422,7 @@ def update_key(adinput=None, keyword=None, value=None, comment=None,
                   extname, extver, keyword, value_for_ext, msg, ad.filename))
 
 def update_key_from_descriptor(adinput=None, descriptor=None, keyword=None,
-                               extname=None):
+                               extname=None, keyword_comments=None):
     """
     Add or update a keyword in the specified header of the AstroData object
     with a value determined from the specified descriptor.
@@ -2152,8 +2466,8 @@ def update_key_from_descriptor(adinput=None, descriptor=None, keyword=None,
     if key is None:
         raise Errors.Error("No keyword found for descriptor %s" % descriptor)
     
-    update_key(adinput=ad, keyword=key, value=dv, comment=None,
-               extname=extname)
+    update_key(adinput=ad, keyword=key, value=dv, extname=extname, 
+               keyword_comments=keyword_comments)
     return
 
 def validate_input(input=None, dtype=None):
@@ -2232,12 +2546,14 @@ class ExposureGroup:
     # pass around nddata instances rather than lists or dictionaries but
     # that's not even well defined within AstroPy yet.
 
-    def __init__(self, adinputs, frac_FOV=1.0):
+    def __init__(self, adinputs, pkg, frac_FOV=1.0):
 
         """
         :param adinputs: an exposure list from which to initialize the group
             (currently may not be empty)
         :type adinputs: list of AstroData instances
+
+        :param pkg: Package name of the 
 
         :param frac_FOV: proportion by which to scale the area in which
             points are considered to be within the same field, for tweaking
@@ -2254,8 +2570,9 @@ class ExposureGroup:
             raise Errors.InputError('frac_FOV must be >= 0.')
 
         # Initialize members:
-        self._frac_FOV = frac_FOV
         self.members = {}
+        self.package = pkg
+        self._frac_FOV = frac_FOV
         self.group_cen = (0., 0.)
         self.add_members(adinputs)
 
@@ -2284,7 +2601,7 @@ class ExposureGroup:
 
         # Check co-ordinates WRT the group centre & field of view as
         # appropriate for the instrument:
-        return pointing_in_field(position, self.group_cen,
+        return pointing_in_field(position, self.package, self.group_cen,
                                  frac_FOV=self._frac_FOV)
 
     def __len__(self):
@@ -2352,7 +2669,7 @@ class ExposureGroup:
           for cval, nval in zip(self.group_cen, newsum)]
 
 
-def group_exposures(adinputs, frac_FOV=1.0):
+def group_exposures(adinputs, pkg, frac_FOV=1.0):
 
     """
     Sort a list of AstroData instances into dither groups around common
@@ -2360,6 +2677,11 @@ def group_exposures(adinputs, frac_FOV=1.0):
 
     :param adinputs: A list of exposures to sort into groups.
     :type adinputs: list of AstroData instances
+
+    :param pkg: Package name of the calling primitive. Used to determine
+                correct package lookup tables. Passed through to
+                ExposureGroup() call.
+    :type pkg: <str>
 
     :param frac_FOV: proportion by which to scale the area in which
         points are considered to be within the same field, for tweaking
@@ -2400,7 +2722,7 @@ def group_exposures(adinputs, frac_FOV=1.0):
 
         # If unassociated, start a new group:
         if not found:
-            groups.append(ExposureGroup(ad, frac_FOV=frac_FOV))
+            groups.append(ExposureGroup(ad, pkg, frac_FOV=frac_FOV))
             # if debug: print 'New group', groups[-1]
 
     # Here this simple algorithm could be made more robust for borderline
@@ -2414,7 +2736,7 @@ def group_exposures(adinputs, frac_FOV=1.0):
     return tuple(groups)
 
 
-def pointing_in_field(pos, refpos, frac_FOV=1.0, frac_slit=None):
+def pointing_in_field(pos, package, refpos, frac_FOV=1.0, frac_slit=None):
 
     """
     Determine whether two telescope pointings fall within each other's
@@ -2453,7 +2775,9 @@ def pointing_in_field(pos, refpos, frac_FOV=1.0, frac_slit=None):
     :returns: Whether or not the pointing falls within the field (after
       adjusting for frac_FOV & frac_slit). 
     :rtype: boolean
+
     """
+    log = logutils.get_logger(__name__)
 
     # This function needs an AstroData instance rather than just 2
     # co-ordinate tuples and a PA in order to look up the instrument for
@@ -2496,17 +2820,16 @@ def pointing_in_field(pos, refpos, frac_FOV=1.0, frac_slit=None):
     global _FOV_lookup, _FOV_pointing_in_field
 
     # Look up the back-end implementation for the appropriate instrument,
-    # or use the previously-cached one. Currently we have to hard-wire the
-    # name "Gemini" because that's how AD configuration packages work :-(.
-    FOV_lookup = "Gemini/" + inst + "/FOV"
-    if FOV_lookup != _FOV_lookup:
-        try:
-            _FOV_pointing_in_field = Lookups.get_lookup_table(FOV_lookup,
-              "pointing_in_field")
-        except (IOError, NameError):
-            raise NameError("FOV.pointing_in_field() function not " \
-              "implemented for %s" % inst)
-        _FOV_lookup = FOV_lookup
+    # or use the previously-cached one.
+    # Build the lookup name to the instrument specific FOV module. In all 
+    # likelihood this is 'Gemini'.
+    FOV_mod = "astrodata_{0}.ADCONFIG_{0}.lookups.{1}.FOV".format(package, inst)
+
+    try:
+        FOV = import_module(FOV_mod)
+        _FOV_pointing_in_field = FOV.pointing_in_field
+    except (ImportError, AttributeError):
+        raise NameError("FOV.pointing_in_field() function not implemented for %s" % inst)
 
     # Execute it & return the results:
     return _FOV_pointing_in_field(pos, pointing, frac_FOV=frac_FOV,

@@ -7,7 +7,7 @@
 # $Id: gemini_catalog_client.py 5124 2015-02-11 01:06:06Z phirst $
 # ------------------------------------------------------------------------------
 __version__      = '$Revision: 5124 $'[11:-2]
-__version_date__ = '$Date: 2015-02-10 15:06:06 -1000 (Tue, 10 Feb 2015) $'[7:-2]
+__version_date__ = '$Date: 2015-02-11 12:06:06 +1100 (Wed, 11 Feb 2015) $'[7:-2]
 # ------------------------------------------------------------------------------
 """
 This gemini_catalog_client module contains code to access various catalogs

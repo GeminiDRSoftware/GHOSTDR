@@ -4,10 +4,10 @@
 #                                                                astrodata.utils
 #                                                                    gdpgutil.py
 # ------------------------------------------------------------------------------
-# $Id: gdpgutil.py 5274 2015-06-11 14:39:37Z kanderson $
+# $Id: gdpgutil.py 5650 2016-03-17 21:42:00Z kanderson $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5274 $'[11:-2]
-__version_date__ = '$Date: 2015-06-11 04:39:37 -1000 (Thu, 11 Jun 2015) $'[7:-3]
+__version__      = '$Revision: 5650 $'[11:-2]
+__version_date__ = '$Date: 2016-03-18 08:42:00 +1100 (Fri, 18 Mar 2016) $'[7:-3]
 # ------------------------------------------------------------------------------
 from copy import copy
 
@@ -173,7 +173,7 @@ def deadfunctioninherit_config(typ, index, cl=None):
             return cfgs
 
 
-def inherit_index(typ = None, index = None, for_child = None):
+def inherit_index(typ=None, index=None, for_child=None):
     if not typ and not index:
         return None
         
@@ -181,14 +181,14 @@ def inherit_index(typ = None, index = None, for_child = None):
         return (typ, index[typ])
     else:
         cl = get_classification_library()
-        if type(typ) == str:
+        if isinstance(typ, str):
             typo = cl.get_type_obj(typ)
         
         if typo.parent:
-            if for_child == None:
+            if for_child is None:
                 for_child = typ
             
-            return inherit_index(typo.parent, index, for_child = for_child)
+            return inherit_index(typo.parent, index, for_child=for_child)
         else:
             return None  
 

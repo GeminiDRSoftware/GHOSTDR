@@ -1166,7 +1166,7 @@ MetricsViewer.prototype = {
                 // AO seeing corrected is iq-zenith
                 if (record["iq"]["is_ao"]) {
                     record["iq"]["zenith_str"] =
-                        record["iq"]["zenith"].toFixed(2) + " (AOtest)";
+                        record["iq"]["zenith"].toFixed(2) + " (AO)";
                 } else {
                     record["iq"]["zenith_str"] =
                         record["iq"]["zenith"].toFixed(2);
@@ -1365,10 +1365,11 @@ MetricsViewer.prototype = {
             element = $('#'+datalabel+' td.iq');
             value = element.text();
 
-            if ( (record["iq"]["comment"].length==1 &&
-                  (record["iq"]["comment"][0].indexOf("ellipticity")!=-1) ||
-                  record["iq"]["comment"][0].indexOf("estimated AO seeing") ) ||
-                  record["metadata"]["types"].indexOf("SPECT")!=-1 )
+            if ( record["iq"]["comment"].length==1 &&
+                 (record["iq"]["comment"][0].indexOf("ellipticity")!=-1 ||
+                  record["iq"]["comment"][0].indexOf("Single source")!=-1 ||
+		  record["iq"]["comment"][0].indexOf("estimated AO seeing")!=-1 ||
+                  record["metadata"]["types"].indexOf("SPECT")!=-1 ) )
             {
                 value = '<div class=outer>'+warn+value+'</div>';
             } else {
@@ -1710,6 +1711,7 @@ MetricsViewer.prototype = {
                     message += ", ";
                 }
                 if ((msg_array[m].indexOf("ellipticity")!=-1) ||
+                    (msg_array[m].indexOf("Single source")!=-1) ||
                     (msg_array[m].indexOf("estimated AO seeing")!=-1) ||
                     (record["metadata"]["types"].indexOf("SPECT")!=-1 )) {
                     message += '<span class="outer">'+

@@ -3,10 +3,10 @@
 #
 #                                                                  coreReduce.py
 # ------------------------------------------------------------------------------
-# $Id: coreReduce.py 5418 2015-12-02 13:26:18Z kanderson $
+# $Id: coreReduce.py 5725 2016-04-13 14:57:05Z kanderson $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5418 $'[11:-2]
-__version_date__ = '$Date: 2015-12-02 03:26:18 -1000 (Wed, 02 Dec 2015) $'[7:-2]
+__version__      = '$Revision: 5725 $'[11:-2]
+__version_date__ = '$Date: 2016-04-14 00:57:05 +1000 (Thu, 14 Apr 2016) $'[7:-2]
 # ------------------------------------------------------------------------------
 # Provides reduce functionlity as a class, Reduce
 #
@@ -194,14 +194,20 @@ class Reduce(object):
             log.error(str(err))
             return xstat
 
-        allinputs   = self._convert_inputs(valid_inputs)
-        nof_ad_sets = len(allinputs)
+        try:
+            allinputs   = self._convert_inputs(valid_inputs)
+            nof_ad_sets = len(allinputs)
+        except IOError, err:
+            xstat = signal.SIGIO
+            log.error("IOError raised in _convert_inputs()")
+            log.error(str(err))
+            return xstat
 
         try:
             adcc_proc, reduceServer, prs = start_proxy_servers()
         except Errors.ADCCCommunicationError, err:
             xstat = signal.SIGSYS
-            log.error("ADCCCommunicationError raised in start_proxy_servers()")
+            log.error("ADCCCommunicationError raised: start_proxy_servers()")
             log.error(str(err))
             return xstat
 
@@ -340,7 +346,7 @@ class Reduce(object):
     def _convert_inputs(self, inputs):
         if self.intelligence:
             typeIndex = cluster_by_groupid(inputs)
-            # If super intelligence, it would determine ordering. Now, recipes in
+            # super intelligence would determine ordering. Now, recipes in
             # simple order, (i.e. the order of values()).
             allinputs = typeIndex.values()
         else:
@@ -358,12 +364,15 @@ class Reduce(object):
                     log.warning("Can't Load Dataset: %s" % inp)
                     log.warning(err)
                     continue
+                if not len(ad):
+                    log.warning("%s contains no extensions." % ad.filename)
+                    continue
                 nl.append(ad)
             try:
                 assert(nl)
                 allinputs = [nl]
             except AssertionError:
-                msg = "No AstroData objects were created."
+                msg = "No AstroData objects can be processed."
                 log.warning(msg)
                 raise IOError(msg)
         return allinputs
@@ -451,12 +460,9 @@ class Reduce(object):
             log.info("A recipe was specified:")
         else:
             if self.astrotype:
-                self.reclist = self.rl.get_applicable_recipes(astrotype=self.astrotype,
-                                                              prune=True)
                 recdict = self.rl.get_applicable_recipes(astrotype=self.astrotype,
                                                          prune=True, collate=True)
             else:
-                self.reclist = self.rl.get_applicable_recipes(self.infiles[0])
                 recdict = self.rl.get_applicable_recipes(self.infiles[0], collate=True)
 
         if recdict:
@@ -469,7 +475,14 @@ class Reduce(object):
             log.error(msg)
             raise Errors.RecipeNotFoundError(msg)
             
-        for recipe in self.reclist:
+        reclist = []
+        for gtype, recipe in recdict.iteritems():
+            if gtype is "all":
+                reclist.extend(recipe)
+            elif gtype in self.infiles[0].type(prune=True):
+                reclist.extend(recipe)
+
+        for recipe in reclist:
             self._exec_recipe(recipe, ro, adcc)
         
         return

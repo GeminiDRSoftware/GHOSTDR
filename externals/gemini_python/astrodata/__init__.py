@@ -4,17 +4,11 @@
 #                                                                      astrodata
 #                                                                    __init__.py
 # ------------------------------------------------------------------------------
-# $Id: __init__.py 5538 2016-02-02 17:56:41Z kanderson $
+# $Id: __init__.py 5650 2016-03-17 21:42:00Z kanderson $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5538 $'[11:-2]
-__version_date__ = '$Date: 2016-02-02 07:56:41 -1000 (Tue, 02 Feb 2016) $'[7:-2]
+__version__      = '$Revision: 5650 $'[11:-2]
+__version_date__ = '$Date: 2016-03-18 08:42:00 +1100 (Fri, 18 Mar 2016) $'[7:-2]
 # ------------------------------------------------------------------------------
-"""
-GP-X2 is the restructured edition of RELEASE X1 (GP-X1).
-Class AstroData is now contained herein.
-"""
-__version__ = 'GP-X2'
-
 from pyfits import __version__ as pf_version
 new_pyfits_version = [int(x) for x in pf_version.split('.')[:2]] >= [3, 1]
 
@@ -188,9 +182,8 @@ class AstroData(CalculatorInterface):
         # None means "all", else an array of extensions
         self.extensions = None
 
-        # CODE FOLLOWING THIS COMMENT IS REQUIRED BY DESIGN
-        # "extensions" first so other initialization code knows this is
-        # subdata.
+        # CODE FOLLOWING IS REQUIRED BY DESIGN
+        # "extensions" first so other initialization code knows this is subdata.
         self.extInsts   = extInsts
         self.extensions = exts
 
@@ -268,16 +261,10 @@ class AstroData(CalculatorInterface):
             self.open(fname, mode)
             if store is None:
                 os.remove(fname)
-    
-    # def __del__(self):
-    #     """ 
-    #     This is the destructor for AstroData. It performs reference 
-    #     counting and behaves differently when this instance is subdata, since
-    #     in that case some other instance "owns" the pyfits HDUs instance.
-    #     """
-    #     if (self.hdulist != None):
-    #         self.hdulist = None
-    #     return
+
+    # magic method __bool__ only in 3.x
+    def __bool__(self):
+        return True
 
     def __contains__(self, ext):
         try:

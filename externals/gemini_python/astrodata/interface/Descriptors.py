@@ -4,10 +4,10 @@
 #                                                            astrodata.interface
 #                                                                 Descriptors.py
 # ------------------------------------------------------------------------------
-# $Id: Descriptors.py 5108 2015-01-29 21:24:47Z klabrie $
+# $Id: Descriptors.py 5716 2016-04-11 21:49:47Z klabrie $
 # ------------------------------------------------------------------------------
-__version__      = '$Revision: 5108 $'[11:-2]
-__version_date__ = '$Date: 2015-01-29 11:24:47 -1000 (Thu, 29 Jan 2015) $'[7:-2]
+__version__      = '$Revision: 5716 $'[11:-2]
+__version_date__ = '$Date: 2016-04-12 07:49:47 +1000 (Tue, 12 Apr 2016) $'[7:-2]
 # ------------------------------------------------------------------------------
 """
 The Descriptors module provides the following definitions, which are used to
@@ -41,6 +41,7 @@ import sys
 import inspect
 
 from copy import copy
+from math import log10, floor
 
 from ..utils import Errors
 from ..utils.ConfigSpace import config_walk
@@ -457,9 +458,9 @@ class DescriptorValue(object):
         # got here then all values were identical
         return value
 
-    def collapse_by_extver(self):
+    def collapse_by_extver(self, precision=None):
         for extver in self.ext_vers():
-            self.collapse_value(extver)
+            self.collapse_value(extver, precision=precision)
         return self._extver_dict
     
     def validate_collapse_by_extver(self, edict):
@@ -609,7 +610,7 @@ class DescriptorValue(object):
         print self._info()
         return
 
-    def collapse_value(self, extver=None):
+    def collapse_value(self, extver=None, precision=None):
         oldvalue = None
         primext = self.primary_extname
         if primext not in self.ext_names():
@@ -627,7 +628,17 @@ class DescriptorValue(object):
             if oldvalue is None:
                 oldvalue = value
             else:
-                if oldvalue != value:
+
+                # If the value is of float type, and a precision is
+                # supplied, the values are checked to match to the 
+                # required number of significant figures
+                approxmatch = False
+                if type(oldvalue) is float and precision is not None:
+                    roundoldvalue = round_sig(oldvalue, precision)
+                    roundvalue = round_sig(value, precision)
+                    approxmatch = (roundoldvalue == roundvalue)
+                match = (oldvalue == value)
+                if not (match or approxmatch):
                     if extver is None:
                         self._val = CouldNotCollapse
                         self._valid_collapse = False
@@ -635,7 +646,7 @@ class DescriptorValue(object):
                         self._extver_dict[extver] = CouldNotCollapse
                     return None
 
-        # got here then all values were identical
+        # If get here then all values are the same to within the precision
         if extver is None:
             self._val = value
             self._valid_collapse = True
@@ -871,3 +882,8 @@ class DescriptorValue(object):
         return self.overloaded(other)
     __xor__.operation = "val ^ other"
 
+
+# Helper functions
+def round_sig(x, sig=2):
+    # Round to a defined number of significant figures
+    return round(x, sig-int(floor(log10(abs(x))))-1)

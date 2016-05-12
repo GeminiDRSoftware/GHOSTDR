@@ -1,0 +1,94 @@
+
+                             ____    ____                   
+                            |       |    |     \  /  /|
+                            | ___   |____|  =   \/    |
+                            |    |  |           /\    |
+                            |____|  |          /  \   |
+
+
+                   The Gemini Observatory gemini_python package
+                                  RELEASE X1.0.1
+
+Version: X1.0.1
+Release Date: November 14, 2014
+
+==================================
+gemini_python X1.0.1 Release Notes
+==================================
+
+This is a patch release to address errors in the installation instructions
+and adjust the documentation following feedback from early users.  There
+has been no changes to the software.
+
+==============================
+gemini_python X1 Release Notes
+==============================
+
+gemini_python is collection of Python packages forming the new Gemini data 
+processing platform.  This release is an "experimental" release, aimed at
+developers or the curious.  The objective is to share with the community
+some of the new software that are being developed.
+
+gemini_python contains the RecipeSystem, the automation system often referred
+to as the "pipeline".  It also contains AstroData which provides an instrument
+agnostic access layer to Multi-Extension FITS (MEF) files, and the AstroData
+configuration packages for FITS files and Gemini data.  A small package with
+library routines, gempy, completes the contents.
+
+IMPORTANT: gemini_python's RecipeSystem should not be used for science 
+           reduction.  The RecipeSystem has not been vetted for science. 
+           Therefore it should be used exclusively for quick-look.
+
+Refer to the README for installation instructions and for pointers to various
+documents and manuals.
+
+astrodata
+=========
+
+The astrodata package contains AstroData and the RecipeSystem.
+
+AstroData has just undergone a massive API clean up.  It is the most stable
+feature in gemini_python.  An AstroData Users Manual is available, as well
+as an API document (see README).
+
+The RecipeSystem has, so far, been used exclusively for Quality Assessment
+in the controlled environment of Gemini Operations.  Nice features like
+a Calibration Server for automatic selection of processed calibrations are
+not available to the end-users.  It can nevertheless be used for quick-look
+reductions.  A demo is available and complete documentation on how to launch
+a reduction in the "reduce" Users Manual (see README).  "reduce" is the
+interface to the RecipeSystem.
+
+astrodata_FITS
+==============
+
+astrodata_FITS is a support package for AstroData.  This package is purely
+configuration.  It defines Descriptors that are so general they be associated 
+with any FITS file.
+
+astrodata_Gemini
+================
+
+astrodata_Gemini is a support package for AstroData and the RecipeSystem.
+
+The configuration subpackage contains definitions for most Gemini instruments
+already.  This means that opening almost any Gemini dataset with AstroData
+gives access to Descriptors and AstroDataTypes.
+
+The recipes and primitives subpackage contains algorithms to reduce Gemini
+dataset.  Currently, only GMOS Imaging data can be processed with the 
+RecipeSystem, and only for quick-look purposes, as the algorithms and recipes
+have not been vetted for science yet.  You might be able to get quick-look
+reduction for NIRI Imaging with on-target dithers, but no promises.
+
+gempy
+=====
+
+gempy is a collection of modules and functions in support of the rest of
+gemini_python. The organization of the functions and modules is a bit 
+unruly and is expected to change in future releases.
+
+
+
+
+
