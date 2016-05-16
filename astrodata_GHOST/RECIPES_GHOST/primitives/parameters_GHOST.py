@@ -10,7 +10,7 @@
         "recipeOverride" : True,
         "userOverride"   : True,
         "uiLevel"        : "UIBASIC",
-        }
+        },
     "nextparam" : {
         "default"        : "somestring",
         "type"           : "str",

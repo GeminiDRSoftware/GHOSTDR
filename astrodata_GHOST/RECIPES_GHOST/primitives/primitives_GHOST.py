@@ -1,5 +1,5 @@
 from astrodata import AstroData
-from gempy.gemini import gemini_tools at gt
+from gempy.gemini import gemini_tools as gt
 
 from primitives_GEMINI import GEMINIPrimitives
 
