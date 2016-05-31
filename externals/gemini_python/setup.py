@@ -54,9 +54,9 @@ RS_MODULES = ['recipe_system',
               'recipe_system.reduction'
              ]
 # IQTOOL NOT FOR PUBLIC RELEASE, YET
-IQTOOL_MODULES = ['iqtool',
-                  'iqtool.iq',
-                  'iqtool.gemplotlib']
+#IQTOOL_MODULES = ['iqtool',
+#                  'iqtool.iq',
+#                  'iqtool.gemplotlib']
 ADLIB_PACKAGES = ['FITS','Gemini']   # This is be used to form 'astrodata_Gemini' and 'astrodata_FITS'
 RECIPE_MODULES=[]
 PIF_MODULES=[]
@@ -97,7 +97,7 @@ SUBMODULES.extend(GEMPY_MODULES)
 SUBMODULES.extend(RECIPE_MODULES)
 SUBMODULES.extend(PIF_MODULES)
 SUBMODULES.extend(ADCONFIG_MODULES)
-SUBMODULES.extend(IQTOOL_MODULES)
+#SUBMODULES.extend(IQTOOL_MODULES)
 
 
 PACKAGES = []
