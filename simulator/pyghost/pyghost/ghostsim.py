@@ -41,13 +41,26 @@ class Arm(object):
     takes a single string representing the configuration. For GHOST, it can be
     "red" or "blue"."""
 
+    ARM_OPTIONS = [
+        'red',
+        'blue',
+    ]
+    MODE_OPTIONS = [
+        'high',
+        'std',
+    ]
+
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, arm):
-        self.arm = arm
-        self.d_y = 1000/52.67          # Distance in microns
-        self.theta = 65.0              # Blaze angle
-        self.assym = 1.0/0.41  # Magnification
+        if arm.lower() not in self.ARM_OPTIONS:
+            raise ValueError('arm must be one of %s' % (
+                ','.join(self.ARM_OPTIONS),
+            ))
+        self.arm = arm.lower()
+        self.d_y = 1000./52.67          # Distance in microns
+        self.theta = 65.0               # Blaze angle
+        self.assym = 1.0/0.41           # Magnification
         self.gamma = 0.56      # Echelle gamma
         self.nwave = 1e2       # Wavelengths per order for interpolation.
         self.f_col = 1750.6    # Collimator focal length.
@@ -85,8 +98,8 @@ class Arm(object):
             self.order_min = 63
             self.order_max = 95
         else:
-            print("Unknown spectrograph arm!")
-            raise UserWarning
+            raise RuntimeError('Order information not provided in Arm class '
+                               'for arm %s - aborting' % (self.arm, ))
 
     def spectral_format(self, xoff=0.0, yoff=0.0, ccd_centre=None):
         """Create a spectrum, with wavelengths sampled in 2 orders.
@@ -139,8 +152,8 @@ class Arm(object):
             wave[i, :] = np.linspace(wave_mins[i], wave_maxs[i], self.nwave)
         wave = wave.flatten()
         orders = np.repeat(orders, self.nwave)
-        order_frac = \
-            np.abs(orders - 2*self.d_y*np.sin(np.radians(self.theta))/wave)
+        order_frac = np.abs(orders -
+                            2*self.d_y*np.sin(np.radians(self.theta))/wave)
         ml_d = orders*wave/self.d_y
         # Propagate the beam through the Echelle.
         v_vects = np.zeros((3, len(wave)))
@@ -270,7 +283,7 @@ class Arm(object):
         # to interpolate to find the slit to detector transform.
         isbad = w_c*w_xp*w_yp == 0
         for i in range(x_c.shape[0]):
-            #w_ix = np.where(isbad[i, :] == False)[0]
+            # w_ix = np.where(isbad[i, :] == False)[0]
             w_ix = np.where(np.logical_not(isbad[i, :]))[0]
             dy_dyoff[i, w_ix] = \
                 np.interp(w_yp[i, w_ix], w_c[i, w_ix],
@@ -359,8 +372,8 @@ class Arm(object):
         elif len(fluxes) == 17:
             mode = 'std'
         elif len(mode) == 0:
-            print("Error: 17 or 28 lenslets needed... or mode should be set")
-            raise UserWarning
+            raise ValueError("Error: 17 or 28 lenslets needed... "
+                             "or mode should be set")
         if mode == 'std':
             n_lenslets = 17
             lenslet_width = self.lenslet_std_size
@@ -384,7 +397,7 @@ class Arm(object):
                                  -1, 1, -2, 0, 2, -1, 1,
                                  4, -3, 3, -2, 0, 2])).astype(int)
         else:
-            print("Error: mode must be standard or high")
+            raise ValueError("Error: mode must be standard or high")
 
         # Some preliminaries...
         cutout_hw = int(lenslet_width/self.microns_pix*1.5)
@@ -468,7 +481,7 @@ class Arm(object):
 
         Parameters
         ----------
-        x,w,b,matrices: float arrays
+        x, wave, blaze, matrices: float arrays
             See the output of spectral_format_with_matrix
         im_slit: float array
             See the output of make_lenslets
@@ -553,11 +566,11 @@ class Arm(object):
         thar = np.loadtxt(
             os.path.join(LOCAL_DIR, 'data/mnras0378-0221-SD1.txt'),
             usecols=[0, 1, 2])
-        #Create a fixed wavelength scale evenly spaced in log.
+        # Create a fixed wavelength scale evenly spaced in log.
         thar_wave = 3600 * np.exp(np.arange(5e5)/5e5)
         thar_flux = np.zeros(5e5)
-        #NB This is *not* perfect: we just find the nearest index of the
-        #wavelength scale corresponding to each Th/Ar line.
+        # NB This is *not* perfect: we just find the nearest index of the
+        # wavelength scale corresponding to each Th/Ar line.
         wave_ix = (np.log(thar[:, 1]/3600) * 5e5).astype(int)
         wave_ix = np.minimum(np.maximum(wave_ix, 0), 5e5-1).astype(int)
         thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))
@@ -580,6 +593,12 @@ class Arm(object):
         -------
         wave, flux: sky spectrum (wavelength in um, flux in photons/s)
         """
+
+        # Input checks
+        if mode not in self.MODE_OPTIONS:
+            raise ValueError('Mode must be one of %s' % (
+                ', '.join(self.MODE_OPTIONS),
+            ))
 
         # FIXME this sky spectrum isn't high enough resolution
         bgdata = np.loadtxt(
@@ -690,6 +709,12 @@ class Arm(object):
             Do we return an image as an array? The fits file is always written.
         """
 
+        # Input checks
+        if mode not in self.MODE_OPTIONS:
+            raise ValueError('Mode must be one of %s' % (
+                ', '.join(self.MODE_OPTIONS),
+            ))
+
         x, wave, blaze, matrices = self.spectral_format_with_matrix()
 
         # Deal with the values that can be scalars or arrays.
@@ -735,6 +760,7 @@ class Arm(object):
                 image += self.simulate_image(x, wave, blaze, matrices, im_slit2,
                                              spectrum=thar_spect, n_x=self.szx,
                                              xshift=xshift, rv=rv_thar)
+        # FIXME: Why is there no handling here for mode='std'?
         else:
             print("ERROR: unknown mode.")
             raise UserWarning

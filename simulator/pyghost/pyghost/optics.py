@@ -9,6 +9,7 @@ or an appropriate link.
 from __future__ import print_function
 import numpy as np
 
+
 def azimuthal_average(image, center=None, stddev=False, returnradii=False,
                       return_nr=False, binsize=0.5, weights=None, steps=False,
                       interpnan=False, left=None, right=None, return_max=False):
@@ -60,8 +61,8 @@ def azimuthal_average(image, center=None, stddev=False, returnradii=False,
     maxbin = nbins * binsize
     bins = np.linspace(0, maxbin, nbins+1)
 
-    #... but we're probably more interested in the bin centers than their
-    #left or right sides...
+    # ... but we're probably more interested in the bin centers than their
+    # left or right sides...
     bin_centers = (bins[1:]+bins[:-1])/2.0
 
     # Find out which radial bin each point in the map belongs to
@@ -108,6 +109,7 @@ def azimuthal_average(image, center=None, stddev=False, returnradii=False,
     else:
         return radial_prof
 
+
 def fresnel(wf, m_per_pix, dist, wave):
     """Propagate a wave by Fresnel diffraction
 
@@ -127,14 +129,13 @@ def fresnel(wf, m_per_pix, dist, wave):
     wf_new: float array
         Wavefront after propagating.
     """
-    #Notation on Mike's board
+    # Notation on Mike's board
     sz_xy = wf.shape[0]
     if wf.shape[0] != wf.shape[1]:
-        print("ERROR: Input wavefront must be square")
-        raise UserWarning
+        raise ValueError("ERROR: Input wavefront must be square")
 
-    #Co-ordinate axis of the wavefront Fourier transform. Not that 0 must be in
-    #the corner. x is in cycles per wavefront dimension.
+    # Co-ordinate axis of the wavefront Fourier transform. Not that 0 must be in
+    # the corner. x is in cycles per wavefront dimension.
     x = (((np.arange(sz_xy)+sz_xy/2) % sz_xy) - sz_xy/2)/m_per_pix/sz_xy
     xy_mesh = np.meshgrid(x, x)
     uu = np.sqrt(xy_mesh[0]**2 + xy_mesh[1]**2)
@@ -142,6 +143,7 @@ def fresnel(wf, m_per_pix, dist, wave):
     g_ft = np.fft.fft2(np.fft.fftshift(wf))*h_ft
     wf_new = np.fft.ifft2(g_ft)
     return np.fft.fftshift(wf_new)
+
 
 def curved_wf(sz_xy, m_per_pix, f_length, wave):
     """A curved wavefront centered on the *middle*
@@ -158,6 +160,7 @@ def curved_wf(sz_xy, m_per_pix, f_length, wave):
     rr = np.sqrt(xy_mesh[0]**2 + xy_mesh[1]**2)
     phase = 0.5*m_per_pix**2/wave/f_length*rr**2
     return np.exp(2j*np.pi*phase)
+
 
 def kmf(sz_xy):
     """This function creates a periodic wavefront produced by Kolmogorov
@@ -183,7 +186,9 @@ def kmf(sz_xy):
     ft_wf = np.exp(2j * np.pi * \
             np.random.random((sz_xy, sz_xy/2+1)))*dist2**(-11.0/12.0)*sz_xy/15.81
     ft_wf[0, 0] = 0
+
     return np.fft.irfft2(ft_wf)
+
 
 def test_kmf(sz_xy, ntests):
     """Function to test the normalization of kmf"""
@@ -194,6 +199,8 @@ def test_kmf(sz_xy, ntests):
                             np.mean((wf[:, 1:] - wf[:, :-1])**2))
     print("Mean var: {0:7.3e} Sdev var: {1:7.3e}"\
           .format(np.mean(variances), np.std(variances)))
+    return
+
 
 def moffat(theta, hw, beta=4.0):
     """This creates a moffatt function for simulating seeing.
@@ -215,6 +222,7 @@ def moffat(theta, hw, beta=4.0):
     denom = (1 + (2**(1.0/beta) - 1)*(theta/hw)**2)**beta
     return (2.0**(1.0/beta)-1)*(beta-1)/np.pi/hw**2/denom
 
+
 def moffat2d(sz_xy, hw, beta=4.0):
     """A 2D version of a moffat function
     """
@@ -222,6 +230,7 @@ def moffat2d(sz_xy, hw, beta=4.0):
     xy_mesh = np.meshgrid(x, x)
     r = np.sqrt(xy_mesh[0]**2 + xy_mesh[1]**2)
     return moffat(r, hw, beta=beta)
+
 
 def circle(dim, width):
     """This function creates a circle.
@@ -244,6 +253,7 @@ def circle(dim, width):
     yy = xy_mesh[0]
     circle_array = ((xx**2+yy**2) < (width/2.0)**2).astype(float)
     return circle_array
+
 
 def square(dim, width):
     """This function creates a square.
@@ -269,6 +279,7 @@ def square(dim, width):
     square_array = np.zeros((dim, dim))
     square_array[w_ix] = 1.0
     return square_array
+
 
 def hexagon(dim, width):
     """This function creates a hexagon.
@@ -298,6 +309,7 @@ def hexagon(dim, width):
     hex_array[w_ix] = 1.0
     return hex_array
 
+
 def snell(u_vect, f_vect, n_i, n_f):
     """Snell's law at an interface between two dielectrics
 
@@ -318,6 +330,7 @@ def snell(u_vect, f_vect, n_i, n_f):
     theta_f = np.arcsin(n_i*np.sin(theta_i)/n_f)
     v_vect = u_p*np.sin(theta_f) + f_vect*np.cos(theta_f)
     return v_vect
+
 
 def grating_sim(u_vect, l_vect, s_vect, ml_d, refract=False):
     r"""This function computes an output unit vector based on an input unit
@@ -347,8 +360,7 @@ def grating_sim(u_vect, l_vect, s_vect, ml_d, refract=False):
         Is the grating a refractive grating?
     """
     if np.abs(np.sum(l_vect*s_vect)) > 1e-3:
-        print('Error: input l and s must be orthogonal!')
-        raise UserWarning
+        raise ValueError('Error: input l and s must be orthogonal!')
     n_vect = np.cross(s_vect, l_vect)
     if refract:
         n_vect *= -1
@@ -357,6 +369,7 @@ def grating_sim(u_vect, l_vect, s_vect, ml_d, refract=False):
     v_n = np.sqrt(1-v_l**2 - v_s**2)
     return v_l*l_vect + v_s*s_vect + v_n*n_vect
 
+
 def rotate_xz(u_vect, theta_deg):
     """Rotates a vector u in the x-z plane, clockwise where x is up and
     z is right"""
@@ -364,6 +377,7 @@ def rotate_xz(u_vect, theta_deg):
     M = np.array([[np.cos(theta), 0, np.sin(theta)], [0, 1, 0],
                   [-np.sin(theta), 0, np.cos(theta)]])
     return np.dot(M, u_vect)
+
 
 def nglass(wave, glass='sio2'):
     """Refractive index of fused silica and other glasses. Note that C is
@@ -375,7 +389,7 @@ def nglass(wave, glass='sio2'):
     """
     try:
         n_wave = len(wave)
-    except:
+    except TypeError:
         wave = [wave]
         n_wave = 1
     wave = np.array(wave)
@@ -389,12 +403,12 @@ def nglass(wave, glass='sio2'):
         b_sellmeier = np.array([1.39757037, 1.59201403e-1, 1.26865430])
         c_sellmeier = np.array([9.95906143e-3, 5.46931752e-2, 1.19248346e2])
     else:
-        print("ERROR: Unknown glass {0:s}".format(glass))
-        raise UserWarning
+        raise ValueError("ERROR: Unknown glass %s" % (glass, ))
     refractive_index = np.ones(n_wave)
     for i in range(len(b_sellmeier)):
         refractive_index += b_sellmeier[i]*wave**2/(wave**2 - c_sellmeier[i])
     return np.sqrt(refractive_index)
+
 
 def shift_and_ft(image):
     """Sub-pixel shift an image to the origin and Fourier-transform it
@@ -419,6 +433,7 @@ def shift_and_ft(image):
     ftim = np.fft.rfft2(image)
     return ftim
 
+
 def rebin(image, shape):
     """Re-bins an image to a new (smaller) image with summing
 
@@ -435,6 +450,7 @@ def rebin(image, shape):
     sh = shape[0], image.shape[0]//shape[0], \
          shape[1], image.shape[1]//shape[1]
     return image.reshape(sh).sum(-1).sum(1)
+
 
 def regrid_fft(im, new_shape):
     """Regrid onto a larger number of pixels using an fft. This is optimal

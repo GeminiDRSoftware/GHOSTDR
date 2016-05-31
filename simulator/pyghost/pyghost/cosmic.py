@@ -73,9 +73,14 @@ import math
 # rate rate at which cosmic rays are incident (rays/s/cm/cm)
 # use_mask True if the area effect mask is to be used
 # pix_size size of pixels in microns (3D)
-#
+
+
 # returns image in electrons
 def cosmic(im_shape, exposed, shieldcover, rate, use_mask, pix_size):
+  # Input checking
+  # Type-cast use_mask to make sure it's valid
+  use_mask = bool(use_mask)
+
   image = np.zeros(im_shape)
 
   # Calculate number of rays based on rate for time exposed
