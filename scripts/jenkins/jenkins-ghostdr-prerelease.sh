@@ -14,6 +14,10 @@ ${RELEASE_STR}
 .
 w" | ed ${WORKSPACE}/hg/rtd/releases.rst >& /dev/null
 
+echo "RELEASE_VERSION: ${RELEASE_VERSION}"
+echo "RELEASE_DESCRIPTION: ${RELEASE_DESCRIPTION}"
+echo "RELEASE_STR: ${RELEASE_STR}"
+
 # Only mess with the repository from one host, not all the build hosts.  Might as well be the master.
 if [ ${NODE_NAME} == "master" ]; then
   # Start in the repository
