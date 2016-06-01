@@ -7,7 +7,7 @@
 # Exit if any command returns an error
 set -e
 
-# If this is a release version then use a real version number, otherwise make up a fake one to identify the build.
+# Change to the appropriate directory
 cd ${WORKSPACE}/hg
 
 # Run pylint over our codebase
