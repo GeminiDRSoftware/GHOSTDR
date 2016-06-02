@@ -8,7 +8,10 @@
 set -e
 
 # Prepend the details of the new release to the file that contains the list of releases
-RELEASE_STR="${RELEASE_VERSION}\n  ${RELEASE_DESCRIPTION}\n\n"
+RELEASE_STR="${RELEASE_VERSION}
+  ${RELEASE_DESCRIPTION}
+
+"
 echo "0a
 ${RELEASE_STR}
 .
