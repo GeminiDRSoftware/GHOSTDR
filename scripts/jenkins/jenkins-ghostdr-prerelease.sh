@@ -12,25 +12,26 @@ RELEASE_STR="${RELEASE_VERSION}
   ${RELEASE_DESCRIPTION}
 
 "
-echo "0a
-${RELEASE_STR}
-.
-w" | ed ${WORKSPACE}/hg/rtd/releases.rst >& /dev/null
-
-echo "RELEASE_VERSION: ${RELEASE_VERSION}"
-echo "RELEASE_DESCRIPTION: ${RELEASE_DESCRIPTION}"
-echo "RELEASE_STR: ${RELEASE_STR}"
-
 # Only mess with the repository from one host, not all the build hosts.  Might as well be the master.
 if [ ${NODE_NAME} == "master" ]; then
   # Start in the repository
   cd ${WORKSPACE}/hg
+
   # Update to the specified revision
   hg update ${RELEASE_REVISION}
+
+  # Edit the releases file
+  echo "0a
+  ${RELEASE_STR}
+  .
+  w" | ed ${WORKSPACE}/hg/rtd/releases.rst >& /dev/null
+
   # Commit the updated versions of the file
   hg commit -m "Jenkins prerelease ${RELEASE_VERSION}" ${WORKSPACE}/hg/rtd/releases.rst
+
   # Tag the repository with this updated file
   hg tag ${RELEASE_VERSION}
+
   # Now push the tag and the update, but don't run the usual hook
   hg push --config hooks.incoming.jenkins=
 fi
