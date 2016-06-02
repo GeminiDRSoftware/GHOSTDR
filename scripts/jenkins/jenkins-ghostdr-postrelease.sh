@@ -23,8 +23,8 @@ rsync -a --exclude "externals" --exclude ".hg*" ${WORKSPACE}/hg/ ${JENKINS_HOME}
 # Push the changes back into the github repository
 cd ${JENKINS_HOME}/workspace/GHOSTDR_github
 git add .
-git commit -m ${GITMSG}
-git tag -a -m ${GITMSG} ${RELEASE_VERSION}
+git commit -m "${GITMSG}"
+git tag -a -m "${GITMSG}" ${RELEASE_VERSION}
 git push origin master
 
 # send out a new notification
