@@ -11,7 +11,7 @@ set -e
 GITMSG="GHOST data reduction software release ${RELEASE_VERSION}"
 
 # make the new web pages from the latest rst files
-make -C ${WORKSPACE}/hg/rtd html
+make -C ${WORKSPACE}/hg/rtd SPHINXBUILD=/usr/local/python-2.7.1/bin/sphinx-build html
 
 # remove old software release web pages and install new ones
 rm -rf /priv/www/mssso/ghostdr/*
