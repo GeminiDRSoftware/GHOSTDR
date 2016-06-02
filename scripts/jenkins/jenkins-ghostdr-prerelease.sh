@@ -22,9 +22,9 @@ if [ ${NODE_NAME} == "master" ]; then
 
   # Edit the releases file
   echo "0a
-  ${RELEASE_STR}
-  .
-  w" | ed ${WORKSPACE}/hg/rtd/releases.rst >& /dev/null
+${RELEASE_STR}
+.
+w" | ed ${WORKSPACE}/hg/rtd/releases.rst >& /dev/null
 
   # Commit the updated versions of the file
   hg commit -m "Jenkins prerelease ${RELEASE_VERSION}" ${WORKSPACE}/hg/rtd/releases.rst
