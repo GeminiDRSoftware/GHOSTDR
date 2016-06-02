@@ -15,7 +15,7 @@ make -C ${WORKSPACE}/hg/rtd SPHINXBUILD=/usr/local/python-2.7.1/bin/sphinx-build
 
 # remove old software release web pages and install new ones
 rm -rf /priv/www/mssso/ghostdr/*
-cp -r ${WORKSPACE}/hg/rtd/build/_html/* /priv/www/mssso/ghostdr
+cp -r ${WORKSPACE}/hg/rtd/_build/html/* /priv/www/mssso/ghostdr
 
 # copy everything into the GHOSTDR_github directory
 rsync -a --exclude "externals" --exclude ".hg*" ${WORKSPACE}/hg/ ${JENKINS_HOME}/workspace/GHOSTDR_github/
