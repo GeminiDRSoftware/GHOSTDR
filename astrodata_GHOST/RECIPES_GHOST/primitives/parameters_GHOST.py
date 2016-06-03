@@ -10,7 +10,7 @@
         "recipeOverride" : True,
         "userOverride"   : True,
         "uiLevel"        : "UIBASIC",
-        }
+        },
     "nextparam" : {
         "default"        : "somestring",
         "type"           : "str",
@@ -19,7 +19,6 @@
         "uiLevel"        : "UIBASIC",
         },
     },
-
  "anotherPrimitive" : {
     "combine" : {
         "default"        : "sum",
@@ -27,6 +26,22 @@
         "recipeOverride" : True,
         "userOverride"   : True,
         "uiLevel"        : "UIBASIC",
+        },
+    },
+ "validateData":{
+    "suffix":{
+        "default"       : "_dataValidated",
+        "type"          : "str",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    "repair":{
+        "default"       : False,
+        "type"          : "bool",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
         },
     },
 }
