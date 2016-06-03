@@ -25,7 +25,8 @@ cd ${JENKINS_HOME}/workspace/GHOSTDR_github
 git add .
 git commit -m "${GITMSG}"
 git tag -a -m "${GITMSG}" ${RELEASE_VERSION}
-git push origin master
+git config credential.helper store
+git push origin HEAD:master
 
 # send out a new notification
 mail -s "GHOST data reduction software package release ${RELEASE_VERSION}" ghostdr-release@mso.anu.edu.au <<< "GHOST data reduction software package ${RELEASE_VERSION} has been released.  You can find more information at http://www.mso.anu.edu.au/ghostdr/"
