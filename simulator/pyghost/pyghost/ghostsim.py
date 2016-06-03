@@ -888,6 +888,7 @@ class Arm(object):
             if overscan > 0:
                 hdr['BIASSEC'] = "[%d:%d,%d:%d]" % (im_amp.shape[1]-overscan+1,
                                                     im_amp.shape[1], 1, im_amp.shape[0])
+            hdr['RDNOISE'] = rnoise[i]
             hdulist.append(pf.ImageHDU(data=im_amp, header=hdr))
         hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
 
