@@ -25,7 +25,7 @@ cd ${JENKINS_HOME}/workspace/GHOSTDR_github
 git add .
 git commit -m "${GITMSG}"
 git tag -a -m "${GITMSG}" ${RELEASE_VERSION}
-git config credential.helper store
+git config credential.helper store --file /var/lib/jenkins/.git-credentials
 git push origin ${RELEASE_VERSION}
 
 # send out a new notification
