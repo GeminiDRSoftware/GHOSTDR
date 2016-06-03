@@ -21,7 +21,7 @@ if [ ${NODE_NAME} == "master" ]; then
   hg update ${RELEASE_REVISION}
 
   # Edit the releases file
-  echo "0a
+  echo "3a
 ${RELEASE_STR}
 .
 w" | ed ${WORKSPACE}/hg/rtd/releases.rst >& /dev/null
