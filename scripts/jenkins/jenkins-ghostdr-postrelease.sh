@@ -25,11 +25,7 @@ cd ${JENKINS_HOME}/workspace/GHOSTDR_github
 git add .
 git commit -m "${GITMSG}"
 git tag -a -m "${GITMSG}" ${RELEASE_VERSION}
-
-# We rely on the GHOSTDR_github project to do the actual push, since it has
-# the relevant github credentials in it.  We trigger it via a URL since the
-# automatic triggering from the build plugin doesn't seem to work
-wget --auth-no-challenge --http-user=jon --http-password=ebe7a51b95bd18400d51484e698703dc -q -O /dev/null 'http://meh.anu.edu.au:8889/job/GHOSTDR_github/build?token=chicken&cause=release'
+git push origin master
 
 # send out a new notification
 mail -s "GHOST data reduction software package release ${RELEASE_VERSION}" ghostdr-release@mso.anu.edu.au <<< "GHOST data reduction software package ${RELEASE_VERSION} has been released.  You can find more information at http://www.mso.anu.edu.au/ghostdr/"
