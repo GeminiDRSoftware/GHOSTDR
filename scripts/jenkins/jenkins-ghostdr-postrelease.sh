@@ -25,7 +25,10 @@ cd ${JENKINS_HOME}/workspace/GHOSTDR_github
 git add .
 git commit -m "${GITMSG}"
 git tag -a -m "${GITMSG}" ${RELEASE_VERSION}
-git push origin master
+
+# We rely on the GHOSTDR_github project to do the actual push, since it has
+# the relevant github credentials in it.  And that project is triggered
+# automatically when this job completes.
 
 # send out a new notification
 mail -s "GHOST data reduction software package release ${RELEASE_VERSION}" ghostdr-release@mso.anu.edu.au <<< "GHOST data reduction software package ${RELEASE_VERSION} has been released.  You can find more information at http://www.mso.anu.edu.au/ghostdr/"
