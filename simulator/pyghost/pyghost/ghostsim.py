@@ -889,6 +889,8 @@ class Arm(object):
                 hdr['BIASSEC'] = "[%d:%d,%d:%d]" % (im_amp.shape[1]-overscan+1,
                                                     im_amp.shape[1], 1, im_amp.shape[0])
             hdr['RDNOISE'] = rnoise[i]
+            hdr['GAIN'] = gain[i]
+            hdr['BUNIT'] = 'ADU'
             hdulist.append(pf.ImageHDU(data=im_amp, header=hdr))
         hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
 
