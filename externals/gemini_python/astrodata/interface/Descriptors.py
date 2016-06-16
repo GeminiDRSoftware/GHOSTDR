@@ -885,5 +885,10 @@ class DescriptorValue(object):
 
 # Helper functions
 def round_sig(x, sig=2):
-    # Round to a defined number of significant figures
-    return round(x, sig-int(floor(log10(abs(x))))-1)
+    try:
+        rounded_x = round(x, sig - int(floor(log10(abs(x)))) - 1)
+    except ValueError:
+        rounded_x = x
+    except:
+        raise
+    return rounded_x
