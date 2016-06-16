@@ -2,6 +2,7 @@ from astrodata import AstroData
 from astrodata.utils import logutils
 from astrodata.utils import Errors
 from gempy.gemini import gemini_tools as gt
+from astrodata_GHOST.ADCONFIG_GHOST.lookups import timestamp_keywords as ghost_stamps
 
 from primitives_GEMINI import GEMINIPrimitives
 
@@ -16,6 +17,7 @@ class GHOSTPrimitives(GEMINIPrimitives):
 
     def init(self, rc):
         GEMINIPrimitives.init(self, rc)
+        self.timestamp_keys.update(ghost_stamps.timestamp_keys)
         return rc
 
     def validateData(self, rc):
