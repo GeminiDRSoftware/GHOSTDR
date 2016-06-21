@@ -4,6 +4,7 @@ from astrodata.utils import Errors
 from gempy.gemini import gemini_tools as gt
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import timestamp_keywords as ghost_stamps
 from gempy.gemini.eti.gireduceparam import subtract_overscan_hardcoded_params
+from pyraf import iraf
 
 from primitives_GMOS import GMOSPrimitives
 
@@ -22,6 +23,7 @@ class GHOSTPrimitives(GMOSPrimitives):
         return rc
 
     def subtractOverscan(self, rc):
+        iraf.setVerbose(value=2)
         subtract_overscan_hardcoded_params['order'] = 1
         return GMOSPrimitives.subtractOverscan(self, rc)
 

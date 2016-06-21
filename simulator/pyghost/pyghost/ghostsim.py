@@ -874,6 +874,8 @@ class Arm(object):
         hdr['INSTRUME'] = 'GHOST'
         hdr['CAMERA'] = self.arm.upper()
         hdr['OBSTYPE'] = obstype
+        if obstype == 'BIAS':
+            hdr['EXPTIME'] = 0.0
         hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
         for i, im_amp in enumerate(images):
