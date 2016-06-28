@@ -24,17 +24,15 @@ class GHOSTPrimitives(GMOSPrimitives):
 
     def subtractOverscan(self, rc):
         iraf.setVerbose(value=2)
+        # supply extra required param in gireduce's ETI wrapper; can also
+        # override DETTYPE defaults this way (the alternative is to extend
+        # gireduce to support our DETTYPE)
         subtract_overscan_hardcoded_params['order'] = 1
         return GMOSPrimitives.subtractOverscan(self, rc)
 
     def standardizeHeaders(self, rc):
-        """
-        This primitive is used to standardize the headers of GHOST data,
-        specifically.
-        """
-
-        log = logutils.get_logger(__name__)
-        log.debug(gt.log_message("primitive", "standardizeHeaders", "starting"))
+        #log = logutils.get_logger(__name__)
+        #log.debug(gt.log_message("primitive", "standardizeHeaders", "starting"))
         #timestamp_key = self.timestamp_keys["standardizeHeaders"]
         rc.run('standardizeGeminiHeaders')
         yield rc
