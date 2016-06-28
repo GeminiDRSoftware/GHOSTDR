@@ -6,6 +6,5 @@
 __author__ = "Michael Ireland <michael.ireland@anu.edu.au>"
 __version__ = "0.1"
 
-from ghostsim import Arm
+from ghostsim import Arm, split_image, thar_spectrum
 from extract import Extractor
-

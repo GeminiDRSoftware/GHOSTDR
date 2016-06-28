@@ -35,6 +35,84 @@ import pyghost.cosmic as cosmic
 
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
 
+def split_image(image, namps, return_headers=False):
+    """ Split the input image into sections for each readout amplifier. """
+    images = np.array_split(image, namps[0])
+    current_size = 0
+    ccdsecx = np.zeros((namps[1], 2))
+    ccdsecy = np.zeros((namps[0], 2))
+    newimages = []
+    for i, im_amp in enumerate(images):
+        ccdsecy[i, 0] = current_size
+        current_size += im_amp.shape[0]
+        ccdsecy[i, 1] = current_size
+        newimages.extend(np.array_split(im_amp, namps[1], axis=1))
+    images = newimages
+    current_size = 0
+    for i, im_amp in enumerate(images[0:namps[1]]):
+        ccdsecx[i, 0] = current_size
+        current_size += im_amp.shape[1]
+        ccdsecx[i, 1] = current_size
+
+    cxl, cyl = np.meshgrid(ccdsecx[:, 0], ccdsecy[:, 0])
+    cxh, cyh = np.meshgrid(ccdsecx[:, 1], ccdsecy[:, 1])
+    cxl = cxl.flatten()
+    cyl = cyl.flatten()
+    cxh = cxh.flatten()
+    cyh = cyh.flatten()
+    if return_headers:
+        return images, cxl, cxh, cyl, cyh
+    else:
+        return images
+
+def fftnoise(samples):
+    """ Use an inverse FFT to generate noise. """
+    samples = np.array(samples, dtype='complex')
+    npoints = (len(samples) - 1) // 2
+    phases = np.random.rand(npoints) * 2 * np.pi
+    phases = np.cos(phases) + 1j * np.sin(phases)
+    samples[1:npoints+1] *= phases
+    samples[-1:-1-npoints:-1] = np.conj(samples[1:npoints+1])
+    return np.fft.ifft(samples).real
+
+def frequency_noise(noise_freqs, sample_rate, shape, mean=0.0, std=1.0):
+    """ Simulate noise at specific frequencies in a 1D array. """
+    if np.isscalar(noise_freqs):
+        noise_freqs = [noise_freqs]
+
+    nsamples = np.prod(shape)
+    sample_freqs = np.abs(np.fft.fftfreq(nsamples, 1/sample_rate))
+    samples = np.zeros(nsamples)
+    for freq in noise_freqs:
+        idx = (np.abs(sample_freqs-freq)).argmin()
+        samples[idx] = 1
+    return mean + std/math.sqrt(2)*nsamples*fftnoise(samples).reshape(shape, order='F')
+
+def thar_spectrum():
+    """Calculates a ThAr spectrum.
+
+    Returns
+    -------
+    wave, flux: ThAr spectrum (wavelength in um, flux in photons/s?)
+    """
+
+    thar = np.loadtxt(
+        os.path.join(LOCAL_DIR, 'data/mnras0378-0221-SD1.txt'),
+        usecols=[0, 1, 2])
+    # Create a fixed wavelength scale evenly spaced in log.
+    thar_wave = 3600 * np.exp(np.arange(5e5)/5e5)
+    thar_flux = np.zeros(5e5)
+    # NB This is *not* perfect: we just find the nearest index of the
+    # wavelength scale corresponding to each Th/Ar line.
+    wave_ix = (np.log(thar[:, 1]/3600) * 5e5).astype(int)
+    wave_ix = np.minimum(np.maximum(wave_ix, 0), 5e5-1).astype(int)
+    thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))
+    thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
+                            mode='same')
+    # Make the peak flux equal to 3
+    # FIXME I don't know the real flux of the ThAr lamp
+    thar_flux /= np.max(thar_flux) / 3.0
+    return np.array([thar_wave/1e4, thar_flux])
 
 class Arm(object):
     """A class for each arm of the spectrograph. The initialisation function
@@ -69,6 +147,7 @@ class Arm(object):
         self.microns_pix = 2.0  # slit image microns per pixel
         self.microns_arcsec = 400.0  # slit image plane microns per arcsec
         self.im_slit_sz = 2048  # Size of the image slit size in pixels.
+        self.sample_rate = 1e6  # Sample rate of the pixels
         if arm == 'red':
             # Additional slit rotation across an order needed to match Zemax.
             self.extra_rot = 3.0
@@ -83,6 +162,7 @@ class Arm(object):
             self.alpha2 = 0.0      # Second prism apex angle
             self.order_min = 34
             self.order_max = 67
+            self.dettype = 'E2V-CCD-231-C6'
         elif arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
             self.extra_rot = 2.0
@@ -97,6 +177,7 @@ class Arm(object):
             self.alpha2 = 0.0      # Second prism apex angle
             self.order_min = 63
             self.order_max = 95
+            self.dettype = 'E2V-CCD-231-84'
         else:
             raise RuntimeError('Order information not provided in Arm class '
                                'for arm %s - aborting' % (self.arm, ))
@@ -171,7 +252,7 @@ class Arm(object):
             mean_v[1] = 0
             # Re-normalise this mean direction vector
             mean_v /= np.sqrt(np.sum(mean_v**2))
-            
+
         for i in range(len(wave)):
             # Expand the range of angles around the mean direction.
             temp = mean_v + (v_vects[:, i]-mean_v)*self.assym
@@ -206,7 +287,7 @@ class Arm(object):
             ccdx = np.array([1, 0, 0]) - np.dot([1, 0, 0], mean_w)*mean_w
             ccdx[1] = 0
             ccdx /= np.sqrt(np.sum(ccdx**2))
-            
+
         # Make the spectrum on the detector.
         xpx = np.zeros(len(wave))
         ypx = np.zeros(len(wave))
@@ -225,7 +306,7 @@ class Arm(object):
         else:
             w_ix = np.where((ypx < self.szy/2) * (ypx > -self.szy/2))[0]
             xpix_offset = 0.5*(np.min(xpx[w_ix]) + np.max(xpx[w_ix]))
-            
+
         xpx -= xpix_offset
         # Now lets interpolate onto a pixel grid rather than the
         # arbitrary wavelength grid we began with.
@@ -458,7 +539,7 @@ class Arm(object):
             im_cutout = im_cutout[szy/2-cutout_hw:szy/2+cutout_hw,
                                   szx/2-cutout_hw:szx/2+cutout_hw]
             prof = optics.azimuthal_average(im_cutout, returnradii=True,
-                                           binsize=1)
+                                            binsize=1)
             prof = (prof[0], prof[1] * flux)
             xprof = np.append(np.append(0, prof[0]), np.max(prof[0])*2)
             yprof = np.append(np.append(prof[1][0], prof[1]), 0)
@@ -476,7 +557,7 @@ class Arm(object):
         return im_slit
 
     def simulate_image(self, x, wave, blaze, matrices, im_slit, spectrum=None,
-                       n_x=0, xshift=0.0, yshift=0.0, rv=0.0):
+                       n_x=0, xshift=0.0, yshift=0.0, radvel=0.0):
         """Simulate a spectrum on the CCD.
 
         Parameters
@@ -496,7 +577,7 @@ class Arm(object):
             Bulk shift to put in to the spectrum along the slit.
         yshift: float
             NOT IMPLEMENTED
-        rv: float
+        radvel: float
             Radial velocity in m/s.
         """
         # If no input spectrum, use the sun.
@@ -530,7 +611,7 @@ class Arm(object):
                                 (cutout_shifted[1] < n_y))
                 cutout_shifted = (cutout_shifted[0][w_ix],
                                   cutout_shifted[1][w_ix])
-                flux = np.interp(wave[i, j]*(1 + rv/299792458.0),
+                flux = np.interp(wave[i, j]*(1 + radvel/299792458.0),
                                  spectrum[0], spectrum[1],
                                  left=0, right=0)
                 # Rounded to the nearest microns_pix, find the co-ordinate
@@ -554,32 +635,6 @@ class Arm(object):
                     flux * im_slit[slit_y, slit_x]
             print('Done order: {0}'.format(i + self.order_min))
         return image
-
-    def thar_spectrum(self):
-        """Calculates a ThAr spectrum.
-
-        Returns
-        -------
-        wave, flux: ThAr spectrum (wavelength in um, flux in photons/s?)
-        """
-
-        thar = np.loadtxt(
-            os.path.join(LOCAL_DIR, 'data/mnras0378-0221-SD1.txt'),
-            usecols=[0, 1, 2])
-        # Create a fixed wavelength scale evenly spaced in log.
-        thar_wave = 3600 * np.exp(np.arange(5e5)/5e5)
-        thar_flux = np.zeros(5e5)
-        # NB This is *not* perfect: we just find the nearest index of the
-        # wavelength scale corresponding to each Th/Ar line.
-        wave_ix = (np.log(thar[:, 1]/3600) * 5e5).astype(int)
-        wave_ix = np.minimum(np.maximum(wave_ix, 0), 5e5-1).astype(int)
-        thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))
-        thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
-                                mode='same')
-        # Make the peak flux equal to 3
-        # FIXME I don't know the real flux of the ThAr lamp
-        thar_flux /= np.max(thar_flux) / 3.0
-        return np.array([thar_wave/1e4, thar_flux])
 
     def sky_background(self, mode):
         """Calculate a sky spectrum.
@@ -631,13 +686,36 @@ class Arm(object):
         # Return flux and wavelength
         return np.array([bgwave, bgflux])
 
+    def simulate_frequency_noise(self, freq, mean, std):
+        """ Simulate an image with noise of specific frequencies in it. """
+        image = frequency_noise(freq, self.sample_rate, (self.szx, self.szy), mean=mean, std=std)
+        return image
+
+    def simulate_gradient(self, theta, mean, std):
+        """ Simulate an image with a gradient across it, at angle theta.
+            The image has mean=0 and std=1. """
+        x, y = np.meshgrid(np.arange(self.szy), np.arange(self.szx))
+        image = x * np.sin(theta) + y * np.cos(theta)
+        image = (image - image.mean()) / image.std()
+        return image * std + mean
+
+    def simulate_flatfield(self, mean, std):
+        """ Simulate a flatfield. """
+        return np.random.normal(loc=mean, scale=std, size=(self.szx, self.szy))
+
+    def blank_frame(self, namps=[1, 1]):
+        image = np.zeros((self.szx, self.szy))
+        images = split_image(image, namps, return_headers=False)
+        return images
+
     def simulate_frame(self, duration=0.0, output_prefix='test_',
-                       spectrum=None, xshift=0.0, yshift=0.0, rv=0.0,
+                       spectrum=None, xshift=0.0, yshift=0.0, radvel=0.0,
                        rv_thar=0.0, flux=1e2, rnoise=3.0, gain=[1.0],
                        bias_level=10, overscan=32, namps=[1, 1],
                        use_thar=True, mode='high', add_cosmic=True,
                        add_sky=True, return_image=False, thar_flatlamp=False,
-                       obstype=None):
+                       flatlamp=False, obstype=None, additive_noise=None,
+                       scaling=None):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -664,7 +742,7 @@ class Arm(object):
         yshift: float (optional)
             y-direction (spectral direction) shift.
 
-        rv: float (optional)
+        radvel: float (optional)
             Radial velocity in m/s for the target star with respect to
             the observer.
 
@@ -728,24 +806,32 @@ class Arm(object):
         if np.isscalar(rnoise):
             rnoise = np.ones(namps[0]*namps[1]) * rnoise
 
+        if scaling is None:
+            scaling = np.ones(namps[0]*namps[1])
+        elif np.isscalar(scaling):
+            scaling = np.ones(namps[0]*namps[1]) * scaling
+
         # Make sure duration is a float so that it doesn't mess
         # up our calculations later on
         duration = float(duration)
 
         if mode == 'high':
-            slit_fluxes = np.ones(19)*0.37
-            slit_fluxes[6:13] = 0.78
-            slit_fluxes[9] = 1.0
-            slit_fluxes /= np.mean(slit_fluxes)
+            if flatlamp:
+                slit_fluxes = np.ones(19)
+            else:
+                slit_fluxes = np.ones(19)*0.37
+                slit_fluxes[6:13] = 0.78
+                slit_fluxes[9] = 1.0
+                slit_fluxes /= np.mean(slit_fluxes)
             im_slit = self.make_lenslets(fluxes=slit_fluxes, mode='high',
                                          llet_offset=2)
             image = self.simulate_image(x, wave, blaze, matrices, im_slit,
                                         spectrum=spectrum, n_x=self.szx,
-                                        xshift=xshift, rv=rv)
+                                        xshift=xshift, radvel=radvel)
 
             if use_thar:
                 # Create an appropriately convolved Thorium-Argon spectrum
-                thar_spect = self.thar_spectrum()
+                thar_spect = thar_spectrum()
                 '''
                 plt.clf()
                 plt.plot(thar_spect[0], thar_spect[1])
@@ -759,7 +845,7 @@ class Arm(object):
                                               llet_offset=0)
                 image += self.simulate_image(x, wave, blaze, matrices, im_slit2,
                                              spectrum=thar_spect, n_x=self.szx,
-                                             xshift=xshift, rv=rv_thar)
+                                             xshift=xshift, radvel=rv_thar)
         # FIXME: Why is there no handling here for mode='std'?
         else:
             print("ERROR: unknown mode.")
@@ -787,7 +873,7 @@ class Arm(object):
                                               llet_offset=0)
             sky_image = self.simulate_image(x, wave, blaze, matrices, im_slit2,
                                             spectrum=sky_spect, n_x=self.szx,
-                                            xshift=xshift, rv=0.0)
+                                            xshift=xshift, radvel=0.0)
             sky_image = np.maximum(0, sky_image)
             image += duration * np.random.poisson(flux * sky_image)
 
@@ -810,44 +896,23 @@ class Arm(object):
         # Add dark current (3 e/pix/hour)
         image += np.random.poisson(np.ones_like(image) * 3.0 * duration/3600.0)
 
-        # FIXME Multiply by flatfield map (i.e. simulate pixel-pixel
-        # non-uniformity).
-        # FIXME Apply non-linearity
-
         # For conventional axes transpose the image
         image = image.T
 
         # Split the image into sections for each readout amplifier
-        images = np.array_split(image, namps[0])
-        current_size = 0
-        ccdsecx = np.zeros((namps[1], 2))
-        ccdsecy = np.zeros((namps[0], 2))
-        newimages = []
-        for i, im_amp in enumerate(images):
-            ccdsecy[i, 0] = current_size
-            current_size += im_amp.shape[0]
-            ccdsecy[i, 1] = current_size
-            newimages.extend(np.array_split(im_amp, namps[1], axis=1))
-        images = newimages
-        current_size = 0
-        for i, im_amp in enumerate(images[0:namps[1]]):
-            ccdsecx[i, 0] = current_size
-            current_size += im_amp.shape[1]
-            ccdsecx[i, 1] = current_size
-
-        cxl, cyl = np.meshgrid(ccdsecx[:, 0], ccdsecy[:, 0])
-        cxh, cyh = np.meshgrid(ccdsecx[:, 1], ccdsecy[:, 1])
-        cxl = cxl.flatten()
-        cyl = cyl.flatten()
-        cxh = cxh.flatten()
-        cyh = cyh.flatten()
+        images, cxl, cxh, cyl, cyh = split_image(image, namps, return_headers=True)
 
         # Add read noise for each amplifier
         images = [i+r*np.random.normal(size=i.shape)
                   for i, r in zip(images, rnoise)]
 
-        # Divide by the gain in e/ADU for each amplifier
-        images = [(a/g + b) for (a, g, b) in zip(images, gain, bias_level)]
+        # Divide by the gain in e/ADU for each amplifier, scale, and add the bias level
+        images = [(s*a/g + b) for (a, g, b, s) in zip(images, gain, bias_level, scaling)]
+
+        # Add in the additive noise
+        # This is assumed to be electronic noise, so it's in ADUs
+        if additive_noise is not None:
+            images = [i + j for i, j in zip(images, additive_noise)]
 
         # Add overscan for each amplifier
         if overscan > 0:
@@ -859,10 +924,13 @@ class Arm(object):
                 newimages.append(i)
             images = newimages
 
+        # FIXME Apply non-linearity
+
         # Convert to unsigned short, and deal with saturation
         newimages = []
         saturation = np.iinfo(np.uint16).max
         for im_amp in images:
+            im_amp[im_amp < 0] = 0
             im_amp[im_amp > saturation] = saturation
             newimages.append(np.asarray(im_amp, dtype=np.uint16))
         images = newimages
@@ -876,7 +944,10 @@ class Arm(object):
         hdr['OBSTYPE'] = obstype
         if obstype == 'BIAS':
             hdr['EXPTIME'] = 0.0
+        else:
+            hdr['EXPTIME'] = duration
         hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
+        hdr['DETTYPE'] = self.dettype
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
         for i, im_amp in enumerate(images):
             hdr = pf.Header()
