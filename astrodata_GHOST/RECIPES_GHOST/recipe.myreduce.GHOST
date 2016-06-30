@@ -9,6 +9,9 @@ overscanCorrect
 biasCorrect
 ADUToElectrons
 addVar(poisson_noise=True)
-#...
-#...
+flatCorrect
+mosaicDetectors
+makeFringe
+fringeCorrect
+alignAndStack
 

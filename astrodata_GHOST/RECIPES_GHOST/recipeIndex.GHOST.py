@@ -5,5 +5,5 @@
 localAstroTypeRecipeIndex = {
                             "GHOST_BIAS"  : ["makeProcessedBias"],
                             "GHOST_FLAT"  : ["makeProcessedFlat"],
-                            "GHOST_SPECT" : ["reduce"],
+                            "GHOST_SPECT" : ["myreduce"],
                             }
