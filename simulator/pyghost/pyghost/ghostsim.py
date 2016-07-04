@@ -24,16 +24,32 @@ import os
 # import matplotlib.pyplot as plt
 # import matplotlib.cm as cm
 import numpy as np
+# import pylab as plt
 
 try:
-    import pyfits as pf
-except ImportError:
     import astropy.io.fits as pf
+except ImportError:
+    import pyfits as pf
 
-import pyghost.optics as optics
-import pyghost.cosmic as cosmic
+from astropy import wcs
+from pyghost import optics
+from pyghost import cosmic
 
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
+PLANCK_H = 6.6256e-27  # Planck constant [erg s]
+LIGHT_C = 2.99792458e18  # Speed of light [A/s]
+
+# Number of fibers in each mode
+# HR = high resolution
+# SR = standard resolution
+N_HR_SCI = 19
+N_HR_SKY = 7
+# We add 2, one for the ThAr fiber, and one for the gap
+N_HR_TOT = N_HR_SCI + N_HR_SKY + 2
+N_SR_SCI = 7
+N_SR_SKY = 3
+N_SR_TOT = 2 * N_SR_SCI + N_SR_SKY
+N_GD = 6
 
 def split_image(image, namps, return_headers=False):
     """ Split the input image into sections for each readout amplifier. """
@@ -113,6 +129,61 @@ def thar_spectrum():
     # FIXME I don't know the real flux of the ThAr lamp
     thar_flux /= np.max(thar_flux) / 3.0
     return np.array([thar_wave/1e4, thar_flux])
+
+def fits_in_dir(dirname):
+    """ Return all fits files in the given directory """
+    for f in os.listdir(dirname):
+        fname = os.path.join(dirname, f)
+        if os.path.isfile(fname) and fname.endswith(".fits"):
+            yield fname
+  
+def load_sky_from_dir(dirname):
+    """ Load the UVES sky spectrum from the given direcotry """
+    # Initialise our data structures
+    wavel = []
+    flux = []
+
+    # Iterate over all the FITS files in the given directory
+    for filename in fits_in_dir(dirname):
+         # Load the FITS hdulist
+         hdulist = pf.open(filename)
+ 
+         # Parse the WCS keywords in the primary HDU
+         wav_wcs = wcs.WCS(hdulist[0].header)
+     
+         # Create an array of pixel coordinates
+         pixcrd = np.array(np.arange(hdulist[0].data.shape[0]))
+         
+         # Convert pixel coordinates to world coordinates
+         world = wav_wcs.wcs_pix2world(pixcrd, 0)[0]
+
+         # Grab the data
+         data = hdulist[0].data
+
+         # Be careful - there's some dud data in there
+         if filename.endswith("564U.fits"):
+             args = (world > 5700) * (world < 5900)
+             world = world[args]
+             data = data[args]
+         elif filename.endswith("800U.fits"):
+             args = (world > 8530) * (world < 8630)
+             world = world[args]
+             data = data[args]
+         
+         # Accumulate the data
+         wavel.extend(world)
+         flux.extend(data)
+         
+    # Make sure the data is sorted by wavelength, in case we read
+    # the files in some other order
+    wavel = np.asarray(wavel)
+    args = np.argsort(wavel)
+    wavel = wavel[args]   
+    flux = np.asarray(flux)[args]
+    # Why is there negative flux?
+    flux[flux < 0] = 0
+ 
+    return wavel, flux 
 
 class Arm(object):
     """A class for each arm of the spectrograph. The initialisation function
@@ -448,15 +519,15 @@ class Arm(object):
         # equivalent to a 1 degree FWHM for an f/3 input ???
         # !!! Double-check !!!
         conv_fwhm = 30.0
-        if len(fluxes) == 28:
+        if len(fluxes) == N_HR_TOT:
             mode = 'high'
-        elif len(fluxes) == 17:
+        elif len(fluxes) == N_SR_TOT:
             mode = 'std'
         elif len(mode) == 0:
-            raise ValueError("Error: 17 or 28 lenslets needed... "
+            raise ValueError("Error: "+N_SR_TOT+" or "+N_HR_TOT+" lenslets needed... "
                              "or mode should be set")
         if mode == 'std':
-            n_lenslets = 17
+            n_lenslets = N_SR_TOT
             lenslet_width = self.lenslet_std_size
             yoffset = \
                 (lenslet_width/self.microns_pix/hex_scale *
@@ -465,7 +536,7 @@ class Arm(object):
                 (lenslet_width/self.microns_pix/hex_scale *
                  np.array([-1, -0.5, -0.5, 0, 0.5, 0.5, 1.0])).astype(int)
         elif mode == 'high':
-            n_lenslets = 28
+            n_lenslets = N_HR_TOT
             lenslet_width = self.lenslet_high_size
             #Order is 6 from the outer array then inner 7 then 6 from the
             #outer array. Should confirm to AAO.
@@ -655,33 +726,35 @@ class Arm(object):
                 ', '.join(self.MODE_OPTIONS),
             ))
 
-        # FIXME this sky spectrum isn't high enough resolution
-        bgdata = np.loadtxt(
-            os.path.join(LOCAL_DIR, 'data/skybg_50_10.dat'), skiprows=14)
-        # Convert nm to um
-        bgdata[:, 0] /= 1000
+        # Load the UVES sky
+        # Flux is in 1e-16 erg / (s*A*cm^2*arcs^2) 
+        bgwave, bgflux = load_sky_from_dir(os.path.join(LOCAL_DIR, 'data/uves_sky'))
 
-        # Calculate area per fiber
+        # Convert flux to phot/s/A/cm^2/arcsec^2
+        bgflux *= 1e-16
+        bgflux /= PLANCK_H*LIGHT_C/bgwave
+
+        # Calculate area per fiber in arcsec^2
         # FIXME this is just a rough guess - should get the real numbers
         if mode == 'high':
-            area = math.pi * 0.125**2
+            fiber_area = math.pi * 0.125**2
         elif mode == 'std':
-            area = math.pi * 0.2**2
+            fiber_area = math.pi * 0.2**2
 
-        # Convert phot/s/nm/arcsec^2/m^2 into phot/s/nm
-        bgdata[:, 1] *= math.pi * 4**2 * area
+        # Convert phot/s/A/cm^2/arcsec^2 into phot/s/A/cm^2
+        bgflux *= fiber_area
 
-        # Wavelength of spectrum
-        bgwave = np.linspace(bgdata[:, 0].min(), bgdata[:, 0].max(), 100000)
-
-        # Size of each step in nm
-        bgstep = 1000 * (bgwave[1] - bgwave[0])
+        # Convert phot/s/A/cm^2 to phot/s/A
+        bgflux *= math.pi * 400**2
 
         # Convert to phot/s
-        bgdata[:, 1] *= bgstep
+        bgflux = bgflux[:-1] * np.diff(bgwave)
 
-        # Interpolate onto a regular grid
-        bgflux = np.interp(bgwave, bgdata[:, 0], bgdata[:, 1])
+        # Convert wavelength to microns
+        bgwave = bgwave[:-1] / 1e4
+
+        # plt.plot(bgwave, bgflux)
+        # plt.show()
 
         # Return flux and wavelength
         return np.array([bgwave, bgflux])
@@ -816,10 +889,11 @@ class Arm(object):
         duration = float(duration)
 
         if mode == 'high':
-            if flatlamp:
-                slit_fluxes = np.ones(19)
-            else:
-                slit_fluxes = np.ones(19)*0.37
+            slit_fluxes = np.ones(N_HR_SCI)
+            if not flatlamp:
+                # FIXME where are these numbers from?
+                # Also, the fiber ordering is not like this
+                slit_fluxes *= 0.37
                 slit_fluxes[6:13] = 0.78
                 slit_fluxes[9] = 1.0
                 slit_fluxes /= np.mean(slit_fluxes)
@@ -847,6 +921,19 @@ class Arm(object):
                                              spectrum=thar_spect, n_x=self.szx,
                                              xshift=xshift, radvel=rv_thar)
         # FIXME: Why is there no handling here for mode='std'?
+        elif mode == 'std':
+            slit_fluxes = np.ones(N_SR_SCI)
+            if not flatlamp:
+                # FIXME these numbers are made up
+                # Also, the fiber ordering is not like this
+                slit_fluxes *= 0.78
+                slit_fluxes[3] = 1.0
+                slit_fluxes /= np.mean(slit_fluxes)
+            im_slit = self.make_lenslets(fluxes=slit_fluxes, mode='std',
+                                         llet_offset=0)
+            image = self.simulate_image(x, wave, blaze, matrices, im_slit,
+                                        spectrum=spectrum, n_x=self.szx,
+                                        xshift=xshift, radvel=radvel)
         else:
             print("ERROR: unknown mode.")
             raise UserWarning
@@ -863,12 +950,11 @@ class Arm(object):
             sky_spect = self.sky_background(mode)
             # Put it into all the fibers equally
             if mode == 'high':
-                slit_fluxes = np.ones(26)
+                slit_fluxes = np.ones(N_HR_SCI + N_HR_SKY)
                 im_slit2 = self.make_lenslets(fluxes=slit_fluxes, mode=mode,
-                                              llet_offset=0)
+                                              llet_offset=2)
             elif mode == 'std':
-                slit_fluxes = np.ones(10)
-                # FIXME llet_offset for standard mode?
+                slit_fluxes = np.ones(N_SR_TOT)
                 im_slit2 = self.make_lenslets(fluxes=slit_fluxes, mode=mode,
                                               llet_offset=0)
             sky_image = self.simulate_image(x, wave, blaze, matrices, im_slit2,
