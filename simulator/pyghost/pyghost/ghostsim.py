@@ -132,11 +132,11 @@ def thar_spectrum():
 
 def fits_in_dir(dirname):
     """ Return all fits files in the given directory """
-    for f in os.listdir(dirname):
-        fname = os.path.join(dirname, f)
-        if os.path.isfile(fname) and fname.endswith(".fits"):
-            yield fname
-  
+    for fname in os.listdir(dirname):
+        fullname = os.path.join(dirname, fname)
+        if os.path.isfile(fullname) and fullname.endswith(".fits"):
+            yield fullname
+
 def load_sky_from_dir(dirname):
     """ Load the UVES sky spectrum from the given direcotry """
     # Initialise our data structures
@@ -145,45 +145,45 @@ def load_sky_from_dir(dirname):
 
     # Iterate over all the FITS files in the given directory
     for filename in fits_in_dir(dirname):
-         # Load the FITS hdulist
-         hdulist = pf.open(filename)
- 
-         # Parse the WCS keywords in the primary HDU
-         wav_wcs = wcs.WCS(hdulist[0].header)
-     
-         # Create an array of pixel coordinates
-         pixcrd = np.array(np.arange(hdulist[0].data.shape[0]))
-         
-         # Convert pixel coordinates to world coordinates
-         world = wav_wcs.wcs_pix2world(pixcrd, 0)[0]
+        # Load the FITS hdulist
+        hdulist = pf.open(filename)
 
-         # Grab the data
-         data = hdulist[0].data
+        # Parse the WCS keywords in the primary HDU
+        wav_wcs = wcs.WCS(hdulist[0].header)
 
-         # Be careful - there's some dud data in there
-         if filename.endswith("564U.fits"):
-             args = (world > 5700) * (world < 5900)
-             world = world[args]
-             data = data[args]
-         elif filename.endswith("800U.fits"):
-             args = (world > 8530) * (world < 8630)
-             world = world[args]
-             data = data[args]
-         
-         # Accumulate the data
-         wavel.extend(world)
-         flux.extend(data)
-         
+        # Create an array of pixel coordinates
+        pixcrd = np.array(np.arange(hdulist[0].data.shape[0]))
+
+        # Convert pixel coordinates to world coordinates
+        world = wav_wcs.wcs_pix2world(pixcrd, 0)[0]
+
+        # Grab the data
+        data = hdulist[0].data
+
+        # Be careful - there's some dud data in there
+        if filename.endswith("564U.fits"):
+            args = (world > 5700) * (world < 5900)
+            world = world[args]
+            data = data[args]
+        elif filename.endswith("800U.fits"):
+            args = (world > 8530) * (world < 8630)
+            world = world[args]
+            data = data[args]
+
+        # Accumulate the data
+        wavel.extend(world)
+        flux.extend(data)
+
     # Make sure the data is sorted by wavelength, in case we read
     # the files in some other order
     wavel = np.asarray(wavel)
     args = np.argsort(wavel)
-    wavel = wavel[args]   
+    wavel = wavel[args]
     flux = np.asarray(flux)[args]
     # Why is there negative flux?
     flux[flux < 0] = 0
- 
-    return wavel, flux 
+
+    return wavel, flux
 
 class Arm(object):
     """A class for each arm of the spectrograph. The initialisation function
@@ -727,7 +727,7 @@ class Arm(object):
             ))
 
         # Load the UVES sky
-        # Flux is in 1e-16 erg / (s*A*cm^2*arcs^2) 
+        # Flux is in 1e-16 erg / (s*A*cm^2*arcs^2)
         bgwave, bgflux = load_sky_from_dir(os.path.join(LOCAL_DIR, 'data/uves_sky'))
 
         # Convert flux to phot/s/A/cm^2/arcsec^2
@@ -777,6 +777,7 @@ class Arm(object):
         return np.random.normal(loc=mean, scale=std, size=(self.szx, self.szy))
 
     def blank_frame(self, namps=[1, 1]):
+        """ Return an entirely blank frame, of the correct size """
         image = np.zeros((self.szx, self.szy))
         images = split_image(image, namps, return_headers=False)
         return images
@@ -1004,10 +1005,10 @@ class Arm(object):
         if overscan > 0:
             newimages = []
             for (i, g, b, r) in zip(images, gain, bias_level, rnoise):
-                o = r * np.random.normal(size=(i.shape[0], overscan)) + b
-                o /= g
-                i = np.hstack((i, o))
-                newimages.append(i)
+                oimg = r * np.random.normal(size=(i.shape[0], overscan)) + b
+                oimg /= g
+                newimg = np.hstack((i, oimg))
+                newimages.append(newimg)
             images = newimages
 
         # FIXME Apply non-linearity
