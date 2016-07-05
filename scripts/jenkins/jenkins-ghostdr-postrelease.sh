@@ -27,7 +27,7 @@ export GIT_CONFIG=${JENKINS_HOME}/.gitconfig
 git add .
 git commit -m "${GITMSG}"
 git tag -a -m "${GITMSG}" ${RELEASE_VERSION}
-git config credential.helper "store --file=${JENKINS_HOME}/.git-credentials"
+git config credential.helper store --file=${JENKINS_HOME}/.git-credentials
 git push origin ${RELEASE_VERSION}
 
 # send out a new notification
