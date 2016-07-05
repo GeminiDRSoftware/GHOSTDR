@@ -13,7 +13,7 @@ Contents:
 .. toctree::
 
    releases
-   Github Repository <http://https://github.com/GeminiDRSoftware/GHOSTDR>
+   Github Repository <https://github.com/GeminiDRSoftware/GHOSTDR>
    Programmer's Manual <http://ghostdr.readthedocs.org/projects/ghostdr-progmanual/>
    User's Manual <http://ghostdr.readthedocs.org/projects/ghostdr-usermanual/>
 
