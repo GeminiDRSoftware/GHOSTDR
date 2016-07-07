@@ -24,7 +24,7 @@ import os
 # import matplotlib.pyplot as plt
 # import matplotlib.cm as cm
 import numpy as np
-# import pylab as plt
+import pylab as plt
 
 try:
     import astropy.io.fits as pf
@@ -35,9 +35,13 @@ from astropy import wcs
 from pyghost import optics
 from pyghost import cosmic
 
+# The directory that this file is located in
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Useful constants
 PLANCK_H = 6.6256e-27  # Planck constant [erg s]
 LIGHT_C = 2.99792458e18  # Speed of light [A/s]
+S32 = math.sqrt(3)/2.0
 
 # Number of fibers in each mode
 # HR = high resolution
@@ -125,9 +129,9 @@ def thar_spectrum():
     thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))
     thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
                             mode='same')
-    # Make the peak flux equal to 3
+    # Make the peak flux equal to 100
     # FIXME I don't know the real flux of the ThAr lamp
-    thar_flux /= np.max(thar_flux) / 3.0
+    thar_flux /= np.max(thar_flux) / 100.0
     return np.array([thar_wave/1e4, thar_flux])
 
 def fits_in_dir(dirname):
@@ -138,7 +142,7 @@ def fits_in_dir(dirname):
             yield fullname
 
 def load_sky_from_dir(dirname):
-    """ Load the UVES sky spectrum from the given direcotry """
+    """ Load the UVES sky spectrum from the given directory """
     # Initialise our data structures
     wavel = []
     flux = []
@@ -184,6 +188,111 @@ def load_sky_from_dir(dirname):
     flux[flux < 0] = 0
 
     return wavel, flux
+
+class Fibers(object):
+    """ Represent the details of a fiber bundle. """
+
+    # The order in which fibers are presented at the slit
+    fiber_order = []
+
+    # The IFU that each fiber belongs to
+    ifu = []
+
+    # The focal plane offsets in x and y of each fiber
+    offsets = {}
+
+    hex_scale = 1.15
+
+    def __init__(self, lenslet_width, microns_pix):
+        self.lenslet_width = lenslet_width
+        self.microns_pix = microns_pix
+
+    def xyoffsets(self, ifu):
+        """ Return the xy offsets of the fibers of the given IFU. """
+        args = (self.ifu == ifu)
+        points = np.zeros((np.count_nonzero(args), 2))
+        for i, fiber in enumerate(self.fiber_order[args]):
+            points[i] = self.offsets[fiber]
+        points = (points * self.lenslet_width/self.microns_pix/self.hex_scale).astype(int)
+        return points[:, 0], points[:, 1]
+
+    def plot(self):
+        """ Plot the positions of the fibers for this IFU """
+        points = np.array([(v[0], v[1], k, i)
+                           for (k, v), i in zip(self.offsets.items(), self.ifu)
+                           if v is not None])
+        plt.plot(points[:, 0], points[:, 1], 'x')
+        for x, y, label, ifu in points:
+            plt.annotate(int(label), xy=(x, y), xytext=(0, (ifu-1)*10), textcoords='offset points')
+        plt.show()
+
+class SRFibers(Fibers):
+    """ Represent the details of the standard resolution fibers. """
+    fiber_order = np.array([2, 5, 3, 1, 6, 4, 7, 14, 15, 16, 43, 46, 44, 42, 47, 45, 48])
+    ifu = np.array([1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2])
+    offsets = {
+        # IFU 1 fibers
+        1: (0, 0),
+        2: (S32, 0.5),
+        3: (S32, -0.5),
+        4: (0, -1),
+        5: (-S32, -0.5),
+        6: (-S32, 0.5),
+        7: (0, 1),
+        # Sky fibers
+        14: None,
+        15: None,
+        16: None,
+        # IFU 2 fibers
+        42: (0, 0),
+        43: (S32, 0.5),
+        44: (S32, -0.5),
+        45: (0, -1),
+        46: (-S32, -0.5),
+        47: (-S32, 0.5),
+        48: (0, 1)
+    }
+
+    def __init__(self, lenslet_width, microns_pix):
+        super(SRFibers, self).__init__(lenslet_width, microns_pix)
+
+class HRFibers(Fibers):
+    """ Represent the details of the high resolution fibers. """
+    fiber_order = np.array([62, 0, 25, 31, 27, 32, 26, 30, 18, 21, 19, 17, 22, 20, 23, 28, 34, 24, 29, 33, 35,
+                            56, 59, 57, 55, 60, 58, 61])
+    ifu = np.array([0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0])
+    offsets = {
+        17: (0, 0),
+        18: (S32, 0.5),
+        19: (S32, -0.5),
+        20: (0, -1),
+        21: (-S32, -0.5),
+        22: (-S32, 0.5),
+        23: (0, 1),
+        24: (S32, 1.5),
+        25: (2*S32, 1),
+        26: (2*S32, 0),
+        27: (2*S32, -1),
+        28: (S32, -1.5),
+        29: (0, -2),
+        30: (-S32, -1.5),
+        31: (-2*S32, -1),
+        32: (-2*S32, 0),
+        33: (-2*S32, 1),
+        34: (-S32, 1.5),
+        35: (0, 2),
+        # The following are the sky fibers
+        56: None,
+        57: None,
+        58: None,
+        59: None,
+        60: None,
+        61: None,
+        62: None
+    }
+
+    def __init__(self, lenslet_width, microns_pix):
+        super(HRFibers, self).__init__(lenslet_width, microns_pix)
 
 class Arm(object):
     """A class for each arm of the spectrograph. The initialisation function
@@ -492,7 +601,7 @@ class Arm(object):
                     matrices[i, j, :, :] = np.linalg.inv(amat)
         return x_c, w_c, b_c, matrices
 
-    def make_lenslets(self, fluxes=[], mode='', seeing=0.8, llet_offset=0):
+    def make_lenslets(self, fluxes=[], mode='', seeing=0.8, llet_offset=0, ifu=1):
         """Make an image of the lenslets with sub-pixel sampling.
 
         Parameters
@@ -514,7 +623,6 @@ class Arm(object):
         szx = self.im_slit_sz
         szy = 256
         fillfact = 0.98
-        s32 = np.sqrt(3)/2
         hex_scale = 1.15
         # equivalent to a 1 degree FWHM for an f/3 input ???
         # !!! Double-check !!!
@@ -529,27 +637,15 @@ class Arm(object):
         if mode == 'std':
             n_lenslets = N_SR_TOT
             lenslet_width = self.lenslet_std_size
-            yoffset = \
-                (lenslet_width/self.microns_pix/hex_scale *
-                 np.array([0, -s32, s32, 0, -s32, s32, 0])).astype(int)
-            xoffset = \
-                (lenslet_width/self.microns_pix/hex_scale *
-                 np.array([-1, -0.5, -0.5, 0, 0.5, 0.5, 1.0])).astype(int)
+            fibers = SRFibers(lenslet_width, self.microns_pix)
+            xoffset, yoffset = fibers.xyoffsets(ifu)
         elif mode == 'high':
             n_lenslets = N_HR_TOT
             lenslet_width = self.lenslet_high_size
-            #Order is 6 from the outer array then inner 7 then 6 from the
-            #outer array. Should confirm to AAO.
-            yoffset = (lenslet_width/self.microns_pix/hex_scale*s32 *
-                       np.array([-2, 2, -2, -1, -1, 0,
-                                 -1, -1, 0, 0, 0, 1, 1,
-                                 0, 1, 1, 2, -2, 2])).astype(int)
-            xoffset = (lenslet_width/self.microns_pix/hex_scale*0.5 *
-                       np.array([-2, 0, 2, -3, 3, -4,
-                                 -1, 1, -2, 0, 2, -1, 1,
-                                 4, -3, 3, -2, 0, 2])).astype(int)
+            fibers = HRFibers(lenslet_width, self.microns_pix)
+            xoffset, yoffset = fibers.xyoffsets(ifu)
         else:
-            raise ValueError("Error: mode must be standard or high")
+            raise ValueError("Error: mode must be std or high")
 
         # Some preliminaries...
         cutout_hw = int(lenslet_width/self.microns_pix*1.5)
@@ -600,15 +696,19 @@ class Arm(object):
             im_cutout = optics.moffat2d(szy, \
                 seeing * self.microns_arcsec / self.microns_pix / 2, beta=4.0)
             im_object[:, szx/2-szy/2:szx/2+szy/2] = im_cutout
+            # Scale the image so the mean is 1.0
+            im_object /= im_object.mean()
             fluxes = np.ones(len(xoffset))
 
         # Go through the flux vector and fill in each lenslet.
+        cutoutx = [max(0, szx/2 - cutout_hw), min(szx/2 + cutout_hw, szx)]
+        cutouty = [max(0, szy/2 - cutout_hw), min(szy/2 + cutout_hw, szy)]
         for i, flux in enumerate(fluxes):
             im_one = np.zeros((szy, szx))
             im_cutout = np.roll(np.roll(im_object, yoffset[i], axis=0),
                                 xoffset[i], axis=1) * h_long
-            im_cutout = im_cutout[szy/2-cutout_hw:szy/2+cutout_hw,
-                                  szx/2-cutout_hw:szx/2+cutout_hw]
+            im_cutout = im_cutout[cutouty[0]:cutouty[1],
+                                  cutoutx[0]:cutoutx[1]]
             prof = optics.azimuthal_average(im_cutout, returnradii=True,
                                             binsize=1)
             prof = (prof[0], prof[1] * flux)
@@ -735,16 +835,18 @@ class Arm(object):
         bgflux /= PLANCK_H*LIGHT_C/bgwave
 
         # Calculate area per fiber in arcsec^2
-        # FIXME this is just a rough guess - should get the real numbers
+        # This is the area of a hexagon on the focal plane, where the scale
+        # is 610 um/arcsec.
         if mode == 'high':
-            fiber_area = math.pi * 0.125**2
+            fiber_area = S32 * 240.0**2 / (610.0 ** 2)
         elif mode == 'std':
-            fiber_area = math.pi * 0.2**2
+            fiber_area = S32 * 144.0**2 / (610.0 ** 2)
 
         # Convert phot/s/A/cm^2/arcsec^2 into phot/s/A/cm^2
         bgflux *= fiber_area
 
         # Convert phot/s/A/cm^2 to phot/s/A
+        # (assuming an 8m mirror)
         bgflux *= math.pi * 400**2
 
         # Convert to phot/s
@@ -784,12 +886,12 @@ class Arm(object):
 
     def simulate_frame(self, duration=0.0, output_prefix='test_',
                        spectrum=None, xshift=0.0, yshift=0.0, radvel=0.0,
-                       rv_thar=0.0, flux=1e2, rnoise=3.0, gain=[1.0],
+                       rv_thar=0.0, flux=1, rnoise=3.0, gain=[1.0],
                        bias_level=10, overscan=32, namps=[1, 1],
                        use_thar=True, mode='high', add_cosmic=True,
                        add_sky=True, return_image=False, thar_flatlamp=False,
                        flatlamp=False, obstype=None, additive_noise=None,
-                       scaling=None):
+                       scaling=None, seeing=0.8):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -832,8 +934,7 @@ class Arm(object):
             Readout noise in electrons/pix
 
         gain: float[namps] (optional)
-            Gain in electrons per ADU, per amplifier (or a single scalar for
-            all amps).
+            Gain in electrons per ADU, per amplifier (or a single scalar for all amps).
 
         bias_level: float (optional)
             Bias level in electrons, per amplifier (or a single scalar for
@@ -890,16 +991,13 @@ class Arm(object):
         duration = float(duration)
 
         if mode == 'high':
-            slit_fluxes = np.ones(N_HR_SCI)
-            if not flatlamp:
-                # FIXME where are these numbers from?
-                # Also, the fiber ordering is not like this
-                slit_fluxes *= 0.37
-                slit_fluxes[6:13] = 0.78
-                slit_fluxes[9] = 1.0
-                slit_fluxes /= np.mean(slit_fluxes)
-            im_slit = self.make_lenslets(fluxes=slit_fluxes, mode='high',
+            if flatlamp:
+                slit_fluxes = np.ones(N_HR_SCI+N_HR_SKY)
+            else:
+                slit_fluxes = []
+            im_slit = self.make_lenslets(fluxes=slit_fluxes, mode='high', seeing=seeing,
                                          llet_offset=2)
+
             image = self.simulate_image(x, wave, blaze, matrices, im_slit,
                                         spectrum=spectrum, n_x=self.szx,
                                         xshift=xshift, radvel=radvel)
@@ -921,17 +1019,17 @@ class Arm(object):
                 image += self.simulate_image(x, wave, blaze, matrices, im_slit2,
                                              spectrum=thar_spect, n_x=self.szx,
                                              xshift=xshift, radvel=rv_thar)
-        # FIXME: Why is there no handling here for mode='std'?
         elif mode == 'std':
-            slit_fluxes = np.ones(N_SR_SCI)
-            if not flatlamp:
-                # FIXME these numbers are made up
-                # Also, the fiber ordering is not like this
-                slit_fluxes *= 0.78
-                slit_fluxes[3] = 1.0
-                slit_fluxes /= np.mean(slit_fluxes)
-            im_slit = self.make_lenslets(fluxes=slit_fluxes, mode='std',
-                                         llet_offset=0)
+            if flatlamp:
+                slit_fluxes = np.ones(N_SR_TOT)
+                im_slit = self.make_lenslets(fluxes=slit_fluxes, mode='std', seeing=seeing,
+                                              llet_offset=0)
+            else:
+                im_slit1 = self.make_lenslets(fluxes=[], mode='std', seeing=seeing,
+                                              llet_offset=0, ifu=1)
+                im_slit2 = self.make_lenslets(fluxes=[], mode='std', seeing=seeing,
+                                              llet_offset=N_SR_SCI+N_SR_SKY, ifu=2)
+                im_slit = im_slit1 + im_slit2
             image = self.simulate_image(x, wave, blaze, matrices, im_slit,
                                         spectrum=spectrum, n_x=self.szx,
                                         xshift=xshift, radvel=radvel)
@@ -947,7 +1045,8 @@ class Arm(object):
         image = duration * np.random.poisson(flux * image)
 
         if add_sky:
-            # Add sky spectrum here
+            # Calculate the sky spectrum - the flux we calculate
+            # is per fiber.
             sky_spect = self.sky_background(mode)
             # Put it into all the fibers equally
             if mode == 'high':
