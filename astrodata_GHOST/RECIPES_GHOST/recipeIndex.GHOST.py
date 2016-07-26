@@ -4,7 +4,7 @@
 
 localAstroTypeRecipeIndex = {
                             "GHOST_BIAS"  : ["makeProcessedBiasG"],
-                            "GHOST_DARK"  : ["MakeProcessedDarkG"],
+                            "GHOST_DARK"  : ["makeProcessedDarkG"],
                             "GHOST_FLAT"  : ["makeProcessedFlat"],
                             "GHOST_SPECT" : ["reduceG"],
                             }
