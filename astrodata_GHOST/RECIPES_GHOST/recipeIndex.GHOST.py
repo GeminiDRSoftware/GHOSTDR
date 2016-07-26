@@ -3,8 +3,8 @@
 # for example makeProcessedBias.
 
 localAstroTypeRecipeIndex = {
-                            "GHOST_BIAS"  : ["makeProcessedBias"],
-                            "GHOST_DARK"  : ["marcMakeProcessedDark"],
+                            "GHOST_BIAS"  : ["makeProcessedBiasG"],
+                            "GHOST_DARK"  : ["MakeProcessedDarkG"],
                             "GHOST_FLAT"  : ["makeProcessedFlat"],
-                            "GHOST_SPECT" : ["myreduce"],
+                            "GHOST_SPECT" : ["reduceG"],
                             }
