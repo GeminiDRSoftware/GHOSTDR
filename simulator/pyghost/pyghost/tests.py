@@ -72,7 +72,7 @@ def run():
                            bias_level=bias_level, obstype='DARK',
                            additive_noise=noise, scaling=scaling)
 
-        for mode in ('std', 'high'):
+        for mode in ('std', 'high'):        
             # This produces a flat frame
             arm.simulate_frame(duration=duration,
                                output_prefix='flat'+str(duration)+'_'+mode+'_',

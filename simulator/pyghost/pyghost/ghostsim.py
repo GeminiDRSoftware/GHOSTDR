@@ -25,6 +25,8 @@ import os
 # import matplotlib.cm as cm
 import numpy as np
 import pylab as plt
+import time
+import sys
 
 try:
     import astropy.io.fits as pf
@@ -134,11 +136,11 @@ def thar_spectrum():
     thar_flux /= np.max(thar_flux) / 100.0
     return np.array([thar_wave/1e4, thar_flux])
 
-def fits_in_dir(dirname):
+def fits_in_dir(dirname, prefix=""):
     """ Return all fits files in the given directory """
     for fname in os.listdir(dirname):
         fullname = os.path.join(dirname, fname)
-        if os.path.isfile(fullname) and fullname.endswith(".fits"):
+        if os.path.isfile(fullname) and fullname.endswith(".fits") and fname.startswith(prefix):
             yield fullname
 
 def load_sky_from_dir(dirname):
@@ -148,7 +150,7 @@ def load_sky_from_dir(dirname):
     flux = []
 
     # Iterate over all the FITS files in the given directory
-    for filename in fits_in_dir(dirname):
+    for filename in fits_in_dir(dirname, prefix="fluxed_sky"):
         # Load the FITS hdulist
         hdulist = pf.open(filename)
 
@@ -227,7 +229,11 @@ class Fibers(object):
         plt.show()
 
 class SRFibers(Fibers):
-    """ Represent the details of the standard resolution fibers. """
+    """ Represent the details of the standard resolution fibers. 
+    
+    The fiber_order is the AAO's numbering system for the fibers in CY_RPT_50, where 
+    numbers in the first bundle (low and high res) go from 1 to 41, and the numbers in the
+    second bundle go from 42 to 61. Fiber 62 is the simultaneous calibration fiber."""
     fiber_order = np.array([2, 5, 3, 1, 6, 4, 7, 14, 15, 16, 43, 46, 44, 42, 47, 45, 48])
     ifu = np.array([1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2])
     offsets = {
@@ -257,7 +263,10 @@ class SRFibers(Fibers):
         super(SRFibers, self).__init__(lenslet_width, microns_pix)
 
 class HRFibers(Fibers):
-    """ Represent the details of the high resolution fibers. """
+    """ Represent the details of the high resolution fibers. 
+    
+    See SRFibers for detail.
+    """
     fiber_order = np.array([62, 0, 25, 31, 27, 32, 26, 30, 18, 21, 19, 17, 22, 20, 23, 28, 34, 24, 29, 33, 35,
                             56, 59, 57, 55, 60, 58, 61])
     ifu = np.array([0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0])
@@ -362,7 +371,7 @@ class Arm(object):
             raise RuntimeError('Order information not provided in Arm class '
                                'for arm %s - aborting' % (self.arm, ))
 
-    def spectral_format(self, xoff=0.0, yoff=0.0, ccd_centre=None):
+    def spectral_format(self, xoff=0.0, yoff=0.0, ccd_centre=None, verbose=False):
         """Create a spectrum, with wavelengths sampled in 2 orders.
 
         Parameters
@@ -447,7 +456,8 @@ class Arm(object):
         s_vect = optics.rotate_xz(np.array([1, 0, 0]), theta_xdp)
         n_vect = np.cross(s_vect, l_vect)  # The normal
         incidence_angle = np.degrees(np.arccos(np.dot(mean_v, n_vect)))
-        print('Incidence angle in air: {0:5.3f}'.format(incidence_angle))
+        if verbose:
+            print('Incidence angle in air: {0:5.3f}'.format(incidence_angle))
         # w is the exit vector after the grating.
         w_vects = np.zeros((3, len(wave)))
         for i in range(len(wave)):
@@ -457,7 +467,8 @@ class Arm(object):
         mean_w[1] = 0
         mean_w /= np.sqrt(np.sum(mean_w**2))
         exit_angle = np.degrees(np.arccos(np.dot(mean_w, n_vect)))
-        print('Grating exit angle in glass: {0:5.3f}'.format(exit_angle))
+        if verbose:
+            print('Grating exit angle in glass: {0:5.3f}'.format(exit_angle))
         # Define the CCD x and y axes by the spread of angles.
         if ccd_centre:
             ccdx = ccd_centre['ccdx']
@@ -623,7 +634,7 @@ class Arm(object):
         szx = self.im_slit_sz
         szy = 256
         fillfact = 0.98
-        hex_scale = 1.15
+        hex_scale = 1.15 #!!! This exists elsewhere !!!
         # equivalent to a 1 degree FWHM for an f/3 input ???
         # !!! Double-check !!!
         conv_fwhm = 30.0
@@ -763,7 +774,8 @@ class Arm(object):
         image = np.zeros((n_y, n_x))
         # Simulate the slit image within a small cutout region.
         cutout_xy = np.meshgrid(np.arange(81)-40, np.arange(7)-3)
-        # Loop over orders
+        # Loop over orders. Use a status line where the numbers change but new lines
+        # aren't created.
         for i in range(n_orders):
             for j in range(n_y):
                 if x[i, j] != x[i, j]:
@@ -804,7 +816,14 @@ class Arm(object):
                 slit_y = slit_y[w_ix]
                 image[cutout_shifted[1], cutout_shifted[0]] += blaze[i, j] * \
                     flux * im_slit[slit_y, slit_x]
-            print('Done order: {0}'.format(i + self.order_min))
+            print('\r Doing orders {0:d} to {1:d}. Done order {2:d}'.format(self.order_min, self.order_max, i+self.order_min), end='\r')
+            sys.stdout.flush()
+            #time.sleep(0.1)
+            #outline.write('Doing orders {0:d} to {1:d}. Done order {2:d}\r'.format(self.order_min, self.order_max, i+self.order_min))
+            #outline.flush()
+        print('\n')
+        #outline.write('\n')
+        #Old code was: print('Done order: {0}'.format(i + self.order_min)) 
         return image
 
     def sky_background(self, mode):
@@ -828,7 +847,7 @@ class Arm(object):
 
         # Load the UVES sky
         # Flux is in 1e-16 erg / (s*A*cm^2*arcs^2)
-        bgwave, bgflux = load_sky_from_dir(os.path.join(LOCAL_DIR, 'data/uves_sky'))
+        bgwave, bgflux = load_sky_from_dir(os.path.join(LOCAL_DIR, 'data'))
 
         # Convert flux to phot/s/A/cm^2/arcsec^2
         bgflux *= 1e-16

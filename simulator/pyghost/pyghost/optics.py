@@ -91,6 +91,8 @@ def azimuthal_average(image, center=None, stddev=False, returnradii=False,
             np.array([(image*weights).flat[whichbin == b].sum() /
                       weights.flat[whichbin == b].sum()
                       for b in xrange(1, nbins+1)])
+        #!!! Often a NaN here. nbins -> nbins+1
+        #import pdb; pdb.set_trace()
 
     if interpnan:
         radial_prof = \
