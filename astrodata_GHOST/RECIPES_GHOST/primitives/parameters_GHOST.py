@@ -46,7 +46,7 @@
         "uiLevel"       : "UIBASIC",
         },
     "attach_mdf":{
-        "default"       : True,
+        "default"       : False,
         "type"          : "bool",
         "recipeOverride": True,
         "userOverride"  : True,
