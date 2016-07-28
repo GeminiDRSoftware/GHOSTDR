@@ -5,7 +5,7 @@
    Manually edited by KL Fri Apr 4 2014
 
 GHOST Users Manual
-=================
+==================
 
 .. toctree::
    :numbered:

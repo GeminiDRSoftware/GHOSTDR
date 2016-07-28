@@ -6,7 +6,7 @@ prepare
 addDQ
 addVAR(read_noise=True)
 overscanCorrect
-#biasCorrect
+biasCorrect
 #ADUToElectrons
 #addVar(poisson_noise=True)
 #flatCorrect
