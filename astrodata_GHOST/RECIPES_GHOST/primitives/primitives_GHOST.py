@@ -7,6 +7,7 @@ from gempy.gemini.eti.gireduceparam import subtract_overscan_hardcoded_params
 from pyraf import iraf
 
 from primitives_GMOS import GMOSPrimitives
+from primitives_stack import StackPrimitives
 
 class GHOSTPrimitives(GMOSPrimitives):
     """
@@ -21,6 +22,11 @@ class GHOSTPrimitives(GMOSPrimitives):
         GMOSPrimitives.init(self, rc)
         self.timestamp_keys.update(ghost_stamps.timestamp_keys)
         return rc
+
+    def stackFrames(self, rc):
+        # Runs the standard stackFrames, but sets the iraf logging level higher
+        iraf.setVerbose(value=2)
+        return StackPrimitives.stackFrames(self, rc)
 
     def standardizeHeaders(self, rc):
         #log = logutils.get_logger(__name__)
