@@ -1099,7 +1099,20 @@ class Arm(object):
                                    [15, 15, 16])
 
         # Add dark current (3 e/pix/hour)
-        image += np.random.poisson(np.ones_like(image) * 3.0 * duration/3600.0)
+        image += np.random.poisson(np.ones_like(image) * 3.0 *
+                                   duration/3600.0)
+        # Or, have a ludicrously high dark current (1500 e/pix/hr)
+        # image += np.random.poisson(
+        #     np.ones_like(image) * 1500.0 * duration / 3600.0)
+        # Or, have a high dark current on half the CCD and zero on the other
+        # half
+        # hlfw = image.shape[-1] / 2
+        # image += np.concatenate(
+        #     (
+        #         np.random.poisson(np.ones_like(image[:, :hlfw]) * 36000.0 *
+        #                           duration / 3600.0),
+        #         np.zeros_like(image[:, hlfw:]),
+        #     ), axis=-1)
 
         # For conventional axes transpose the image
         image = image.T
