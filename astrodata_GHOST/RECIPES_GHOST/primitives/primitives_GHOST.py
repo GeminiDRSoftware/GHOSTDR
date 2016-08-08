@@ -7,6 +7,7 @@ from gempy.gemini.eti.gireduceparam import subtract_overscan_hardcoded_params
 from pyraf import iraf
 import numpy as np
 import scipy
+import functools
 
 from primitives_GMOS import GMOSPrimitives
 from primitives_stack import StackPrimitives
@@ -71,8 +72,24 @@ class GHOSTPrimitives(GMOSPrimitives):
             cosmic_bpm = np.zeros_like(ad["SCI"].data, dtype=int)
             new_crs = 1
 
+            # Start with a fresh copy of the data
+            clean_data = np.copy(ad["SCI"].data)
+
+            # Define the function for performing the median-replace of cosmic
+            # ray pixels
+            # Note that this is different from a straight median filter, as we
+            # *don't* want to include the central pixel
+            fp = [[1, 1, 1],
+                  [1, 0, 1],
+                  [1, 1, 1]]
+            median_replace = functools.partial(scipy.ndimage.generic_filter,
+                                               function=np.median, footprint=fp)
+
             while new_crs > 0:
                 curr_crs = np.count_nonzero(cosmic_bpm)
+                # Median out the pixels already defined as cosmic rays
+                clean_data[cosmic_bpm] = median_replace(clean_data)[cosmic_bpm]
+
                 # Actually do the cosmic ray subtraction here
                 # ------
                 # STEP 1
@@ -80,7 +97,6 @@ class GHOSTPrimitives(GMOSPrimitives):
                 # TODO: Add option for 'wave' keyword, which parametrizes
                 # an input wavelength solution function
                 # ------
-                clean_data = np.copy(ad["SCI"].data)
                 sky_model = scipy.ndimage.median_filter(clean_data, size=[7, 1])
                 m5_model = scipy.ndimage.median_filter(clean_data, size=[5, 5])
                 subbed_data = clean_data - sky_model
