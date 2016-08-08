@@ -77,5 +77,35 @@
         "uiLevel"       : "UIBASIC",
         },
     },
+"rejectCosmicRays": {
+    "suffix":{
+        "default"       : "_cosmicRaysRejected",
+        "type"          : "str",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    "subsampling":{
+        "default"       : 2,
+        "type"          : "int",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    "sigma_lim":{
+        "default"       : 2.0,
+        "type"          : "float",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    "f_lim":{
+        "default"       : 2.0,
+        "type"          : "float",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    },
 }
 
