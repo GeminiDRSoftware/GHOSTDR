@@ -9,6 +9,7 @@ addVAR(read_noise=True)
 #nonlinearityCorrect
 overscanCorrect
 biasCorrect
+rejectCosmicRays
 ADUToElectrons
 addVAR(poisson_noise=True)
 addToList(purpose="forStack")

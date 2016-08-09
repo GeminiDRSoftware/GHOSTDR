@@ -39,7 +39,7 @@ class GHOSTPrimitives(GMOSPrimitives):
                                  "starting"))
 
         # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys["markCosmicRays"]
+        timestamp_key = self.timestamp_keys["rejectCosmicRays"]
 
         # Initialise a list of output AstroData objects
         adoutput_list = []
@@ -69,11 +69,11 @@ class GHOSTPrimitives(GMOSPrimitives):
             # Note that we're deliberately not using the BPM at this stage,
             # otherwise the algorithm will start searching for cosmic rays
             # around pixels that have been flagged bad for another reason.
-            cosmic_bpm = np.zeros_like(ad["SCI"].data, dtype=int)
+            cosmic_bpm = np.zeros_like(ad["SCI", 1].data, dtype=bool)
             new_crs = 1
 
             # Start with a fresh copy of the data
-            clean_data = np.copy(ad["SCI"].data)
+            clean_data = np.copy(ad["SCI", 1].data)
 
             # Define the function for performing the median-replace of cosmic
             # ray pixels
@@ -85,10 +85,17 @@ class GHOSTPrimitives(GMOSPrimitives):
             median_replace = functools.partial(scipy.ndimage.generic_filter,
                                                function=np.median, footprint=fp)
 
+            log.stdinfo('Doing CR removal for %s' % ad.filename)
+            no_passes = 0
             while new_crs > 0:
+                no_passes += 1
                 curr_crs = np.count_nonzero(cosmic_bpm)
                 # Median out the pixels already defined as cosmic rays
-                clean_data[cosmic_bpm] = median_replace(clean_data)[cosmic_bpm]
+                log.stdinfo('Pass %d: Wiping over previously found bad pix' %
+                            no_passes)
+                if curr_crs > 0:
+                    clean_data[cosmic_bpm] = median_replace(
+                        clean_data)[cosmic_bpm]
 
                 # Actually do the cosmic ray subtraction here
                 # ------
@@ -97,6 +104,7 @@ class GHOSTPrimitives(GMOSPrimitives):
                 # TODO: Add option for 'wave' keyword, which parametrizes
                 # an input wavelength solution function
                 # ------
+                log.stdinfo('Pass %d: Building sky model' % no_passes)
                 sky_model = scipy.ndimage.median_filter(clean_data, size=[7, 1])
                 m5_model = scipy.ndimage.median_filter(clean_data, size=[5, 5])
                 subbed_data = clean_data - sky_model
@@ -113,10 +121,11 @@ class GHOSTPrimitives(GMOSPrimitives):
                 # This is 'curly L' in van Dokkum 2001
                 # ------
                 # Subsample the data
+                log.stdinfo('Pass %d: Computing Laplacian' % no_passes)
                 subsampling = rc["subsampling"]
-                data_shape = ad["SCI"].data.shape()
+                data_shape = ad["SCI", 1].data.shape
                 subsampl_data = np.repeat(np.repeat(
-                    ad["SCI"].data, subsampling, axis=1),
+                    ad["SCI", 1].data, subsampling, axis=1),
                     subsampling, axis=0
                 )
                 # Convolve the subsampled data with the Laplacian kernel,
@@ -143,11 +152,12 @@ class GHOSTPrimitives(GMOSPrimitives):
                 # 'sigma_map' S
                 # This is the equivalent of equation (11) of van Dokkum 2001
                 # ------
+                log.stdinfo('Pass %d: Constructing sigma map' % no_passes)
                 gain = ad.gain()
                 read_noise = ad.read_noise()
                 noise = (1.0 / gain) * ((gain * m5_model + read_noise**2)**0.5)
                 noise_min = 0.00001
-                noise[numpy.nonzero(noise <= noise_min)] = noise_min
+                noise[np.nonzero(noise <= noise_min)] = noise_min
                 # div by 2 to correct convolution counting
                 # FIXME: Why is it divided by *two* times the noise?
                 sigmap = conv_data / (2.0 * noise)
@@ -160,6 +170,7 @@ class GHOSTPrimitives(GMOSPrimitives):
                 # STEP 5
                 # Identify the potential cosmic rays
                 # ------
+                log.stdinfo('Pass %d: Flagging cosmic rays' % no_passes)
                 # Construct the fine-structure image (F, eqn 14 of van Dokkum)
                 m3 = scipy.ndimage.median_filter(subbed_data, size=[3, 3])
                 fine_struct = m3 - scipy.ndimage.median_filter(m3, size=[7, 7])
@@ -169,16 +180,18 @@ class GHOSTPrimitives(GMOSPrimitives):
                 #   fine-structure image (F) is greater than f_lim
                 sigma_lim = rc['sigma_lim']
                 f_lim = rc['f_lim']
-                cosmic_bpm[sig_detrend > sigma_lim and
-                           (conv_data/fine_struct) > f_lim] = 1
+                cosmic_bpm[np.logical_and(sig_detrend > sigma_lim,
+                                          (conv_data/fine_struct) > f_lim)] = 1
                 new_crs = np.count_nonzero(cosmic_bpm) - curr_crs
+                log.stdinfo('Found %d CR pixels in pass %d' % (new_crs,
+                                                               no_passes, ))
 
             # TODO: Determine whether to alter pix or alter BPM
             # For the moment, go with Mike Ireland's suggestion to require
             # a BPM update
-            curr_bpm = ad["DQ"].data
+            curr_bpm = ad["DQ", 1].data
             curr_bpm[cosmic_bpm] = True
-            ad['DQ'].data = curr_bpm
+            ad['DQ', 1].data = curr_bpm
 
             # Append the ad to the output list
             adoutput_list.append(ad)
