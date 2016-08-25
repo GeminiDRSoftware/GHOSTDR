@@ -41,6 +41,8 @@ class Extractor():
     
     def __init__(self, arm, mode):
         self.sim = ghostsim.Arm(arm)
+        self.square_profile = None  # populated later by define_profile()
+        self.sim_profile = None  # populated later by define_profile()
 
         if mode not in self.MODE_OPTIONS:
             raise ValueError('mode must be one of %s' % (
@@ -78,10 +80,6 @@ class Extractor():
             fluxes[10:, 2] = 1.0
             self.define_profile(fluxes)
 
-        # Initialise some values well will need later
-        self.square_profile = None
-        self.sim_profile = None
-            
         # Set some default pixel offsets for each lenslet,
         # as used for a square lenslet profile
         ny = self.x_map.shape[1]
@@ -111,7 +109,8 @@ class Extractor():
         self.slit_tilt = np.zeros((nm, ny))
         for i in range(nm):
             for j in range(ny):
-                invmat = np.linalg.inv( self.matrices[i, j])
+                dude = self.matrices[i, j]
+                invmat = np.linalg.inv( dude )
                 # What happens to the +x direction?
                 x_dir_map = np.dot(invmat,[1,0])
                 self.slit_tilt[i,j] = x_dir_map[1]/x_dir_map[0]
