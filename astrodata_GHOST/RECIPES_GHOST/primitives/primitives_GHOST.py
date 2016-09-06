@@ -87,7 +87,7 @@ class GHOSTPrimitives(GMOSPrimitives):
 
             log.stdinfo('Doing CR removal for %s' % ad.filename)
             no_passes = 0
-            while new_crs > 0:
+            while new_crs > 0 and no_passes < 1:
                 no_passes += 1
                 curr_crs = np.count_nonzero(cosmic_bpm)
                 # Median out the pixels already defined as cosmic rays
