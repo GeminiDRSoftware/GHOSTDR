@@ -1095,8 +1095,12 @@ class Arm(object):
             # of the zenith.
             # Pixel size of 15 x 15 x 16 um
             # FIXME Mike says the red detector is 4x thicker than the blue
-            image += cosmic.cosmic(image.shape, duration, 10, 2.0, False,
-                                   [15, 15, 16])
+            cosmic_img = cosmic.cosmic(image.shape, duration, 10, 2.0, False,
+                                       [15, 15, 16])
+            image += cosmic_img
+            # no_cr_pix = np.count_nonzero(cosmic_img)
+        else:
+            cosmic_img = np.zeros(image.shape)
 
         # Add dark current (3 e/pix/hour)
         image += np.random.poisson(np.ones_like(image) * 3.0 *
@@ -1119,6 +1123,7 @@ class Arm(object):
 
         # Split the image into sections for each readout amplifier
         images, cxl, cxh, cyl, cyh = split_image(image, namps, return_headers=True)
+        cosmic_images = split_image(cosmic_img, namps, return_headers=False)
 
         # Add read noise for each amplifier
         images = [i+r*np.random.normal(size=i.shape)
@@ -1169,6 +1174,7 @@ class Arm(object):
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
         for i, im_amp in enumerate(images):
             hdr = pf.Header()
+            hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
             hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
             hdr['DETSEC'] = "[%d:%d,%d:%d]" % (cxl[i]+1, cxh[i],
                                                cyl[i]+1, cyh[i])
