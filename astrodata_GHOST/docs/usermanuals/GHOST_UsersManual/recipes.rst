@@ -44,11 +44,14 @@ several red arm biases (if you don't specify either ``GHOST_RED`` or
     typewalk --types GHOST_BIAS GHOST_RED --dir <path_to>/data_folder -o bias.list
 
 Now you are ready to generate a bias calibration frame.  The following command
-(which runs the ``makeProcessedBias`` Gemini recipe behind the scenes) will
+(which runs the ``makeProcessedBiasG`` Gemini recipe behind the scenes) will
 stack the bias frames in listed ``bias.list`` and store the finished bias
 calibration in ``calibrations/storedcals/``::
 
     reduce @<path_to>/bias.list
+
+This code call will place a file named ``bias_red_bias.fits`` in the
+``calibrations/storedcals`` directory of your present working directory.
 
 The whole process behind Gemini's ``makeProcessedBias`` recipe is documented in
 the following flowchart (thanks Kathleen Labrie):
@@ -56,31 +59,61 @@ the following flowchart (thanks Kathleen Labrie):
 .. image:: images/biasCalibration.png
   :scale: 30
 
+Generating a Dark Calibration Frame
+-----------------------------------
+
+The procedure for generating a dark calibration frame is broadly similar to
+making a bias calibration frame. However, the type to be passed to ``typewalk``
+should be ``GHOST_DARK`` instead of ``GHOST_BIAS`` (in addition to the necessary
+``GHOST_RED``/``GHOST_BLUE`` type).
+
+Assuming ``typewalk`` has output your list of dark frames to ``dark.list``,
+attempting to run::
+
+    reduce @<path_to>/dark.list
+
+will fail. This is because the framework cannot currently find calibrations
+stored on disk (it uses a much more complicated lookup scheme).  The workaround
+for the time being is to force it to look on disk in a particular area using the
+``--override_cal`` option::
+
+    reduce @<path_to>/dark.list  --override_cal processed_bias:calibrations/storedcals/bias_red_bias.fits
+
+This call will place a file ``dark_red_dark.fits`` into the
+``calibrations/storedcals`` directory.
+
+The whole process behind Gemini's ``makeProcessedDark`` recipe is documented in
+the following flowchart (thanks Kathleen Labrie):
+
+.. image:: images/darkCalibration.png
+  :scale: 30
+
 Reducing an Object frame (Spectra)
 ----------------------------------
 
-The GHOST simulator produces object spectra frames like ``obj100_red.fits``.  If
+The GHOST simulator produces object spectra frames like ``obj100_red.fits``
+(the actual names will also include a bunch of additional information, like
+resolution mode and exposure time). If
 you run ``typewalk`` on the folder containing these, you'll see that they are
 identified as ``GHOST_SPECT``::
 
     typewalk --dir <path_to>/data_folder
 
 This informs the reduction framework to run the ``reduceG`` GHOST recipe on
-them, which should run to at least the ``biasCorrection`` step now that you
-have a bias calibration frame (**warning:** the following command will fail at
-the present time)::
+them, which should run to at least the ``darkCorrection`` step now that you
+have dark and bias calibration frames (for the moment, we have commented the
+remaining steps out of the ``reduceG`` recipe so it will complete
+successfully::
 
     reduce <path_to>/data_folder/obj100_red.fits
 
-The above command fails because the framework cannot currently find calibrations
-stored on disk (it uses a much more complicated lookup scheme).  The workaround
-for the time being is to force it to look on disk in a particular area using the
-``--override_cal`` option::
+The above command will fail due to the faulty calibrations lookup. Again, we
+need to use the ``--override_cal`` option::
 
-    reduce <path_to>/data_folder/obj100_red.fits --override_cal processed_bias:calibrations/storedcals/bias_red_bias.fits
+    reduce <path_to>/data_folder/obj100_red.fits --override_cal processed_bias:calibrations/storedcals/bias_red_bias.fits processed_dark:calibrations/storedcals/dark_red_dark.fits
 
-This produces a ``obj100_red_biasCorrected.fits`` file, a bias corrected GHOST
-spectra.
+This produces a ``obj100_red_darkCorrected.fits`` file, a bias and dark
+corrected GHOST spectra.
 
 Other Processing Flows
 ======================
