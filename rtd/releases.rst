@@ -1,6 +1,10 @@
 GHOST DR Release Notes
 ======================
 
+INTERNAL_MILESTONE_3
+  Testing the automated release mechanism prior to milestone 3.
+
+
 MILESTONE-2
   Milestone 2 release, including a working recipe for bias subtraction
 
