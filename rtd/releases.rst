@@ -1,6 +1,10 @@
 GHOST DR Release Notes
 ======================
 
+INTERNAL_MILESTONE_3a
+  Testing the automated release mechanism prior to milestone 3
+
+
 INTERNAL_MILESTONE_3
   Testing the automated release mechanism prior to milestone 3.
 
