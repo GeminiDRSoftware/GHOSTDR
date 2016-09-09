@@ -1,38 +1,6 @@
 GHOST DR Release Notes
 ======================
 
-INTERNAL_MILESTONE_3g
-  Testing the automated release mechanism prior to milestone 3
-
-
-INTERNAL_MILESTONE_3f
-  Testing the automated release mechanism prior to milestone 3
-
-
-INTERNAL_MILESTONE_3e
-  Testing the automated release mechanism prior to milestone 3
-
-
-INTERNAL_MILESTONE_3d
-  Testing the automated release mechanism prior to milestone 3
-
-
-INTERNAL_MILESTONE_3c
-  Testing the automated release mechanism prior to milestone 3
-
-
-INTERNAL_MILESTONE_3b
-  Testing the automated release mechanism prior to milestone 3
-
-
-INTERNAL_MILESTONE_3a
-  Testing the automated release mechanism prior to milestone 3
-
-
-INTERNAL_MILESTONE_3
-  Testing the automated release mechanism prior to milestone 3.
-
-
 MILESTONE-2
   Milestone 2 release, including a working recipe for bias subtraction
 
