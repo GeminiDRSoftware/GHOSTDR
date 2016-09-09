@@ -25,6 +25,8 @@ rsync -a --exclude "externals" --exclude ".hg*" ${WORKSPACE}/hg/ ${JENKINS_HOME}
 cd ${JENKINS_HOME}/workspace/GHOSTDR_github
 
 # Check the git configuration (so we can see it in the log)
+export GIT_CONFIG=${JENKINS_HOME}/.gitconfig
+echo ${GIT_CONFIG}
 git config -l
 
 git add .
