@@ -25,7 +25,7 @@ echo '<style>#body {margin-left:0}</style>'
 // =============================================================================
 ?>
 <!-- START MAIN PAGE CONTENT -->
-<img src="http://www.mso.anu.edu.au/ghost/images/GHOST_logos.jpg">
+<img src="GHOST_logos.jpg">
 <?php
 include 'index.html'
 ?>

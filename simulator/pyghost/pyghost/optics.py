@@ -91,6 +91,8 @@ def azimuthal_average(image, center=None, stddev=False, returnradii=False,
             np.array([(image*weights).flat[whichbin == b].sum() /
                       weights.flat[whichbin == b].sum()
                       for b in xrange(1, nbins+1)])
+        #!!! Often a NaN here. nbins -> nbins+1
+        #import pdb; pdb.set_trace()
 
     if interpnan:
         radial_prof = \
@@ -300,11 +302,11 @@ def hexagon(dim, width):
     xy_mesh = np.meshgrid(x, x)
     xx = xy_mesh[1]
     yy = xy_mesh[0]
-    w_ix = np.where((yy < width/2) * (yy > (-width/2)) * \
-                    (yy < (width-np.sqrt(3)*xx)) * \
-                    (yy > (-width+np.sqrt(3)*xx))* \
-                    (yy < (width+np.sqrt(3)*xx)) * \
-                    (yy > (-width-np.sqrt(3)*xx)))
+    w_ix = np.where((xx < width/2) * (xx > (-width/2)) * \
+                    (xx < (width-np.sqrt(3)*yy)) * \
+                    (xx > (-width+np.sqrt(3)*yy))* \
+                    (xx < (width+np.sqrt(3)*yy)) * \
+                    (xx > (-width-np.sqrt(3)*yy)))
     hex_array = np.zeros((dim, dim))
     hex_array[w_ix] = 1.0
     return hex_array

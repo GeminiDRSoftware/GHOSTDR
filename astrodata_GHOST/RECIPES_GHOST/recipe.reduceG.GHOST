@@ -1,0 +1,19 @@
+# The list of primitives to be run to reduce a GHOST science frame.
+# Adapt to match the flow chart, though that initial sequence is quite
+# standard for optical data.
+
+prepare
+addDQ
+addVAR(read_noise=True)
+overscanCorrect
+biasCorrect
+darkCorrect
+#rejectCosmicRays
+#ADUToElectrons
+#addVar(poisson_noise=True)
+#flatCorrect
+#mosaicDetectors
+#makeFringe
+#fringeCorrect
+#alignAndStack
+
