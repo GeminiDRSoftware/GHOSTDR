@@ -1,6 +1,10 @@
 GHOST DR Release Notes
 ======================
 
+MILESTONE-3
+  Milestone 3 release, including a working recipe for dark subtraction
+
+
 MILESTONE-2
   Milestone 2 release, including a working recipe for bias subtraction
 
