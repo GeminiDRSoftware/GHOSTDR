@@ -23,11 +23,13 @@ rsync -a --exclude "externals" --exclude ".hg*" ${WORKSPACE}/hg/ ${JENKINS_HOME}
 
 # Push the changes back into the github repository
 cd ${JENKINS_HOME}/workspace/GHOSTDR_github
-export GIT_CONFIG=${JENKINS_HOME}/.gitconfig
+
+# Check the git configuration (so we can see it in the log)
+git config -l
+
 git add .
 git commit -m "${GITMSG}"
 git tag -a -m "${GITMSG}" ${RELEASE_VERSION}
-git config credential.helper store --file=${JENKINS_HOME}/.git-credentials
 git push origin ${RELEASE_VERSION}
 
 # send out a new notification
