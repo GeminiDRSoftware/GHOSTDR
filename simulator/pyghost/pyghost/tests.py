@@ -5,7 +5,7 @@ import numpy as np
 import pyghost
 
 
-def run():
+def run(nbias=3,ndark=3):
     """ The function that runs the test. """
 
     # Create the two arms
@@ -59,18 +59,20 @@ def run():
         scaling = pyghost.split_image(arm.simulate_flatfield(1.0, 0.01), namps, return_headers=False)
 
         # This produces a bias with the above noise
-        arm.simulate_frame(duration=0.0, output_prefix='bias_', use_thar=False,
-                           rnoise=3.0, spectrum=blank, gain=1, namps=namps,
-                           overscan=overscan, add_sky=False, bias_level=bias_level,
-                           obstype='BIAS', additive_noise=noise, scaling=scaling)
+        for i in range(nbias):
+            arm.simulate_frame(duration=0.0, output_prefix='bias_{0:d}_'.format(i), use_thar=False,
+                               rnoise=3.0, spectrum=blank, gain=1, namps=namps,
+                               overscan=overscan, add_sky=False, bias_level=bias_level,
+                               obstype='BIAS', additive_noise=noise, scaling=scaling)
 
         # This produces a dark frame
-        arm.simulate_frame(duration=duration,
-                           output_prefix='dark'+str(duration)+'_',
-                           use_thar=False, rnoise=3.0, spectrum=blank, gain=1,
-                           namps=namps, overscan=overscan, add_sky=False,
-                           bias_level=bias_level, obstype='DARK',
-                           additive_noise=noise, scaling=scaling)
+        for i in range(ndark):
+            arm.simulate_frame(duration=duration,
+                               output_prefix='dark'+str(duration)+'_{0:d}_'.format(i),
+                               use_thar=False, rnoise=3.0, spectrum=blank, gain=1,
+                               namps=namps, overscan=overscan, add_sky=False,
+                               bias_level=bias_level, obstype='DARK',
+                               additive_noise=noise, scaling=scaling)
 
         for mode in ('std', 'high'):        
             # This produces a flat frame
