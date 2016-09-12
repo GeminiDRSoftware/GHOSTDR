@@ -23,12 +23,25 @@ rsync -a --exclude "externals" --exclude ".hg*" ${WORKSPACE}/hg/ ${JENKINS_HOME}
 
 # Push the changes back into the github repository
 cd ${JENKINS_HOME}/workspace/GHOSTDR_github
-export GIT_CONFIG=${JENKINS_HOME}/.gitconfig
+
+# Check the git configuration (so we can see it in the log)
+export HOME=${JENKINS_HOME}
+/usr/bin/env
+git config -l
+
+echo "About to add"
 git add .
+
+echo "About to commit"
 git commit -m "${GITMSG}"
+
+echo "About to tag"
 git tag -a -m "${GITMSG}" ${RELEASE_VERSION}
-git config credential.helper "store --file=${JENKINS_HOME}/.git-credentials"
+
+echo "About to push"
 git push origin ${RELEASE_VERSION}
+
+echo "Done"
 
 # send out a new notification
 mail -s "GHOST data reduction software package release ${RELEASE_VERSION}" ghostdr-release@mso.anu.edu.au <<< "GHOST data reduction software package ${RELEASE_VERSION} has been released.  You can find more information at http://www.mso.anu.edu.au/ghostdr/"

@@ -1,3 +1,4 @@
 [
-    #DD("new_descriptor", pytype=float|str|list|etc.)
+    DD("arm", pytype=str),
+    DD("group_id", pytype=str),
 ]
