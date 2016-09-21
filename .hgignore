@@ -57,13 +57,16 @@ coverage.xml
 *.log
 
 # Sphinx documentation
-#docs/_build/
 rtd/_build/
-docs/progmanuals/_build/
-docs/usermanuals/_build/
+astrodata_GHOST/docs/progmanuals/GHOST_ProgManual/_build/
+astrodata_GHOST/docs/usermanuals/GHOST_UsersManual/_build/
+simulator/pyghost/doc/_build/
 
 # PyBuilder
 target/
 
 # Eclipse
 .project
+
+# Simulator generated fits files
+simulator/pyghost/*.fits

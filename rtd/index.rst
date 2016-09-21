@@ -14,6 +14,6 @@ Contents:
 
    releases
    Github Repository <https://github.com/GeminiDRSoftware/GHOSTDR>
-   Programmer's Manual <http://ghostdr.readthedocs.org/projects/ghostdr-progmanual/>
-   User's Manual <http://ghostdr.readthedocs.org/projects/ghostdr-usermanual/>
+   Programmer's Manual <http://www.mso.anu.edu.au/ghostdr/progman/index.html>
+   User's Manual <http://www.mso.anu.edu.au/ghostdr/userman/index.html>
 
