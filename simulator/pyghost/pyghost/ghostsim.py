@@ -607,7 +607,8 @@ class Arm(object):
                 # (mapping output coordinates back onto the slit).
                 # print amat.shape
                 if np.any(np.isnan(amat)):
-                    matrices[i, j, :, :] = np.zeros_like(amat)
+                    #!!! Below this was zeros... !!!
+                    matrices[i, j, :, :] = np.eye(len(amat))
                 else:
                     matrices[i, j, :, :] = np.linalg.inv(amat)
         return x_c, w_c, b_c, matrices
