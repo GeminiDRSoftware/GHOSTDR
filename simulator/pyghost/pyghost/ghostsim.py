@@ -758,7 +758,7 @@ class Arm(object):
             If not given or zero, a square CCD is assumed.
         xshift: float
             Bulk shift to put in to the spectrum along the slit.
-        yshift: float
+        yshift: floatDROP SCE
             NOT IMPLEMENTED
         radvel: float
             Radial velocity in m/s.
@@ -1064,7 +1064,7 @@ class Arm(object):
         # Scale to photons
         image =  np.random.poisson(duration * flux * image).astype(float)
 
-        if add_sky:
+        if add_sky and obstype != 'BIAS' and obstype != 'DARK':
             # Calculate the sky spectrum - the flux we calculate
             # is per fiber.
             sky_spect = self.sky_background(mode)
@@ -1191,6 +1191,7 @@ class Arm(object):
             hdr['GAIN'] = gain[i]
             hdr['BUNIT'] = 'ADU'
             hdulist.append(pf.ImageHDU(data=im_amp, header=hdr))
+        print('Writing out to ' + output_prefix + self.arm + '.fits')
         hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
 
         if return_image:
