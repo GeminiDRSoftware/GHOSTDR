@@ -1062,7 +1062,7 @@ class Arm(object):
         image = np.maximum(image, 0)
 
         # Scale to photons
-        image = duration * np.random.poisson(flux * image)
+        image =  np.random.poisson(duration * flux * image).astype(float)
 
         if add_sky:
             # Calculate the sky spectrum - the flux we calculate
@@ -1081,7 +1081,7 @@ class Arm(object):
                                             spectrum=sky_spect, n_x=self.szx,
                                             xshift=xshift, radvel=0.0)
             sky_image = np.maximum(0, sky_image)
-            image += duration * np.random.poisson(flux * sky_image)
+            image += np.random.poisson(duration * flux * sky_image)
 
         # Probably ignore atmospheric transmission for now
 
@@ -1099,6 +1099,7 @@ class Arm(object):
             cosmic_img = cosmic.cosmic(image.shape, duration, 10, 2.0, False,
                                        [15, 15, 16])
             image += cosmic_img
+            #import pdb; pdb.set_trace() #!!!MJI!!!
             # no_cr_pix = np.count_nonzero(cosmic_img)
         else:
             cosmic_img = np.zeros(image.shape)

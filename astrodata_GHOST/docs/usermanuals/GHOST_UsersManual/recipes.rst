@@ -50,6 +50,8 @@ calibration in ``calibrations/storedcals/``::
 
     reduce @<path_to>/bias.list
 
+Don't forget the @ character in this line, e.g. if <path_to> is ``data'' then 
+this command is ``reduce @data/bias.list''. 
 This code call will place a file named ``bias_red_bias.fits`` in the
 ``calibrations/storedcals`` directory of your present working directory.
 
@@ -67,6 +69,8 @@ making a bias calibration frame. However, the type to be passed to ``typewalk``
 should be ``GHOST_DARK`` instead of ``GHOST_BIAS`` (in addition to the necessary
 ``GHOST_RED``/``GHOST_BLUE`` type).
 
+    typewalk --types GHOST_DARK GHOST_RED --dir <path_to>/data_folder -o dark.list
+
 Assuming ``typewalk`` has output your list of dark frames to ``dark.list``,
 attempting to run::
 
@@ -79,7 +83,7 @@ for the time being is to force it to look on disk in a particular area using the
 
     reduce @<path_to>/dark.list  --override_cal processed_bias:calibrations/storedcals/bias_red_bias.fits
 
-This call will place a file ``dark_red_dark.fits`` into the
+Note that this filename is probably not your filename - look in the calibrations/storedcals directory. This call will place a file ``dark_red_dark.fits`` into the
 ``calibrations/storedcals`` directory.
 
 The whole process behind Gemini's ``makeProcessedDark`` recipe is documented in
