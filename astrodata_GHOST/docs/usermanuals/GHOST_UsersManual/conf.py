@@ -40,8 +40,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'GHOST Users Manual'
-copyright = u'2014, Kathleen Labrie'
+project = u"GHOST Users' Manual"
+copyright = u'2016-17, The GHOST DRS Team & Kathleen Labrie'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -215,7 +215,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'ghostusersmanual', u'GHOST Users Manual',
-     [u'Kathleen Labrie'], 1)
+     [u'Kathleen Labrie & the GHOST DRS team'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -229,7 +229,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'GHOSTUsersManual', u'GHOST Users Manual',
-   u'Kathleen Labrie', 'GHOSTUsersManual', 'One line description of project.',
+   u'Kathleen Labrie & the GHOST DRS team', 'GHOSTUsersManual', 'One line description of project.',
    'Miscellaneous'),
 ]
 

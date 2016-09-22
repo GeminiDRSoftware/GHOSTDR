@@ -41,7 +41,8 @@ using the ``typewalk`` utility.  The following command assumes you have generate
 several red arm biases (if you don't specify either ``GHOST_RED`` or
 ``GHOST_BLUE``, you may get mixed red and blue frames which don't stack well!)::
 
-    typewalk --types GHOST_BIAS GHOST_RED --dir <path_to>/data_folder -o bias.list
+    typewalk --types GHOST_BIAS GHOST_RED --dir <path_to>/data_folder -o
+    bias.list
 
 Now you are ready to generate a bias calibration frame.  The following command
 (which runs the ``makeProcessedBiasG`` Gemini recipe behind the scenes) will
@@ -50,8 +51,10 @@ calibration in ``calibrations/storedcals/``::
 
     reduce @<path_to>/bias.list
 
-Don't forget the @ character in this line, e.g. if <path_to> is ``data'' then 
-this command is ``reduce @data/bias.list''. 
+Don't forget the @ character in this line, e.g. if <path_to> is ``data`` then
+this command should be ``reduce @data/bias.list``. The @ parameter is a legacy
+from IRAF, and tells ``reduce`` that you're passing a list of filenames instead
+of a data file.
 This code call will place a file named ``bias_red_bias.fits`` in the
 ``calibrations/storedcals`` directory of your present working directory.
 
@@ -81,7 +84,8 @@ stored on disk (it uses a much more complicated lookup scheme).  The workaround
 for the time being is to force it to look on disk in a particular area using the
 ``--override_cal`` option::
 
-    reduce @<path_to>/dark.list  --override_cal processed_bias:calibrations/storedcals/bias_red_bias.fits
+    reduce @<path_to>/dark.list  --override_cal
+    processed_bias:calibrations/storedcals/bias_red_bias.fits
 
 Note that this filename is probably not your filename - look in the calibrations/storedcals directory. This call will place a file ``dark_red_dark.fits`` into the
 ``calibrations/storedcals`` directory.
@@ -116,8 +120,8 @@ need to use the ``--override_cal`` option::
 
     reduce <path_to>/data_folder/obj100_red.fits --override_cal processed_bias:calibrations/storedcals/bias_red_bias.fits processed_dark:calibrations/storedcals/dark_red_dark.fits
 
-This produces a ``obj100_red_darkCorrected.fits`` file, a bias and dark
-corrected GHOST spectra.
+This produces a ``obj100_red_darkCorrected.fits`` (or similar) file, a bias and
+dark corrected GHOST spectrum frame.
 
 Other Processing Flows
 ======================
