@@ -1174,6 +1174,7 @@ class Arm(object):
         hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
         hdr['DETTYPE'] = self.dettype
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
+        crhdu = pf.HDUList(pf.PrimaryHDU(header=hdr))
         for i, im_amp in enumerate(images):
             hdr = pf.Header()
             hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
@@ -1190,9 +1191,15 @@ class Arm(object):
             hdr['RDNOISE'] = rnoise[i]
             hdr['GAIN'] = gain[i]
             hdr['BUNIT'] = 'ADU'
-            hdulist.append(pf.ImageHDU(data=im_amp, header=hdr))
+            hdulist.append(pf.ImageHDU(data=im_amp, header=hdr, name='SCI'))
+            if add_cosmic:
+                cosmic_image = cosmic_images[i]
+                crhdu.append(pf.ImageHDU(data=cosmic_image, name='SCI'))
         print('Writing out to ' + output_prefix + self.arm + '.fits')
         hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
+        if add_cosmic:
+            print('Writing CR out to ' + output_prefix + self.arm + '_CR.fits')
+            crhdu.writeto(output_prefix + self.arm + '.fits', clobber=True)
 
         if return_image:
             return images
