@@ -1124,8 +1124,10 @@ class Arm(object):
         image = image.T
 
         # Split the image into sections for each readout amplifier
-        images, cxl, cxh, cyl, cyh = split_image(image, namps, return_headers=True)
-        cosmic_images = split_image(cosmic_img, namps, return_headers=False)
+        images, cxl, cxh, cyl, cyh = split_image(image, namps,
+                                                 return_headers=True)
+        if add_cosmic:
+            cosmic_images = split_image(cosmic_img, namps, return_headers=False)
 
         # Add read noise for each amplifier
         images = [i+r*np.random.normal(size=i.shape)
@@ -1148,6 +1150,15 @@ class Arm(object):
                 newimg = np.hstack((i, oimg))
                 newimages.append(newimg)
             images = newimages
+            if add_cosmic:
+                newcosmic = []
+                for (i, g, b, r) in zip(cosmic_images, gain, bias_level,
+                                        rnoise):
+                    oimg = r * np.random.normal(size=(i.shape[0], overscan)) + b
+                    oimg /= g
+                    newcr = np.hstack((i, oimg))
+                    newcosmic.append(newcr)
+                cosmic_images = newcosmic
 
         # FIXME Apply non-linearity
 
