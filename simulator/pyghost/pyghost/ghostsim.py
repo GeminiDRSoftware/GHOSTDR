@@ -1122,6 +1122,7 @@ class Arm(object):
 
         # For conventional axes transpose the image
         image = image.T
+        cosmic_img = cosmic_img.T
 
         # Split the image into sections for each readout amplifier
         images, cxl, cxh, cyl, cyh = split_image(image, namps,
