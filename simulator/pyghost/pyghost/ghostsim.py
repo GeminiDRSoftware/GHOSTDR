@@ -1199,7 +1199,7 @@ class Arm(object):
         hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
         if add_cosmic:
             print('Writing CR out to ' + output_prefix + self.arm + '_CR.fits')
-            crhdu.writeto(output_prefix + self.arm + '.fits', clobber=True)
+            crhdu.writeto(output_prefix + self.arm + '_CR.fits', clobber=True)
 
         if return_image:
             return images
