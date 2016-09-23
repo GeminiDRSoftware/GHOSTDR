@@ -1188,13 +1188,30 @@ class Arm(object):
             if overscan > 0:
                 hdr['BIASSEC'] = "[%d:%d,%d:%d]" % (im_amp.shape[1]-overscan+1,
                                                     im_amp.shape[1], 1, im_amp.shape[0])
+            if add_cosmic:
+                cosmic_image = cosmic_images[i]
+                crhdr = pf.Header()
+                crhdr['DETSIZE'] = "[1:%d,1:%d]" % (
+                    cosmic_image.shape[1], cosmic_image.shape[0])
+                crhdr['DETSEC'] = "[%d:%d,%d:%d]" % (cxl[i] + 1, cxh[i],
+                                                   cyl[i] + 1, cyh[i])
+                crhdr['DATASEC'] = "[%d:%d,%d:%d]" % (
+                    1, cosmic_images[i].shape[1] - overscan,
+                    1, cosmic_images[i].shape[0])
+                crhdr['TRIMSEC'] = "[%d:%d,%d:%d]" % (
+                    1, cosmic_images[i].shape[1] - overscan,
+                    1, cosmic_images[i].shape[0])
+                if overscan > 0:
+                    crhdr['BIASSEC'] = "[%d:%d,%d:%d]" % (
+                        cosmic_images[i].shape[1] - overscan + 1,
+                        cosmic_images[i].shape[1], 1, cosmic_images[i].shape[0])
             hdr['RDNOISE'] = rnoise[i]
             hdr['GAIN'] = gain[i]
             hdr['BUNIT'] = 'ADU'
             hdulist.append(pf.ImageHDU(data=im_amp, header=hdr, name='SCI'))
             if add_cosmic:
-                cosmic_image = cosmic_images[i]
-                crhdu.append(pf.ImageHDU(data=cosmic_image, name='SCI'))
+                crhdu.append(pf.ImageHDU(data=cosmic_image, header=crhdr,
+                                         name='SCI'))
         print('Writing out to ' + output_prefix + self.arm + '.fits')
         hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
         if add_cosmic:
