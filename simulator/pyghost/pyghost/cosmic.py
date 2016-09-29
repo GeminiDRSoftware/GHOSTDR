@@ -143,9 +143,9 @@ def cosmic(im_shape, exposed, shieldcover, rate, use_mask, pix_size):
     # We ignore any fractional steps at the end of the path, trusting
     # that our step size is small enough to make the effect of these negligible
     nsteps = np.around(pix_size[2] / dz).astype(int)
-    print nsteps
-    print np.min(nsteps)
-    print np.max(nsteps)
+    # print nsteps
+    # print np.min(nsteps)
+    # print np.max(nsteps)
 
     # the path each CR takes
     path = [(np.linspace(p[0], p[0]+n*x, n),
