@@ -1096,8 +1096,13 @@ class Arm(object):
             # of the zenith.
             # Pixel size of 15 x 15 x 16 um
             # FIXME Mike says the red detector is 4x thicker than the blue
-            cosmic_img = cosmic.cosmic(image.shape, duration, 10, 2.0, False,
-                                       [15, 15, 16])
+            cosmic_img = cosmic.cosmic(image.shape,     # Image shape
+                                       duration,        # Exposure length
+                                       10,              # CR shield angle
+                                       2.0,             # CR/s/cm/cm
+                                       False,           # Use effect area mask
+                                       [15, 15, 16]     # Pixel size (microns)
+                                       )
             image += cosmic_img
             #import pdb; pdb.set_trace() #!!!MJI!!!
             # no_cr_pix = np.count_nonzero(cosmic_img)
