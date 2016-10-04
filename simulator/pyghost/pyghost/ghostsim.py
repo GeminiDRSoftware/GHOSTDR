@@ -911,7 +911,7 @@ class Arm(object):
                        use_thar=True, mode='high', add_cosmic=True,
                        add_sky=True, return_image=False, thar_flatlamp=False,
                        flatlamp=False, obstype=None, additive_noise=None,
-                       scaling=None, seeing=0.8):
+                       scaling=None, seeing=0.8, write_crplane=False):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -980,6 +980,9 @@ class Arm(object):
 
         return_image: bool (optional)
             Do we return an image as an array? The fits file is always written.
+
+        write_crplane: bool (optional)
+            Output a fits file containing locations where CRs were injected?
         """
 
         # Input checks
@@ -1169,13 +1172,20 @@ class Arm(object):
         # FIXME Apply non-linearity
 
         # Convert to unsigned short, and deal with saturation
-        newimages = []
         saturation = np.iinfo(np.uint16).max
+        newimages = []
         for im_amp in images:
             im_amp[im_amp < 0] = 0
             im_amp[im_amp > saturation] = saturation
             newimages.append(np.asarray(im_amp, dtype=np.uint16))
         images = newimages
+        if add_cosmic and write_crplane:
+            newcosmic = []
+            for im_amp in cosmic_images:
+                im_amp[im_amp < 0] = 0
+                im_amp[im_amp > saturation] = saturation
+                newcosmic.append(np.asarray(im_amp, dtype=np.uint16))
+            cosmic_images = newcosmic
 
         # Now create our fits image!
         # By adding the DETSIZE and DETSEC keywords we can open the
@@ -1205,7 +1215,7 @@ class Arm(object):
             if overscan > 0:
                 hdr['BIASSEC'] = "[%d:%d,%d:%d]" % (im_amp.shape[1]-overscan+1,
                                                     im_amp.shape[1], 1, im_amp.shape[0])
-            if add_cosmic:
+            if add_cosmic and write_crplane:
                 cosmic_image = cosmic_images[i]
                 crhdr = pf.Header()
                 crhdr['DETSIZE'] = "[1:%d,1:%d]" % (
@@ -1226,12 +1236,12 @@ class Arm(object):
             hdr['GAIN'] = gain[i]
             hdr['BUNIT'] = 'ADU'
             hdulist.append(pf.ImageHDU(data=im_amp, header=hdr, name='SCI'))
-            if add_cosmic:
+            if add_cosmic and write_crplane:
                 crhdu.append(pf.ImageHDU(data=cosmic_image, header=crhdr,
                                          name='SCI'))
         print('Writing out to ' + output_prefix + self.arm + '.fits')
         hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
-        if add_cosmic:
+        if add_cosmic and write_crplane:
             print('Writing CR out to ' + output_prefix + self.arm + '_CR.fits')
             crhdu.writeto(output_prefix + self.arm + '_CR.fits', clobber=True)
 
