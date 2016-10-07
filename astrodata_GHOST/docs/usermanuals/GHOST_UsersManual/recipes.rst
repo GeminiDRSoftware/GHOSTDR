@@ -32,13 +32,13 @@ Generating a Bias Calibration frame
 To generate a bias calibration frame you need 2 or more GHOST bias frames from
 the same arm.  Until the instrument is live, you can use the GHOST simulator to
 generate this data.  Its ``testsim.py`` script will create several types of
-frames, so run it a few times to create a couple of bias frames. You may want
-to comment out the other frames types for speed, and rename the biases between
-runs so they're not overwritten.
+frames, including 3 bias frames for each arm, 3 darks for each arm, and 3 flats
+for each arm and resolution combination. You can comment out the generation of
+non-bias frame types to speed things up.
 
 Once you have a few biases of the same arm to work with, generate a file list
-using the ``typewalk`` utility.  The following command assumes you have generated
-several red arm biases (if you don't specify either ``GHOST_RED`` or
+using the ``typewalk`` utility.  The following command assumes you have
+generated several red arm biases (if you don't specify either ``GHOST_RED`` or
 ``GHOST_BLUE``, you may get mixed red and blue frames which don't stack well!)::
 
     typewalk --types GHOST_BIAS GHOST_RED --dir <path_to>/data_folder -o
@@ -55,7 +55,7 @@ Don't forget the @ character in this line, e.g. if <path_to> is ``data`` then
 this command should be ``reduce @data/bias.list``. The @ parameter is a legacy
 from IRAF, and tells ``reduce`` that you're passing a list of filenames instead
 of a data file.
-This code call will place a file named ``bias_red_bias.fits`` in the
+This code call will place a file named ``bias_0_red_bias.fits`` in the
 ``calibrations/storedcals`` directory of your present working directory.
 
 The whole process behind Gemini's ``makeProcessedBias`` recipe is documented in
@@ -69,10 +69,11 @@ Generating a Dark Calibration Frame
 
 The procedure for generating a dark calibration frame is broadly similar to
 making a bias calibration frame. However, the type to be passed to ``typewalk``
-should be ``GHOST_DARK`` instead of ``GHOST_BIAS`` (in addition to the necessary
-``GHOST_RED``/``GHOST_BLUE`` type).
+should be ``GHOST_DARK`` instead of ``GHOST_BIAS`` (in addition to the
+necessary ``GHOST_RED``/``GHOST_BLUE`` type)::
 
-    typewalk --types GHOST_DARK GHOST_RED --dir <path_to>/data_folder -o dark.list
+    typewalk --types GHOST_DARK GHOST_RED --dir <path_to>/data_folder -o
+    dark.list
 
 Assuming ``typewalk`` has output your list of dark frames to ``dark.list``,
 attempting to run::
@@ -85,9 +86,11 @@ for the time being is to force it to look on disk in a particular area using the
 ``--override_cal`` option::
 
     reduce @<path_to>/dark.list  --override_cal
-    processed_bias:calibrations/storedcals/bias_red_bias.fits
+    processed_bias:calibrations/storedcals/bias_0_red_bias.fits
 
-Note that this filename is probably not your filename - look in the calibrations/storedcals directory. This call will place a file ``dark_red_dark.fits`` into the
+(Depending on your specific bias.list contents, your bias calibration under
+your calibrations/storedcals directory may have a different name, so double-
+check.) This command will place a file ``dark100_0_red_dark.fits`` into the
 ``calibrations/storedcals`` directory.
 
 The whole process behind Gemini's ``makeProcessedDark`` recipe is documented in
@@ -99,11 +102,11 @@ the following flowchart (thanks Kathleen Labrie):
 Reducing an Object frame (Spectra)
 ----------------------------------
 
-The GHOST simulator produces object spectra frames like ``obj100_red.fits``
-(the actual names will also include a bunch of additional information, like
-resolution mode and exposure time). If
-you run ``typewalk`` on the folder containing these, you'll see that they are
-identified as ``GHOST_SPECT``::
+The GHOST simulator produces object spectra frames like
+``obj100_1.0_std_red.fits`` whose names follow this convention:
+``obj{exptime}_{seeing}_{resolution}_{arm}.fits``. If you run ``typewalk`` on
+the folder containing these, you'll see that they are identified as
+``GHOST_SPECT``::
 
     typewalk --dir <path_to>/data_folder
 
@@ -113,15 +116,17 @@ have dark and bias calibration frames (for the moment, we have commented the
 remaining steps out of the ``reduceG`` recipe so it will complete
 successfully::
 
-    reduce <path_to>/data_folder/obj100_red.fits
+    reduce <path_to>/data_folder/obj100_1.0_std_red.fits
 
 The above command will fail due to the faulty calibrations lookup. Again, we
 need to use the ``--override_cal`` option::
 
-    reduce <path_to>/data_folder/obj100_red.fits --override_cal processed_bias:calibrations/storedcals/bias_red_bias.fits processed_dark:calibrations/storedcals/dark_red_dark.fits
+    reduce <path_to>/data_folder/obj100_red.fits --override_cal
+    processed_bias:calibrations/storedcals/bias_0_red_bias.fits
+    processed_dark:calibrations/storedcals/dark100_0_red_dark.fits
 
-This produces a ``obj100_red_darkCorrected.fits`` (or similar) file, a bias and
-dark corrected GHOST spectrum frame.
+This produces a ``obj100_1.0_std_red_darkCorrected.fits`` (or similar) file, a
+bias and dark corrected GHOST spectrum frame.
 
 Other Processing Flows
 ======================
