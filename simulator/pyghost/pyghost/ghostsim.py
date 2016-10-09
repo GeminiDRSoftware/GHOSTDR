@@ -337,6 +337,7 @@ class Arm(object):
         self.microns_arcsec = 400.0  # slit image plane microns per arcsec
         self.im_slit_sz = 2048  # Size of the image slit size in pixels.
         self.sample_rate = 1e6  # Sample rate of the pixels
+        #self.set_mode(mode)
         if arm == 'red':
             # Additional slit rotation across an order needed to match Zemax.
             self.extra_rot = 3.0
@@ -370,6 +371,37 @@ class Arm(object):
         else:
             raise RuntimeError('Order information not provided in Arm class '
                                'for arm %s - aborting' % (self.arm, ))
+
+    def set_mode(self, new_mode):
+        """Set a new mode (high or standard res) for tramline purposes.
+        """
+        if (new_mode == 'high'):
+            self.mode=new_mode
+            self.lenslet_width = self.lenslet_high_size
+            self.nl = 28
+            ## Set default profiles - object, sky and reference
+            fluxes = np.zeros( (self.nl,3) )
+            fluxes[2:21,0] = 0.37
+            fluxes[8:15,0] = 0.78
+            fluxes[11,0] = 1.0
+            #NB if on the following line, fluxes[2:,1]=1.0 is set, sky will be
+            #subtracted automatically.
+            fluxes[2+19:,1]=1.0
+            fluxes[0,2]=1.0
+        elif (new_mode == 'std'):
+            self.mode=new_mode
+            self.lenslet_width = self.lenslet_std_size
+            self.nl = 17
+            ## Set default profiles - object 1, sky and object 2
+            fluxes = np.zeros( (self.nl,3) )
+            fluxes[0:7,0]  = 1.0
+            fluxes[7:10,1] = 1.0
+            fluxes[10:,2] = 1.0
+        else:
+            print("Unknown mode!")
+            raise UserWarning
+        self.fluxes=fluxes
+
 
     def spectral_format(self, xoff=0.0, yoff=0.0, ccd_centre=None, verbose=False):
         """Create a spectrum, with wavelengths sampled in 2 orders.
