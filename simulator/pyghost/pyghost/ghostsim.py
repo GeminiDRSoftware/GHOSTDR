@@ -639,7 +639,8 @@ class Arm(object):
                 # (mapping output coordinates back onto the slit).
                 # print amat.shape
                 if np.any(np.isnan(amat)):
-                    matrices[i, j, :, :] = np.zeros_like(amat)
+                    #!!! Below this was zeros... !!!
+                    matrices[i, j, :, :] = np.eye(len(amat))
                 else:
                     matrices[i, j, :, :] = np.linalg.inv(amat)
         return x_c, w_c, b_c, matrices
@@ -789,7 +790,7 @@ class Arm(object):
             If not given or zero, a square CCD is assumed.
         xshift: float
             Bulk shift to put in to the spectrum along the slit.
-        yshift: float
+        yshift: floatDROP SCE
             NOT IMPLEMENTED
         radvel: float
             Radial velocity in m/s.
@@ -942,7 +943,7 @@ class Arm(object):
                        use_thar=True, mode='high', add_cosmic=True,
                        add_sky=True, return_image=False, thar_flatlamp=False,
                        flatlamp=False, obstype=None, additive_noise=None,
-                       scaling=None, seeing=0.8):
+                       scaling=None, seeing=0.8, write_crplane=False):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -1011,6 +1012,9 @@ class Arm(object):
 
         return_image: bool (optional)
             Do we return an image as an array? The fits file is always written.
+
+        write_crplane: bool (optional)
+            Output a fits file containing locations where CRs were injected?
         """
 
         # Input checks
@@ -1093,9 +1097,9 @@ class Arm(object):
         image = np.maximum(image, 0)
 
         # Scale to photons
-        image = duration * np.random.poisson(flux * image)
+        image =  np.random.poisson(duration * flux * image).astype(float)
 
-        if add_sky:
+        if add_sky and obstype != 'BIAS' and obstype != 'DARK':
             # Calculate the sky spectrum - the flux we calculate
             # is per fiber.
             sky_spect = self.sky_background(mode)
@@ -1112,7 +1116,7 @@ class Arm(object):
                                             spectrum=sky_spect, n_x=self.szx,
                                             xshift=xshift, radvel=0.0)
             sky_image = np.maximum(0, sky_image)
-            image += duration * np.random.poisson(flux * sky_image)
+            image += np.random.poisson(duration * flux * sky_image)
 
         # Probably ignore atmospheric transmission for now
 
@@ -1127,9 +1131,15 @@ class Arm(object):
             # of the zenith.
             # Pixel size of 15 x 15 x 16 um
             # FIXME Mike says the red detector is 4x thicker than the blue
-            cosmic_img = cosmic.cosmic(image.shape, duration, 10, 2.0, False,
-                                       [15, 15, 16])
+            cosmic_img = cosmic.cosmic(image.shape,     # Image shape
+                                       duration,        # Exposure length
+                                       10,              # CR shield angle
+                                       2.0,             # CR/s/cm/cm
+                                       False,           # Use effect area mask
+                                       [15, 15, 16]     # Pixel size (microns)
+                                       )
             image += cosmic_img
+            #import pdb; pdb.set_trace() #!!!MJI!!!
             # no_cr_pix = np.count_nonzero(cosmic_img)
         else:
             cosmic_img = np.zeros(image.shape)
@@ -1152,10 +1162,13 @@ class Arm(object):
 
         # For conventional axes transpose the image
         image = image.T
+        cosmic_img = cosmic_img.T
 
         # Split the image into sections for each readout amplifier
-        images, cxl, cxh, cyl, cyh = split_image(image, namps, return_headers=True)
-        cosmic_images = split_image(cosmic_img, namps, return_headers=False)
+        images, cxl, cxh, cyl, cyh = split_image(image, namps,
+                                                 return_headers=True)
+        if add_cosmic:
+            cosmic_images = split_image(cosmic_img, namps, return_headers=False)
 
         # Add read noise for each amplifier
         images = [i+r*np.random.normal(size=i.shape)
@@ -1178,17 +1191,33 @@ class Arm(object):
                 newimg = np.hstack((i, oimg))
                 newimages.append(newimg)
             images = newimages
+            if add_cosmic:
+                newcosmic = []
+                for (i, g, b, r) in zip(cosmic_images, gain, bias_level,
+                                        rnoise):
+                    oimg = r * np.random.normal(size=(i.shape[0], overscan)) + b
+                    oimg /= g
+                    newcr = np.hstack((i, oimg))
+                    newcosmic.append(newcr)
+                cosmic_images = newcosmic
 
         # FIXME Apply non-linearity
 
         # Convert to unsigned short, and deal with saturation
-        newimages = []
         saturation = np.iinfo(np.uint16).max
+        newimages = []
         for im_amp in images:
             im_amp[im_amp < 0] = 0
             im_amp[im_amp > saturation] = saturation
             newimages.append(np.asarray(im_amp, dtype=np.uint16))
         images = newimages
+        if add_cosmic and write_crplane:
+            newcosmic = []
+            for im_amp in cosmic_images:
+                im_amp[im_amp < 0] = 0
+                im_amp[im_amp > saturation] = saturation
+                newcosmic.append(np.asarray(im_amp, dtype=np.uint16))
+            cosmic_images = newcosmic
 
         # Now create our fits image!
         # By adding the DETSIZE and DETSEC keywords we can open the
@@ -1204,6 +1233,7 @@ class Arm(object):
         hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
         hdr['DETTYPE'] = self.dettype
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
+        crhdu = pf.HDUList(pf.PrimaryHDU(header=hdr))
         for i, im_amp in enumerate(images):
             hdr = pf.Header()
             hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
@@ -1217,11 +1247,35 @@ class Arm(object):
             if overscan > 0:
                 hdr['BIASSEC'] = "[%d:%d,%d:%d]" % (im_amp.shape[1]-overscan+1,
                                                     im_amp.shape[1], 1, im_amp.shape[0])
+            if add_cosmic and write_crplane:
+                cosmic_image = cosmic_images[i]
+                crhdr = pf.Header()
+                crhdr['DETSIZE'] = "[1:%d,1:%d]" % (
+                    cosmic_image.shape[1], cosmic_image.shape[0])
+                crhdr['DETSEC'] = "[%d:%d,%d:%d]" % (cxl[i] + 1, cxh[i],
+                                                   cyl[i] + 1, cyh[i])
+                crhdr['DATASEC'] = "[%d:%d,%d:%d]" % (
+                    1, cosmic_images[i].shape[1] - overscan,
+                    1, cosmic_images[i].shape[0])
+                crhdr['TRIMSEC'] = "[%d:%d,%d:%d]" % (
+                    1, cosmic_images[i].shape[1] - overscan,
+                    1, cosmic_images[i].shape[0])
+                if overscan > 0:
+                    crhdr['BIASSEC'] = "[%d:%d,%d:%d]" % (
+                        cosmic_images[i].shape[1] - overscan + 1,
+                        cosmic_images[i].shape[1], 1, cosmic_images[i].shape[0])
             hdr['RDNOISE'] = rnoise[i]
             hdr['GAIN'] = gain[i]
             hdr['BUNIT'] = 'ADU'
-            hdulist.append(pf.ImageHDU(data=im_amp, header=hdr))
+            hdulist.append(pf.ImageHDU(data=im_amp, header=hdr, name='SCI'))
+            if add_cosmic and write_crplane:
+                crhdu.append(pf.ImageHDU(data=cosmic_image, header=crhdr,
+                                         name='SCI'))
+        print('Writing out to ' + output_prefix + self.arm + '.fits')
         hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
+        if add_cosmic and write_crplane:
+            print('Writing CR out to ' + output_prefix + self.arm + '_CR.fits')
+            crhdu.writeto(output_prefix + self.arm + '_CR.fits', clobber=True)
 
         if return_image:
             return images

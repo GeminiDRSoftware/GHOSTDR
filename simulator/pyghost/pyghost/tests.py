@@ -5,7 +5,7 @@ import numpy as np
 import pyghost
 
 
-def run(nbias=3,ndark=3):
+def run(nbias=3,ndark=3,nflat=3,crplane=False):
     """ The function that runs the test. """
 
     # Create the two arms
@@ -63,7 +63,8 @@ def run(nbias=3,ndark=3):
             arm.simulate_frame(duration=0.0, output_prefix='bias_{0:d}_'.format(i), use_thar=False,
                                rnoise=3.0, spectrum=blank, gain=1, namps=namps,
                                overscan=overscan, add_sky=False, bias_level=bias_level,
-                               obstype='BIAS', additive_noise=noise, scaling=scaling)
+                               obstype='BIAS', additive_noise=noise, scaling=scaling,
+                               write_crplane=crplane)
 
         # This produces a dark frame
         for i in range(ndark):
@@ -72,16 +73,19 @@ def run(nbias=3,ndark=3):
                                use_thar=False, rnoise=3.0, spectrum=blank, gain=1,
                                namps=namps, overscan=overscan, add_sky=False,
                                bias_level=bias_level, obstype='DARK',
-                               additive_noise=noise, scaling=scaling)
+                               additive_noise=noise, scaling=scaling,
+                               write_crplane=crplane)
 
         for mode in ('std', 'high'):        
             # This produces a flat frame
-            arm.simulate_frame(duration=duration,
-                               output_prefix='flat'+str(duration)+'_'+mode+'_',
-                               use_thar=False, rnoise=0.0, spectrum=flat, gain=1,
-                               namps=namps, overscan=overscan, add_sky=False, mode=mode,
-                               bias_level=bias_level, flatlamp=True, obstype='FLAT',
-                               additive_noise=noise, scaling=scaling)
+            for i in range(nflat):
+                arm.simulate_frame(duration=duration,
+                                   output_prefix='flat'+str(duration)+'_'+mode+'_{0:d}_'.format(i),
+                                   use_thar=False, rnoise=0.0, spectrum=flat, gain=1,
+                                   namps=namps, overscan=overscan, add_sky=False, mode=mode,
+                                   bias_level=bias_level, flatlamp=True, obstype='FLAT',
+                                   additive_noise=noise, scaling=scaling,
+                                   write_crplane=crplane)
 
             # This produces an arc frame
             arm.simulate_frame(duration=duration,
@@ -89,7 +93,8 @@ def run(nbias=3,ndark=3):
                                use_thar=False, rnoise=3.0, spectrum=thar, gain=1,
                                namps=namps, overscan=overscan, add_sky=False,
                                mode=mode, bias_level=bias_level, flatlamp=True,
-                               obstype='ARC', additive_noise=noise, scaling=scaling)
+                               obstype='ARC', additive_noise=noise, scaling=scaling,
+                               write_crplane=crplane)
 
             # This produces a sky frame
             arm.simulate_frame(duration=duration,
@@ -97,7 +102,8 @@ def run(nbias=3,ndark=3):
                                use_thar=False, rnoise=3.0, spectrum=blank, gain=1,
                                namps=namps, overscan=overscan, add_sky=True,
                                mode=mode, bias_level=bias_level, obstype='GCALFLAT',
-                               additive_noise=noise, scaling=scaling)
+                               additive_noise=noise, scaling=scaling,
+                               write_crplane=crplane)
 
             # This produces an object frame, using the default object spectrum
             # and 0.5 arcsec seeing
@@ -106,7 +112,8 @@ def run(nbias=3,ndark=3):
                                use_thar=True, rnoise=3.0, gain=1, namps=namps,
                                overscan=overscan, add_sky=True, mode=mode,
                                bias_level=bias_level, obstype='OBJECT',
-                               additive_noise=noise, scaling=scaling, seeing=0.5)
+                               additive_noise=noise, scaling=scaling, seeing=0.5,
+                               write_crplane=crplane)
 
             # This produces an object frame, using the default object spectrum
             # and 1.0 arcsec seeing
@@ -115,7 +122,8 @@ def run(nbias=3,ndark=3):
                                use_thar=True, rnoise=3.0, gain=1, namps=namps,
                                overscan=overscan, add_sky=True, mode=mode,
                                bias_level=bias_level, obstype='OBJECT',
-                               additive_noise=noise, scaling=scaling, seeing=1.0)
+                               additive_noise=noise, scaling=scaling, seeing=1.0,
+                               write_crplane=crplane)
 
 
 if __name__ == "__main__":
