@@ -1236,7 +1236,7 @@ class Arm(object):
         crhdu = pf.HDUList(pf.PrimaryHDU(header=hdr))
         for i, im_amp in enumerate(images):
             hdr = pf.Header()
-            hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
+            if add_cosmic: hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
             hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
             hdr['DETSEC'] = "[%d:%d,%d:%d]" % (cxl[i]+1, cxh[i],
                                                cyl[i]+1, cyh[i])
