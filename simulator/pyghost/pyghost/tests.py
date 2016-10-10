@@ -61,7 +61,7 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
         # This produces a bias with the above noise
         for i in range(nbias):
             arm.simulate_frame(duration=0.0, output_prefix='bias_{0:d}_'.format(i), use_thar=False,
-                               rnoise=3.0, spectrum=blank, gain=1, namps=namps,
+                               rnoise=3.0, spectrum_in=blank, gain=1, namps=namps,
                                overscan=overscan, add_sky=False, bias_level=bias_level,
                                obstype='BIAS', additive_noise=noise, scaling=scaling,
                                write_crplane=crplane)
@@ -70,7 +70,7 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
         for i in range(ndark):
             arm.simulate_frame(duration=duration,
                                output_prefix='dark'+str(duration)+'_{0:d}_'.format(i),
-                               use_thar=False, rnoise=3.0, spectrum=blank, gain=1,
+                               use_thar=False, rnoise=3.0, spectrum_in=blank, gain=1,
                                namps=namps, overscan=overscan, add_sky=False,
                                bias_level=bias_level, obstype='DARK',
                                additive_noise=noise, scaling=scaling,
@@ -81,7 +81,7 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
             for i in range(nflat):
                 arm.simulate_frame(duration=duration,
                                    output_prefix='flat'+str(duration)+'_'+mode+'_{0:d}_'.format(i),
-                                   use_thar=False, rnoise=0.0, spectrum=flat, gain=1,
+                                   use_thar=False, rnoise=0.0, spectrum_in=flat, gain=1,
                                    namps=namps, overscan=overscan, add_sky=False, mode=mode,
                                    bias_level=bias_level, flatlamp=True, obstype='FLAT',
                                    additive_noise=noise, scaling=scaling,
@@ -90,7 +90,7 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
             # This produces an arc frame
             arm.simulate_frame(duration=duration,
                                output_prefix='arc'+str(duration)+'_'+mode+'_',
-                               use_thar=False, rnoise=3.0, spectrum=thar, gain=1,
+                               use_thar=False, rnoise=3.0, spectrum_in=thar, gain=1,
                                namps=namps, overscan=overscan, add_sky=False,
                                mode=mode, bias_level=bias_level, flatlamp=True,
                                obstype='ARC', additive_noise=noise, scaling=scaling,
@@ -99,7 +99,7 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
             # This produces a sky frame
             arm.simulate_frame(duration=duration,
                                output_prefix='sky'+str(duration)+'_'+mode+'_',
-                               use_thar=False, rnoise=3.0, spectrum=blank, gain=1,
+                               use_thar=False, rnoise=3.0, spectrum_in=blank, gain=1,
                                namps=namps, overscan=overscan, add_sky=True,
                                mode=mode, bias_level=bias_level, obstype='GCALFLAT',
                                additive_noise=noise, scaling=scaling,
@@ -124,7 +124,10 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
                                bias_level=bias_level, obstype='OBJECT',
                                additive_noise=noise, scaling=scaling, seeing=1.0,
                                write_crplane=crplane)
-
+                               
+    #Now combine the slit images.
+    for rfn, bfn in zip(red.slit_fns, blue.slit_fns):
+        pyghost.combine_slitviewer_files([rfn,bfn])
 
 if __name__ == "__main__":
     run()
