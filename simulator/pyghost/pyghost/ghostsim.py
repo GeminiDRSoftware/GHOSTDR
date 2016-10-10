@@ -713,7 +713,7 @@ class Arm(object):
                     
         # Store these key spectral format parameters as object properties
         self.x = x_c
-        self.w = w_c
+        self.wave = w_c
         self.blaze = b_c
         self.matrices = matrices
         self.stale_spectral_format = False
