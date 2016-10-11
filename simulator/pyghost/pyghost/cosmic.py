@@ -178,6 +178,8 @@ def cosmic(im_shape, exposed, shieldcover, rate, use_mask, pix_size):
                         image[xx,yy] += (crcont * mask)[i]
         else:
             crcont = np.random.poisson(np.ones_like(xs)*depath*p[2]*p[2])
+            if type(crcont) != np.ndarray:
+                crcont = np.array([crcont])
             for i in range(len(crcont)):
                 image[xs[i],ys[i]] += crcont[i]
 

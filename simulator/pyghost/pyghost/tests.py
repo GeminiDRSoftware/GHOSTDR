@@ -4,7 +4,6 @@ import math
 import numpy as np
 import pyghost
 
-
 def run(nbias=3,ndark=3,nflat=3,crplane=False):
     """ The function that runs the test. """
 
@@ -127,7 +126,7 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
                                
     #Now combine the slit images.
     for rfn, bfn in zip(red.slit_fns, blue.slit_fns):
-        pyghost.combine_slitviewer_files([rfn,bfn])
+        pyghost.ghostsim.combine_slitviewer_files([rfn,bfn])
 
 if __name__ == "__main__":
     run()

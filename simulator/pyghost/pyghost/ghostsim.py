@@ -111,7 +111,8 @@ def frequency_noise(noise_freqs, sample_rate, shape, mean=0.0, std=1.0):
     return mean + std/math.sqrt(2)*nsamples*fftnoise(samples).reshape(shape, order='F')
 
 def thar_spectrum():
-    """Calculates a ThAr spectrum.
+    """Calculates a ThAr spectrum. Note that the flux scaling here is roughly correct
+    for the lamp with no neutral density.
 
     Returns
     -------
@@ -131,9 +132,13 @@ def thar_spectrum():
     thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))
     thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
                             mode='same')
-    # Make the peak flux equal to 100
-    # FIXME I don't know the real flux of the ThAr lamp
-    thar_flux /= np.max(thar_flux) / 100.0
+    # McDermid email of 10 July 2015 to Mike Ireland:
+    # "For the arc, I integrated a single emission line of average brightness, and 
+    # putting this into a single resolution element in GHOST, get 370 e- per second per 
+    # pixel, averaging across the 3.4 pixel resolution element. "
+    # This results in a peak flux of 370 * 3.4**2 * 7 = 30,000 for an "average" line
+    # (of "strength" 3.0), or 300,000 for the brightest line (with a "strength" 4.0).
+    thar_flux /= np.max(thar_flux) / 3e5
     return np.array([thar_wave/1e4, thar_flux])
 
 def fits_in_dir(dirname, prefix=""):
@@ -440,7 +445,10 @@ class Arm(object):
     def set_mode(self, new_mode):
         """Set a new mode (high or standard res) for tramline purposes.
         
-        THIS APPEARS NOT TO BE USED.
+        THIS IS CURRENTLY ONLY USED FOR EXTRACTION (PYMFE) TESTING
+        
+        A SIMILAR ROUTINE NEEDS TO START WITH HEADER KEYWORDS THEN THE
+        FLUXES FROM THE SLIT VIEWING CAMERA.
         """
         if (new_mode == 'high'):
             self.mode=new_mode
@@ -1123,7 +1131,8 @@ class Arm(object):
         spectrum_in: array of shape (2,n) where n is the number of
             spectral samples input spectrum.
             spectrum[0] is the wavelength array, spectrum[1] is the flux array, in units
-            of received photons/spectral pixel/s.
+            of recorded photons/spectral pixel/s, taking into account the full 
+            instrument at order centers (i.e. excluding the blaze function)
 
         xshift: float (optional)
             x-direction (along-slit) shift.
@@ -1466,7 +1475,7 @@ class Arm(object):
         #Save the slit image as a fits file
         slit_fn = output_prefix + self.arm + '_SLIT.fits'
         hdu = pf.PrimaryHDU(slit_camera_full)
-        hdu.header['ORIGFN'] = output_prefix + '_SLIT.fits'
+        hdu.header['ORIGFN'] = output_prefix + 'SLIT.fits'
         hdu.writeto(slit_fn, clobber=True) 
         
         #Keep a list of slit image files this arm has created.
