@@ -1369,8 +1369,10 @@ class Arm(object):
         images = [i+r*np.random.normal(size=i.shape)
                   for i, r in zip(images, rnoise)]
 
-        # Divide by the gain in e/ADU for each amplifier, scale, and add the bias level
-        images = [(s*a/g + b) for (a, g, b, s) in zip(images, gain, bias_level, scaling)]
+        # Divide by the gain in e/ADU for each amplifier, scale,
+        # and add the bias level
+        images = [(s*a/g + b) for (a, g, b, s) in
+                  zip(images, gain, bias_level, scaling)]
 
         # Add in the additive noise
         # This is assumed to be electronic noise, so it's in ADUs
@@ -1390,7 +1392,8 @@ class Arm(object):
                 newcosmic = []
                 for (i, g, b, r) in zip(cosmic_images, gain, bias_level,
                                         rnoise):
-                    oimg = r * np.random.normal(size=(i.shape[0], overscan)) + b
+                    # oimg = r * np.random.normal(size=(i.shape[0], overscan)) + b
+                    oimg = np.zeros((i.shape[0], overscan))
                     oimg /= g
                     newcr = np.hstack((i, oimg))
                     newcosmic.append(newcr)
