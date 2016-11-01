@@ -9,8 +9,8 @@ import numpy as np
 import scipy
 import functools
 
-from primitives_GMOS import GMOSPrimitives
-from primitives_stack import StackPrimitives
+from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import GMOSPrimitives
+from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import StackPrimitives
 
 class GHOSTPrimitives(GMOSPrimitives):
     """
@@ -28,8 +28,23 @@ class GHOSTPrimitives(GMOSPrimitives):
 
     def rejectCosmicRays(self, rc):
         """
-        Reject cosmic rays using a custom implementation of the LACosmic
-        algorithm
+        Reject cosmic rays from GHOST data.
+
+        .. note:: This currently does not successfully flag anything in the DQ
+                  plane. I'm looking into this. -MCW
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Yields
+        ------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+
         """
         # Instantiate the log
         log = logutils.get_logger(__name__)
@@ -65,16 +80,6 @@ class GHOSTPrimitives(GMOSPrimitives):
                 adoutput_list.append(ad)
                 continue
 
-            # Define an array that will hold the cosmic ray flagging
-            # Note that we're deliberately not using the BPM at this stage,
-            # otherwise the algorithm will start searching for cosmic rays
-            # around pixels that have been flagged bad for another reason.
-            cosmic_bpm = np.zeros_like(ad["SCI", 1].data, dtype=bool)
-            new_crs = 1
-
-            # Start with a fresh copy of the data
-            clean_data = np.copy(ad["SCI", 1].data)
-
             # Define the function for performing the median-replace of cosmic
             # ray pixels
             # Note that this is different from a straight median filter, as we
@@ -86,112 +91,131 @@ class GHOSTPrimitives(GMOSPrimitives):
                                                function=np.median, footprint=fp)
 
             log.stdinfo('Doing CR removal for %s' % ad.filename)
-            no_passes = 0
-            while new_crs > 0 and no_passes < 1:
-                no_passes += 1
-                curr_crs = np.count_nonzero(cosmic_bpm)
-                # Median out the pixels already defined as cosmic rays
-                log.stdinfo('Pass %d: Wiping over previously found bad pix' %
-                            no_passes)
-                if curr_crs > 0:
-                    clean_data[cosmic_bpm] = median_replace(
-                        clean_data)[cosmic_bpm]
 
-                # Actually do the cosmic ray subtraction here
-                # ------
-                # STEP 1
-                # Construct a model for sky lines to subtract
-                # TODO: Add option for 'wave' keyword, which parametrizes
-                # an input wavelength solution function
-                # ------
-                log.stdinfo('Pass %d: Building sky model' % no_passes)
-                sky_model = scipy.ndimage.median_filter(clean_data, size=[7, 1])
-                m5_model = scipy.ndimage.median_filter(clean_data, size=[5, 5])
-                subbed_data = clean_data - sky_model
+            for i in range(ad['SCI'].count_exts()):
+                amp = i + 1
 
-                # ------
-                # STEP 2
-                # Remove object spectra
-                # TODO: Determine if this is necessary - PyWiFeS does not use it
-                # ------
+                # Define an array that will hold the cosmic ray flagging
+                # Note that we're deliberately not using the BPM at this stage,
+                # otherwise the algorithm will start searching for cosmic rays
+                # around pixels that have been flagged bad for another reason.
+                cosmic_bpm = np.zeros_like(ad["SCI", amp].data, dtype=bool)
 
-                # ------
-                # STEP 3
-                # Compute 2nd-order Laplacian of input frame
-                # This is 'curly L' in van Dokkum 2001
-                # ------
-                # Subsample the data
-                log.stdinfo('Pass %d: Computing Laplacian' % no_passes)
-                subsampling = rc["subsampling"]
-                data_shape = ad["SCI", 1].data.shape
-                subsampl_data = np.repeat(np.repeat(
-                    ad["SCI", 1].data, subsampling, axis=1),
-                    subsampling, axis=0
-                )
-                # Convolve the subsampled data with the Laplacian kernel,
-                # trimming off the edges this introduces
-                # Bring any negative values up to 0
-                init_conv_data = scipy.signal.convolve2d(
-                    subsampl_data, laplace_kernel)[1:-1, 1:-1]
-                init_conv_data[np.nonzero(init_conv_data <= 0.)] = 0.
-                # Reverse the subsampling, returning the
-                # correctly-convolved image
-                conv_data = np.reshape(init_conv_data,
-                                       (
-                                           data_shape[0],
-                                           init_conv_data.shape[0] //
-                                           data_shape[0],
-                                           data_shape[1],
-                                           init_conv_data.shape[1] //
-                                           data_shape[1],
-                                       )).mean(axis=3).mean(axis=1)
+                # Start with a fresh copy of the data
+                clean_data = np.copy(ad["SCI", amp].data)
 
-                # ------
-                # STEP 4
-                # Construct noise model, and use it to generate the
-                # 'sigma_map' S
-                # This is the equivalent of equation (11) of van Dokkum 2001
-                # ------
-                log.stdinfo('Pass %d: Constructing sigma map' % no_passes)
-                gain = ad.gain()
-                read_noise = ad.read_noise()
-                noise = (1.0 / gain) * ((gain * m5_model + read_noise**2)**0.5)
-                noise_min = 0.00001
-                noise[np.nonzero(noise <= noise_min)] = noise_min
-                # div by 2 to correct convolution counting
-                # FIXME: Why is it divided by *two* times the noise?
-                sigmap = conv_data / (2.0 * noise)
-                # Remove large structure with a 5x5 median filter
-                # Equation (13) of van Dokkum 2001, generates S'
-                sig_smooth = scipy.ndimage.median_filter(sigmap, size=[5, 5])
-                sig_detrend = sigmap - sig_smooth
+                no_passes = 0
+                new_crs = 1
+                while new_crs > 0 and no_passes < rc['n_passes']:
+                    no_passes += 1
+                    curr_crs = np.count_nonzero(cosmic_bpm)
+                    # Median out the pixels already defined as cosmic rays
+                    log.stdinfo('Pass %d: Wiping over previously '
+                                'found bad pix' % no_passes)
+                    if curr_crs > 0:
+                        clean_data[cosmic_bpm] = median_replace(
+                            clean_data)[cosmic_bpm]
 
-                # ------
-                # STEP 5
-                # Identify the potential cosmic rays
-                # ------
-                log.stdinfo('Pass %d: Flagging cosmic rays' % no_passes)
-                # Construct the fine-structure image (F, eqn 14 of van Dokkum)
-                m3 = scipy.ndimage.median_filter(subbed_data, size=[3, 3])
-                fine_struct = m3 - scipy.ndimage.median_filter(m3, size=[7, 7])
-                # Pixels are flagged as being cosmic rays if:
-                # - The sig_detrend image (S') is > sigma_lim
-                # - The contrast between the Laplacian image (L+) and the
-                #   fine-structure image (F) is greater than f_lim
-                sigma_lim = rc['sigma_lim']
-                f_lim = rc['f_lim']
-                cosmic_bpm[np.logical_and(sig_detrend > sigma_lim,
-                                          (conv_data/fine_struct) > f_lim)] = 1
-                new_crs = np.count_nonzero(cosmic_bpm) - curr_crs
-                log.stdinfo('Found %d CR pixels in pass %d' % (new_crs,
-                                                               no_passes, ))
+                    # Actually do the cosmic ray subtraction here
+                    # ------
+                    # STEP 1
+                    # Construct a model for sky lines to subtract
+                    # TODO: Add option for 'wave' keyword, which parametrizes
+                    # an input wavelength solution function
+                    # ------
+                    log.stdinfo('Pass %d: Building sky model' % no_passes)
+                    sky_model = scipy.ndimage.median_filter(clean_data,
+                                                            size=[7, 1])
+                    m5_model = scipy.ndimage.median_filter(clean_data,
+                                                           size=[5, 5])
+                    subbed_data = clean_data - sky_model
 
-            # TODO: Determine whether to alter pix or alter BPM
-            # For the moment, go with Mike Ireland's suggestion to require
-            # a BPM update
-            curr_bpm = ad["DQ", 1].data
-            curr_bpm[cosmic_bpm] = True
-            ad['DQ', 1].data = curr_bpm
+                    # ------
+                    # STEP 2
+                    # Remove object spectra
+                    # FIXME: Waiting on working find apertures routine
+                    # ------
+
+                    # ------
+                    # STEP 3
+                    # Compute 2nd-order Laplacian of input frame
+                    # This is 'curly L' in van Dokkum 2001
+                    # ------
+                    # Subsample the data
+                    log.stdinfo('Pass %d: Computing Laplacian' % no_passes)
+                    subsampling = rc["subsampling"]
+                    data_shape = ad["SCI", amp].data.shape
+                    subsampl_data = np.repeat(np.repeat(
+                        ad["SCI", amp].data, subsampling, axis=1),
+                        subsampling, axis=0
+                    )
+                    # Convolve the subsampled data with the Laplacian kernel,
+                    # trimming off the edges this introduces
+                    # Bring any negative values up to 0
+                    init_conv_data = scipy.signal.convolve2d(
+                        subsampl_data, laplace_kernel)[1:-1, 1:-1]
+                    init_conv_data[np.nonzero(init_conv_data <= 0.)] = 0.
+                    # Reverse the subsampling, returning the
+                    # correctly-convolved image
+                    conv_data = np.reshape(init_conv_data,
+                                           (
+                                               data_shape[0],
+                                               init_conv_data.shape[0] //
+                                               data_shape[0],
+                                               data_shape[1],
+                                               init_conv_data.shape[1] //
+                                               data_shape[1],
+                                           )).mean(axis=3).mean(axis=1)
+
+                    # ------
+                    # STEP 4
+                    # Construct noise model, and use it to generate the
+                    # 'sigma_map' S
+                    # This is the equivalent of equation (11) of van Dokkum 2001
+                    # ------
+                    log.stdinfo('Pass %d: Constructing sigma map' % no_passes)
+                    gain = ad.gain()
+                    read_noise = ad.read_noise()
+                    noise = (1.0 / gain) * ((gain * m5_model +
+                                             read_noise**2)**0.5)
+                    noise_min = 0.00001
+                    noise[np.nonzero(noise <= noise_min)] = noise_min
+                    # div by 2 to correct convolution counting
+                    sigmap = conv_data / (subsampling * noise)
+                    # Remove large structure with a 5x5 median filter
+                    # Equation (13) of van Dokkum 2001, generates S'
+                    sig_smooth = scipy.ndimage.median_filter(sigmap,
+                                                             size=[5, 5])
+                    sig_detrend = sigmap - sig_smooth
+
+                    # ------
+                    # STEP 5
+                    # Identify the potential cosmic rays
+                    # ------
+                    log.stdinfo('Pass %d: Flagging cosmic rays' % no_passes)
+                    # Construct the fine-structure image
+                    # (F, eqn 14 of van Dokkum)
+                    m3 = scipy.ndimage.median_filter(subbed_data, size=[3, 3])
+                    fine_struct = m3 - scipy.ndimage.median_filter(m3,
+                                                                   size=[7, 7])
+                    # Pixels are flagged as being cosmic rays if:
+                    # - The sig_detrend image (S') is > sigma_lim
+                    # - The contrast between the Laplacian image (L+) and the
+                    #   fine-structure image (F) is greater than f_lim
+                    sigma_lim = rc['sigma_lim']
+                    f_lim = rc['f_lim']
+                    cosmic_bpm[np.logical_and(sig_detrend > sigma_lim,
+                                              (conv_data/fine_struct) > f_lim)] = 1
+                    new_crs = np.count_nonzero(cosmic_bpm) - curr_crs
+                    log.stdinfo('Found %d CR pixels in pass %d' % (new_crs,
+                                                                   no_passes, ))
+
+                # TODO: Determine whether to alter pix or alter BPM
+                # For the moment, go with Mike Ireland's suggestion to require
+                # a BPM update
+                curr_bpm = ad["DQ", amp].data
+                curr_bpm[cosmic_bpm] = 8
+                ad['DQ', amp].data = curr_bpm
 
             # Append the ad to the output list
             adoutput_list.append(ad)
@@ -202,11 +226,48 @@ class GHOSTPrimitives(GMOSPrimitives):
         yield rc
 
     def stackFrames(self, rc):
-        # Runs the standard stackFrames, but sets the iraf logging level higher
+        """
+        Reject cosmic rays from GHOST data.
+
+        .. note:: This is a wrapped for the standard stackFrames primitive,
+                  which increases the IRAF verbosity to 2.
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Yields
+        ------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+
+        """
         iraf.setVerbose(value=2)
         return StackPrimitives.stackFrames(self, rc)
 
     def standardizeHeaders(self, rc):
+        """
+        Standardize the headers of GHOST data to Gemini standards.
+
+        .. note:: This function currently just called the equivalent
+                  GMOS function (from GMOSPrimitives).
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Yields
+        ------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+
+        """
         #log = logutils.get_logger(__name__)
         #log.debug(gt.log_message("primitive", "standardizeHeaders", "starting"))
         #timestamp_key = self.timestamp_keys["standardizeHeaders"]
@@ -214,6 +275,26 @@ class GHOSTPrimitives(GMOSPrimitives):
         yield rc
 
     def subtractOverscan(self, rc):
+        """
+        Subtract overscan from GHOST data.
+
+        .. note:: This currently adds an extra subtract_overscan parameter
+                  to send on to IRAF, then calls the equivalent GMOS
+                  primitive (from GMOSPrimitives).
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Yields
+        ------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+
+        """
         iraf.setVerbose(value=2)
         # supply extra required param in gireduce's ETI wrapper; can also
         # override DETTYPE defaults this way (the alternative is to extend

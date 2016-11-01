@@ -29,7 +29,7 @@ or overridden with a user configuration file, as marked:
 +------------+---------+---------------------+---------+-------+--------------------------------------+
 | f_lim      | float   | 6.0                 | Y       | Y     | Fine-structure clipping limit.       |
 +------------+---------+---------------------+---------+-------+--------------------------------------+
-| n_steps    | int     | 2                   | Y       | Y     | Number of iterations to perform.     |
+| n_passes   | int     | 2                   | Y       | Y     | Number of iterations to perform.     |
 +------------+---------+---------------------+---------+-------+--------------------------------------+
 
 .. _ADS: https://ui.adsabs.harvard.edu/#abs/2001PASP..113.1420V/abstract
@@ -73,7 +73,7 @@ In summary (where the symbol :math:`\ast` denotes convolution):
 5. For the purposes of the algorithm (i.e. **not** in the data to be returned),
    replace cosmic rays pixels with the median value of surrounding pixels.
 
-6. Iterate over steps 1-5 until ``n_steps`` is reached, or the number of
+6. Iterate over steps 1-5 until ``n_passes`` is reached, or the number of
    cosmic rays detected falls to 0.
 
 

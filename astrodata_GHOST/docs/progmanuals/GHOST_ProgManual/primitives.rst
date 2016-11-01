@@ -4,33 +4,44 @@
 Primitives
 **********
 
-Primitive #1  (alphabetical)
-============================
+.. module:: astrodata_GHOST.RECIPES_GHOST.primitives.primitives_GHOST
+.. autoclass:: GHOSTPrimitives
+    :members:
 
-Purpose
--------
-
-Inputs and Outputs
-------------------
-
-Input parameters
-----------------
-
-AstroData Type(s)
------------------
-
-Inheritance and Primitive Set
------------------------------
-
-Location
---------
-
-Algorithms
-----------
-
-Issues and Limitations
-----------------------
-
-
-Primitive #2
-============
+.. **********
+.. Primitives
+.. **********
+..
+.. Primitive #1  (alphabetical)
+.. ============================
+..
+.. Test text to make sure this file is being found
+..
+.. Purpose
+.. -------
+..
+.. Inputs and Outputs
+.. ------------------
+..
+.. Input parameters
+.. ----------------
+..
+.. AstroData Type(s)
+.. -----------------
+..
+.. Inheritance and Primitive Set
+.. -----------------------------
+..
+.. Location
+.. --------
+..
+.. Algorithms
+.. ----------
+..
+.. Issues and Limitations
+.. ----------------------
+..
+..
+.. Primitive #2
+.. ============
+..
