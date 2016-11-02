@@ -29,7 +29,8 @@ sys.path.insert(0, os.path.abspath('../../../../externals/gemini_python'))
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
               'sphinx.ext.coverage', 'sphinx.ext.pngmath',
               'sphinx.ext.ifconfig', 'sphinx.ext.viewcode',
-              # 'sphinx.ext.napoleon',
+              'sphinx.ext.napoleon',
+              # 'numpydoc',
               ]
 
 # Add any paths that contain templates here, relative to this directory.

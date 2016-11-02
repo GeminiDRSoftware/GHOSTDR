@@ -6,7 +6,18 @@ Primitives
 
 .. module:: astrodata_GHOST.RECIPES_GHOST.primitives.primitives_GHOST
 .. autoclass:: GHOSTPrimitives
-    :members:
+
+    **Primitives**
+
+    .. method:: rejectCosmicRays(self, rc)
+
+        Reject cosmic rays from GHOST frames.
+
+    .. method:: stackFrames(self, rc)
+
+        Stack GHOST frames using IRAF.
+
+    .. automethod:: standardizeHeaders
 
 .. **********
 .. Primitives
