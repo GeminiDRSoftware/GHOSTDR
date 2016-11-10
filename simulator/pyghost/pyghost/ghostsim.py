@@ -133,8 +133,8 @@ def thar_spectrum():
     thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
                             mode='same')
     # McDermid email of 10 July 2015 to Mike Ireland:
-    # "For the arc, I integrated a single emission line of average brightness, and 
-    # putting this into a single resolution element in GHOST, get 370 e- per second per 
+    # "For the arc, I integrated a single emission line of average brightness, and
+    # putting this into a single resolution element in GHOST, get 370 e- per second per
     # pixel, averaging across the 3.4 pixel resolution element. "
     # This results in a peak flux of 370 * 3.4**2 * 7 = 30,000 for an "average" line
     # (of "strength" 3.0), or 300,000 for the brightest line (with a "strength" 4.0).
@@ -234,9 +234,9 @@ class Fibers(object):
         plt.show()
 
 class SRFibers(Fibers):
-    """ Represent the details of the standard resolution fibers. 
-    
-    The fiber_order is the AAO's numbering system for the fibers in CY_RPT_50, where 
+    """ Represent the details of the standard resolution fibers.
+
+    The fiber_order is the AAO's numbering system for the fibers in CY_RPT_50, where
     numbers in the first bundle (low and high res) go from 1 to 41, and the numbers in the
     second bundle go from 42 to 61. Fiber 62 is the simultaneous calibration fiber."""
     fiber_order = np.array([2, 5, 3, 1, 6, 4, 7, 14, 15, 16, 43, 46, 44, 42, 47, 45, 48])
@@ -268,8 +268,8 @@ class SRFibers(Fibers):
         super(SRFibers, self).__init__(lenslet_width, microns_pix)
 
 class HRFibers(Fibers):
-    """ Represent the details of the high resolution fibers. 
-    
+    """ Represent the details of the high resolution fibers.
+
     See SRFibers for detail.
     """
     fiber_order = np.array([62, 0, 25, 31, 27, 32, 26, 30, 18, 21, 19, 17, 22, 20, 23, 28, 34, 24, 29, 33, 35,
@@ -311,21 +311,21 @@ class HRFibers(Fibers):
 def combine_slitviewer_files(infiles, outfile=None, slitcam_readnoise = 8.0, \
     slitcam_gain=1.0, slitcam_bias = 1000):
     """Combine slit viewer images from red and blue cameras, and add readout noise
-    
+
     Parameters
     ----------
     infiles: list
         Input filenames
-        
+
     slitcam_readnoise: float
         Readout noise in electrons
-    
+
     slitcam_gain: float
         Camera gain in electrons per ADU
-    
+
     outfile: string
-        Out filename    
-        
+        Out filename
+
     WARNING: Only a simple initial function created here - needs more header keywords
     etc.
     """
@@ -336,26 +336,26 @@ def combine_slitviewer_files(infiles, outfile=None, slitcam_readnoise = 8.0, \
         outshape = (1,header['NAXIS2'], header['NAXIS1'])
     else:
         outshape = (header['NAXIS3'], header['NAXIS2'], header['NAXIS1'])
-    
+
     #Start with some readout noise (linear regime assumed, so order doesn't matter)
     full_cube = np.random.normal(loc=slitcam_bias, \
-            scale=slitcam_readnoise / slitcam_gain, 
+            scale=slitcam_readnoise / slitcam_gain,
             size=outshape )
-    
+
     #Add in the data.
     for infile in infiles:
         full_cube += pf.getdata(infile) / slitcam_gain
-        
+
     #Now restrict to 14 bits (BigEye G283) and digitize
     full_cube = np.minimum(np.maximum(full_cube,0), 1<<14).astype(np.int16)
-    
+
     #If the output file isn't set, get it from the header.
     if not outfile:
         outfile = header['ORIGFN']
-    
+
     #Write to our fits file.
     pf.writeto(outfile, full_cube, header)
-        
+
 class Arm(object):
     """A class for each arm of the spectrograph. The initialisation function
     takes a single string representing the configuration. For GHOST, it can be
@@ -390,7 +390,7 @@ class Arm(object):
         self.microns_arcsec = 400.0  # slit image plane microns per arcsec
         self.im_slit_sz = 2048  # Size of the image slit size in pixels.
         self.sample_rate = 1e6  # Sample rate of the pixels
-        #Below comes from CY_RPT_044, with 50mm/180mm demagnification and 
+        #Below comes from CY_RPT_044, with 50mm/180mm demagnification and
         #the Bigeye G-283 (Sony ICX674) with 4.54 micron pixels. 2x2  binning
         #Is assumed.
         self.slitview_pxsize = 32.69 #Effective pixel size of the slit viewer in microns.
@@ -444,9 +444,9 @@ class Arm(object):
 
     def set_mode(self, new_mode):
         """Set a new mode (high or standard res) for tramline purposes.
-        
+
         THIS IS CURRENTLY ONLY USED FOR EXTRACTION (PYMFE) TESTING
-        
+
         A SIMILAR ROUTINE NEEDS TO START WITH HEADER KEYWORDS THEN THE
         FLUXES FROM THE SLIT VIEWING CAMERA.
         """
@@ -718,7 +718,7 @@ class Arm(object):
                     matrices[i, j, :, :] = np.eye(len(amat))
                 else:
                     matrices[i, j, :, :] = np.linalg.inv(amat)
-                    
+
         # Store these key spectral format parameters as object properties
         self.x = x_c
         self.wave = w_c
@@ -852,7 +852,7 @@ class Arm(object):
                 int((llet_offset + i - n_lenslets/2.0) *
                     lenslet_width/self.microns_pix)
             im_slit += np.roll(im_one, the_shift, axis=1)
-            
+
         # Now normalise the slit image to have a sum of 1.0. This is the easiest
         # type of normalisation to deal with for conversion to physical units.
         im_slit /= np.sum(im_slit)
@@ -940,8 +940,8 @@ class Arm(object):
                                   cutout_shifted[1][w_ix])
                 slit_x = slit_x[w_ix]
                 slit_y = slit_y[w_ix]
-                # Find the flux scaling. The slit image is normalised to 1, and we 
-                # normalize the re-sampled slit image to 1 by multiplying by the 
+                # Find the flux scaling. The slit image is normalised to 1, and we
+                # normalize the re-sampled slit image to 1 by multiplying by the
                 # determinant of the slit-to-detector matrix.
                 image[cutout_shifted[1], cutout_shifted[0]] += blaze[i, j] * \
                     flux * im_slit[slit_y, slit_x] * np.linalg.det(matrices[i,j])
@@ -952,7 +952,7 @@ class Arm(object):
             #outline.flush()
         print('\n')
         #outline.write('\n')
-        #Old code was: print('Done order: {0}'.format(i + self.order_min)) 
+        #Old code was: print('Done order: {0}'.format(i + self.order_min))
         return image
 
     def sky_background(self, mode):
@@ -1034,26 +1034,26 @@ class Arm(object):
 
     def create_slitview_frames(self, im_slit, spectrum, mode='high', duration=None):
         """
-        Create a slit viewer frame.  
-        
+        Create a slit viewer frame.
+
         WARNING: A Cube should be created here, with the total flux split into
         many subframes.
-        
+
         Parameters
         ----------
         im_slit: numpy array
             Image of the slit, sampled at self.microns_pix sampling
-        
+
         spectrum: numpy array
             (2, nwave) array of wavelengths and fluxes
-            
+
         mode: string
             'high' or 'std'
-        
+
         duration: float
-            The duration of the science frame (to define the number of frames in 
-            the cube)  WARNING: NOT IMPLEMENTED YET    
-        
+            The duration of the science frame (to define the number of frames in
+            the cube)  WARNING: NOT IMPLEMENTED YET
+
         Returns
         -------
         image: numpy array
@@ -1064,21 +1064,21 @@ class Arm(object):
         n_ypix = int(self.lenslet_std_size / self.slitview_pxsize) + 2
         slit_camera_image = np.zeros( (n_ypix, n_xpix) )
         xy = np.meshgrid( np.arange(n_xpix) - n_xpix//2, np.arange(n_ypix) - n_ypix//2)
-        ycoord = (xy[1] * self.slitview_pxsize / self.microns_pix).astype(int) 
+        ycoord = (xy[1] * self.slitview_pxsize / self.microns_pix).astype(int)
         ycoord += im_slit.shape[0]//2
-        xcoord = (xy[0] * self.slitview_pxsize / self.microns_pix).astype(int) 
+        xcoord = (xy[0] * self.slitview_pxsize / self.microns_pix).astype(int)
         xcoord += im_slit.shape[1]//2
-        
+
         #Roughly convolve with a pixel with a 4-point dither.
         dither_pix = int(0.25 * self.slitview_pxsize / self.microns_pix)
         for xdither in [-dither_pix, dither_pix]:
             for ydither in [-dither_pix, dither_pix]:
                 slit_camera_image += im_slit[ycoord + ydither, xcoord + xdither]
-        
+
         #Re-normalize
         slit_camera_image /= 4
         slit_camera_image *= (self.slitview_pxsize / self.microns_pix)**2
-        
+
         # Multiply by total flux within our bandpass. First multiply by mean flux
         # per resolution element, then scale WARNING: Doesn't work if min and max outside
         wave_in_filter = (self.slitview_wave[0] < spectrum[0]) & \
@@ -1090,7 +1090,7 @@ class Arm(object):
         frac_bw = 0.5*(self.slitview_wave[1] - self.slitview_wave[0])/ \
             (self.slitview_wave[1] + self.slitview_wave[0])
         slit_camera_image *= self.R_per_pixel * frac_bw * self.slitview_frac
-        
+
         #Create the full-sized image in units of photons.
         slit_camera_full = np.zeros( (self.slitcam_ysz, self.slitcam_xsz), dtype=np.int)
         xoffset = int(self.slitview_offset[0]/self.slitview_pxsize)
@@ -1099,10 +1099,10 @@ class Arm(object):
         xy = np.meshgrid(np.arange(n_xpix) - n_xpix//2 + xoffset + self.slitcam_xsz//2, \
             np.arange(n_ypix) - n_ypix//2 + yoffset + self.slitcam_ysz//2)
         slit_camera_full[xy] += np.random.poisson(np.maximum(slit_camera_image,0))
-        
+
         #Return the frame
         return slit_camera_full
-        
+
 
     def simulate_frame(self, duration=0.0, output_prefix='test_',
                        spectrum_in=None, xshift=0.0, yshift=0.0, radvel=0.0,
@@ -1131,7 +1131,7 @@ class Arm(object):
         spectrum_in: array of shape (2,n) where n is the number of
             spectral samples input spectrum.
             spectrum[0] is the wavelength array, spectrum[1] is the flux array, in units
-            of recorded photons/spectral pixel/s, taking into account the full 
+            of recorded photons/spectral pixel/s, taking into account the full
             instrument at order centers (i.e. excluding the blaze function)
 
         xshift: float (optional)
@@ -1195,11 +1195,11 @@ class Arm(object):
 
         # If no input spectrum, use the sun with default scaling.
         if (spectrum_in is None) or len(spectrum_in) == 0:
-            spectrum_in = self.get_solar_spectrum() 
-    
+            spectrum_in = self.get_solar_spectrum()
+
         # Scale the spectrum as required.
         spectrum = spectrum_in * flux
-    
+
         #Compute the spectral format if we need to
         if self.stale_spectral_format:
             x, wave, blaze, matrices = self.spectral_format_with_matrix()
@@ -1208,7 +1208,7 @@ class Arm(object):
             wave = self.wave
             blaze = self.blaze
             matrices = self.matrices
-        
+
 
         # Deal with the values that can be scalars or arrays.
         # Turn them into arrays of the right size if they're scalars.
@@ -1273,7 +1273,7 @@ class Arm(object):
                 im_slit = self.make_lenslets(fluxes=slit_fluxes, mode=mode, seeing=seeing,
                                               llet_offset=0)
             else:
-                #WARNING: 
+                #WARNING:
                 im_slit1 = self.make_lenslets(fluxes=[], mode=mode, seeing=seeing,
                                               llet_offset=0, ifu=1)
                 im_slit2 = self.make_lenslets(fluxes=[], mode=mode, seeing=seeing,
@@ -1286,6 +1286,7 @@ class Arm(object):
             slit_camera_full = self.create_slitview_frames(im_slit, \
                 spectrum, mode=mode, duration=duration)
         else:
+            # mode input check above makes this test unecessary/redundant
             print("ERROR: unknown mode.")
             raise UserWarning
 
@@ -1315,7 +1316,7 @@ class Arm(object):
             sky_image = np.maximum(0, sky_image)
             image += np.random.poisson(duration * sky_image)
 
-        # We ignore atmospheric transmission and instrument throughput in this 
+        # We ignore atmospheric transmission and instrument throughput in this
         # routine, because the input spectrum is assumed to include all of these effects
         # other than the blaze function.
 
@@ -1424,14 +1425,13 @@ class Arm(object):
         hdr['INSTRUME'] = 'GHOST'
         hdr['CAMERA'] = self.arm.upper()
         hdr['OBSTYPE'] = obstype
-        if obstype == 'BIAS':
-            hdr['EXPTIME'] = 0.0
-        else:
-            hdr['EXPTIME'] = duration
+        hdr['EXPTIME'] = (0.0 if obstype == 'BIAS' else duration)
+        hdr['SMPNAME'] = ('HI_ONLY' if mode == 'high' else 'LO_ONLY')
+        hdr['SMPPOS'] = (1 if mode == 'high' else 2)
         hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
         hdr['DETTYPE'] = self.dettype
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
-        crhdu = pf.HDUList(pf.PrimaryHDU(header=hdr))
+        crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
         for i, im_amp in enumerate(images):
             hdr = pf.Header()
             if add_cosmic: hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
@@ -1479,12 +1479,10 @@ class Arm(object):
         slit_fn = output_prefix + self.arm + '_SLIT.fits'
         hdu = pf.PrimaryHDU(slit_camera_full)
         hdu.header['ORIGFN'] = output_prefix + 'SLIT.fits'
-        hdu.writeto(slit_fn, clobber=True) 
-        
+        hdu.writeto(slit_fn, clobber=True)
+
         #Keep a list of slit image files this arm has created.
         self.slit_fns.append(slit_fn)
 
         if return_image:
             return images
-            
-        
