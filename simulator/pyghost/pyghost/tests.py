@@ -14,7 +14,8 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
     # Create a blank spectrum (used for the bias, dark, and sky)
     blank = np.array([[0.1, 1.0], [0.0, 0.0]])
 
-    # Create a perfectly flat spectrum (used for the flat)
+    # Create a perfectly flat spectrum (used for the flat); need to replace
+    # this with a better GCAL spectrum
     flat = np.array([[0.1, 1.0], [100.0, 100.0]])
 
     # Create a ThAr spectrum (used for the arc)
@@ -75,8 +76,8 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
                                additive_noise=noise, scaling=scaling,
                                write_crplane=crplane)
 
-        for mode in ('std', 'high'):        
-            # This produces a flat frame
+        for mode in ('std', 'high'):
+            # This (should) produce a GCAL flat frame
             for i in range(nflat):
                 arm.simulate_frame(duration=duration,
                                    output_prefix='flat'+str(duration)+'_'+mode+'_{0:d}_'.format(i),
@@ -100,7 +101,7 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
                                output_prefix='sky'+str(duration)+'_'+mode+'_',
                                use_thar=False, rnoise=3.0, spectrum_in=blank, gain=1,
                                namps=namps, overscan=overscan, add_sky=True,
-                               mode=mode, bias_level=bias_level, obstype='GCALFLAT',
+                               mode=mode, bias_level=bias_level, obstype='SKY',
                                additive_noise=noise, scaling=scaling,
                                write_crplane=crplane)
 
@@ -123,7 +124,7 @@ def run(nbias=3,ndark=3,nflat=3,crplane=False):
                                bias_level=bias_level, obstype='OBJECT',
                                additive_noise=noise, scaling=scaling, seeing=1.0,
                                write_crplane=crplane)
-                               
+
     #Now combine the slit images.
     for rfn, bfn in zip(red.slit_fns, blue.slit_fns):
         pyghost.ghostsim.combine_slitviewer_files([rfn,bfn])

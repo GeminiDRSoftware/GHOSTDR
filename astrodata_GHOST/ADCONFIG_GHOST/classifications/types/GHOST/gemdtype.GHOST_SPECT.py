@@ -4,6 +4,10 @@ class GHOST_SPECT(DataClassification):
         Applies to all spectra datasets from the GHOST instruments
         """
     parent = "GHOST"
-    requirement = ISCLASS("GHOST") & PHU(OBSTYPE="OBJECT")
+    requirement = ISCLASS("GHOST") & OR([
+        PHU(OBSTYPE="FLAT"),
+        PHU(OBSTYPE="ARC"),
+        PHU(OBSTYPE="OBJECT"),
+        PHU(OBSTYPE="SKY")])
 
 newtypes.append(GHOST_SPECT())
