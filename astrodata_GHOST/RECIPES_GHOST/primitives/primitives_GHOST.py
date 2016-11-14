@@ -14,14 +14,36 @@ from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import StackPri
 
 class GHOSTPrimitives(GMOSPrimitives):
     """
-    Class containing all the GHOST primitives.  It inherits all the primitives
-    from the GEMINIPrimitives class (which itself inherits a series of 
-    primitives from RECIPE_Gemini/primitives.)
+    Primary primitive set for GHOST.
+
+    Attributes
+    ----------
+    astrotype : str
+        Set to "GHOST"
     """
 
     astrotype = "GHOST"
 
     def init(self, rc):
+        """
+        GHOSTPrimitives init function.
+
+        .. note:: This calls the GMOSPrimitives init function, changes
+                  the timestamp_keys to GHOST ones, and returns the
+                  ReductionContext.
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Returns
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+        """
         GMOSPrimitives.init(self, rc)
         self.timestamp_keys.update(ghost_stamps.timestamp_keys)
         return rc
@@ -30,8 +52,8 @@ class GHOSTPrimitives(GMOSPrimitives):
         """
         Reject cosmic rays from GHOST data.
 
-        .. note:: This currently does not successfully flag anything in the DQ
-                  plane. I'm looking into this. -MCW
+        .. warning:: This currently does not successfully flag anything in the
+                     DQ plane. I'm looking into this. -MCW
 
         Parameters
         ----------
@@ -227,7 +249,7 @@ class GHOSTPrimitives(GMOSPrimitives):
 
     def stackFrames(self, rc):
         """
-        Reject cosmic rays from GHOST data.
+        Stack GHOST frames using IRAF.
 
         .. note:: This is a wrapped for the standard stackFrames primitive,
                   which increases the IRAF verbosity to 2.
