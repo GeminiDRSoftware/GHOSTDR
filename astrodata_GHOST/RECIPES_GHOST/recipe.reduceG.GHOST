@@ -8,7 +8,7 @@ addVAR(read_noise=True)
 overscanCorrect
 biasCorrect
 darkCorrect
-#rejectCosmicRays
+rejectCosmicRays
 #ADUToElectrons
 #addVar(poisson_noise=True)
 #flatCorrect

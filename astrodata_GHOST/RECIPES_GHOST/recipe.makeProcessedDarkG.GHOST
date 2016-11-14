@@ -11,6 +11,7 @@ overscanCorrect
 biasCorrect
 ADUToElectrons
 addVAR(poisson_noise=True)
+rejectCosmicRays
 addToList(purpose="forStack")
 getList(purpose="forStack")
 stackFrames
