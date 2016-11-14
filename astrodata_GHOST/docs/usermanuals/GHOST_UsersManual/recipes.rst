@@ -23,7 +23,8 @@ Furthermore, for the commands given below to work properly, you must:
  #. add ``wc/externals/gemini_python`` to the beginning of your ``PYTHONPATH``,
     and
  #. add ``wc/externals/gemini_python/astrodata/scripts`` and
-    ``wc/externals/gemini_python/recipe_system/apps`` to the beginning of your
+    ``wc/externals/
+    gemini_python/recipe_system/apps`` to the beginning of your
     ``PATH``
 
 Generating a Bias Calibration frame
@@ -61,8 +62,15 @@ This code call will place a file named ``bias_0_red_bias.fits`` in the
 The whole process behind Gemini's ``makeProcessedBias`` recipe is documented in
 the following flowchart (thanks Kathleen Labrie):
 
-.. image:: images/biasCalibration.png
-  :scale: 30
+.. only:: latex
+
+    .. image:: images/biasCalibration.png
+      :scale: 70
+
+.. only:: html
+
+    .. image:: images/biasCalibration.png
+      :scale: 45
 
 Generating a Dark Calibration Frame
 -----------------------------------
@@ -96,8 +104,16 @@ check.) This command will place a file ``dark100_0_red_dark.fits`` into the
 The whole process behind Gemini's ``makeProcessedDark`` recipe is documented in
 the following flowchart (thanks Kathleen Labrie):
 
-.. image:: images/darkCalibration.png
-  :scale: 30
+.. only:: latex
+
+  .. image:: images/darkCalibration.png
+    :scale: 70
+
+.. only:: html
+
+  .. image:: images/darkCalibration.png
+    :scale: 45
+
 
 Reducing an Object frame (Spectra)
 ----------------------------------

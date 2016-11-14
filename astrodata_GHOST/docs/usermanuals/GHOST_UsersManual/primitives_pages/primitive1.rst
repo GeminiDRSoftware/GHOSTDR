@@ -10,6 +10,9 @@ Purpose
 This primitive will mask cosmic rays in a GHOST data frame by updating the
 data mask.
 
+.. warning:: The algorithm seems to work, but isn't managing to update the
+             DQ plane. I'm working on the issue. -MCW
+
 Inputs and Outputs
 ------------------
 The following options can be passed to rejectCosmicRays via the RecipeSystem,
