@@ -116,6 +116,9 @@ class GHOSTPrimitives(GMOSPrimitives):
 
             for i in range(ad['SCI'].count_exts()):
                 amp = i + 1
+                log.stdinfo('-----')
+                log.stdinfo('AMP %d' % amp)
+                log.stdinfo('-----')
 
                 # Define an array that will hold the cosmic ray flagging
                 # Note that we're deliberately not using the BPM at this stage,
@@ -128,15 +131,15 @@ class GHOSTPrimitives(GMOSPrimitives):
 
                 no_passes = 0
                 new_crs = 1
-                while new_crs > 0 and no_passes < rc['n_passes']:
+                while new_crs > 0 and no_passes < rc['n_steps']:
                     no_passes += 1
                     curr_crs = np.count_nonzero(cosmic_bpm)
                     # Median out the pixels already defined as cosmic rays
                     log.stdinfo('Pass %d: Wiping over previously '
                                 'found bad pix' % no_passes)
                     if curr_crs > 0:
-                        clean_data[cosmic_bpm] = median_replace(
-                            clean_data)[cosmic_bpm]
+                        clean_data[cosmic_bpm > 0] = median_replace(
+                            clean_data)[cosmic_bpm > 0]
 
                     # Actually do the cosmic ray subtraction here
                     # ------
