@@ -27,6 +27,8 @@ import numpy as np
 import pylab as plt
 import time
 import sys
+import datetime
+from dateutil import tz
 
 try:
     import astropy.io.fits as pf
@@ -1425,7 +1427,15 @@ class Arm(object):
         hdr['INSTRUME'] = 'GHOST'
         hdr['CAMERA'] = self.arm.upper()
         hdr['OBSTYPE'] = obstype
-        hdr['EXPTIME'] = (0.0 if obstype == 'BIAS' else duration)
+        hdr['EXPTIME'] = duration
+        utcnow = datetime.datetime.utcnow()
+        hdr['DATE-OBS'] = utcnow.strftime("%Y-%m-%d")
+        hdr['UTSTART'] = utcnow.strftime("%H:%M:%S.%f")[:-3]
+        hdr['UTEND'] = (utcnow - datetime.timedelta(seconds=duration)
+                        ).strftime("%H:%M:%S.%f")[:-3]
+        ltnow = utcnow.replace(tzinfo=tz.tzutc())
+        ltnow = ltnow.astimezone(tz.tzlocal())
+        hdr['LT'] = ltnow.strftime("%H:%M:%S.%f")[:-3]
         hdr['SMPNAME'] = ('HI_ONLY' if mode == 'high' else 'LO_ONLY')
         hdr['SMPPOS'] = (1 if mode == 'high' else 2)
         hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
@@ -1434,6 +1444,9 @@ class Arm(object):
         crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
         for i, im_amp in enumerate(images):
             hdr = pf.Header()
+            hdr['EXPUTST'] = utcnow.strftime("%H:%M:%S.%f")[:-3]
+            hdr['EXPUTEND'] = (utcnow - datetime.timedelta(seconds=duration)
+                                ).strftime("%H:%M:%S.%f")[:-3]
             if add_cosmic: hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
             hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
             hdr['DETSEC'] = "[%d:%d,%d:%d]" % (cxl[i]+1, cxh[i],
