@@ -110,7 +110,9 @@ class GHOSTPrimitives(GMOSPrimitives):
                   [1, 0, 1],
                   [1, 1, 1]]
             median_replace = functools.partial(scipy.ndimage.generic_filter,
-                                               function=np.median, footprint=fp)
+                                               function=np.median, footprint=fp,
+                                               mode='constant',
+                                               cval=np.nan)
 
             log.stdinfo('Doing CR removal for %s' % ad.filename)
 
@@ -124,20 +126,24 @@ class GHOSTPrimitives(GMOSPrimitives):
                 # Note that we're deliberately not using the BPM at this stage,
                 # otherwise the algorithm will start searching for cosmic rays
                 # around pixels that have been flagged bad for another reason.
-                cosmic_bpm = np.zeros_like(ad["SCI", amp].data, dtype=bool)
+                cosmic_bpm = np.zeros_like(ad["SCI", amp].data,
+                                           dtype=bool)
 
                 # Start with a fresh copy of the data
+                # Use numpy NaN to cover up any data detected bad so far
+                # (i.e. BPM < 8)
                 clean_data = np.copy(ad["SCI", amp].data)
+                clean_data[ad['DQ', amp].data > 0] = np.nan
 
                 no_passes = 0
                 new_crs = 1
                 while new_crs > 0 and no_passes < rc['n_steps']:
                     no_passes += 1
                     curr_crs = np.count_nonzero(cosmic_bpm)
-                    # Median out the pixels already defined as cosmic rays
-                    log.stdinfo('Pass %d: Wiping over previously '
-                                'found bad pix' % no_passes)
                     if curr_crs > 0:
+                        # Median out the pixels already defined as cosmic rays
+                        log.stdinfo('Pass %d: Wiping over previously '
+                                    'found bad pix' % no_passes)
                         clean_data[cosmic_bpm > 0] = median_replace(
                             clean_data)[cosmic_bpm > 0]
 
@@ -150,9 +156,13 @@ class GHOSTPrimitives(GMOSPrimitives):
                     # ------
                     log.stdinfo('Pass %d: Building sky model' % no_passes)
                     sky_model = scipy.ndimage.median_filter(clean_data,
-                                                            size=[7, 1])
+                                                            size=[7, 1],
+                                                            mode='constant',
+                                                            cval=np.nan)
                     m5_model = scipy.ndimage.median_filter(clean_data,
-                                                           size=[5, 5])
+                                                           size=[5, 5],
+                                                           mode='constant',
+                                                           cval=np.nan)
                     subbed_data = clean_data - sky_model
 
                     # ------
@@ -210,7 +220,9 @@ class GHOSTPrimitives(GMOSPrimitives):
                     # Remove large structure with a 5x5 median filter
                     # Equation (13) of van Dokkum 2001, generates S'
                     sig_smooth = scipy.ndimage.median_filter(sigmap,
-                                                             size=[5, 5])
+                                                             size=[5, 5],
+                                                             mode='constant',
+                                                             cval=np.nan)
                     sig_detrend = sigmap - sig_smooth
 
                     # ------
@@ -220,9 +232,14 @@ class GHOSTPrimitives(GMOSPrimitives):
                     log.stdinfo('Pass %d: Flagging cosmic rays' % no_passes)
                     # Construct the fine-structure image
                     # (F, eqn 14 of van Dokkum)
-                    m3 = scipy.ndimage.median_filter(subbed_data, size=[3, 3])
+                    m3 = scipy.ndimage.median_filter(subbed_data, size=[3, 3],
+                                                     mode='constant',
+                                                     cval=np.nan)
                     fine_struct = m3 - scipy.ndimage.median_filter(m3,
-                                                                   size=[7, 7])
+                                                                   size=[7, 7],
+                                                                   mode=
+                                                                   'constant',
+                                                                   cval=np.nan)
                     # Pixels are flagged as being cosmic rays if:
                     # - The sig_detrend image (S') is > sigma_lim
                     # - The contrast between the Laplacian image (L+) and the
@@ -230,12 +247,12 @@ class GHOSTPrimitives(GMOSPrimitives):
                     sigma_lim = rc['sigma_lim']
                     f_lim = rc['f_lim']
                     cosmic_bpm[np.logical_and(sig_detrend > sigma_lim,
-                                              (conv_data/fine_struct) > f_lim)] = 1
+                                              (conv_data/fine_struct) >
+                                              f_lim)] = 1
                     new_crs = np.count_nonzero(cosmic_bpm) - curr_crs
                     log.stdinfo('Found %d CR pixels in pass %d' % (new_crs,
                                                                    no_passes, ))
 
-                # TODO: Determine whether to alter pix or alter BPM
                 # For the moment, go with Mike Ireland's suggestion to require
                 # a BPM update
                 curr_bpm = ad["DQ", amp].data

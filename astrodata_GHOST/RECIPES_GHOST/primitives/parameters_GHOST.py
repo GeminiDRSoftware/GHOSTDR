@@ -93,14 +93,14 @@
         "uiLevel"       : "UIBASIC",
         },
     "sigma_lim":{
-        "default"       : 3.0,
+        "default"       : 7.5,
         "type"          : "float",
         "recipeOverride": True,
         "userOverride"  : True,
         "uiLevel"       : "UIBASIC",
         },
     "f_lim":{
-        "default"       : 3.0,
+        "default"       : 5.0,
         "type"          : "float",
         "recipeOverride": True,
         "userOverride"  : True,
