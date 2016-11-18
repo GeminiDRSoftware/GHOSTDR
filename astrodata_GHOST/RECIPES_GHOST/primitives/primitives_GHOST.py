@@ -137,15 +137,40 @@ class GHOSTPrimitives(GMOSPrimitives):
 
                 no_passes = 0
                 new_crs = 1
+                new_cr_pix = None
+
                 while new_crs > 0 and no_passes < rc['n_steps']:
                     no_passes += 1
                     curr_crs = np.count_nonzero(cosmic_bpm)
-                    if curr_crs > 0:
+                    if curr_crs > 0 and new_cr_pix is not None:
                         # Median out the pixels already defined as cosmic rays
-                        log.stdinfo('Pass %d: Wiping over previously '
-                                    'found bad pix' % no_passes)
-                        clean_data[cosmic_bpm > 0] = median_replace(
-                            clean_data)[cosmic_bpm > 0]
+                        log.stdinfo('Pass %d: Median over previously '
+                                    'found CR pix' % no_passes)
+
+                        # One pass option - slow
+                        # clean_data[new_cr_pix > 0] = median_replace(
+                        #     clean_data)[new_cr_pix > 0]
+
+                        # Loop option - faster for the number of CR (~ few k
+                        # we expect for realistic data
+                        inds = np.argwhere(new_cr_pix)
+                        pad_data = np.pad(clean_data, 1, 'constant',
+                                          constant_values=(np.nan, ))
+                        # log.stdinfo('Padded array size: %s' % str(pad_data.shape))
+                        # log.stdinfo(
+                        #     'Data array size: %s' % str(clean_data.shape))
+                        # log.stdinfo(
+                        #     'CR array size: %s' % str(new_cr_pix.shape))
+                        for ind in inds:
+                            # log.stdinfo(str(ind))
+                            # Using nanmedian stops nan values being considered
+                            # in the ordering of median values
+                            clean_data[zip(ind)] = np.nanmedian(
+                                fp * pad_data[
+                                     ind[0]:ind[0] + 3,
+                                     ind[1]:ind[1] + 3
+                                     ]
+                            )
 
                     # Actually do the cosmic ray subtraction here
                     # ------
@@ -180,16 +205,22 @@ class GHOSTPrimitives(GMOSPrimitives):
                     log.stdinfo('Pass %d: Computing Laplacian' % no_passes)
                     subsampling = rc["subsampling"]
                     data_shape = ad["SCI", amp].data.shape
+                    # log.stdinfo(
+                    #     'data array size: %s' % str(data_shape))
                     subsampl_data = np.repeat(np.repeat(
                         ad["SCI", amp].data, subsampling, axis=1),
                         subsampling, axis=0
                     )
+                    # log.stdinfo(
+                    #     'subsampl_data array size: %s' % str(subsampl_data.shape))
                     # Convolve the subsampled data with the Laplacian kernel,
                     # trimming off the edges this introduces
                     # Bring any negative values up to 0
                     init_conv_data = scipy.signal.convolve2d(
                         subsampl_data, laplace_kernel)[1:-1, 1:-1]
                     init_conv_data[np.nonzero(init_conv_data <= 0.)] = 0.
+                    # log.stdinfo(
+                    #     'init_conv_data array size: %s' % str(init_conv_data.shape))
                     # Reverse the subsampling, returning the
                     # correctly-convolved image
                     conv_data = np.reshape(init_conv_data,
@@ -201,6 +232,7 @@ class GHOSTPrimitives(GMOSPrimitives):
                                                init_conv_data.shape[1] //
                                                data_shape[1],
                                            )).mean(axis=3).mean(axis=1)
+                    # log.stdinfo('conv_data array size: %s' % str(conv_data.shape))
 
                     # ------
                     # STEP 4
@@ -246,12 +278,13 @@ class GHOSTPrimitives(GMOSPrimitives):
                     #   fine-structure image (F) is greater than f_lim
                     sigma_lim = rc['sigma_lim']
                     f_lim = rc['f_lim']
-                    cosmic_bpm[np.logical_and(sig_detrend > sigma_lim,
-                                              (conv_data/fine_struct) >
-                                              f_lim)] = 1
+                    new_cr_pix = np.logical_and(sig_detrend > sigma_lim,
+                                                (conv_data/fine_struct) >
+                                                f_lim)
+                    cosmic_bpm[new_cr_pix] = 1
                     new_crs = np.count_nonzero(cosmic_bpm) - curr_crs
-                    log.stdinfo('Found %d CR pixels in pass %d' % (new_crs,
-                                                                   no_passes, ))
+                    log.stdinfo('Pass %d: Found %d CR pixels' %
+                                (no_passes, new_crs, ))
 
                 # For the moment, go with Mike Ireland's suggestion to require
                 # a BPM update
