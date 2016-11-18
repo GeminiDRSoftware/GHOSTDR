@@ -77,7 +77,7 @@
         "uiLevel"       : "UIBASIC",
         },
     },
-"rejectCosmicRays": {
+"rejectCosmicRays":{
     "suffix":{
         "default"       : "_cosmicRaysRejected",
         "type"          : "str",
