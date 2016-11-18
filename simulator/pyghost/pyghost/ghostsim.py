@@ -310,53 +310,187 @@ class HRFibers(Fibers):
     def __init__(self, lenslet_width, microns_pix):
         super(HRFibers, self).__init__(lenslet_width, microns_pix)
 
-def combine_slitviewer_files(infiles, outfile=None, slitcam_readnoise = 8.0, \
-    slitcam_gain=1.0, slitcam_bias = 1000):
-    """Combine slit viewer images from red and blue cameras, and add readout noise
-
-    Parameters
-    ----------
-    infiles: list
-        Input filenames
-
-    slitcam_readnoise: float
-        Readout noise in electrons
-
-    slitcam_gain: float
-        Camera gain in electrons per ADU
-
-    outfile: string
-        Out filename
-
-    WARNING: Only a simple initial function created here - needs more header keywords
-    etc.
+class SlitViewer(object):
+    """A class for the slit viewer camera.  The initialisation function
+       takes the duration of each slit viewer exposure, and the total number
+       of exposures to be taken.  The data for each exposure will be filled
+       in by each Arm object in the simulate_frame function.
     """
-    header = pf.getheader(infiles[0])
-    # Lets make sure that we always output a data cube, even if a single image
-    # is given.
-    if header['NAXIS']==2:
-        outshape = (1,header['NAXIS2'], header['NAXIS1'])
-    else:
-        outshape = (header['NAXIS3'], header['NAXIS2'], header['NAXIS1'])
 
-    #Start with some readout noise (linear regime assumed, so order doesn't matter)
-    full_cube = np.random.normal(loc=slitcam_bias, \
-            scale=slitcam_readnoise / slitcam_gain,
-            size=outshape )
+    def __init__(self):
+        # FIXME these values are duplicated in the Arm class
+        self.lenslet_std_size = 197.0   # Lenslet flat-to-flat in microns
+        self.microns_pix = 2.0  # slit image microns per pixel
+        # Below comes from CY_RPT_044, with 50mm/180mm demagnification and
+        # the Bigeye G-283 (Sony ICX674) with 4.54 micron pixels. 2x2 binning
+        # is assumed.
+        self.slitview_pxsize = 32.69 #Effective pixel size of the slit viewer in microns.
+        self.slit_length = 3540.0 #Slit length in microns
+        self.R_per_pixel = 195000.0 #Resolving power per pixel.
+        self.slitcam_xsz = 160      #Slit viewer x size in pix.
+        self.slitcam_ysz = 160      #Slit viewer y size in pix.
+        self.slit_mode_offsets = {"high":-1000.0, "std":1000.0}
+        self.duration = 0
+        self.nexp = 0
+        self.images = None
+        self.flux_profile = None
 
-    #Add in the data.
-    for infile in infiles:
-        full_cube += pf.getdata(infile) / slitcam_gain
+    def set_exposure(self, duration, nexp, flux_profile):
+        """
+        Set the exposure parameters for the slit viewing camera.
 
-    #Now restrict to 14 bits (BigEye G283) and digitize
-    full_cube = np.minimum(np.maximum(full_cube,0), 1<<14).astype(np.int16)
+        Parameters
+        ----------
+        duration: float
+            The duration of each slit viewing exposure
 
-    #If the output file isn't set, get it from the header.
-    if not outfile:
-        outfile = header['ORIGFN']
+        nexp: int
+            The number of slit viewing exposures to take
 
-    #Write to our fits file.
-    pf.writeto(outfile, full_cube, header)
+        flux_profile: int[2,n]
+            The distribution of flux over the exposures.  Can be an array
+            of any length - it will be interpolated and scaled to fit the
+            actual number of exposures taken.
+        """
+        self.duration = duration
+        self.nexp = nexp
+        if flux_profile is None:
+            self.flux_profile = np.ones((self.nexp))
+        else:
+            flux_profile = np.asarray(flux_profile)
+            if (flux_profile[1].min() < 0) or (flux_profile[1].max() > 1):
+                raise ValueError('Slit-viewing flux profile must have range in [0, 1]')
+            # Ensure that the flux profile is evenly spaced over the number of exposures
+            # we are taking.
+            x = flux_profile[0] * self.nexp / flux_profile[0, -1]
+            self.flux_profile = np.interp(np.arange(self.nexp), x, flux_profile[1])
+
+        if self.nexp > 0:
+            self.images = np.zeros((self.nexp, self.slitcam_ysz, self.slitcam_xsz), dtype=int)
+        else:
+            self.images = None
+
+    def save(self, fname, bias=1000, readnoise=8.0, gain=1.0):
+        """
+        Save the slit viewer frames in self.images.
+
+        Parameters
+        ----------
+        fname: string
+            FITS filename for saving the images
+
+        """
+
+        if self.images is None:
+            return
+
+        header=pf.Header()
+        header['CAMERA'] = 'Slit'
+        header['DETSIZE'] = '[1:1928,1:1452]'
+        header['CCDSIZE'] = '[1:1928,1:1452]'
+        header['DETSEC'] = '[1:160,1:160]' # FIXME
+        header['CCDSEC'] = '[1:160,1:160]' # FIXME
+        header['CCDNAME'] = 'Sony-ICX674'
+        header['CCDSUM'] = '2 2'
+        header['ORIGFN'] = fname
+
+        hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
+        for expid, image in enumerate(self.images):
+            # Construct a new header
+            header=pf.Header()
+
+            # Grab the image data
+            data = image / gain
+
+            # Add some readout noise (linear regime assumed, so order doesn't matter)
+            data += np.random.normal(loc=bias, scale=readnoise / gain, size=data.shape)
+
+            # Now restrict to 14 bits (BigEye G283) and digitize
+            data = np.minimum(np.maximum(data, 0), 1<<14).astype(np.int16)
+
+            # Set the id of this extension
+            header['EXPID'] = expid
+
+            hdulist.append(pf.ImageHDU(data=data, header=header))
+
+        print('Writing slit-viewing images to ' + fname)
+        hdulist.writeto(fname, clobber=True)
+
+    def create_slitview_frames(self, im_slit, spectrum, slitview_wave, slitview_frac,
+                               slitview_offset, mode='high'):
+        """
+        Create slit viewer frames, and store them in self.images.
+
+        Parameters
+        ----------
+        im_slit: numpy array
+            Image of the slit, sampled at self.microns_pix sampling
+
+        spectrum: numpy array
+            (2, nwave) array of wavelengths and fluxes
+
+        slitview_wave: array (2)
+            the low and high wavelength cutoffs of this exposure
+
+        slitview_frac
+            the fraction of flux that is diverted into the slit viewing camera
+
+        slitview_offset
+            the slit plane offset in microns
+
+        mode: string
+            'high' or 'std'
+
+        """
+
+        # If the images have not been set up then there are no exposures on this
+        # camera.
+        if self.images is None:
+            return
+
+        # Create a sub-array with just enough pixels to sample the slit.
+        n_xpix = int(self.slit_length / self.slitview_pxsize) + 2
+        n_ypix = int(self.lenslet_std_size / self.slitview_pxsize) + 2
+        xy = np.meshgrid(np.arange(n_xpix) - n_xpix // 2,
+                         np.arange(n_ypix) - n_ypix // 2)
+        ycoord = (xy[1] * self.slitview_pxsize / self.microns_pix).astype(int)
+        ycoord += im_slit.shape[0]//2
+        xcoord = (xy[0] * self.slitview_pxsize / self.microns_pix).astype(int)
+        xcoord += im_slit.shape[1]//2
+
+        slit_camera_image = np.zeros( (n_ypix, n_xpix) )
+        #Roughly convolve with a pixel with a 4-point dither.
+        dither_pix = int(0.25 * self.slitview_pxsize / self.microns_pix)
+        for xdither in [-dither_pix, dither_pix]:
+            for ydither in [-dither_pix, dither_pix]:
+                slit_camera_image += im_slit[ycoord + ydither, xcoord + xdither]
+
+        #Re-normalize
+        slit_camera_image /= 4
+        slit_camera_image *= (self.slitview_pxsize / self.microns_pix)**2
+
+        # Multiply by total flux within our bandpass. First multiply by mean flux
+        # per resolution element, then scale WARNING: Doesn't work if min and max outside
+        wave_in_filter = (slitview_wave[0] < spectrum[0]) & \
+                         (spectrum[0] < slitview_wave[1])
+        if sum(wave_in_filter)==0:
+            wave_in_filter = np.argmin(np.abs(spectrum[0] - \
+                             0.5 * slitview_wave[0] - 0.5 * slitview_wave[1]))
+        slit_camera_image *= np.mean(spectrum[1, wave_in_filter])
+        frac_bw = 0.5*(slitview_wave[1] - slitview_wave[0]) / \
+                  (slitview_wave[1] + slitview_wave[0])
+        slit_camera_image *= self.duration * self.R_per_pixel * frac_bw * slitview_frac
+        slit_camera_image = np.maximum(slit_camera_image, 0)
+
+        # Store the full-sized image in units of photons.
+        xoffset = int(slitview_offset[0]/self.slitview_pxsize)
+        yoffset = int((self.slit_mode_offsets[mode] + \
+                       slitview_offset[1]) / self.slitview_pxsize)
+        xy = np.meshgrid(np.arange(n_xpix) - n_xpix // 2 + xoffset + self.slitcam_xsz // 2,
+                         np.arange(n_ypix) - n_ypix // 2 + yoffset + self.slitcam_ysz // 2)
+
+        for i, (image, profile) in enumerate(zip(self.images, self.flux_profile)):
+            image[xy] += np.random.poisson(profile * slit_camera_image)
 
 class Arm(object):
     """A class for each arm of the spectrograph. The initialisation function
@@ -392,17 +526,7 @@ class Arm(object):
         self.microns_arcsec = 400.0  # slit image plane microns per arcsec
         self.im_slit_sz = 2048  # Size of the image slit size in pixels.
         self.sample_rate = 1e6  # Sample rate of the pixels
-        #Below comes from CY_RPT_044, with 50mm/180mm demagnification and
-        #the Bigeye G-283 (Sony ICX674) with 4.54 micron pixels. 2x2  binning
-        #Is assumed.
-        self.slitview_pxsize = 32.69 #Effective pixel size of the slit viewer in microns.
-        self.slit_length = 3540.0 #Slit length in microns
         self.stale_spectral_format=True #Do we need to re-compute the spectral format?
-        self.R_per_pixel = 195000.0 #Resolving power per pixel.
-        self.slitcam_xsz = 160      #Slit viewer x size in pix.
-        self.slitcam_ysz = 160      #Slit viewer y size in pix.
-        self.slit_mode_offsets = {"high":-1000.0, "std":1000.0}
-        self.slit_fns = [] #A list of slit image files this arm has created.
         #self.set_mode(mode)
         if arm == 'red':
             # Additional slit rotation across an order needed to match Zemax.
@@ -1034,77 +1158,6 @@ class Arm(object):
         images = split_image(image, namps, return_headers=False)
         return images
 
-    def create_slitview_frames(self, im_slit, spectrum, mode='high', duration=None):
-        """
-        Create a slit viewer frame.
-
-        WARNING: A Cube should be created here, with the total flux split into
-        many subframes.
-
-        Parameters
-        ----------
-        im_slit: numpy array
-            Image of the slit, sampled at self.microns_pix sampling
-
-        spectrum: numpy array
-            (2, nwave) array of wavelengths and fluxes
-
-        mode: string
-            'high' or 'std'
-
-        duration: float
-            The duration of the science frame (to define the number of frames in
-            the cube)  WARNING: NOT IMPLEMENTED YET
-
-        Returns
-        -------
-        image: numpy array
-            Return the image, in photons
-        """
-        #Create a sub-array with just enough pixels to sample the slit.
-        n_xpix = int(self.slit_length / self.slitview_pxsize) + 2
-        n_ypix = int(self.lenslet_std_size / self.slitview_pxsize) + 2
-        slit_camera_image = np.zeros( (n_ypix, n_xpix) )
-        xy = np.meshgrid( np.arange(n_xpix) - n_xpix//2, np.arange(n_ypix) - n_ypix//2)
-        ycoord = (xy[1] * self.slitview_pxsize / self.microns_pix).astype(int)
-        ycoord += im_slit.shape[0]//2
-        xcoord = (xy[0] * self.slitview_pxsize / self.microns_pix).astype(int)
-        xcoord += im_slit.shape[1]//2
-
-        #Roughly convolve with a pixel with a 4-point dither.
-        dither_pix = int(0.25 * self.slitview_pxsize / self.microns_pix)
-        for xdither in [-dither_pix, dither_pix]:
-            for ydither in [-dither_pix, dither_pix]:
-                slit_camera_image += im_slit[ycoord + ydither, xcoord + xdither]
-
-        #Re-normalize
-        slit_camera_image /= 4
-        slit_camera_image *= (self.slitview_pxsize / self.microns_pix)**2
-
-        # Multiply by total flux within our bandpass. First multiply by mean flux
-        # per resolution element, then scale WARNING: Doesn't work if min and max outside
-        wave_in_filter = (self.slitview_wave[0] < spectrum[0]) & \
-                         (spectrum[0] < self.slitview_wave[1])
-        if sum(wave_in_filter)==0:
-            wave_in_filter = np.argmin(np.abs(spectrum[0] - \
-                0.5*self.slitview_wave[0] - 0.5*self.slitview_wave[1]))
-        slit_camera_image *= np.mean(spectrum[1, wave_in_filter])
-        frac_bw = 0.5*(self.slitview_wave[1] - self.slitview_wave[0])/ \
-            (self.slitview_wave[1] + self.slitview_wave[0])
-        slit_camera_image *= self.R_per_pixel * frac_bw * self.slitview_frac
-
-        #Create the full-sized image in units of photons.
-        slit_camera_full = np.zeros( (self.slitcam_ysz, self.slitcam_xsz), dtype=np.int)
-        xoffset = int(self.slitview_offset[0]/self.slitview_pxsize)
-        yoffset = int( (self.slit_mode_offsets[mode] + \
-            self.slitview_offset[1])/self.slitview_pxsize )
-        xy = np.meshgrid(np.arange(n_xpix) - n_xpix//2 + xoffset + self.slitcam_xsz//2, \
-            np.arange(n_ypix) - n_ypix//2 + yoffset + self.slitcam_ysz//2)
-        slit_camera_full[xy] += np.random.poisson(np.maximum(slit_camera_image,0))
-
-        #Return the frame
-        return slit_camera_full
-
 
     def simulate_frame(self, duration=0.0, output_prefix='test_',
                        spectrum_in=None, xshift=0.0, yshift=0.0, radvel=0.0,
@@ -1113,7 +1166,7 @@ class Arm(object):
                        use_thar=True, mode='high', add_cosmic=True,
                        add_sky=True, return_image=False, thar_flatlamp=False,
                        flatlamp=False, obstype=None, additive_noise=None,
-                       scaling=None, seeing=0.8, write_crplane=False):
+                       scaling=None, seeing=0.8, write_crplane=False, slit_viewer=None):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -1246,8 +1299,9 @@ class Arm(object):
                                         xshift=xshift, radvel=radvel)
 
             #Create the slit viewing camera image for the science flux.
-            slit_camera_full = self.create_slitview_frames(im_slit, \
-                spectrum, mode=mode, duration=duration)
+            if not slit_viewer is None:
+                slit_viewer.create_slitview_frames(im_slit, spectrum, self.slitview_wave,
+                                                   self.slitview_frac, self.slitview_offset, mode)
 
             if use_thar:
                 # Create an appropriately convolved Thorium-Argon spectrum
@@ -1267,8 +1321,9 @@ class Arm(object):
                                              spectrum=thar_spect, n_x=self.szx,
                                              xshift=xshift, radvel=rv_thar)
                 #Add in the Th/Ar spectrum
-                slit_camera_full += self.create_slitview_frames(im_slit2, \
-                    thar_spect, mode=mode, duration=duration)
+                if not slit_viewer is None:
+                    slit_viewer.create_slitview_frames(im_slit2, thar_spect, self.slitview_wave,
+                                                       self.slitview_frac, self.slitview_offset, mode)
         elif mode == 'std':
             if flatlamp:
                 slit_fluxes = np.ones(N_SR_TOT)
@@ -1285,8 +1340,9 @@ class Arm(object):
                                         spectrum=spectrum, n_x=self.szx,
                                         xshift=xshift, radvel=radvel)
             #Create the slit viewing camera image for the science flux.
-            slit_camera_full = self.create_slitview_frames(im_slit, \
-                spectrum, mode=mode, duration=duration)
+            if not slit_viewer is None:
+                slit_viewer.create_slitview_frames(im_slit, spectrum, self.slitview_wave,
+                                                   self.slitview_frac, self.slitview_offset, mode)
         else:
             # mode input check above makes this test unecessary/redundant
             print("ERROR: unknown mode.")
@@ -1316,7 +1372,12 @@ class Arm(object):
                                             spectrum=sky_spect, n_x=self.szx,
                                             xshift=xshift, radvel=0.0)
             sky_image = np.maximum(0, sky_image)
+            # Add to the science image
             image += np.random.poisson(duration * sky_image)
+            # And to the slit viewing image
+            if not slit_viewer is None:
+                slit_viewer.create_slitview_frames(im_slit2, sky_spect, self.slitview_wave,
+                                                   self.slitview_frac, self.slitview_offset, mode)
 
         # We ignore atmospheric transmission and instrument throughput in this
         # routine, because the input spectrum is assumed to include all of these effects
@@ -1488,14 +1549,153 @@ class Arm(object):
             print('Writing CR out to ' + output_prefix + self.arm + '_CR.fits')
             crhdu.writeto(output_prefix + self.arm + '_CR.fits', clobber=True)
 
-        #Save the slit image as a fits file
-        slit_fn = output_prefix + self.arm + '_SLIT.fits'
-        hdu = pf.PrimaryHDU(slit_camera_full)
-        hdu.header['ORIGFN'] = output_prefix + 'SLIT.fits'
-        hdu.writeto(slit_fn, clobber=True)
-
-        #Keep a list of slit image files this arm has created.
-        self.slit_fns.append(slit_fn)
-
         if return_image:
             return images
+
+class Ghost(object):
+    """A class to encapsulate both Arm objects that represent the two arms of the spectrograph.
+    The initialisation function takes the fixed parameters for the two detectors (the things
+    that won't change between exposures).
+
+    Parameters
+    ----------
+    rnoise: float
+        The read noise for both detectors (assumed to be the same for now)
+
+    gain: float
+        The gain for both detectors (assumed to be the same for now)
+
+    namps: int[2]
+        The number of amplifiers in the row and column directions for both detectors
+        (assumed to be the same)
+
+    overscan: int
+        The number of columns of overscan for each amplifier (assumed to be
+        the same for all amplifiers on both detectors)
+
+    bias_level: float
+        The bias level for both detectors (assumed to be the same for now)
+
+    additive_noise: dict{'red'/'blue': float[namps, ampsize]}
+        Additive noise (in ADUs) that will be added to every exposure.
+
+    scaling: dict{'red'/'blue': float[namps, ampsize]}
+        The scaling factor (i.e. pixel-to-pixel variation) for every exposure
+    """
+
+    def __init__(self, rnoise, gain, namps, overscan, bias_level, additive_noise, scaling):
+        self.blue = Arm('blue')
+        self.red = Arm('red')
+        self.rnoise = rnoise
+        self.gain = gain
+        self.namps = namps
+        self.overscan = overscan
+        self.bias_level = bias_level
+        self.additive_noise = additive_noise
+        self.scaling = scaling
+        self.sv = SlitViewer()
+
+    def simulate_observation(self, duration=0.0, output_prefix='test_',
+                             spectrum_in=None, xshift=0.0, yshift=0.0, radvel=0.0,
+                             rv_thar=0.0, flux=1, use_thar=True, mode='high',
+                             add_cosmic=True, add_sky=True, 
+                             thar_flatlamp=False, flatlamp=False, obstype=None,
+                             seeing=0.8, write_crplane=False, sv_duration=1.0,
+                             sv_flux_profile=None):
+        """
+        Simulate an observation with the whole instrument.
+        This includes slit-viewing exposures, a blue and a red science exposure.
+
+        Parameters
+        ----------
+        duration: float (optional)
+            Duration of the exposure in seconds
+
+        output_prefix: string (optional)
+            Prefix for the output filename.
+
+        spectrum_in: array of shape (2,n) where n is the number of
+            spectral samples input spectrum.
+            spectrum[0] is the wavelength array, spectrum[1] is the flux array, in units
+            of recorded photons/spectral pixel/s, taking into account the full
+            instrument at order centers (i.e. excluding the blaze function)
+
+        xshift: float (optional)
+            x-direction (along-slit) shift.
+
+        yshift: float (optional)
+            y-direction (spectral direction) shift.
+
+        radvel: float (optional)
+            Radial velocity in m/s for the target star with respect to
+            the observer.
+
+        rv_thar: float (optional)
+            Radial velocity in m/s applied to the Thorium/Argon source.  It is
+            unlikely that this is useful (use yshift instead for common shifts
+            in the dispersion direction).
+
+        flux: float (optional) Flux multiplier for the reference spectrum to
+            give photons/pix/s.
+
+        use_thar: bool (optional)
+            Is the Thorium/Argon lamp in use?
+
+        mode: string (optional)
+            Can be 'high' or 'std' for the resolution mode.
+
+        add_cosmic: bool (optional)
+            Are cosmic rays added to the frame?
+
+        add_sky: bool (optional)
+            Is the sky background added to the frame?
+
+        thar_flatlamp: bool (optional)
+            Is the ThAr fiber illuminated with the flat lamp?
+
+        flatlamp: bool (optional)
+            Is the input spectrum evenly illuminating the slit, like a
+            flat lamp would?
+
+        obstype: string
+            The value for the OBSTYPE FITS keyword
+
+        seeing: float (optional)
+            Determines the flux in each fiber (if flatlamp=False)
+
+        write_crplane: bool (optional)
+            Output a fits file containing locations where CRs were injected?
+
+        sv_duration: the slit viewing camera exposure duration (in seconds)
+
+        sv_flux_profile: array of shape (2, n) where n is the number of samples
+            in the profile.  sv_flux_profile[0] is the sv exposure index array, and
+            sv_flux_profile[1] gives the flux of that exposure, relative to the
+            maximum possible (i.e. 0=no flux, 1=full flux).
+        """
+
+        if sv_duration > 0:
+            self.sv.set_exposure(sv_duration, int(duration/sv_duration), sv_flux_profile)
+        else:
+            self.sv.set_exposure(0.0, 0, None)
+        self.blue.simulate_frame(duration=duration, output_prefix=output_prefix,
+                                 spectrum_in=spectrum_in, xshift=xshift, yshift=yshift, radvel=radvel,
+                                 rv_thar=rv_thar, flux=flux, rnoise=self.rnoise, gain=self.gain,
+                                 bias_level=self.bias_level, overscan=self.overscan, namps=self.namps,
+                                 use_thar=use_thar, mode=mode, add_cosmic=add_cosmic,
+                                 add_sky=add_sky, return_image=False, thar_flatlamp=thar_flatlamp,
+                                 flatlamp=flatlamp, obstype=obstype, additive_noise=self.additive_noise['blue'],
+                                 scaling=self.scaling['blue'], seeing=seeing, write_crplane=write_crplane,
+                                 slit_viewer=self.sv)
+        self.red.simulate_frame(duration=duration, output_prefix=output_prefix,
+                                spectrum_in=spectrum_in, xshift=xshift, yshift=yshift, radvel=radvel,
+                                rv_thar=rv_thar, flux=flux, rnoise=self.rnoise, gain=self.gain,
+                                bias_level=self.bias_level, overscan=self.overscan, namps=self.namps,
+                                use_thar=use_thar, mode=mode, add_cosmic=add_cosmic,
+                                add_sky=add_sky, return_image=False, thar_flatlamp=thar_flatlamp,
+                                flatlamp=flatlamp, obstype=obstype, additive_noise=self.additive_noise['red'],
+                                scaling=self.scaling['red'], seeing=seeing, write_crplane=write_crplane,
+                                slit_viewer=self.sv)
+        # Save the slit images as a fits file
+        slit_fn = output_prefix + 'SLIT.fits'
+        self.sv.save(slit_fn)
