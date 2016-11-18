@@ -177,4 +177,39 @@ science fibres (and avoiding saturation).
 Description of the Data
 =======================
 
-.. note:: Will actually need some, you know, data for this.
+.. note:: Will actually need some, you know, data to do this completely.
+
+BPM Flag Encoding
+-----------------
+
+The bad pixel mask (BPM) flag encoding used for GHOST is derived from that
+used for GHOS, and is summarized below:
+
++----+-------+-----------------------------------------------------------------+ 
+|Bit | Pixel | Meaning                                                         |
+|    | value |                                                                 |
++====+=======+=================================================================+
+| 0  | 0     | No conditions apply (i.e. good data)                            |
++----+-------+-----------------------------------------------------------------+
+| 1  | 1     | Generic bad pixel (e.g. region occulted/not illuminated; hot    |
+|    |       | pixel; bad column)                                              |
++----+-------+-----------------------------------------------------------------+
+| 2  | 2     | Highly non-linear pixel response                                |
++----+-------+-----------------------------------------------------------------+
+| 3  | 4     | Saturated pixel                                                 |
++----+-------+-----------------------------------------------------------------+
+| 4  | 8     | Cosmic ray hit                                                  |
++----+-------+-----------------------------------------------------------------+
+| 5  | 16    | Invalid data (e.g. all data rejected during stacking)           |
++----+-------+-----------------------------------------------------------------+
+| 6  | 32    | Not used.                                                       |
++----+-------+-----------------------------------------------------------------+
+| 7  | 64    | Not used.                                                       |
++----+-------+-----------------------------------------------------------------+
+| 8  | 128   | Not used.                                                       |
++----+-------+-----------------------------------------------------------------+
+| 9  | 256   | SCI pixel value has been replaced via interpolation             |
++----+-------+-----------------------------------------------------------------+
+| 10 | 512   | SCI pixel value has been replaced, but **not** via              |
+|    |       | interpolation                                                   |
++----+-------+-----------------------------------------------------------------+
