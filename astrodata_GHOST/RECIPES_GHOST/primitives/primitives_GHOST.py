@@ -52,9 +52,6 @@ class GHOSTPrimitives(GMOSPrimitives):
         """
         Reject cosmic rays from GHOST data.
 
-        .. warning:: This currently does not successfully flag anything in the
-                     DQ plane. I'm looking into this. -MCW
-
         Parameters
         ----------
         rc : dict
@@ -319,6 +316,11 @@ class GHOSTPrimitives(GMOSPrimitives):
             The same ReductionContext dictionary, with any necessary
             alterations.
 
+
+        Algorithms
+        ----------
+        This is a test of autodoc's abilities.
+
         """
         iraf.setVerbose(value=2)
         return StackPrimitives.stackFrames(self, rc)
@@ -341,6 +343,11 @@ class GHOSTPrimitives(GMOSPrimitives):
         rc : dict
             The same ReductionContext dictionary, with any necessary
             alterations.
+
+
+        Algorithms
+        ----------
+        This is a test of autodoc's abilities.
 
         """
         #log = logutils.get_logger(__name__)

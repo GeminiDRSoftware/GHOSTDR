@@ -6,6 +6,7 @@ Primitives
 
 .. module:: astrodata_GHOST.RECIPES_GHOST.primitives.primitives_GHOST
 .. autoclass:: GHOSTPrimitives
+    :members: stackFrames
 
     **Primitives**
 
@@ -18,19 +19,17 @@ Primitives
 
         Parameters
         ----------
+
         rc : dict
             The ReductionContext dictionary that holds the data stream
             processing information.
 
         Yields
         ------
+
         rc : dict
             The same ReductionContext dictionary, with any necessary
             alterations.
-
-    .. method:: stackFrames(self, rc)
-
-        Stack GHOST frames using IRAF.
 
     .. automethod:: standardizeHeaders
 
