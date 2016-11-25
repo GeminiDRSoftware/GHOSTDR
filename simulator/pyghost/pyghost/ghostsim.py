@@ -298,12 +298,14 @@ class HRFibers(Fibers):
         34: (-S32, 1.5),
         35: (0, 2),
         # The following are the sky fibers
+        55: None,
         56: None,
         57: None,
         58: None,
         59: None,
         60: None,
         61: None,
+        # And fiber 62 is the simultaneous calibration source
         62: None
     }
 
@@ -322,13 +324,13 @@ class SlitViewer(object):
         self.lenslet_std_size = 197.0   # Lenslet flat-to-flat in microns
         self.microns_pix = 2.0  # slit image microns per pixel
         # Below comes from CY_RPT_044, with 50mm/180mm demagnification and
-        # the Bigeye G-283 (Sony ICX674) with 4.54 micron pixels. 2x2 binning
-        # is assumed.
-        self.slitview_pxsize = 32.69 #Effective pixel size of the slit viewer in microns.
+        # the Bigeye G-283 (Sony ICX674) with 4.54 micron pixels.
+        self.binning = 2 # Assumed that we bin in both directions
+        self.slitview_pxsize = 16.344 * self.binning #Effective pixel size of the slit viewer in microns.
         self.slit_length = 3540.0 #Slit length in microns
         self.R_per_pixel = 195000.0 #Resolving power per pixel.
-        self.slitcam_xsz = 160      #Slit viewer x size in pix.
-        self.slitcam_ysz = 160      #Slit viewer y size in pix.
+        self.slitcam_xsz = 160      #Slit viewer x size in binned pix.
+        self.slitcam_ysz = 160      #Slit viewer y size in binned pix.
         self.slit_mode_offsets = {"high":-1000.0, "std":1000.0}
         self.duration = 0
         self.nexp = 0
@@ -384,14 +386,13 @@ class SlitViewer(object):
         if self.images is None:
             return
 
+        # Calculate the detector/ccd section
+        y0 = 804 // self.binning
+        x0 = 566 // self.binning
+        secstr = '['+ str(y0) + ":" + str(y0 + self.slitcam_ysz - 1) + "," + \
+                 str(x0) + ":" + str(x0 + self.slitcam_xsz - 1) + "]"
+
         header=pf.Header()
-        header['CAMERA'] = 'Slit'
-        header['DETSIZE'] = '[1:1928,1:1452]'
-        header['CCDSIZE'] = '[1:1928,1:1452]'
-        header['DETSEC'] = '[1:160,1:160]' # FIXME
-        header['CCDSEC'] = '[1:160,1:160]' # FIXME
-        header['CCDNAME'] = 'Sony-ICX674'
-        header['CCDSUM'] = '2 2'
         header['ORIGFN'] = fname
 
         hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
@@ -410,6 +411,15 @@ class SlitViewer(object):
 
             # Set the id of this extension
             header['EXPID'] = expid
+
+            # And all the other headers
+            header['CAMERA'] = 'Slit'
+            header['DETSIZE'] = '[1:1928,1:1452]'
+            header['CCDSIZE'] = '[1:1928,1:1452]'
+            header['DETSEC'] = secstr
+            header['CCDSEC'] = secstr
+            header['CCDNAME'] = 'Sony-ICX674'
+            header['CCDSUM'] = str(self.binning) + " " + str(self.binning)
 
             hdulist.append(pf.ImageHDU(data=data, header=header))
 
