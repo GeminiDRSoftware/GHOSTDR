@@ -8,6 +8,7 @@ Based on the setup.py from the gemini_python distribution.
 In this package:
     astrodata_GHOST  : Recipes, Primitives and astrodata configuration for GHOST
     pyghost          : GHOST simulator
+    polyfit          : GHOST find apertures and polynomial model fitting
     
 
 Usage:
@@ -125,6 +126,11 @@ PACKAGES.append('pyghost')
 PACKAGE_DIRS['pyghost'] = 'simulator/pyghost/pyghost'
 ENTRY_POINTS['console_scripts'] = ['ghost-sim=pyghost.tests:run']
 PACKAGE_DATA['pyghost'] = ['data/*']
+
+# Add the polynomial model module
+PACKAGES.append('polyfit')
+PACKAGE_DIRS['polyfit'] = 'polyfit/polyfit'
+
 
 EXTENSIONS = None
 
