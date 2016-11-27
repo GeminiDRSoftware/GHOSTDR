@@ -55,28 +55,28 @@ def run(nbias=3, ndark=3, nflat=3, crplane=False):
                           additive_noise=noise, scaling=scaling)
 
     ## This produces a bias with the above noise
-    for i in range(nbias):
+    for i in range(1, nbias+1):
         ghost.simulate_observation(duration=0.0, output_prefix='bias_{0:d}_'.format(i),
                                    spectrum_in=blank, use_thar=False,
                                    add_sky=False, obstype='BIAS',
-                                   write_crplane=crplane)
+                                   write_crplane=crplane, data_label=i)
 
     ## This produces a dark frame
-    for i in range(ndark):
+    for i in range(1, ndark+1):
         ghost.simulate_observation(duration=duration,
                                    output_prefix='dark'+str(duration)+'_{0:d}_'.format(i),
                                    use_thar=False, spectrum_in=blank, add_sky=False,
-                                   obstype='DARK', write_crplane=crplane)
+                                   obstype='DARK', write_crplane=crplane, data_label=i)
 
     for mode in ('std', 'high'):
         # This (should) produce a GCAL flat frame
-        for i in range(nflat):
+        for i in range(1, nflat+1):
             ghost.simulate_observation(duration=duration,
                                        output_prefix='flat'+str(duration)+'_'+mode+'_{0:d}_'.format(i),
                                        use_thar=False, spectrum_in=flat,
                                        add_sky=False, mode=mode,
                                        flatlamp=True, obstype='FLAT',
-                                       write_crplane=crplane)
+                                       write_crplane=crplane, data_label=i)
 
         # This produces an arc frame
         ghost.simulate_observation(duration=duration,

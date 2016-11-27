@@ -25,10 +25,18 @@ import os
 # import matplotlib.cm as cm
 import numpy as np
 import pylab as plt
-import time
 import sys
 import datetime
 from dateutil import tz
+import astropy.units as u
+from astropy.time import Time
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+
+# uncomment to download the latest IERS predictions to avoid runtime warnings
+from astropy.utils.data import download_file
+from astropy.utils import iers
+iers.IERS.iers_table = iers.IERS_A.open(download_file(iers.IERS_A_URL,
+                                                      cache=True))
 
 try:
     import astropy.io.fits as pf
@@ -1176,7 +1184,8 @@ class Arm(object):
                        use_thar=True, mode='high', add_cosmic=True,
                        add_sky=True, return_image=False, thar_flatlamp=False,
                        flatlamp=False, obstype=None, additive_noise=None,
-                       scaling=None, seeing=0.8, write_crplane=False, slit_viewer=None):
+                       scaling=None, seeing=0.8, write_crplane=False,
+                       slit_viewer=None, data_label=1):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -1250,6 +1259,10 @@ class Arm(object):
 
         write_crplane: bool (optional)
             Output a fits file containing locations where CRs were injected?
+
+        data_label: int (optional)
+            Indicates which frame of a sequence this is; written to the DATALAB
+            keyword
         """
 
         # Input checks
@@ -1491,64 +1504,173 @@ class Arm(object):
                 newcosmic.append(np.asarray(im_amp, dtype=np.uint16))
             cosmic_images = newcosmic
 
+        # some datetimes for use in creating the header below
+        utcnow = datetime.datetime.utcnow()
+        ltnow = utcnow.replace(tzinfo=tz.tzutc())
+        ltnow = ltnow.astimezone(tz.tzlocal())
+
+        # location and UTC time at Gemini South
+        gs_locn = EarthLocation(lat=-30.24075*u.deg, lon=-70.736693*u.deg,
+                                height=2722*u.m)
+        gs_time = Time(ltnow, location=gs_locn) - 3*u.hour
+
+        # a spot in the sky that's always visible from Gemini South
+        my_ra, my_dec = 149.2442500, -69.1009167  # V492 Car
+        spot = SkyCoord(my_ra, my_dec, unit=u.deg, frame='fk5')
+        aa_start = AltAz(obstime=gs_time, location=gs_locn)
+        aa_end = AltAz(obstime=gs_time+duration*u.second, location=gs_locn)
+        horz_start = spot.transform_to(aa_start)
+        horz_end = spot.transform_to(aa_end)
+
         # Now create our fits image!
         # By adding the DETSIZE and DETSEC keywords we can open the
         # raw image in ds9 as an IRAF mosaic.
         hdr = pf.Header()
-        hdr['INSTRUME'] = 'GHOST'
-        hdr['CAMERA'] = self.arm.upper()
-        hdr['OBSTYPE'] = obstype
-        hdr['EXPTIME'] = duration
-        utcnow = datetime.datetime.utcnow()
-        hdr['DATE-OBS'] = utcnow.strftime("%Y-%m-%d")
-        hdr['UTSTART'] = utcnow.strftime("%H:%M:%S.%f")[:-3]
-        hdr['UTEND'] = (utcnow - datetime.timedelta(seconds=duration)
-                        ).strftime("%H:%M:%S.%f")[:-3]
-        ltnow = utcnow.replace(tzinfo=tz.tzutc())
-        ltnow = ltnow.astimezone(tz.tzlocal())
-        hdr['LT'] = ltnow.strftime("%H:%M:%S.%f")[:-3]
+        hdr['OBSERVAT'] = ('Gemini-South',
+                           'Name of telescope (Gemini-North|Gemini-South)')
+        hdr['TELESCOP'] = 'Gemini-South'
+        hdr['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
+        hdr['OBSTYPE'] = (obstype, 'Observation type')
+
+        # TODO: remove this once red/blue/slit are all stuffed into the one MEF
+        hdr['CAMERA'] = (self.arm.upper(), 'Camera name')
+
+        # populate OBJECT keyword
+        obj = {'FLAT': 'GCALflat', 'ARC': 'ThAr', 'OBJECT': 'V492 Car',
+               'BIAS': 'Bias', 'DARK': 'Dark', 'SKY': ''}
+        hdr['OBJECT'] = (obj[obstype], 'Object Name')
+
+        # populate OBSCLASS keyword
+        obsclass = {'FLAT': 'science', 'ARC': 'science', 'OBJECT': 'science',
+                    'BIAS': 'dayCal', 'DARK': 'dayCal', 'SKY': ''}
+        hdr['OBSCLASS'] = (obsclass[obstype], 'Observe class')
+
+        # populate GEMPRGID, OBSID, and DATALAB keywords
+        prgid = 'GS-2016B-Q-20'  # just choose a base at random
+        hdr['GEMPRGID'] = (prgid, 'Gemini programme ID')
+        obsid = {'FLAT': '2', 'ARC': '2', 'OBJECT': '2', 'BIAS': '1',
+                 'DARK': '5', 'SKY': '6'}
+        hdr['OBSID'] = (prgid + '-' + obsid[obstype],
+                        'Observation ID / Data label')
+        hdr['DATALAB'] = (prgid + '-' + obsid[obstype] + '-' +
+                          ('%03d' % data_label), 'DHS data label')
+
+        hdr['RA'] = (my_ra, 'Right Ascension')
+        hdr['DEC'] = (my_dec, 'Declination of Target')
+        hdr['EQUINOX'] = (2000., 'Equinox of coordinate system')
+        hdr['ELEVATIO'] = (horz_start.alt.deg, 'Current Elevation')
+        hdr['AZIMUTH'] = (horz_start.az.deg, 'Current Azimuth')
+        # TODO: use apparent sidereal time below instead of mean?
+        hdr['HA'] = ((gs_time.sidereal_time('mean') - my_ra*u.deg).to_string(
+            unit=u.deg, sep=':'), 'Telescope hour angle')
+        hdr['AMSTART'] = (horz_start.secz.value, 'Airmass at start of exposure')
+        hdr['AMEND'] = (horz_end.secz.value, 'Airmass at end of exposure')
+        hdr['AIRMASS'] = ((horz_end.secz.value+horz_start.secz.value)/2,
+                          'Mean airmass for the observation')
+
+        hdr['HUMIDITY'] = (39., 'The Relative Humidity (fraction, 0..101)')
+        hdr['TAMBIENT'] = (8.8, 'The ambient temp (C)')
+        hdr['PRESSURE'] = (546.95412, 'The atmospheric pressure (mm Hg)')
+        hdr['PA'] = (90., 'Sky Position Angle at start of exposure')
+        hdr['IAA'] = (359.78, 'Instrument Alignment Angle')
+        hdr['CRPA'] = (-187.344883172036, 'Current Cass Rotator Position Angle')
+        # hdr['CRFOLLOW'] = (0, '')  # TODO: where can I get this info?
+
+        hdr['EXPTIME'] = (duration, 'Exposure time in seconds')
+        hdr['DATE-OBS'] = (utcnow.strftime("%Y-%m-%d"),
+                           'UT date at observation start')
+        hdr['UTSTART'] = (utcnow.strftime("%H:%M:%S.%f")[:-3],
+                          'UT time at observation start')
+        hdr['UTEND'] = ((utcnow - datetime.timedelta(seconds=duration)
+                         ).strftime("%H:%M:%S.%f")[:-3],
+                        'UT time at observation end')
+        hdr['LT'] = (ltnow.strftime("%H:%M:%S.%f")[:-3],
+                     'Local time at start of observation')
         hdr['SMPNAME'] = ('HI_ONLY' if mode == 'high' else 'LO_ONLY')
         hdr['SMPPOS'] = (1 if mode == 'high' else 2)
-        hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
-        hdr['DETTYPE'] = self.dettype
+        hdr['DETSIZE'] = ("[1:%d,1:%d]" % (
+            image.shape[1], image.shape[0]), 'Detector size')
+        hdr['DETTYPE'] = (self.dettype, 'Detector array type')
+        hdr['NEXTEND'] = (len(images), 'Number of extensions')
+        hdr['NREDEXP'] = ((1 if self.arm == 'red' else 0),
+                          'Number of red exposures')
+        hdr['NBLUEEXP'] = ((1 if self.arm == 'blue' else 0),
+                           'Number of blue exposures')
+        hdr['NSLITEXP'] = (0, 'Number of slit-viewing exposures')
+
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
         crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
         for i, im_amp in enumerate(images):
             hdr = pf.Header()
-            hdr['EXPUTST'] = utcnow.strftime("%H:%M:%S.%f")[:-3]
-            hdr['EXPUTEND'] = (utcnow - datetime.timedelta(seconds=duration)
-                                ).strftime("%H:%M:%S.%f")[:-3]
-            if add_cosmic: hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
-            hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
-            hdr['DETSEC'] = "[%d:%d,%d:%d]" % (cxl[i]+1, cxh[i],
-                                               cyl[i]+1, cyh[i])
-            hdr['DATASEC'] = "[%d:%d,%d:%d]" % (1, im_amp.shape[1]-overscan,
-                                                1, im_amp.shape[0])
-            hdr['TRIMSEC'] = "[%d:%d,%d:%d]" % (1, im_amp.shape[1]-overscan,
-                                                1, im_amp.shape[0])
+            hdr['BUNIT'] = 'ADU'
+            # hdr['BSCALE'] = 1  # added by default
+            # hdr['BZERO'] = 32768  # added by default
+            hdr['CAMERA'] = (self.arm.upper(), 'Camera name')
+            hdr['RDNOISE'] = (rnoise[i], 'Readout noise')
+            hdr['GAIN'] = (gain[i], 'Amplifier gain')
+            hdr['EXPID'] = (data_label, 'Exposure ID')
+            hdr['PCOUNT'] = (0, 'Required keyword; must = 0')
+            hdr['GCOUNT'] = (1, 'Required keyword; must = 1')
+            hdr['EXPUTST'] = (utcnow.strftime("%H:%M:%S.%f")[:-3],
+                              'UT time at exposure start')
+            hdr['EXPUTEND'] = ((utcnow - datetime.timedelta(seconds=duration)
+                                ).strftime("%H:%M:%S.%f")[:-3],
+                               'UT time at exposure end')
+            hdr['DETSIZE'] = ("[1:%d,1:%d]" % (
+                image.shape[1], image.shape[0]), 'Detector size')
+            hdr['CCDSIZE'] = ("[1:%d,1:%d]" % (
+                image.shape[1], image.shape[0]), 'CCD size')
+            ccdname = 'E2V-CCD-231-' + ('C6' if self.arm == 'red' else '84')
+            hdr['CCDNAME'] = (ccdname, 'CCD name')
+            hdr['AMPNAME'] = (i, 'Amplifier name')
+            hdr['AMPSIZE'] = ("[1:%d,1:%d]" % (
+                im_amp.shape[1], im_amp.shape[0]), 'Amplifier size')
+            hdr['DETSEC'] = ("[%d:%d,%d:%d]" % (
+                cxl[i]+1, cxh[i], cyl[i]+1, cyh[i]), 'Detector section(s)')
+            hdr['CCDSEC'] = ("[%d:%d,%d:%d]" % (
+                cxl[i]+1, cxh[i], cyl[i]+1, cyh[i]), 'CCD section(s)')
+            # TODO: replace static value below with dynamically determined value
+            hdr['CCDSUM'] = ('1 1', 'CCD pixel summing')
+            # TODO: what's a realistic value for readout time?
+            hdr['DARKTIME'] = (duration + 5., 'Dark time (seconds)')
+            hdr['DATASEC'] = ("[%d:%d,%d:%d]" % (
+                1, im_amp.shape[1]-overscan, 1, im_amp.shape[0]),
+                'Data section(s)')
+            hdr['TRIMSEC'] = ("[%d:%d,%d:%d]" % (
+                1, im_amp.shape[1]-overscan, 1, im_amp.shape[0]),
+                'Trim section(s)')
+            # TODO: where can I find these values?
+            hdr['DSPTIMBN'] = ('???', 'ARC timing board dsp code')
+            hdr['DSPTIMBV'] = (0, 'ARC timing board dsp version')
+
             if overscan > 0:
-                hdr['BIASSEC'] = "[%d:%d,%d:%d]" % (im_amp.shape[1]-overscan+1,
-                                                    im_amp.shape[1], 1, im_amp.shape[0])
+                hdr['BIASSEC'] = ("[%d:%d,%d:%d]" % (
+                    im_amp.shape[1]-overscan+1, im_amp.shape[1], 1,
+                    im_amp.shape[0]), 'Bias section(s)')
+
+            if add_cosmic:
+                hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
+
             if add_cosmic and write_crplane:
                 cosmic_image = cosmic_images[i]
                 crhdr = pf.Header()
-                crhdr['DETSIZE'] = "[1:%d,1:%d]" % (
-                    cosmic_image.shape[1], cosmic_image.shape[0])
-                crhdr['DETSEC'] = "[%d:%d,%d:%d]" % (cxl[i] + 1, cxh[i],
-                                                   cyl[i] + 1, cyh[i])
-                crhdr['DATASEC'] = "[%d:%d,%d:%d]" % (
+                crhdr['DETSIZE'] = ("[1:%d,1:%d]" % (
+                    cosmic_image.shape[1], cosmic_image.shape[0]),
+                    'Detector size')
+                crhdr['DETSEC'] = ("[%d:%d,%d:%d]" % (
+                    cxl[i] + 1, cxh[i], cyl[i] + 1, cyh[i]),
+                    'Detector section(s)')
+                crhdr['DATASEC'] = ("[%d:%d,%d:%d]" % (
                     1, cosmic_images[i].shape[1] - overscan,
-                    1, cosmic_images[i].shape[0])
-                crhdr['TRIMSEC'] = "[%d:%d,%d:%d]" % (
+                    1, cosmic_images[i].shape[0]), 'Data section(s)')
+                crhdr['TRIMSEC'] = ("[%d:%d,%d:%d]" % (
                     1, cosmic_images[i].shape[1] - overscan,
-                    1, cosmic_images[i].shape[0])
+                    1, cosmic_images[i].shape[0]), 'Trim section(s)')
                 if overscan > 0:
-                    crhdr['BIASSEC'] = "[%d:%d,%d:%d]" % (
+                    crhdr['BIASSEC'] = ("[%d:%d,%d:%d]" % (
                         cosmic_images[i].shape[1] - overscan + 1,
-                        cosmic_images[i].shape[1], 1, cosmic_images[i].shape[0])
-            hdr['RDNOISE'] = rnoise[i]
-            hdr['GAIN'] = gain[i]
-            hdr['BUNIT'] = 'ADU'
+                        cosmic_images[i].shape[1], 1,
+                        cosmic_images[i].shape[0]), 'Bias section(s)')
             hdulist.append(pf.ImageHDU(data=im_amp, header=hdr, name='SCI'))
             if add_cosmic and write_crplane:
                 crhdu.append(pf.ImageHDU(data=cosmic_image, header=crhdr,
@@ -1608,10 +1730,10 @@ class Ghost(object):
     def simulate_observation(self, duration=0.0, output_prefix='test_',
                              spectrum_in=None, xshift=0.0, yshift=0.0, radvel=0.0,
                              rv_thar=0.0, flux=1, use_thar=True, mode='high',
-                             add_cosmic=True, add_sky=True, 
+                             add_cosmic=True, add_sky=True,
                              thar_flatlamp=False, flatlamp=False, obstype=None,
                              seeing=0.8, write_crplane=False, sv_duration=1.0,
-                             sv_flux_profile=None):
+                             sv_flux_profile=None, data_label=1):
         """
         Simulate an observation with the whole instrument.
         This includes slit-viewing exposures, a blue and a red science exposure.
@@ -1679,9 +1801,13 @@ class Ghost(object):
         sv_duration: the slit viewing camera exposure duration (in seconds)
 
         sv_flux_profile: array of shape (2, n) where n is the number of samples
-            in the profile.  sv_flux_profile[0] is the sv exposure index array, and
-            sv_flux_profile[1] gives the flux of that exposure, relative to the
-            maximum possible (i.e. 0=no flux, 1=full flux).
+            in the profile.  sv_flux_profile[0] is the sv exposure index array,
+            and sv_flux_profile[1] gives the flux of that exposure, relative to
+            the maximum possible (i.e. 0=no flux, 1=full flux).
+
+        data_label: int (optional)
+            Indicates which frame of a sequence this is; written to the DATALAB
+            keyword
         """
 
         if sv_duration > 0:
@@ -1696,7 +1822,7 @@ class Ghost(object):
                                  add_sky=add_sky, return_image=False, thar_flatlamp=thar_flatlamp,
                                  flatlamp=flatlamp, obstype=obstype, additive_noise=self.additive_noise['blue'],
                                  scaling=self.scaling['blue'], seeing=seeing, write_crplane=write_crplane,
-                                 slit_viewer=self.sv)
+                                 slit_viewer=self.sv, data_label=data_label)
         self.red.simulate_frame(duration=duration, output_prefix=output_prefix,
                                 spectrum_in=spectrum_in, xshift=xshift, yshift=yshift, radvel=radvel,
                                 rv_thar=rv_thar, flux=flux, rnoise=self.rnoise, gain=self.gain,
@@ -1705,7 +1831,7 @@ class Ghost(object):
                                 add_sky=add_sky, return_image=False, thar_flatlamp=thar_flatlamp,
                                 flatlamp=flatlamp, obstype=obstype, additive_noise=self.additive_noise['red'],
                                 scaling=self.scaling['red'], seeing=seeing, write_crplane=write_crplane,
-                                slit_viewer=self.sv)
+                                slit_viewer=self.sv, data_label=data_label)
         # Save the slit images as a fits file
         slit_fn = output_prefix + 'SLIT.fits'
         self.sv.save(slit_fn)
