@@ -367,6 +367,7 @@ class Polyspect(object):
         xs = xs.flatten()
 
         # Do the fit!
+        print("Fitting (this can sometimes take a while...)")
         init_resid = self.wave_fit_resid(
             params0, ms, xs, ys, ydeg=ydeg, xdeg=xdeg)
         bestp = op.leastsq(self.wave_fit_resid, params0,
@@ -484,7 +485,7 @@ class Polyspect(object):
 
     def adjust_model(self, data, wparams=None,
                       xparams=None,convolve=True,
-                      percentage_variation=10):
+                      percentage_variation=10,vary_wrt_max=True):
         """Function that uses matplotlib slider widgets to adjust a polynomial
         model overlaid on top of a flat field image. In practice this will be
         overlaid on top of the result of convolving the flat with a slit
@@ -509,6 +510,9 @@ class Polyspect(object):
         percentage_variation: int
             How much should the percentage adjustment in each bin as a function
             of the parameter. Default is 10%
+        vary_wrt_max: bool
+            Vary all parameters intelligently with a scaling of the maximum variation, 
+            rather than just a percentage of each.
 
         Returns
         -------
@@ -560,6 +564,9 @@ class Polyspect(object):
         # Use this to adjust in a percentage how much to let each parameter
         # vary
         frac_xparams = np.absolute(xparams * (percentage_variation / 100))
+        if vary_wrt_max:
+            for i in range(npolys):
+                frac_xparams[i] = np.max(frac_xparams[-1])/(nx/2.0)**(npolys-1-i)
         axq = [[0 for x in range(polyorder)] for y in range(npolys)]
         sliders = [[0 for x in range(polyorder)] for y in range(npolys)]
         # Now put all the sliders in the new figure based on position in the
@@ -597,4 +604,4 @@ class Polyspect(object):
         button.on_clicked(submit)
 
         plt.show()
-        return 1
+ 

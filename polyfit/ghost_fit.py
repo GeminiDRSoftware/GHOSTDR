@@ -16,7 +16,7 @@ import matplotlib.cm as cm
 
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 #arc_file  = "/home/jbento/code/pymfe/data/ghost/blue/std/arcstd_blue.fits"
-flat_file = "/home/jbento/code/pymfe/data/ghost/red/high/flathigh_red.fits"
+flat_file = "../simulator/pyghost/flatstd_red.fits"
 
 #instantiate the ghostsim arm
 ghost_format = polyfit.ghost.Arm('red',mode='high')
