@@ -144,6 +144,71 @@ need to use the ``--override_cal`` option::
 This produces a ``obj100_1.0_std_red_darkCorrected.fits`` (or similar) file, a
 bias and dark corrected GHOST spectrum frame.
 
+
+Finding apertures
+-----------------
+
+This is the first iteration of this documentation. At this stage this process
+is done purely within python. 
+
+The principle behind this process is that the format of the spectral orders 
+and the wavelength scale can be modelled uniquely using polynomials of
+polynomials. e.g. A series of polynomials as a function of order number are 
+combined in a polynomial fashion as a function of y position on the chip. 
+
+The polyfit module is used at this stage and requires knowledge of the 
+spectrograph arm, mode and a reduced flat field image (tested only with 
+flats from the simulator). 
+
+Usage follows::
+
+  import polyfit
+  import astropy.io.fits as pyfits
+  ghost_format = polyfit.ghost.Arm('red',mode='high')
+
+At this stage it is important to have some existing file or initial guess
+array for the polynomial model. By default, these are found in a 
+``../data/ghost/<arm>/<mode>/`` folder alongisde the polyfit module but this 
+can be changed using the ``ghost_format.model_location`` variable. 
+
+After acquiring the flat field data::
+
+  flat_file = "location_to_flat/flatfield_frame.fits"
+  flat_data = pyfits.getdata(flat_file)
+
+a convolution map is required. This is done so that, irrespective of the 
+number of fibers per order, the model is adjusted with respect to an 
+equivalent map that has maxima where the middle of the order lies. 
+
+Either a supplied model of the slit profile (from the slit viewer) or a 
+default uniform illumination profile is convolved with every column of the 
+flat field image along the spatial direction, resulting in a series of 
+images that match the centers of the orders. 
+
+This is then fed into the ``adjust_model`` function for visual inspection
+of the initial model::
+
+  flat_conv=ghost_format.slit_flat_convolve(flat_data)
+  ghost_format.adjust_model(flat_conv,convolve=False,percentage_variation=10)
+
+The ``percentage_variation`` refers to the percentage range of values that each
+parameter is allowed to be varied by the matplotlib slider widgets. 
+
+The ``Submit`` button saves the current version of the model onto the default 
+location. 
+
+Once the model is close, the model can be fitted::
+
+  ghost_format.fit_x_to_image(flat_conv,decrease_dim=8,inspect=True)
+
+This function takes the convolution map and adjusts the model to the local
+maximum along each order. The ``inspect`` parameter set to True displays the
+result of the fit and, if it is satisfactory, pressing the ``submit`` button
+again will save it. 
+
+At this point, the input to the flux extraction code is available for testing.
+
+
 Other Processing Flows
 ======================
 include scientific flow charts, include associated recipes

@@ -28,10 +28,6 @@ xx, wave, blaze= ghost_format.spectral_format()
 flat_data = pyfits.getdata(flat_file)
 #arc_data = pyfits.getdata(arc_file)
 
-nx = flat_data.shape[0]
-ny = flat_data.shape[1]
-
-
 #Have a look at the default model and make small adjustments if needed.
 flat_conv=ghost_format.slit_flat_convolve(flat_data)
 ghost_format.adjust_model(flat_conv,convolve=False,percentage_variation=10)
