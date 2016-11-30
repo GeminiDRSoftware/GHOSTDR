@@ -364,6 +364,7 @@ class SlitViewer(object):
         """
         self.duration = duration
         self.nexp = nexp
+        self.utstart = datetime.datetime.utcnow()
         if flux_profile is None:
             self.flux_profile = np.ones((self.nexp))
         else:
@@ -428,6 +429,13 @@ class SlitViewer(object):
             header['CCDSEC'] = secstr
             header['CCDNAME'] = 'Sony-ICX674'
             header['CCDSUM'] = str(self.binning) + " " + str(self.binning)
+            header['EXPTIME'] = self.duration
+            utcnow = self.utstart + datetime.timedelta(seconds=expid*self.duration)
+            header['EXPUTST'] = (utcnow.strftime("%H:%M:%S.%f")[:-3],
+                                 'UT time at exposure start')
+            header['EXPUTEND'] = ((utcnow + datetime.timedelta(seconds=self.duration)
+                                  ).strftime("%H:%M:%S.%f")[:-3],
+                                  'UT time at exposure end')
 
             hdulist.append(pf.ImageHDU(data=data, header=header))
 
@@ -1581,7 +1589,7 @@ class Arm(object):
                            'UT date at observation start')
         hdr['UTSTART'] = (utcnow.strftime("%H:%M:%S.%f")[:-3],
                           'UT time at observation start')
-        hdr['UTEND'] = ((utcnow - datetime.timedelta(seconds=duration)
+        hdr['UTEND'] = ((utcnow + datetime.timedelta(seconds=duration)
                          ).strftime("%H:%M:%S.%f")[:-3],
                         'UT time at observation end')
         hdr['LT'] = (ltnow.strftime("%H:%M:%S.%f")[:-3],
@@ -1613,7 +1621,7 @@ class Arm(object):
             hdr['GCOUNT'] = (1, 'Required keyword; must = 1')
             hdr['EXPUTST'] = (utcnow.strftime("%H:%M:%S.%f")[:-3],
                               'UT time at exposure start')
-            hdr['EXPUTEND'] = ((utcnow - datetime.timedelta(seconds=duration)
+            hdr['EXPUTEND'] = ((utcnow + datetime.timedelta(seconds=duration)
                                 ).strftime("%H:%M:%S.%f")[:-3],
                                'UT time at exposure end')
             hdr['DETSIZE'] = ("[1:%d,1:%d]" % (
