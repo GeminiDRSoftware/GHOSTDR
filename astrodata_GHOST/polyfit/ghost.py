@@ -66,8 +66,8 @@ class Arm(Polyspect):
         self.mode = mode
         #This is the location of the model parameter files. 
         self.model_location=os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         '../data/'+self.spect+'/'+\
-                                         self.arm+'/'+self.mode))
+                                         'defaults/'+\
+                                         self.arm+'/161120/'+self.mode))
         if (arm == 'red'):
             # Additional slit rotation across an order needed to match Zemax.
             self.extra_rot = 3.0

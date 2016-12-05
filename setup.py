@@ -127,10 +127,6 @@ PACKAGE_DIRS['pyghost'] = 'simulator/pyghost/pyghost'
 ENTRY_POINTS['console_scripts'] = ['ghost-sim=pyghost.tests:run']
 PACKAGE_DATA['pyghost'] = ['data/*']
 
-# Add the polynomial model module
-PACKAGES.append('polyfit')
-PACKAGE_DIRS['polyfit'] = 'polyfit/polyfit'
-
 
 EXTENSIONS = None
 
