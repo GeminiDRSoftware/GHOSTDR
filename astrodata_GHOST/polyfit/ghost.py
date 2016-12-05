@@ -209,9 +209,9 @@ class Arm(Polyspect):
         pix /= np.sum(pix)
         pix_ft = np.conj(np.fft.rfft2(pix))
         # Create some hexagons. We go via a "cutout" for efficiency.
-        h_cutout = optics.hexagon(
+        h_cutout = self.hexagon(
             szy, lenslet_width / self.microns_pix * fillfact / hex_scale)
-        hbig_cutout = optics.hexagon(
+        hbig_cutout = self.hexagon(
             szy, lenslet_width / self.microns_pix * fillfact)
         h = np.zeros((szy, szx))
         hbig = np.zeros((szy, szx))
@@ -229,7 +229,7 @@ class Arm(Polyspect):
             # If we're simulating seeing, create a Moffat function as our input
             # profile,but just make the lenslet fluxes uniform.
             im = np.zeros((szy, szx))
-            im_cutout = optics.moffat2d(
+            im_cutout = self.moffat2d(
                 szy, seeing * self.microns_arcsec / self.microns_pix / 2,
                 beta=4.0)
             im[:, szx / 2 - szy / 2:szx / 2 + szy / 2] = im_cutout
@@ -243,7 +243,7 @@ class Arm(Polyspect):
             im_cutout = im_cutout[szy / 2 - cutout_hw:szy / 2 +
                                   cutout_hw, szx / 2 - cutout_hw:szx /
                                   2 + cutout_hw]
-            prof = optics.azimuthalAverage(
+            prof = self.azimuthalAverage(
                 im_cutout, returnradii=True, binsize=1)
             prof = (prof[0], prof[1] * fluxes[i])
             xprof = np.append(np.append(0, prof[0]), np.max(prof[0]) * 2)
@@ -259,3 +259,154 @@ class Arm(Polyspect):
                             lenslet_width / self.microns_pix)
             im_slit += np.roll(im_one, the_shift, axis=1)
         return im_slit
+
+    def hexagon(dim, width):
+        """This function creates a hexagon. Originally from opticstools.
+
+        Parameters
+        ----------
+        dim: int
+            Size of the 2D array
+        width: int
+            flat-to-flat width of the hexagon
+
+        Returns
+        -------
+        pupil: float array (sz,sz)
+            2D array hexagonal pupil mask
+        """
+        x = np.arange(dim)-dim/2.0
+        xy = np.meshgrid(x,x)
+        xx = xy[1]
+        yy = xy[0]
+        w = np.where( (yy < width/2) * (yy > (-width/2)) * \
+         (yy < (width-np.sqrt(3)*xx)) * (yy > (-width+np.sqrt(3)*xx)) * \
+         (yy < (width+np.sqrt(3)*xx)) * (yy > (-width-np.sqrt(3)*xx)))
+        hex = np.zeros((dim,dim))
+        hex[w]=1.0
+        return hex
+
+    def moffat(theta, hw, beta=4.0):
+        """This creates a moffatt function for simulating seeing.
+        The output is an array with the same dimensions as theta.
+        Total Flux" is set to 1 - this only applies if sampling
+        of thetat is 1 per unit area (e.g. arange(100)).
+
+        From Racine (1996), beta=4 is a good approximation for seeing
+
+        Parameters
+        ----------
+        theta: float or float array
+            Angle at which to calculate the moffat profile (same units as hw)
+        hw: float
+            Half-width of the profile
+        beta: float
+            beta parameters
+
+        """
+        denom = (1 + (2**(1.0/beta) - 1)*(theta/hw)**2)**beta
+        return (2.0**(1.0/beta)-1)*(beta-1)/np.pi/hw**2/denom
+    
+    def moffat2d(sz,hw, beta=4.0):
+        """A 2D version of a moffat function
+        """
+        x = np.arange(sz) - sz/2.0
+        xy = np.meshgrid(x,x)
+        r = np.sqrt(xy[0]**2 + xy[1]**2)
+        return moffat(r, hw, beta=beta)
+
+    def azimuthalAverage(image, center=None, stddev=False, returnradii=False,
+                         return_nr=False, binsize=0.5, weights=None,
+                         steps=False, interpnan=False, left=None,
+                         right=None, return_max=False):
+        """
+        Calculate the azimuthally averaged radial profile.
+        NB: This was found online and should be properly credited! 
+        Modified by MJI
+
+        image - The 2D image
+        center - The [x,y] pixel coordinates used as the center. 
+                 The default is None, which then uses the center of the image
+                 (including fractional pixels).
+        stddev - if specified, return the azimuthal standard deviation instead
+                 of the average
+        returnradii - if specified, return (radii_array,radial_profile)
+        return_nr   - if specified, return number of pixels per radius *and* 
+                      radius
+        binsize - size of the averaging bin.  Can lead to strange results if
+            non-binsize factors are used to specify the center and the binsize 
+            is too large
+        weights - can do a weighted average instead of a simple average if
+                  this keyword parameter is set.  
+                  weights.shape must = image.shape.  
+                  weighted stddev is undefined, so don't set weights and stddev.
+        steps - if specified, will return a double-length bin array and radial
+            profile so you can plot a step-form radial profile (which more 
+            accurately represents what's going on)
+        interpnan - Interpolate over NAN values, i.e. bins where there is no 
+                    data?
+            left,right - passed to interpnan; they set the extrapolated values
+        return_max - (MJI) Return the maximum index.
+
+        If a bin contains NO DATA, it will have a NAN value because of the
+        divide-by-sum-of-weights component.  I think this is a useful way to 
+        denote lack of data, but users let me know if an alternative is 
+        prefered...
+
+        """
+        # Calculate the indices from the image
+        y, x = np.indices(image.shape)
+
+        if center is None:
+            center = np.array([(x.max()-x.min())/2.0, (y.max()-y.min())/2.0])
+
+        r = np.hypot(x - center[0], y - center[1])
+
+        if weights is None:
+            weights = np.ones(image.shape)
+        elif stddev:
+            raise ValueError("Weighted standard deviation is not defined.")
+
+        # the 'bins' as initially defined are lower/upper bounds for each bin
+        # so that values will be in [lower,upper)  
+        nbins = int(np.round(r.max() / binsize)+1)
+        maxbin = nbins * binsize
+        bins = np.linspace(0,maxbin,nbins+1)
+        # but we're probably more interested in the bin centers than their left
+        # or right sides...
+        bin_centers = (bins[1:]+bins[:-1])/2.0
+
+        # Find out which radial bin each point in the map belongs to
+        whichbin = np.digitize(r.flat,bins)
+
+        # how many per bin (i.e., histogram)?
+        # there are never any in bin 0, because the lowest index returned by
+        # digitize is 1
+        nr = np.bincount(whichbin)[1:]
+
+        # recall that bins are from 1 to nbins (which is expressed in array
+        # terms by arange(nbins)+1 or xrange(1,nbins+1) )
+        # radial_prof.shape = bin_centers.shape
+
+        if stddev:
+            radial_prof = np.array([image.flat[whichbin==b].std() for b in xrange(1,nbins+1)])
+        elif return_max:
+            radial_prof = np.array([np.append((image*weights).flat[whichbin==b],-np.inf).max() for b in xrange(1,nbins+1)])
+        else:
+            radial_prof = np.array([(image*weights).flat[whichbin==b].sum() / weights.flat[whichbin==b].sum() for b in xrange(1,nbins+1)])
+
+        #import pdb; pdb.set_trace()
+
+        if interpnan:
+            radial_prof = np.interp(bin_centers,bin_centers[radial_prof==radial_prof],radial_prof[radial_prof==radial_prof],left=left,right=right)
+
+        if steps:
+            xarr = np.array(zip(bins[:-1],bins[1:])).ravel() 
+            yarr = np.array(zip(radial_prof,radial_prof)).ravel() 
+            return xarr,yarr
+        elif returnradii: 
+            return bin_centers,radial_prof
+        elif return_nr:
+            return nr,bin_centers,radial_prof
+        else:
+            return radial_prof
