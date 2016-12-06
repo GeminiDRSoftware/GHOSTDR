@@ -22,8 +22,33 @@ class Polyspect(object):
 
     def wave_fit_resid(self, params, ms, waves, ys, ydeg=3, xdeg=3):
         """A fit function for read_lines_and_fit (see that function for details)
-        to be used in scipy.optimize.leastsq. The same function is used in
-        fit_to_x, but in that case "waves" is replaced by "xs".
+        to be used in scipy.optimize.leastsq as the minimisation function. 
+        The same function is used in fit_to_x, but in that case 
+        "waves" is replaced by "xs".
+
+        Parameters
+        ----------
+        
+        params: float array
+            2D array containing the polynomial coefficients that will form the 
+            model to be compared with the real data. 
+        ms: int array
+            The order numbers for the residual fit repeated ys times.
+        waves: float array
+            This parameter is the argument for the second set of polynomials. 
+            Either the wavelengths or the x positions on the chip
+        ys: float array
+            This is an ms x y sized array with pixel indeces on y direction
+            for each order.
+        ydeg: int
+            Polynomial degree as a function of order
+        xdeg: int
+            Polynomial degree as a function of y
+
+        Returns
+        -------
+
+        The residual between the model and data supplied.
         """
         if np.prod(params.shape) != (xdeg + 1) * (ydeg + 1):
             print("Parameters are flattened - xdeg and ydeg must be correct!")
@@ -53,27 +78,40 @@ class Polyspect(object):
         of pixel value.
 
         The functional form is:
-            wave = p0(m) + p1(m)*yp + p2(m)*yp**2 + ...)
 
-        with yp = y - y_middle, and:
-            p0(m) = q00 + q01 * mp + q02 * mp**2 + ...
+        ..math::
+        
+            wave = p_0(m) + p_1(m)*y' + p_2(m)*y'^2 + ...)
 
-        with mp = m_ref/m - 1
+        with :math: `y^{prime} = y - y_{\rm middle}`, and:
+
+        .. math::
+
+            p_0(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ...
+
+        with :math: `m^{prime} = m_{\rm ref}/m - 1`
 
         This means that the simplest spectrograph model should have:
-        q00 : central wavelength or order m_ref
-        q01: central wavelength or order m_ref
-        q10: central_wavelength/R_pix, with R_pix the resolving power / pixel.
-        q11: central_wavelength/R_pix, with R_pix the resolving power / pixel.
+        :math: `q_{00}` : central wavelength or order m_ref
+        :math: `q_{01}` : central wavelength or order m_ref
+        :math: `q_{10}` : central_wavelength/R_pix, with R_pix the resolving power / pixel.
+        :math: `q_{11}` : central_wavelength/R_pix, with R_pix the resolving power / pixel.
         ... with everything else approximately zero.
 
         Parameters
         ----------
+        
+        init_mod_file: string
+            Optional alternative location for model file.
+        pixdir: string
+            Alternative location for the directory containing the arclines info
+        outdir: string
+            Optional alternative output directory
         xdeg, ydeg: int
             Order of polynomial
-        dir: string
-            Directory. If none given, a fit to Tobias's default
-            pixels in "data" is made."""
+        residfile: string
+            Residual file output name
+        """
         if len(init_mod_file) == 0:
             params0 = pyfits.getdata(self.model_location+'/wavemod.fits')
         if (len(pixdir) == 0):
@@ -260,7 +298,7 @@ class Polyspect(object):
         """Fit a "tramline" map. Note that an initial map has to be pretty
         close, i.e. within "search_pix" everywhere. To get within search_pix
         everywhere, a simple model with a few paramers is fitted manually.
-        This can be done with a GUI using the adjust_model function.
+        This can be done with the GUI using the adjust_model function.
 
         Parameters
         ----------
@@ -326,7 +364,7 @@ class Polyspect(object):
         
         .. math::
         
-            p0(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ...
+            p_0(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ...
 
         with :math:`mp = m_{\rm ref}/m - 1
 
@@ -337,9 +375,19 @@ class Polyspect(object):
 
         Parameters
         ----------
-        
+        x_to_fit: float array
+            x values to fit. This should be an (orders,y) shape array.
+        init_mod_file: string
+            Optional alternative location for model file.
+        outdir: string
+            Optional alternative output directory
         xdeg, ydeg: int
             Order of polynomial
+        y: float array
+            Y positions on the CCD
+        decrease_dim: int
+            The factor of decreased dimentionality for the fit. 
+            This needs to be an exact factor of the y size.        
         """
         if len(init_mod_file) == 0:
             params0 = pyfits.getdata(self.model_location+'/xmod.fits')
@@ -378,12 +426,6 @@ class Polyspect(object):
         print(init_resid, final_resid)
 
         pyfits.writeto(outdir + 'xmod.fits',params,clobber=True)
-        # outf = open(outdir + "xmod.fits", "w")
-        # for i in range(ydeg + 1):
-        #     for j in range(xdeg + 1):
-        #         outf.write("{0:9.4e} ".format(params[i, j]))
-        #     outf.write("\n")
-        # outf.close()
 
     def spectral_format_with_matrix(self):
         """Create a spectral format, including a detector to slit matrix at
@@ -436,7 +478,7 @@ class Polyspect(object):
     def slit_flat_convolve(self, flat, slit_profile=None):
         """Function that takes a flat field image and a slit profile and
            convolves the two in 2D. Returns result of convolution, which
-           should be used for tramline fitting. ONLY WORKS FOR GHOST.
+           should be used for tramline fitting. 
 
         Parameters
         ----------
@@ -450,7 +492,7 @@ class Polyspect(object):
         Returns
         -------
         flat_conv: float array
-            Currently returns the convolved 2D array.
+            Returns the convolved 2D array.
 
         """
         if not slit_profile:

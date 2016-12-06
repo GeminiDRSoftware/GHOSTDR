@@ -38,14 +38,17 @@ except:
 class Arm(Polyspect):
     """A class for each arm of the spectrograph. The initialisation
     function takes a series of strings representing the configuration.
-    For GHOST, it can be "red" or "blue"
-    for the first string, and "std" or "high" for the second string.
+    It can be "red" or "blue" for the arm (first string), 
+    and "std" or "high" for the mode (second string).
     """
 
     def __init__(self, arm='blue', mode='std'):
         """Initialisation function that sets all the mode specific parameters
         related to each configuration of the spectrograph.
         """
+        # A lot of these parameters are yet unused.
+        # These are a legacy of the original simulator and are left here
+        # because they may become useful in the future. 
         self.spect = 'ghost'
         self.arm = arm
         self.d = 1000 / 52.67  # Distance in microns
@@ -64,7 +67,16 @@ class Arm(Polyspect):
         #True if the spectral dispersion dimention is over the x (column) axis
         self.transpose=True
         self.mode = mode
-        #This is the location of the model parameter files. 
+        # This is the location of the model parameter files.
+        # At this time this is not a brilliant idea as it is dependent on the
+        # date of the correct version of the model and is a relative location
+        # with respect to whichever module is imported. This relies on the
+        # data being in a correct relative directory to polyfit
+        # (or astrodata_GHOST, depending on whether the user imports this
+        # directly).
+        # Ideally we will want some sort of function that decides which model
+        # to use for each data set, and overwrite this variable.
+        # For now, it defaults to the latest one set manually.
         self.model_location=os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          'defaults/'+\
                                          self.arm+'/161120/'+self.mode))
@@ -85,12 +97,15 @@ class Arm(Polyspect):
             self.m_ref = 50  # Reference order
             # Now put in the default fiber profile parameters for each mode.
             # These are used by the convolution function on polyspect
+            # These were determined based on visual correspondence with
+            # simulated data and may need to be revised once we have real
+            # data. The same applies to the blue arm parameters.
             if self.mode=='std':
                 self.fiber_separation=4.15
-                self.profile_sigma=1.1#done
+                self.profile_sigma=1.1
             elif self.mode=='high':
                 self.fiber_separation=2.49
-                self.profile_sigma=0.7#done
+                self.profile_sigma=0.7
         elif (arm == 'blue'):
             # Additional slit rotation accross an order needed to match Zemax.
             self.extra_rot = 2.0
@@ -110,14 +125,14 @@ class Arm(Polyspect):
             # These are used by the convolution function on polyspect
             if self.mode=='std':
                 self.fiber_separation=3.97
-                self.profile_sigma=1.1#done
+                self.profile_sigma=1.1
             elif self.mode=='high':
                 self.fiber_separation=2.53
-                self.profile_sigma=0.7#done
+                self.profile_sigma=0.7
         else:
             print("Unknown spectrograph arm!")
             raise UserWarning
-
+        # Now we determine the number of fibers based on mode.
         if (mode == 'high'):
             self.lenslet_width = self.lenslet_high_size
             self.nl = 28
@@ -144,6 +159,7 @@ class Arm(Polyspect):
 
     def make_lenslets(self, fluxes=[], seeing=0.8, llet_offset=0):
         """Make an image of the lenslets with sub-pixel sampling.
+           This is potentially to become part of the simulator.
 
         Parameters
         ----------
@@ -260,6 +276,8 @@ class Arm(Polyspect):
             im_slit += np.roll(im_one, the_shift, axis=1)
         return im_slit
 
+
+    #-- This is a collection of functions that were part of optics.py --
     def hexagon(dim, width):
         """This function creates a hexagon. Originally from opticstools.
 
