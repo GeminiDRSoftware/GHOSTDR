@@ -114,12 +114,22 @@ class Polyspect(object):
         """
         if len(init_mod_file) == 0:
             params0 = pyfits.getdata(self.model_location+'/wavemod.fits')
+        else:
+            try:
+                params0 = pyfits.getdata(init_mod_file)
+            except Exception:
+                return 'Unable to open model file. \
+                        File does not exist or is not fits.'
         if (len(pixdir) == 0):
             pixdir = self.model_location
-        # The next loop reads in Mike's or Tobias's wavelengths.
-        # Try for Mike's single file format first.
+        else:
+            if type(pixdir) is not str:
+                return 'Location for arcline files invalid'
+        # The next loop reads in wavelengths from a file.
         # To make this neater, it could be a function that overrides this
         # base class.
+        # This code needs more work since we will only have one format
+        # for a GHOST arc line list
         if os.path.exists(pixdir + "arclines.txt"):
             lines = np.loadtxt(pixdir + "arclines.txt")
             ms = lines[:, 3]
@@ -165,6 +175,11 @@ class Polyspect(object):
                         xparams=None, imgfile=None):
         """Create a spectrum, with wavelengths sampled in 2 orders based on
            a pre-existing wavelength and x position polynomial model.
+           This code takes the polynomial model and calculates the result as 
+           a function of order number scaled to the reference order and then
+           as a function of y position. 
+           Optionally a file can be supplied for the model to be overlayed 
+           on top of.
 
         Parameters
         ----------
@@ -179,9 +194,13 @@ class Polyspect(object):
             the center of the CCD. To run this program multiple times
             with the same co-ordinate system, take the returned
             ccd_centre and use it as an input.
+        wparams: float array
+            2D array with polynomial parameters for wavelength scale
+        xparams: float array
+            2D array with polynomial parameters for x scale
         imgfile: string (optional)
             String containing a file name for an image. This function
-            uses this image and over plots the created spectrum.
+            uses this image and over plots the created model.
 
         Returns
         -------
@@ -198,8 +217,6 @@ class Polyspect(object):
             NOT YET IMPLEMENTED
             Parameters of the internal co-ordinate system describing the
             center of the CCD.
-
-
         """
 
         # Now lets interpolate onto a pixel grid rather than the arbitrary
@@ -209,7 +226,8 @@ class Polyspect(object):
         wave_int = np.zeros((nm, self.szy))
         blaze_int = np.zeros((nm, self.szy))
 
-        # Should be an option here to get files from a different directory.
+        # At this point grab the parameters. If none are specified,
+        # pick them up from the default location. 
         if wparams is None:
             wparams = pyfits.getdata(self.model_location+'/wavemod.fits')
         if xparams is None:
@@ -246,9 +264,10 @@ class Polyspect(object):
             blaze_int[m - self.m_min, :] = np.sinc((ys - self.szy / 2) /
                                                    order_width)**2
 
-        # Plot this if we have an image file
+        # Plot this if we have an image file 
         if imgfile:
-            im = pyfits.getdata(imgfile)
+            try: im = pyfits.getdata(imgfile)
+            except Exception: return 'Invalid image file.'
             if not self.transpose:
                 im = im.T
             plt.clf()
@@ -261,16 +280,21 @@ class Polyspect(object):
 
     def adjust_x(self, old_x, image, num_xcorr=21):
         """Adjust the x pixel value based on an image and an initial
-            array from spectral_format(). Only really designed for a
-            single fiber flat or science image. This is a helper
-            routine for fit_x_to_image.
+            array from spectral_format().
+            This function performs a cross correlation between a pixel map
+            and a given 2D array image and calculates a shift along the spatial
+            direction. The result is used to inform an initial global shift for
+            the fitting procedure.
+            Only really designed for a single fiber flat, single fiber science
+            image or a convolution map.
+            This is a helper routine for fit_x_to_image.
 
         Parameters
         ----------
         old_x: numpy array
             An old x pixel array
         image: numpy array
-            An image read in from a fits file
+            A 2D image array to be used as the basis for the adjustment.
 
         Returns
         -------
@@ -294,34 +318,51 @@ class Polyspect(object):
 
         return old_x + the_shift
 
-    def fit_x_to_image(self, data, decrease_dim=10, search_pix=20, xdeg=4,inspect=False):
+    def fit_x_to_image(self, data, decrease_dim=10, search_pix=20,
+                       xdeg=4,inspect=False,clobber=False):
         """Fit a "tramline" map. Note that an initial map has to be pretty
         close, i.e. within "search_pix" everywhere. To get within search_pix
         everywhere, a simple model with a few paramers is fitted manually.
-        This can be done with the GUI using the adjust_model function.
+        This can be done with the GUI using the adjust_model function and 
+        finally adjusted with the adjust_x function
 
         Parameters
         ----------
         data: numpy array
-            The image of a single reference fiber to fit to.
+            The image of a single reference fiber to fit to. Typically 
+            the result of the convolution.
         decrease_dim: int
             Median filter by this amount in the dispersion direction and
             decrease the dimensionality of the problem accordingly.
             This helps with both speed and robustness.
         search_pix: int
             Search within this many pixels of the initial model.
+        xdeg: int
+            Polynomial degree. This parameter is probably not needed.
+        inspect: bool
+            If true, once fit is done the adjust_model function
+            is called so that the user can inspect the result of the
+            fit and decide if it is good enough. 
+        clobber: bool
+            If true this will automatically replace the existing model
+            with the fitted one.
         """
         xx, wave, blaze = self.spectral_format()
         if self.transpose:
             image=data.T
         else:
             image=data
+        # Now use the adjust function to figure out a global shift in
+        # the spatial direction
         xs = self.adjust_x(xx, image)
+        
         if image.shape[0]%decrease_dim!=0:
             return "Can not decrease image dimention by this amount. "+\
             "Please check if the image size in the spectral dimention is "+\
             "exactly divisible by this amount."
         # Median-filter in the dispersion direction.
+        # This process will 'collapse' the image in the spectral direction
+        # and make sure the fit is faster. 
         image_med = image.reshape((image.shape[0] // decrease_dim,
                                    decrease_dim, image.shape[1]))
         image_med = np.median(image_med, axis=1)
@@ -334,6 +375,9 @@ class Polyspect(object):
                                    decrease_dim), axis=2)
 
         # Now go through and find the peak pixel values.
+        # Do this by searching for the maximum value along the
+        # order for search_pix on either side of the initial
+        # model pixels in the spatial direction. 
         for i in range(xs.shape[0]):  # Go through each order...
             for j in range(xs.shape[1]):
                 xi = int(np.round(xs[i, j]))
@@ -343,6 +387,9 @@ class Polyspect(object):
                 xs[i, j] += np.argmax(peakpix) - search_pix
 
         self.fit_to_x(xs, ys=ys, xdeg=xdeg)
+        if clobber:
+            try: shutil.copyfile('xmod.fits', self.model_location+'xmod.fits')
+            except Exception: return 'Unable to write new model to location'
         if inspect:
             #This will plot the result of the fit once successful so
             #the user can inspect the result.
@@ -487,7 +534,8 @@ class Polyspect(object):
         slit_profile: float array
             A 1D array with the slit profile fiber amplitudes. If none is
             supplied this function will assume identical fibers and create
-            one to be used in the convolution.
+            one to be used in the convolution based on default parameters 
+            specified in the ghost class.
 
         Returns
         -------
@@ -561,28 +609,29 @@ class Polyspect(object):
         Either a success or an error message.
 
         """
-        # Should be an option here to get files from a different directory.
+        # Grab the model parameters if none are provided.
         if wparams is None:
             wparams = pyfits.getdata(self.model_location+'/wavemod.fits')
         if xparams is None:
             xparams = pyfits.getdata(self.model_location+'/xmod.fits')
-        # Grab the data file
-        nx = data.shape[0]
         
+        nx = data.shape[0]
+        # Start by setting up the graphical part
         fig, ax = plt.subplots()
-
+        axcolor = 'lightgoldenrodyellow'
+        # Grab the model to be plotted
         x_int, wave_int, blaze_int = self.spectral_format(wparams=wparams,
                                                            xparams=xparams)
         y = np.meshgrid(np.arange(data.shape[1]), np.arange(x_int.shape[0]))[0]
-
+        # The data must be flattened for the sliders to work.
+        # Then plot it! 
         l, = plt.plot(y.flatten()[::10], x_int.flatten()[::10] + nx // 2,
                       color='green', linestyle='None', marker='.')
 
         if convolve:
             data = self.slit_flat_convolve(flat=data)
+        # Now over plot the image.
         ax.imshow((data - np.median(data)) / 1e2)
-
-        axcolor = 'lightgoldenrodyellow'
 
         # Create a second window for cliders.
         slide_fig = plt.figure()
@@ -631,10 +680,12 @@ class Polyspect(object):
                 plt.legend(loc=3)
                 sliders[i][j].on_changed(update)
 
-        # Have a button to output the current varied model to the correct file
+        # Have a button to output the current model to the correct file
         submitax = plt.axes([0.8, 0.025, 0.1, 0.04])
         button = Button(submitax, 'Submit', color=axcolor, hovercolor='0.975')
 
+        # This is the triggered function on submit.
+        # Currently only works for the xmod but should be generalised
         def submit(event):
             try:
                 pyfits.writeto(self.model_location+'/xmod.fits', xparams,clobber=True)
