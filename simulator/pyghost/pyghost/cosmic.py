@@ -1,27 +1,27 @@
 '''
 /*
- *+ 
+ *+
  * FUNCTION NAME: template<class T> int cosmic
- * 
- * INVOCATION: cosmic(T* image, int nx, int ny, double exposed, float shieldcover, 
- *                    float rate, bool mask, Image_Pixel P) 
- * 
- * PARAMETERS: (">" input, "!" modified, "<" output) 
+ *
+ * INVOCATION: cosmic(T* image, int nx, int ny, double exposed, float shieldcover,
+ *                    float rate, bool mask, Image_Pixel P)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
  * ! image - image buffer
  * > nx - number of pixels in x direction
  * > ny - number in y direction
  * > exposed - Number of seconds of integration for the image.
- * > shieldcover - Cutoff angle (in degrees) due to shield, assume shield is perfect 
+ * > shieldcover - Cutoff angle (in degrees) due to shield, assume shield is perfect
  * > rate - rate at which cosmic rays are incident (rays/s/cm/cm)
  * > mask - set if required to add area of effect mask
  * > P - size of each pixel in microns in 3 dimensions
- * 
+ *
  * FUNCTION VALUE: Number of hits
- * 
+ *
  * PURPOSE: generate simulated cosmic ray hits on a detector
- * 
+ *
  * DESCRIPTION: Some assumptions:
- *  1.  All CR's liberate 100 (+/- 10) electrons per 0.1 micron travel.  10% 
+ *  1.  All CR's liberate 100 (+/- 10) electrons per 0.1 micron travel.  10%
  *      of the cosmic rays are He nuclei, and thus have 4x the effect.
  *
  *  2.  The plane of the detector (+/- some extra) is blocked by a shield.
@@ -29,38 +29,38 @@
  *  3.  The CR shield stops 100% of CRs, regardless of energy.
  *
  *  4.  A CR event in the detector has no lasting effect.
- * 
- * EXTERNAL VARIABLES: 
- * 
- * PRIOR REQUIREMENTS: 
- * 
- * DEFICIENCIES: 
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * DEFICIENCIES:
 
  * ACKNOWLEDGMENT:
  *   Written by: Joel D. Offenberg, Raytheon ITSS
  *   Extra comments & code clean-up by Marc White, Research School of Astronomy
  *   & Astrophysics, The Australian National University
  *
- *- 
+ *-
  */
-template<class T> int cosmic(T* image, int nx, int ny, double exposed, float shieldcover, 
-			      float rate, bool mask, Image_Pixel P) 
+template<class T> int cosmic(T* image, int nx, int ny, double exposed, float shieldcover,
+			      float rate, bool mask, Image_Pixel P)
 {
   const float deg2rad = M_PI/180.;        // Number of radians per degree
-  float n_rays;                           // # cosmic rays on detector 
-  int i;                     
-  float xpos, ypos, zpos;                 // position of cosmic ray hit on detector 
-  float theta, cosphi,sinphi;             // direction angles (and cosine thereof) of cosmic ray velocity 
+  float n_rays;                           // # cosmic rays on detector
+  int i;
+  float xpos, ypos, zpos;                 // position of cosmic ray hit on detector
+  float theta, cosphi,sinphi;             // direction angles (and cosine thereof) of cosmic ray velocity
   float dpath;                            // Number of microns per step.  In theory,
                                           // this is 1 by definition, except for the last
-                                          // step, but instead we seem to be assuming 
-                                          // even not-quite-micron steps. 
-  float depath;                           // Number of electrons liberated per step. 
-  float dx, dy, dz;                       // Amount of motion per step 
+                                          // step, but instead we seem to be assuming
+                                          // even not-quite-micron steps.
+  float depath;                           // Number of electrons liberated per step.
+  float dx, dy, dz;                       // Amount of motion per step
   float charge;                           // charge from a cosmic ray - use random number generator
   int NHe = 0;                            // count of He nucleii.
-  float crmask[3][3] = {{1.06e-3,1.66e-2,1.06e-3}, // area of effect mask - the values are based on 
-			{1.66e-2,1.00,1.66e-2},    // Bernie Rauscher's cosmic ray measurements.  
+  float crmask[3][3] = {{1.06e-3,1.66e-2,1.06e-3}, // area of effect mask - the values are based on
+			{1.66e-2,1.00,1.66e-2},    // Bernie Rauscher's cosmic ray measurements.
 			{1.06e-3,1.66e-2,1.06e-3}};
   int xxpp,yypp;
   float crcont;
@@ -143,18 +143,20 @@ def cosmic(im_shape, exposed, shieldcover, rate, use_mask, pix_size):
     # We ignore any fractional steps at the end of the path, trusting
     # that our step size is small enough to make the effect of these negligible
     nsteps = np.around(pix_size[2] / dz).astype(int)
-    # print nsteps
-    # print np.min(nsteps)
-    # print np.max(nsteps)
-
     # the path each CR takes
-    path = [(np.linspace(p[0], p[0]+n*x, n),
-              np.linspace(p[1], p[1]+n*y, n)) for
-             p,x,y,n in zip(pos,dx,dy,nsteps) ]
-    # print len(path[0])
+    path = [
+        (np.linspace(p[0], p[0]+n*x, n), np.linspace(p[1], p[1]+n*y, n))
+        for p, x, y, n in zip(pos, dx, dy, nsteps)]
+
+    # when path.shape[0]==1, concat below converts path to 3d array and fails;
+    # in all other cases (?) conversion results in 2d array
+    if len(path) == 1:
+        shaper = np.ndarray(shape=(1, 2), dtype=np.ndarray)
+        shaper[0][0] = path[0][0]
+        shaper[0][1] = path[0][1]
+        path = shaper
+
     path = np.c_[path, charge]
-    # print len(path[0][0])
-    # print (path[0])
 
     # Add effect of CR at each step on its path
     for p in path:
@@ -165,8 +167,6 @@ def cosmic(im_shape, exposed, shieldcover, rate, use_mask, pix_size):
         args = (xs>=0) * (xs<im_shape[0]) * (ys>=0) * (ys<im_shape[1])
         xs = xs[args]
         ys = ys[args]
-        # print xs
-        # print ys
         if use_mask:
             for x,y in zip(xs,ys):
                 crcont = np.random.poisson(depath*p[2]*p[2])

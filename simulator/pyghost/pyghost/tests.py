@@ -5,12 +5,13 @@ import numpy as np
 import pyghost
 import pylab as plt
 
-def run(nbias=3, ndark=3, nflat=3, crplane=False, split=False):
+
+def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, split=False):
     """ The function that runs the test. """
 
     # Create the two arms
-    blue = pyghost.Arm('blue')
-    red = pyghost.Arm('red')
+    blue = pyghost.Arm('blue', cosmics=cosmics, crplane=crplane, split=split)
+    red = pyghost.Arm('red', cosmics=cosmics, crplane=crplane, split=split)
 
     # Create a blank spectrum (used for the bias, dark, and sky)
     blank = np.array([[0.1, 1.0], [0.0, 0.0]])
@@ -57,43 +58,44 @@ def run(nbias=3, ndark=3, nflat=3, crplane=False, split=False):
 
     # This object captures the details of the detectors
     ghost = pyghost.Ghost(
-        rnoise=3.0, gain=1.0, namps=namps, overscan=overscan,
-        bias_level=bias_level, additive_noise=noise, scaling=scaling)
+        rnoise=3.0, gain=1.0, namps=namps, overscan=overscan, split=split,
+        bias_level=bias_level, additive_noise=noise, scaling=scaling,
+        cosmics=cosmics, crplane=crplane)
 
     # This produces a bias with the above noise
     for i in range(1, nbias+1):
         ghost.simulate_observation(
             duration=0.0, output_prefix='bias_{0:d}_'.format(i),
             spectrum_in=blank, use_thar=False, add_sky=False, obstype='BIAS',
-            crplane=crplane, data_label=i, split=split)
+            data_label=i)
 
     # This produces a dark frame
     for i in range(1, ndark+1):
         ghost.simulate_observation(
             duration=duration, output_prefix='dark'+str(duration)+'_{0:d}_'
             .format(i), use_thar=False, spectrum_in=blank, add_sky=False,
-            obstype='DARK', crplane=crplane, data_label=i, split=split)
+            obstype='DARK', data_label=i)
 
-    for mode in ('std', 'high'):
+    for res in ('std', 'high'):
         # This (should) produce a GCAL flat frame
         for i in range(1, nflat+1):
             ghost.simulate_observation(
-                duration=duration, output_prefix='flat'+str(duration)+'_'+mode +
+                duration=duration, output_prefix='flat'+str(duration)+'_'+res +
                 '_{0:d}_'.format(i), use_thar=False, spectrum_in=flat,
-                add_sky=False, mode=mode, flatlamp=True, obstype='FLAT',
-                crplane=crplane, data_label=i, split=split)
+                add_sky=False, res=res, flatlamp=True, obstype='FLAT',
+                data_label=i)
 
         # This produces an arc frame
         ghost.simulate_observation(
-            duration=duration, output_prefix='arc'+str(duration)+'_'+mode+'_',
-            use_thar=False, spectrum_in=thar, add_sky=False, mode=mode,
-            flatlamp=True, obstype='ARC', crplane=crplane, split=split)
+            duration=duration, output_prefix='arc'+str(duration)+'_'+res+'_',
+            use_thar=False, spectrum_in=thar, add_sky=False, res=res,
+            flatlamp=True, obstype='ARC')
 
         # This produces a sky frame
         ghost.simulate_observation(
-            duration=duration, output_prefix='sky'+str(duration)+'_'+mode+'_',
-            use_thar=False, spectrum_in=blank, add_sky=True, mode=mode,
-            obstype='SKY', crplane=crplane, split=split)
+            duration=duration, output_prefix='sky'+str(duration)+'_'+res+'_',
+            use_thar=False, spectrum_in=blank, add_sky=True, res=res,
+            obstype='SKY')
 
         # Make the slit-viewing flux a bit random, to simulate clouds
         svfp = np.random.randn(100)
@@ -105,9 +107,9 @@ def run(nbias=3, ndark=3, nflat=3, crplane=False, split=False):
         for seeing in (0.5, 1.0):  # in arcsecs
             ghost.simulate_observation(
                 duration=duration, output_prefix='obj'+str(duration)+'_' +
-                str(seeing)+'_'+mode+'_', use_thar=True, add_sky=True,
-                mode=mode, obstype='OBJECT', seeing=seeing, crplane=crplane,
-                sv_flux_profile=sv_flux_profile, split=split)
+                str(seeing)+'_'+res+'_', use_thar=True, add_sky=True,
+                res=res, obstype='OBJECT', seeing=seeing,
+                sv_flux_profile=sv_flux_profile)
 
 if __name__ == "__main__":
     run()
