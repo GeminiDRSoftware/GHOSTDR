@@ -4,7 +4,7 @@
 """
 
 from __future__ import division, print_function
-import polyfit
+from astrodata_GHOST import polyfit
 import astropy.io.fits as pyfits
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,7 +19,7 @@ import matplotlib.cm as cm
 flat_file = "../simulator/pyghost/flatstd_red.fits"
 
 #instantiate the ghostsim arm
-ghost_format = polyfit.ghost.Arm('red',mode='high')
+ghost_format = polyfit.ghost.Arm('red',mode='std')
 
 #Create an initial model of the spectrograph.
 xx, wave, blaze= ghost_format.spectral_format()

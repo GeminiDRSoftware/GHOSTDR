@@ -44,9 +44,9 @@ for p in ADLIB_PACKAGES:
         PIFROOT = os.path.join('astrodata_'+p,'PIF_'+p,'pif'+p.lower())
         for root, dirs, files in os.walk(PIFROOT):
             if not svndir.search(root) and len(files) > 0:
-                pifmodules = map((lambda d: slash.sub('.','/'.join([root,d]))),\
+               pifmodules = map((lambda d: slash.sub('.','/'.join([root,d]))),\
                                  filter((lambda d: not svndir.search(d)), dirs))
-                PIF_MODULES.extend( pifmodules )
+               PIF_MODULES.extend( pifmodules )
     if os.path.isdir(os.path.join('astrodata_'+p, 'ADCONFIG_'+p)):
         ADCONFIG_MODULES.append('astrodata_'+p+'.ADCONFIG_'+p)
         ADCONFIG_MODULES.append('astrodata_'+p+'.ADCONFIG_'+p+'.descriptors')
@@ -104,6 +104,11 @@ for p in ADLIB_PACKAGES:
             dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
             PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
     for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'ADCONFIG_'+p,'classifications')):
+        if not svndir.search(root) and len(files) > 0:
+            dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
+            PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
+    #Add polyfit
+    for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'polyfit')):
         if not svndir.search(root) and len(files) > 0:
             dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
             PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )

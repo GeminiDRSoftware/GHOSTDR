@@ -78,7 +78,7 @@ class Arm(Polyspect):
         # to use for each data set, and overwrite this variable.
         # For now, it defaults to the latest one set manually.
         self.model_location=os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         'defaults/'+\
+                                         '../ADCONFIG_GHOST/lookups/GHOST/models/'+\
                                          self.arm+'/161120/'+self.mode))
         if (arm == 'red'):
             # Additional slit rotation across an order needed to match Zemax.
