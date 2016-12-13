@@ -395,10 +395,7 @@ class SlitViewer(object):
             keywords
         """
         self.duration = duration
-        if nexp > 0:
-            self.nexp = nexp
-        else:
-            self.nexp = 1
+        self.nexp = nexp if nexp > 0 else 1
         self.utstart = utstart
         if flux_profile is None:
             self.flux_profile = np.ones((self.nexp))
@@ -448,6 +445,11 @@ class SlitViewer(object):
         detsz = '[1:1928,1:1452]'  # TODO: per qsimaging.com, this is 1940x1460
 
         header = pf.Header()
+        header['OBSERVAT'] = (
+            'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
+        header['TELESCOP'] = 'Gemini-South'
+        header['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
+        header['OBSTYPE'] = ('SLIT', 'Observation type')
         header['ORIGFN'] = fname + 'SLIT.fits'
 
         hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
@@ -1639,7 +1641,7 @@ class Arm(object):
         hdr['OBJECT'] = (obj[obstype], 'Object Name')
 
         # populate OBSCLASS keyword
-        obsclass = dict(FLAT='science', ARC='science', OBJECT='science',
+        obsclass = dict(FLAT='partnerCal', ARC='partnerCal', OBJECT='science',
             BIAS='dayCal', DARK='dayCal', SKY='')  # noqa
         hdr['OBSCLASS'] = (obsclass[obstype], 'Observe class')
 

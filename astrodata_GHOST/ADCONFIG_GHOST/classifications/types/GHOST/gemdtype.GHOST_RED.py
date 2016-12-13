@@ -4,8 +4,8 @@ class GHOST_RED(DataClassification):
         Applies to all data from the red arm of GHOST instruments in any mode.
         '''
         
-    parent = "GHOST"
-    requirement = ISCLASS('GHOST') & PHU(CAMERA='RED')
+    parent = "GHOST_SPECT"
+    requirement = ISCLASS('GHOST_SPECT') & PHU(CAMERA='RED')
 
 newtypes.append(GHOST_RED())
 
