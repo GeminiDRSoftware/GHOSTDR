@@ -1851,7 +1851,7 @@ class Ghost(object):
                              rv_thar=0.0, flux=1, use_thar=True, res='high',
                              add_sky=True, radvel=0.0, thar_flatlamp=False,
                              flatlamp=False, obstype=None, seeing=0.8,
-                             sv_duration=1.0, sv_flux_profile=None,
+                             sv_duration=10.0, sv_flux_profile=None,
                              data_label=1):
         """
         Simulate an observation with the whole instrument.
