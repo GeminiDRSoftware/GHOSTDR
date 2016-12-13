@@ -395,7 +395,10 @@ class SlitViewer(object):
             keywords
         """
         self.duration = duration
-        self.nexp = nexp
+        if nexp > 0:
+            self.nexp = nexp
+        else:
+            self.nexp = 1
         self.utstart = utstart
         if flux_profile is None:
             self.flux_profile = np.ones((self.nexp))
@@ -410,21 +413,19 @@ class SlitViewer(object):
             self.flux_profile = np.interp(
                 np.arange(self.nexp), x, flux_profile[1])
 
-        if self.nexp > 0:
-            self.images = np.zeros(
-                (self.nexp, self.slitcam_ysz, self.slitcam_xsz), dtype=int)
-            if self.cosmics:
-                saturation = np.iinfo(np.uint16).max
-                self.cosims = []  # clear it if not already
-                for expid, image in enumerate(self.images):
-                    cosim = cosmic.cosmic(
-                        image.shape, duration, 10, 2.0, False, [15, 15, 16])
-                    self.images[expid] += cosim
-                    cosim[cosim < 0] = 0
-                    cosim[cosim > saturation] = saturation
-                    self.cosims.append(np.asarray(cosim, dtype=np.uint16))
-        else:
-            self.images = None
+        self.images = np.zeros(
+            (self.nexp, self.slitcam_ysz, self.slitcam_xsz), dtype=int)
+        if self.cosmics:
+            saturation = np.iinfo(np.uint16).max
+            self.cosims = []  # clear it if not already
+            for expid, image in enumerate(self.images):
+                cosim = cosmic.cosmic(
+                    image.shape, duration, 10, 2.0, False, [15, 15, 16])
+                cosim[cosim < 0] = 0
+                cosim[cosim > saturation] = saturation
+                cosim = cosim.astype(np.uint16)
+                self.images[expid] += cosim
+                self.cosims.append(cosim)
 
     def save(self, fname, bias=1000, readnoise=8.0, gain=1.0):
         """
@@ -1922,7 +1923,7 @@ class Ghost(object):
 
         utstart = datetime.datetime.utcnow()
 
-        if sv_duration > 0:
+        if (sv_duration > 0) and (duration > 0):
             self.sv.set_exposure(sv_duration, int(duration/sv_duration),
                 sv_flux_profile, utstart)  # noqa
         else:
