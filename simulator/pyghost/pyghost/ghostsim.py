@@ -424,7 +424,7 @@ class SlitViewer(object):
                 self.images[expid] += cosim
                 self.cosims.append(cosim)
 
-    def save(self, fname, bias=1000, readnoise=8.0, gain=1.0):
+    def save(self, fname, obstype, bias=1000, readnoise=8.0, gain=1.0):
         """
         Save the slit viewer frames in self.images.
 
@@ -449,7 +449,8 @@ class SlitViewer(object):
             'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
         header['TELESCOP'] = 'Gemini-South'
         header['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
-        header['OBSTYPE'] = ('SLIT', 'Observation type')
+        header['OBSTYPE'] = (obstype, 'Observation type')
+        header['CCDNAME'] = ('Sony-ICX674', 'CCD name')
         header['ORIGFN'] = fname + 'SLIT.fits'
 
         hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
@@ -1946,7 +1947,7 @@ class Ghost(object):
         red_hdu = self.red.simulate_frame(  # pylint: disable=star-args
             additive_noise=self.additive_noise['red'],
             scaling=self.scaling['red'], **common_params)
-        slit_hdu = self.sv.save(output_prefix)
+        slit_hdu = self.sv.save(output_prefix, obstype)
 
         if self.split:
             return
