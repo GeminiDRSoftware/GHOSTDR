@@ -4,6 +4,6 @@ class GHOST_SPECT(DataClassification):
         Applies to all spectra datasets from the GHOST instruments
         """
     parent = "GHOST"
-    requirement = ISCLASS("GHOST") & PHU(DETTYPE="E2V-CCD-231-84")
+    requirement = ISCLASS("GHOST") & PHU(DETTYPE="^E2V-CCD-231-.*$")
 
 newtypes.append(GHOST_SPECT())
