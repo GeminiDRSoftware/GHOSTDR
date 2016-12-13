@@ -14,9 +14,6 @@ Primitives
 
         Reject cosmic rays from GHOST data.
 
-        .. warning:: This currently does not successfully flag anything in the
-                     DQ plane. I'm looking into this. -MCW
-
         Parameters
         ----------
 

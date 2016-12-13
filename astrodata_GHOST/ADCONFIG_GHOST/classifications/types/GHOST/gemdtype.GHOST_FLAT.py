@@ -3,7 +3,7 @@ class GHOST_FLAT(DataClassification):
     usage = """
         Applies to all flat datasets from the GHOST instruments
         """
-    parent = "GHOST"
-    requirement = ISCLASS("GHOST") & PHU(OBSTYPE="FLAT")
+    parent = "GHOST_SPECT"
+    requirement = ISCLASS("GHOST_SPECT") & PHU(OBSTYPE="FLAT")
 
 newtypes.append(GHOST_FLAT())
