@@ -670,7 +670,7 @@ class Polyspect(object):
         # This is the triggered function on submit.
         # Currently only works for the xmod but should be generalised
         def submit(event):
-            plt.close()
+            plt.close('all')
             return xparams
             
         button.on_clicked(submit)
