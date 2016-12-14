@@ -7,7 +7,7 @@ prepare  # Gemini superprimitive
 addDQ
 addVAR
 overscanCorrect  # Gemini subrecipe
-	mosaicADdetectors(tile=True)
+mosaicADdetectors(tile=True)
 addToList(purpose="forStack")
 getList(purpose="forStack")
 stackFrames
