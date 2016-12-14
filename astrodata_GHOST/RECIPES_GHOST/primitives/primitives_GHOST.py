@@ -2,6 +2,8 @@ from astrodata import AstroData
 from astrodata.utils import logutils
 from astrodata.utils import Errors
 from gempy.gemini import gemini_tools as gt
+from gempy.adlibrary.mosaicAD import MosaicAD
+from gempy.gemini.gemMosaicFunction import gemini_mosaic_function
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import timestamp_keywords as ghost_stamps
 from gempy.gemini.eti.gireduceparam import subtract_overscan_hardcoded_params
 from pyraf import iraf
@@ -47,6 +49,98 @@ class GHOSTPrimitives(GMOSPrimitives):
         GMOSPrimitives.init(self, rc)
         self.timestamp_keys.update(ghost_stamps.timestamp_keys)
         return rc
+
+    def mosaicADdetectors(self, rc):
+        """
+        This primitive will mosaic the SCI frames of the input images, along
+        with the VAR and DQ frames if they exist.
+
+        :param tile: tile images instead of mosaic
+        :type tile: Python boolean (True/False), default is False
+
+        """
+        log = logutils.get_logger(__name__)
+
+        # Log the standard "starting primitive" debug message
+        log.debug(gt.log_message("primitive", "mosaicADdetectors", "starting"))
+
+        # Define the keyword to be used for the time stamp for this primitive
+        timestamp_key = self.timestamp_keys["mosaicADdetectors"]
+
+        # Initialize the list of output AstroData objects
+        adoutput_list = []
+
+        # Loop over each input AstroData object in the input list
+        for ad in rc.get_inputs_as_astrodata():
+            # Validate Data
+            # if (ad.phu_get_key_value('GPREPARE')==None) and \
+            #     (ad.phu_get_key_value('PREPARE')==None):
+            #     raise Errors.InputError("%s must be prepared" % ad.filename)
+
+            # Check whether the mosaicADdetectors primitive has been run
+            # previously
+            if ad.phu_get_key_value(timestamp_key):
+                log.warning("No changes will be made to %s, since it has "
+                            "already been processed by mosaicADdetectors"
+                            % (ad.filename))
+                # Append the input AstroData object to the list of output
+                # AstroData objects without further processing
+                adoutput_list.append(ad)
+                continue
+
+            # If the input AstroData object only has one extension, there is no
+            # need to mosaic the detectors
+            if ad.count_exts("SCI") == 1:
+                log.stdinfo("No changes will be made to %s, since it " \
+                            "contains only one extension" % (ad.filename))
+                # Append the input AstroData object to the list of output
+                # AstroData objects without further processing
+                adoutput_list.append(ad)
+                continue
+
+            # Get the necessary parameters from the RC
+            tile = rc["tile"]
+
+            log.stdinfo("Mosaicking %s ..." % ad.filename)
+            log.stdinfo("MosaicAD: Using tile: %s ..." % tile)
+
+            # trick mosaicing software into working for GHOST data
+            ad.types.append('GMOS')
+            ad.phu_set_key_value(
+                'INSTRUME', '../../../astrodata_GHOST/ADCONFIG_GHOST/lookups')
+
+            mo = MosaicAD(
+                ad, mosaic_ad_function=gemini_mosaic_function,
+                dq_planes=rc['dq_planes'])  # shift, rotate, and scale DQ plane
+            adout = mo.as_astrodata(tile=tile)
+
+            # undo hacks to trick mosaicing software
+            ad.phu_set_key_value('INSTRUME', 'GHOST')
+            ad.types.pop()
+
+            # Verify mosaicAD was actually run on the file
+            # then log file names of successfully reduced files
+            if adout.phu_get_key_value("MOSAIC"):
+                log.fullinfo(
+                    "File " + adout.filename + " was successfully mosaicked")
+
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=adout, primname=self.myself(), keyword=timestamp_key)
+
+            # Change the filename
+            adout.filename = gt.filename_updater(
+                adinput=ad, suffix=rc["suffix"], strip=True)
+
+            # Append the output AstroData object to the list
+            # of output AstroData objects
+            adoutput_list.append(adout)
+
+        # Report the list of output AstroData objects to the reduction
+        # context
+        rc.report_output(adoutput_list)
+
+        yield rc
 
     def rejectCosmicRays(self, rc):
         """
@@ -383,4 +477,3 @@ class GHOSTPrimitives(GMOSPrimitives):
         # gireduce to support our DETTYPE)
         subtract_overscan_hardcoded_params['order'] = 1
         return GMOSPrimitives.subtractOverscan(self, rc)
-
