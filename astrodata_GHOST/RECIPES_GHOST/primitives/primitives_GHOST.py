@@ -105,7 +105,7 @@ class GHOSTPrimitives(GMOSPrimitives):
             log.stdinfo("MosaicAD: Using tile: %s ..." % tile)
 
             # trick mosaicing software into working for GHOST data
-            ad.types.append('GMOS')
+            ad.types.append('GSAOI')
             ad.phu_set_key_value(
                 'INSTRUME', '../../../astrodata_GHOST/ADCONFIG_GHOST/lookups')
 
