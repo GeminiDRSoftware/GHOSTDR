@@ -29,10 +29,6 @@ import optics
 import os
 import pdb
 from polyspect import Polyspect
-try:
-    import pyfits
-except:
-    import astropy.io.fits as pyfits
 
 
 class Arm(Polyspect):

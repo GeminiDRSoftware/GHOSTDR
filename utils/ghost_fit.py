@@ -11,21 +11,22 @@ import matplotlib.pyplot as plt
 import pdb
 import shutil
 import matplotlib.cm as cm
+import astropy.io.fits as pyfits
 #plt.ion()
 
 
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 #arc_file  = "/home/jbento/code/pymfe/data/ghost/blue/std/arcstd_blue.fits"
-flat_file = "flatstd_red.fits"
+flat_file = "flathigh_red.fits"
 #Get the data
 flat_data = pyfits.getdata(flat_file)
 
 #instantiate the ghostsim arm
-ghost = polyfit.ghost.Arm('red',mode='std')
+ghost = polyfit.ghost.Arm('red',mode='high')
 
 # Where is the default location for the model? By default it is a parameter 
 # in the ghost class. If this needs to be overwritten, go ahead.
-model_file='/home/jbento/.local/lib/python2.7/site-packages/ghostdr-0.1.0-py2.7.egg/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/models/red/161120/std/xmod.fits'
+model_file='/home/jbento/.local/lib/python2.7/site-packages/ghostdr-0.1.0-py2.7.egg/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/models/red/161120/high/xmod.fits'
 #Get the initial default model from the lookup location
 xparams=pyfits.getdata(model_file)
 
@@ -41,11 +42,16 @@ flat_conv=ghost.slit_flat_convolve(flat_data)
 #Have a look at the default model and make small adjustments if needed.
 # This step should not be part of the primitive !!!!!
 # It is for engineering purposes only!
-ghost.adjust_model(flat_conv,convolve=False,percentage_variation=10)
+adjusted_xparams=ghost.adjust_model(flat_conv,xparams=xparams,convolve=False,percentage_variation=10)
+
+#Optionally write this intermediate model to disk
+#pyfits.writeto('new_xmod.fits',adjusted_xparams)
 
 #Re-fit. Make fit return new model.
-ghost.fit_x_to_image(flat_conv,decrease_dim=8,inspect=True)
-#shutil.copyfile('xmod.txt', 'data/subaru/xmod.txt')
+fitted_params=ghost.fit_x_to_image(flat_conv,xparams=adjusted_xparams,decrease_dim=8,inspect=True)
+
+#Now write the fitted parameters somewhere
+pyfits.writeto('calibrations/xmod.fits',fitted_params)
 
 
 '''

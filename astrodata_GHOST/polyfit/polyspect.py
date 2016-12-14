@@ -11,7 +11,7 @@ from matplotlib.widgets import Slider, Button, RadioButtons
 import os
 import scipy.optimize as op
 import pdb
-import astropy.io.fits as pyfits
+
 
 
 class Polyspect(object):
@@ -70,12 +70,13 @@ class Polyspect(object):
             wave_mod[i] = polyp(ys[i] - self.szy // 2)
         return wave_mod - waves
 
-    def read_lines_and_fit(self, init_mod_file='', pixdir='',
+    def read_lines_and_fit(self, init_mod, pixdir='',
                            outdir='./', ydeg=3, xdeg=3, residfile='resid.txt'):
         """Read in a series of text files that have a (Wavelength, pixel)
         format in file names like order99.txt and order100.txt.
         Fit an nth order polynomial to the wavelength as a function
-        of pixel value.
+        of pixel value. THIS IS A PLACE HOLDER FUNCTION NOT PART OF THE
+        LATEST RELEASE. THIS WILL BE USED FOR WAVELENGTH FITTING.
 
         The functional form is:
 
@@ -101,25 +102,24 @@ class Polyspect(object):
         Parameters
         ----------
         
-        init_mod_file: string
-            Optional alternative location for model file.
+        init_mod: 2D array
+            initial model parameters.
         pixdir: string
             Alternative location for the directory containing the arclines info
-        outdir: string
-            Optional alternative output directory
+            THIS IS CURRENTLY NOT COMPLIENT WITH THE PROCEDURE WE WANT. ARC 
+            LINES MUST BE FED WITHOUT A KNOWLEDGE OF THE FILE LOCATION.
         xdeg, ydeg: int
             Order of polynomial
         residfile: string
             Residual file output name
+
+        Returns
+        -------
+        params: float array
+            Fitted parameters
+        wave_and_resid: float array
+            Wavelength and fit residuals.
         """
-        if len(init_mod_file) == 0:
-            params0 = pyfits.getdata(self.model_location+'/wavemod.fits')
-        else:
-            try:
-                params0 = pyfits.getdata(init_mod_file)
-            except Exception:
-                return 'Unable to open model file. \
-                        File does not exist or is not fits.'
         if (len(pixdir) == 0):
             pixdir = self.model_location
         else:
@@ -152,27 +152,22 @@ class Polyspect(object):
                 # python.
                 ys = np.append(ys, self.szy - pix[:, 1])
 
-        init_resid = self.wave_fit_resid(params0, ms, waves, ys, ydeg=ydeg,
+        init_resid = self.wave_fit_resid(init_mod, ms, waves, ys, ydeg=ydeg,
                                          xdeg=xdeg)
-        bestp = op.leastsq(self.wave_fit_resid, params0, args=(ms, waves, ys,
+        bestp = op.leastsq(self.wave_fit_resid, init_mod, args=(ms, waves, ys,
                                                                ydeg, xdeg))
         final_resid = self.wave_fit_resid(bestp[0], ms, waves, ys, ydeg=ydeg,
                                           xdeg=xdeg)
         # Output the fit residuals.
         wave_and_resid = np.array([waves, ms, final_resid]).T
-        np.savetxt(outdir + residfile, wave_and_resid, fmt='%9.4f %d %7.4f')
         print("Fit residual RMS (Angstroms): {0:6.3f}".format(
             np.std(final_resid)))
         params = bestp[0].reshape((ydeg + 1, xdeg + 1))
-        outf = open(outdir + "wavemod.fits", "w")
-        for i in range(ydeg + 1):
-            for j in range(xdeg + 1):
-                outf.write("{0:10.5e} ".format(params[i, j]))
-            outf.write("\n")
-        outf.close()
+        return params, wave_and_resid
 
+    
     def spectral_format(self, xoff=0.0, yoff=0.0, ccd_centre={}, wparams=None,
-                        xparams=None, imgfile=None):
+                        xparams=None, img=None):
         """Create a spectrum, with wavelengths sampled in 2 orders based on
            a pre-existing wavelength and x position polynomial model.
            This code takes the polynomial model and calculates the result as 
@@ -194,13 +189,13 @@ class Polyspect(object):
             the center of the CCD. To run this program multiple times
             with the same co-ordinate system, take the returned
             ccd_centre and use it as an input.
-        wparams: float array
+        wparams: float array (optional)
             2D array with polynomial parameters for wavelength scale
-        xparams: float array
+        xparams: float array (optional)
             2D array with polynomial parameters for x scale
-        imgfile: string (optional)
-            String containing a file name for an image. This function
-            uses this image and over plots the created model.
+        img: 2D array (optional)
+            2D array containing an image. This function
+            uses this image and over plots the created position model.
 
         Returns
         -------
@@ -226,36 +221,33 @@ class Polyspect(object):
         wave_int = np.zeros((nm, self.szy))
         blaze_int = np.zeros((nm, self.szy))
 
-        # At this point grab the parameters. If none are specified,
-        # pick them up from the default location. 
-        if wparams is None:
-            wparams = pyfits.getdata(self.model_location+'/wavemod.fits')
-        if xparams is None:
-            xparams = pyfits.getdata(self.model_location+'/xmod.fits')
-
+        if (xparams is None) and (wparams is None):
+            return 'Must provide at least one of xparams or wparams'
         ys = np.arange(self.szy)
         # Loop through m
         for m in np.arange(self.m_min, self.m_max + 1):
             # First, sort out the wavelengths
             mp = self.m_ref / m - 1
 
-            # Find the polynomial coefficients for each order.
-            ydeg = wparams.shape[0] - 1
-            ps = np.empty((ydeg + 1))
-            for i in range(ydeg + 1):
-                polyq = np.poly1d(wparams[i, :])
-                ps[i] = polyq(mp)
-            polyp = np.poly1d(ps)
-            wave_int[m - self.m_min, :] = polyp(ys - self.szy // 2)
+            if wparams is not None:
+                # Find the polynomial coefficients for each order.
+                ydeg = wparams.shape[0] - 1
+                ps = np.empty((ydeg + 1))
+                for i in range(ydeg + 1):
+                    polyq = np.poly1d(wparams[i, :])
+                    ps[i] = polyq(mp)
+                polyp = np.poly1d(ps)
+                wave_int[m - self.m_min, :] = polyp(ys - self.szy // 2)
 
-            # Find the polynomial coefficients for each order.
-            ydeg = xparams.shape[0] - 1
-            ps = np.empty((ydeg + 1))
-            for i in range(ydeg + 1):
-                polyq = np.poly1d(xparams[i, :])
-                ps[i] = polyq(mp)
-            polyp = np.poly1d(ps)
-            x_int[m - self.m_min, :] = polyp(ys - self.szy // 2)
+            if xparams is not None:
+                # Find the polynomial coefficients for each order.
+                ydeg = xparams.shape[0] - 1
+                ps = np.empty((ydeg + 1))
+                for i in range(ydeg + 1):
+                    polyq = np.poly1d(xparams[i, :])
+                    ps[i] = polyq(mp)
+                polyp = np.poly1d(ps)
+                x_int[m - self.m_min, :] = polyp(ys - self.szy // 2)
 
             # Finally, the blaze
             wcen = wave_int[m - self.m_min, self.szy / 2]
@@ -265,15 +257,13 @@ class Polyspect(object):
                                                    order_width)**2
 
         # Plot this if we have an image file 
-        if imgfile:
-            try: im = pyfits.getdata(imgfile)
-            except Exception: return 'Invalid image file.'
+        if (img is not None) and (xparams is not None):
             if not self.transpose:
-                im = im.T
+                img = img.T
             plt.clf()
-            plt.imshow(np.arcsinh((im - np.median(im)) / 100), aspect='auto',
+            plt.imshow(np.arcsinh((img - np.median(img)) / 100), aspect='auto',
                        interpolation='nearest', cmap=cm.gray)
-            plt.axis([0, im.shape[1], im.shape[0], 0])
+            plt.axis([0, img.shape[1], img.shape[0], 0])
             plt.plot(x_int.T + + self.szx // 2)
 
         return x_int, wave_int, blaze_int
@@ -318,7 +308,7 @@ class Polyspect(object):
 
         return old_x + the_shift
 
-    def fit_x_to_image(self, data, decrease_dim=10, search_pix=20,
+    def fit_x_to_image(self, data, xparams, decrease_dim=10, search_pix=20,
                        xdeg=4,inspect=False,clobber=False):
         """Fit a "tramline" map. Note that an initial map has to be pretty
         close, i.e. within "search_pix" everywhere. To get within search_pix
@@ -331,6 +321,8 @@ class Polyspect(object):
         data: numpy array
             The image of a single reference fiber to fit to. Typically 
             the result of the convolution.
+        xparams: float array
+            The polynomial parameters to be fitted. 
         decrease_dim: int
             Median filter by this amount in the dispersion direction and
             decrease the dimensionality of the problem accordingly.
@@ -347,7 +339,7 @@ class Polyspect(object):
             If true this will automatically replace the existing model
             with the fitted one.
         """
-        xx, wave, blaze = self.spectral_format()
+        xx, wave, blaze = self.spectral_format(xparams=xparams)
         if self.transpose:
             image=data.T
         else:
@@ -386,18 +378,16 @@ class Polyspect(object):
                                     xi + search_pix + 1]
                 xs[i, j] += np.argmax(peakpix) - search_pix
 
-        self.fit_to_x(xs, ys=ys, xdeg=xdeg)
-        if clobber:
-            try: shutil.copyfile('xmod.fits', self.model_location+'xmod.fits')
-            except Exception: return 'Unable to write new model to location'
+        #!!!! HERE 
+        fitted_params=self.fit_to_x(xs, xparams, ys=ys, xdeg=xdeg)
         if inspect:
             #This will plot the result of the fit once successful so
             #the user can inspect the result.
-            xpar=pyfits.getdata('xmod.fits')
-            self.adjust_model(data, xparams=xpar,convolve=False)
-            
+            dummy=self.adjust_model(data, xparams=fitted_params,convolve=False)
 
-    def fit_to_x(self, x_to_fit, init_mod_file='', outdir='./', ydeg=2,
+        return fitted_params
+
+    def fit_to_x(self, x_to_fit, init_mod, ydeg=2,
                  xdeg=4, ys=[], decrease_dim=1):
         """Fit to an (nm,ny) array of x-values.
 
@@ -424,10 +414,8 @@ class Polyspect(object):
         ----------
         x_to_fit: float array
             x values to fit. This should be an (orders,y) shape array.
-        init_mod_file: string
-            Optional alternative location for model file.
-        outdir: string
-            Optional alternative output directory
+        init_mod_file: float array
+            Initial model parameters
         xdeg, ydeg: int
             Order of polynomial
         y: float array
@@ -436,8 +424,6 @@ class Polyspect(object):
             The factor of decreased dimentionality for the fit. 
             This needs to be an exact factor of the y size.        
         """
-        if len(init_mod_file) == 0:
-            params0 = pyfits.getdata(self.model_location+'/xmod.fits')
 
         # Create an array of y and m values.
         xs = x_to_fit.copy()
@@ -464,15 +450,15 @@ class Polyspect(object):
         # Do the fit!
         print("Fitting (this can sometimes take a while...)")
         init_resid = self.wave_fit_resid(
-            params0, ms, xs, ys, ydeg=ydeg, xdeg=xdeg)
-        bestp = op.leastsq(self.wave_fit_resid, params0,
+            init_mod, ms, xs, ys, ydeg=ydeg, xdeg=xdeg)
+        bestp = op.leastsq(self.wave_fit_resid, init_mod,
                            args=(ms, xs, ys, ydeg, xdeg))
         final_resid = self.wave_fit_resid(
             bestp[0], ms, xs, ys, ydeg=ydeg, xdeg=xdeg)
         params = bestp[0].reshape((ydeg + 1, xdeg + 1))
         print(init_resid, final_resid)
 
-        pyfits.writeto(outdir + 'xmod.fits',params,clobber=True)
+        return params
 
     def spectral_format_with_matrix(self):
         """Create a spectral format, including a detector to slit matrix at
@@ -587,12 +573,11 @@ class Polyspect(object):
         data: float array
             an array containing data to be used as a visual comparison of the
             model
-        wparams: string
-            location of the wavemod.fits file containing the initial wavelength
+        wparams: float array (optional)
+            2D array containing the initial wavelength
             model parameters.
-        xparams: string
-            location of the xmod.fits file containing the initial order location
-            model parameters.
+        xparams: float array (optional)
+            2D array containing the initial order location model parameters.
         convolve: boolean
             A boolean indicating whether the data provided should be convolved 
             with a slit profile model. True if data provided is a multi fiber 
@@ -609,11 +594,9 @@ class Polyspect(object):
         Either a success or an error message.
 
         """
-        # Grab the model parameters if none are provided.
-        if wparams is None:
-            wparams = pyfits.getdata(self.model_location+'/wavemod.fits')
-        if xparams is None:
-            xparams = pyfits.getdata(self.model_location+'/xmod.fits')
+        #Must provide at least one of the model parameters
+        if (xparams is None) and (wparams is None):
+            return 'Must provide at least one of xparams or wparams'
         
         nx = data.shape[0]
         # Start by setting up the graphical part
@@ -687,14 +670,10 @@ class Polyspect(object):
         # This is the triggered function on submit.
         # Currently only works for the xmod but should be generalised
         def submit(event):
-            try:
-                pyfits.writeto(self.model_location+'/xmod.fits', xparams,clobber=True)
-                print('Data updated on xmod.fits')
-                return 1
-            except Exception:
-                print('Unable to save data onto file.')
+            plt.close()
+            return xparams
             
         button.on_clicked(submit)
 
         plt.show()
- 
+        return xparams
