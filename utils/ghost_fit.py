@@ -26,7 +26,7 @@ ghost = polyfit.ghost.Arm('red',mode='high')
 
 # Where is the default location for the model? By default it is a parameter 
 # in the ghost class. If this needs to be overwritten, go ahead.
-model_file='/home/jbento/.local/lib/python2.7/site-packages/ghostdr-0.1.0-py2.7.egg/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/models/red/161120/high/xmod.fits'
+model_file='/home/jbento/.local/lib/python2.7/site-packages/ghostdr-0.1.0-py2.7.egg/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/red/161120/high/xmod.fits'
 #Get the initial default model from the lookup location
 xparams=pyfits.getdata(model_file)
 
