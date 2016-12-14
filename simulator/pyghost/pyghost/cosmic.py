@@ -148,13 +148,15 @@ def cosmic(im_shape, exposed, shieldcover, rate, use_mask, pix_size):
         (np.linspace(p[0], p[0]+n*x, n), np.linspace(p[1], p[1]+n*y, n))
         for p, x, y, n in zip(pos, dx, dy, nsteps)]
 
-    # when path.shape[0]==1, concat below converts path to 3d array and fails;
-    # in all other cases (?) conversion results in 2d array
-    if len(path) == 1:
-        shaper = np.ndarray(shape=(1, 2), dtype=np.ndarray)
-        shaper[0][0] = path[0][0]
-        shaper[0][1] = path[0][1]
-        path = shaper
+    # np.c_ (below) normally converts path into a 2D np.ndarray but sometimes,
+    # in a low CR count regime, what results is a 3D np.ndarray (for reasons
+    # still not understood); this 5 line hack forces the conversion to result
+    # in the required 2D array
+    shaper = np.ndarray(shape=(len(path), 2), dtype=np.ndarray)
+    for i, p in enumerate(path):
+        shaper[i][0] = p[0]
+        shaper[i][1] = p[1]
+    path = shaper
 
     path = np.c_[path, charge]
 
