@@ -138,6 +138,29 @@ class GHOST_DescriptorCalc(GEMINI_DescriptorCalc):
 
         return ret_dv
 
+    def res_mode(self, dataset, **args):
+        # Get the GHOST resolution mode of this dataset
+        # Valid outputs are 'std' and 'high' (or None if not applicable)
+
+        mode_val = None
+
+        # Determine the mode keyword from the global keyword dict
+        keyword = self.get_descriptor_key("key_res_mode")
+
+        mode_val = dataset.phu_get_key_value(keyword)
+
+        if mode_val == 'HI_ONLY':
+            return_mode_val = 'high'
+        elif mode_val == 'LO_ONLY':
+            return_mode_val = 'std'
+        else:
+            return_mode_val = None
+
+        # Instantiate the return DescriptorValue (DV) object
+        ret_dv = DescriptorValue(return_mode_val, name="res_mode", ad=dataset)
+
+        return ret_dv
+
     def read_noise(self, dataset, **args):
         # Since this descriptor function accesses keywords in the headers of
         # the pixel data extensions, always construct a dictionary where the
