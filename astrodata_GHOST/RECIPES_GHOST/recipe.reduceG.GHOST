@@ -6,6 +6,7 @@ prepare
 addDQ
 addVAR(read_noise=True)
 overscanCorrect
+mosaicADdetectors(tile=True)
 biasCorrect
 darkCorrect
 rejectCosmicRays
@@ -16,4 +17,3 @@ rejectCosmicRays
 #makeFringe
 #fringeCorrect
 #alignAndStack
-
