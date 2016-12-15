@@ -1,6 +1,7 @@
 from astrodata import AstroData
 from astrodata.utils import logutils
 from astrodata.utils import Errors
+from astrodata.utils.ConfigSpace import lookup_path
 from gempy.gemini import gemini_tools as gt
 from gempy.adlibrary.mosaicAD import MosaicAD
 from gempy.gemini.gemMosaicFunction import gemini_mosaic_function
@@ -13,6 +14,8 @@ import functools
 
 from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import GMOSPrimitives
 from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import StackPrimitives
+
+from astrodata_Gemini.ADCONFIG_Gemini.lookups import PolyfitDict
 
 class GHOSTPrimitives(GMOSPrimitives):
     """
@@ -85,12 +88,41 @@ class GHOSTPrimitives(GMOSPrimitives):
         for ad in rc.get_inputs_as_astrodata():
             if ad.phu_get_key_value(timestamp_key):
                 log.warning("No changes will be made to %s, since it has "
-                            "already been processed by mosaicADdetectors"
+                            "already been processed by findApertures"
                             % (ad.filename))
                 # Append the input AstroData object to the list of output
                 # AstroData objects without further processing
                 adoutput_list.append(ad)
                 continue
+
+            # This primitive should only be run on files of type GHOST_FLAT
+            # which have been successfully prepared
+            # Therefore, if these two types aren't in ad.types, skip the file
+            if 'PREPARED' not in ad.types or 'GHOST_FLAT' not in ad.types:
+                log.warning('findApertures is only run on prepared flats; '
+                            'therefore, %s will not be used' % ad.filename)
+                adoutput_list.append(ad)
+                continue
+
+            all_polyfit_dict = PolyfitDict.polyfit_dict
+            # Work out the directory to get the Polyfit initial files from
+            key = self._get_polyfit_key(ad)
+
+            if key in all_polyfit_dict:
+                # FIXME Hack currently required - can we not use lookup_path?
+                # lookup_path assumes it's getting a single file, so will
+                # prepend .py to any return that doesn't have a file type -
+                # we need to strip this off to get a path
+                poly_path = lookup_path(all_polyfit_dict[key]).replace('.py',
+                                                                       '')
+            else:
+                # Don't know how to fit this file, so probably not necessary
+                # Return this ad to the stream and move to the next
+                log.warning('Not sure which initial model to use for %s; '
+                            'skipping' % ad.filename)
+                adoutput_list.append(ad)
+                continue
+
 
             # Add the appropriate time stamps to the PHU
             gt.mark_history(
