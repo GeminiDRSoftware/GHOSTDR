@@ -50,6 +50,60 @@ class GHOSTPrimitives(GMOSPrimitives):
         self.timestamp_keys.update(ghost_stamps.timestamp_keys)
         return rc
 
+    def findApertures(self, rc):
+        """
+        Locate the apertures within a GHOST frame, and write out polyfit-
+        compliant FITS tables to the calibrations system
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Returns
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+        """
+
+        log = logutils.get_logger(__name__)
+
+        # Log the standard "starting primitive" debug message
+        log.debug(gt.log_message("primitive", "findAperture", "starting"))
+
+        # Define the keyword to be used for the time stamp for this primitive
+        timestamp_key = self.timestamp_keys["findAperture"]
+
+        # Initialize the list of output AstroData objects
+        # Note this will simply be the input list, with the timestamp_key
+        # added
+        adoutput_list = []
+
+        # Loop over each file in the rc
+        for ad in rc.get_inputs_as_astrodata():
+            if ad.phu_get_key_value(timestamp_key):
+                log.warning("No changes will be made to %s, since it has "
+                            "already been processed by mosaicADdetectors"
+                            % (ad.filename))
+                # Append the input AstroData object to the list of output
+                # AstroData objects without further processing
+                adoutput_list.append(ad)
+                continue
+
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=ad, primname=self.myself(),
+                keyword=timestamp_key)
+
+            adoutput_list.append(ad)
+
+        # Report the outputs to the RC
+        rc.report_output(adoutput_list)
+
+        yield rc
+
     def mosaicADdetectors(self, rc):
         """
         This primitive will mosaic the SCI frames of the input images, along
@@ -477,3 +531,47 @@ class GHOSTPrimitives(GMOSPrimitives):
         # gireduce to support our DETTYPE)
         subtract_overscan_hardcoded_params['order'] = 1
         return GMOSPrimitives.subtractOverscan(self, rc)
+
+    def _get_polyfit_key(self, adinput=None):
+        """
+        Helper function - returns the path for finding initial polyfit models
+
+        Parameters
+        ----------
+        adinput:
+            Input AstroData object we wish to calibrate
+
+        Returns
+        -------
+        path:
+            The file path to the relevant polyfit models. There will be two
+            files under each path, wavemod.fits and xmod.fits. The primitives
+            calling _get_polyfit_key will need to open these files as
+            required.
+        """
+        # The polyfit models are keyed by the instrument, and in the case of
+        # GHOST, the arm, resolution mode, and date valid from.
+        # Get the
+        # instrument, the x binning and the y binning values using the
+        # appropriate descriptors
+        ad = adinput
+        instrument = ad.instrument()
+        detector_x_bin = ad.detector_x_bin()
+        detector_y_bin = ad.detector_y_bin()
+        if (instrument is None or detector_x_bin is None or
+                    detector_y_bin is None):
+            raise Errors.Error("Input parameters")
+
+        key = '%s_%s_%s' % (instrument, detector_x_bin, detector_y_bin)
+
+        if 'GHOST' in ad.types:
+            # Need to get the arm and the mode as well to make the key
+            arm = ad.arm()
+            res_mode = ad.res_mode()
+            key = '%s_%s_%s' % (key, arm, res_mode)
+
+        return key
+
+
+
+
