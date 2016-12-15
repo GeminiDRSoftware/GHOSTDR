@@ -7,7 +7,7 @@ prepare(attach_mdf=False)
 addDQ(illum_mask=False)
 addVAR(read_noise=True)
 overscanCorrect
-	mosaicADdetectors(tile=True)
+mosaicADdetectors(tile=True)
 biasCorrect
 ADUToElectrons
 addVAR(poisson_noise=True)

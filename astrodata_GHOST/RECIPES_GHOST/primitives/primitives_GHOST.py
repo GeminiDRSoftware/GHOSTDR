@@ -159,7 +159,7 @@ class GHOSTPrimitives(GMOSPrimitives):
             log.stdinfo("MosaicAD: Using tile: %s ..." % tile)
 
             # trick mosaicing software into working for GHOST data
-            ad.types.append('GMOS')
+            ad.types.append('GSAOI')  # masquerade (briefly) as GSAOI
             ad.phu_set_key_value(
                 'INSTRUME', '../../../astrodata_GHOST/ADCONFIG_GHOST/lookups')
 
@@ -170,13 +170,10 @@ class GHOSTPrimitives(GMOSPrimitives):
 
             # undo hacks to trick mosaicing software
             ad.phu_set_key_value('INSTRUME', 'GHOST')
+            adout.phu_set_key_value('INSTRUME', 'GHOST')
             ad.types.pop()
-
-            # Verify mosaicAD was actually run on the file
-            # then log file names of successfully reduced files
-            if adout.phu_get_key_value("MOSAIC"):
-                log.fullinfo(
-                    "File " + adout.filename + " was successfully mosaicked")
+            ad.refresh_types()
+            adout.refresh_types()
 
             # Add the appropriate time stamps to the PHU
             gt.mark_history(

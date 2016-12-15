@@ -25,7 +25,6 @@ TODO:
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import optics
 import os
 import pdb
 from polyspect import Polyspect
@@ -34,7 +33,7 @@ from polyspect import Polyspect
 class Arm(Polyspect):
     """A class for each arm of the spectrograph. The initialisation
     function takes a series of strings representing the configuration.
-    It can be "red" or "blue" for the arm (first string), 
+    It can be "red" or "blue" for the arm (first string),
     and "std" or "high" for the mode (second string).
     """
 
@@ -44,7 +43,7 @@ class Arm(Polyspect):
         """
         # A lot of these parameters are yet unused.
         # These are a legacy of the original simulator and are left here
-        # because they may become useful in the future. 
+        # because they may become useful in the future.
         self.spect = 'ghost'
         self.arm = arm
         self.d = 1000 / 52.67  # Distance in microns
@@ -320,7 +319,7 @@ class Arm(Polyspect):
         """
         denom = (1 + (2**(1.0/beta) - 1)*(theta/hw)**2)**beta
         return (2.0**(1.0/beta)-1)*(beta-1)/np.pi/hw**2/denom
-    
+
     def moffat2d(sz,hw, beta=4.0):
         """A 2D version of a moffat function
         """
@@ -335,36 +334,36 @@ class Arm(Polyspect):
                          right=None, return_max=False):
         """
         Calculate the azimuthally averaged radial profile.
-        NB: This was found online and should be properly credited! 
+        NB: This was found online and should be properly credited!
         Modified by MJI
 
         image - The 2D image
-        center - The [x,y] pixel coordinates used as the center. 
+        center - The [x,y] pixel coordinates used as the center.
                  The default is None, which then uses the center of the image
                  (including fractional pixels).
         stddev - if specified, return the azimuthal standard deviation instead
                  of the average
         returnradii - if specified, return (radii_array,radial_profile)
-        return_nr   - if specified, return number of pixels per radius *and* 
+        return_nr   - if specified, return number of pixels per radius *and*
                       radius
         binsize - size of the averaging bin.  Can lead to strange results if
-            non-binsize factors are used to specify the center and the binsize 
+            non-binsize factors are used to specify the center and the binsize
             is too large
         weights - can do a weighted average instead of a simple average if
-                  this keyword parameter is set.  
-                  weights.shape must = image.shape.  
+                  this keyword parameter is set.
+                  weights.shape must = image.shape.
                   weighted stddev is undefined, so don't set weights and stddev.
         steps - if specified, will return a double-length bin array and radial
-            profile so you can plot a step-form radial profile (which more 
+            profile so you can plot a step-form radial profile (which more
             accurately represents what's going on)
-        interpnan - Interpolate over NAN values, i.e. bins where there is no 
+        interpnan - Interpolate over NAN values, i.e. bins where there is no
                     data?
             left,right - passed to interpnan; they set the extrapolated values
         return_max - (MJI) Return the maximum index.
 
         If a bin contains NO DATA, it will have a NAN value because of the
-        divide-by-sum-of-weights component.  I think this is a useful way to 
-        denote lack of data, but users let me know if an alternative is 
+        divide-by-sum-of-weights component.  I think this is a useful way to
+        denote lack of data, but users let me know if an alternative is
         prefered...
 
         """
@@ -382,7 +381,7 @@ class Arm(Polyspect):
             raise ValueError("Weighted standard deviation is not defined.")
 
         # the 'bins' as initially defined are lower/upper bounds for each bin
-        # so that values will be in [lower,upper)  
+        # so that values will be in [lower,upper)
         nbins = int(np.round(r.max() / binsize)+1)
         maxbin = nbins * binsize
         bins = np.linspace(0,maxbin,nbins+1)
@@ -415,10 +414,10 @@ class Arm(Polyspect):
             radial_prof = np.interp(bin_centers,bin_centers[radial_prof==radial_prof],radial_prof[radial_prof==radial_prof],left=left,right=right)
 
         if steps:
-            xarr = np.array(zip(bins[:-1],bins[1:])).ravel() 
-            yarr = np.array(zip(radial_prof,radial_prof)).ravel() 
+            xarr = np.array(zip(bins[:-1],bins[1:])).ravel()
+            yarr = np.array(zip(radial_prof,radial_prof)).ravel()
             return xarr,yarr
-        elif returnradii: 
+        elif returnradii:
             return bin_centers,radial_prof
         elif return_nr:
             return nr,bin_centers,radial_prof
