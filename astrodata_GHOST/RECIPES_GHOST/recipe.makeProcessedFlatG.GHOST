@@ -15,6 +15,5 @@ darkCorrect
 addToList(purpose="forStack")
 getList(purpose="forStack")
 stackFrames(operation="median")
-#measureProfile
-#measureApertures
+#findApertures
 storeProcessedFlat
