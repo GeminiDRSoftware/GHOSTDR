@@ -15,7 +15,8 @@ import functools
 from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import GMOSPrimitives
 from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import StackPrimitives
 
-from astrodata_Gemini.ADCONFIG_Gemini.lookups import PolyfitDict
+from astrodata_GHOST import polyfit
+from astrodata_GHOST.ADCONFIG_GHOST.lookups import PolyfitDict
 
 class GHOSTPrimitives(GMOSPrimitives):
     """
@@ -86,14 +87,14 @@ class GHOSTPrimitives(GMOSPrimitives):
 
         # Loop over each file in the rc
         for ad in rc.get_inputs_as_astrodata():
-            if ad.phu_get_key_value(timestamp_key):
-                log.warning("No changes will be made to %s, since it has "
-                            "already been processed by findApertures"
-                            % (ad.filename))
-                # Append the input AstroData object to the list of output
-                # AstroData objects without further processing
-                adoutput_list.append(ad)
-                continue
+            # if ad.phu_get_key_value(timestamp_key):
+            #     log.warning("No changes will be made to %s, since it has "
+            #                 "already been processed by findApertures"
+            #                 % (ad.filename))
+            #     # Append the input AstroData object to the list of output
+            #     # AstroData objects without further processing
+            #     adoutput_list.append(ad)
+            #     continue
 
             # This primitive should only be run on files of type GHOST_FLAT
             # which have been successfully prepared
@@ -109,7 +110,7 @@ class GHOSTPrimitives(GMOSPrimitives):
             key = self._get_polyfit_key(ad)
 
             if key in all_polyfit_dict:
-                # FIXME Hack currently required - can we not use lookup_path?
+                # FIXME Change to read just .xmod file, remove hack
                 # lookup_path assumes it's getting a single file, so will
                 # prepend .py to any return that doesn't have a file type -
                 # we need to strip this off to get a path
@@ -123,6 +124,27 @@ class GHOSTPrimitives(GMOSPrimitives):
                 adoutput_list.append(ad)
                 continue
 
+            # Run the fitting procedure
+            # Instantiate the GhostSim Arm
+            ghost_arm = polyfit.ghost.Arm(arm=ad.arm.as_str(),
+                                          mode=ad.res_mode.as_str())
+
+            # Read in the model file
+            xparams = AstroData(polypath + 'xmod.fits')
+
+            # Creat an initial model of the spectrograph
+            xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams)
+
+            # Convolve the flat field with the slit profile
+            flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data)
+
+            # Fit the initial model to the data being considered
+            fitted_params = ghost_arm.fit_x_to_image(flat_conv,
+                                                     xparams=xparams,
+                                                     decrease_dim=8,
+                                                     inspect=False)
+
+            # TODO Write out to calibrations dir
 
             # Add the appropriate time stamps to the PHU
             gt.mark_history(
