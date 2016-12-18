@@ -148,8 +148,8 @@ bias and dark corrected GHOST spectrum frame.
 Finding apertures
 -----------------
 
-This is the first iteration of this documentation. At this stage this process
-is done purely within python. 
+This is the second iteration of this documentation. At this stage this process
+is done purely within python but is soon to be implemented as a primitive.
 
 The principle behind this process is that the format of the spectral orders 
 and the wavelength scale can be modelled uniquely using polynomials of
@@ -164,12 +164,17 @@ Usage follows::
 
   import polyfit
   import astropy.io.fits as pyfits
-  ghost_format = polyfit.ghost.Arm('red',mode='high')
+  ghost = polyfit.ghost.Arm('red',mode='high')
 
 At this stage it is important to have some existing file or initial guess
-array for the polynomial model. By default, these are found in a 
-``../data/ghost/<arm>/<mode>/`` folder alongisde the polyfit module but this 
-can be changed using the ``ghost_format.model_location`` variable. 
+array for the polynomial model. By default, these are provided by the
+repository under ``astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/``
+and then subdireectories therein depending on mode and resolution.
+
+At this point a location must be defined and the data imported (e.g.)::
+
+  model_file='~.local/lib/python2.7/site-packages/ghostdr-0.1.0-py2.7.egg/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/red/161120/high/xmod.fits'
+  xparams=pyfits.getdata(model_file)
 
 After acquiring the flat field data::
 
@@ -177,7 +182,7 @@ After acquiring the flat field data::
   flat_data = pyfits.getdata(flat_file)
 
 a convolution map is required. This is done so that, irrespective of the 
-number of fibers per order, the model is adjusted with respect to an 
+number of fibers per order, the model is adjusted against an 
 equivalent map that has maxima where the middle of the order lies. 
 
 Either a supplied model of the slit profile (from the slit viewer) or a 
@@ -189,17 +194,18 @@ This is then fed into the ``adjust_model`` function for visual inspection
 of the initial model::
 
   flat_conv=ghost_format.slit_flat_convolve(flat_data)
-  ghost_format.adjust_model(flat_conv,convolve=False,percentage_variation=10)
+  adjusted_xparams=ghost_format.adjust_model(flat_conv,xparams=xparams,convolve=False,percentage_variation=10)
 
 The ``percentage_variation`` refers to the percentage range of values that each
 parameter is allowed to be varied by the matplotlib slider widgets. 
 
-The ``Submit`` button saves the current version of the model onto the default 
-location. 
+The ``Submit`` button saves the current version of the model onto the
+calibrations directory. The ``adjust_model`` function is for engineering
+use only at this stage and the user should not have to see it.
 
 Once the model is close, the model can be fitted::
 
-  ghost_format.fit_x_to_image(flat_conv,decrease_dim=8,inspect=True)
+  ghost_format.fit_x_to_image(flat_conv,xparams=adjusted_xparams, decrease_dim=8,inspect=True)
 
 This function takes the convolution map and adjusts the model to the local
 maximum along each order. The ``inspect`` parameter set to True displays the
