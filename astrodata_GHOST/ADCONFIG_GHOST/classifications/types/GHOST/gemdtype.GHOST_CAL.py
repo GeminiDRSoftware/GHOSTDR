@@ -8,6 +8,8 @@ class GHOST_CAL(DataClassification):
         ISCLASS("GHOST_ARC"),
         ISCLASS("GHOST_BIAS"),
         ISCLASS("GHOST_DARK"),
-        ISCLASS("GHOST_FLAT")])
+        ISCLASS("GHOST_FLAT"),
+        ISCLASS("GHOST_SKY"),
+    ])
 
 newtypes.append(GHOST_CAL())
