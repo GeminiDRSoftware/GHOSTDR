@@ -114,5 +114,23 @@
         "uiLevel"       : "UIBASIC",
         },
     },
+"findApertures":{
+    "suffix":{
+        "default"       : "_findAper",
+        "type"          : "str",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    },
+"storeProcessedPolyfit":{
+    "suffix":{
+        "default"       : "_xmodPolyfit",
+        "type"          : "str",
+        "recipeOverride": True,
+        "userOverride"  : True,
+        "uiLevel"       : "UIBASIC",
+        },
+    }
 }
 

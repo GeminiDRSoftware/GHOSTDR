@@ -14,11 +14,13 @@ import functools
 
 from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import GMOSPrimitives
 from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import StackPrimitives
+from astrodata_GHOST.RECIPES_GHOST.primitives.primitives_GHOST_calibration import GHOST_CalibrationPrimitives
 
 from astrodata_GHOST import polyfit
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import PolyfitDict
 
-class GHOSTPrimitives(GMOSPrimitives):
+class GHOSTPrimitives(GMOSPrimitives,
+                      GHOST_CalibrationPrimitives):
     """
     Primary primitive set for GHOST.
 
@@ -75,10 +77,10 @@ class GHOSTPrimitives(GMOSPrimitives):
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive", "findAperture", "starting"))
+        log.debug(gt.log_message("primitive", "findApertures", "starting"))
 
         # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys["findAperture"]
+        timestamp_key = self.timestamp_keys["findApertures"]
 
         # Initialize the list of output AstroData objects
         # Note this will simply be the input list, with the timestamp_key
@@ -102,7 +104,6 @@ class GHOSTPrimitives(GMOSPrimitives):
             if 'PREPARED' not in ad.types or 'GHOST_FLAT' not in ad.types:
                 log.warning('findApertures is only run on prepared flats; '
                             'therefore, %s will not be used' % ad.filename)
-                adoutput_list.append(ad)
                 continue
 
             all_polyfit_dict = PolyfitDict.polyfit_dict
@@ -110,12 +111,7 @@ class GHOSTPrimitives(GMOSPrimitives):
             key = self._get_polyfit_key(ad)
 
             if key in all_polyfit_dict:
-                # FIXME Change to read just .xmod file, remove hack
-                # lookup_path assumes it's getting a single file, so will
-                # prepend .py to any return that doesn't have a file type -
-                # we need to strip this off to get a path
-                poly_path = lookup_path(all_polyfit_dict[key]).replace('.py',
-                                                                       '')
+                poly_xmod = lookup_path(all_polyfit_dict[key])
             else:
                 # Don't know how to fit this file, so probably not necessary
                 # Return this ad to the stream and move to the next
@@ -126,32 +122,37 @@ class GHOSTPrimitives(GMOSPrimitives):
 
             # Run the fitting procedure
             # Instantiate the GhostSim Arm
-            ghost_arm = polyfit.ghost.Arm(arm=ad.arm.as_str(),
-                                          mode=ad.res_mode.as_str())
+            ghost_arm = polyfit.ghost.Arm(arm=ad.arm().as_str(),
+                                          mode=ad.res_mode().as_str())
 
             # Read in the model file
-            xparams = AstroData(polypath + 'xmod.fits')
+            xparams = AstroData(poly_xmod)
 
             # Creat an initial model of the spectrograph
-            xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams)
+            xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams.data)
 
             # Convolve the flat field with the slit profile
             flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data)
 
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
-                                                     xparams=xparams,
+                                                     xparams=xparams.data,
                                                      decrease_dim=8,
                                                      inspect=False)
-
-            # TODO Write out to calibrations dir
 
             # Add the appropriate time stamps to the PHU
             gt.mark_history(
                 adinput=ad, primname=self.myself(),
                 keyword=timestamp_key)
 
-            adoutput_list.append(ad)
+            ad_xmod = AstroData(
+                data=fitted_params
+            )
+            # Add an INSTRUME keyword so RecipeSystem recognizes these as
+            # GHOST files
+            ad_xmod.phu.header['INSTRUME'] = 'GHOST'
+            ad_xmod.filename = key + '.fits'
+            adoutput_list.append(ad_xmod)
 
         # Report the outputs to the RC
         rc.report_output(adoutput_list)

@@ -2,10 +2,12 @@ from astrodata import AstroData
 from astrodata.utils import logutils
 from astrodata.utils import Errors
 
+from gempy.gemini import gemini_tools as gt
+
 from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_calibration import \
     CalibrationPrimitives
 
-class GHOSTPrimitives(CalibrationPrimitives):
+class GHOST_CalibrationPrimitives(CalibrationPrimitives):
     """
     Calibration fetch and store primitive set for GHOST.
 
@@ -52,10 +54,6 @@ class GHOSTPrimitives(CalibrationPrimitives):
         yield rc
 
     def storeProcessedPolyfit(self, rc):
-        # Note that this is never run as a stand-along primitive like the other
-        # storeProcessed<type> primitives; instead, it's invoked by other
-        # primitives, more like the getProcessed<type> primitives
-
         # Instantiate the log
         log = logutils.get_logger(__name__)
 
@@ -68,7 +66,7 @@ class GHOSTPrimitives(CalibrationPrimitives):
             # Updating the file name with the suffix for this primitive and
             # then report the new file to the reduction context
             ad.filename = gt.filename_updater(adinput=ad, suffix=rc["suffix"],
-                                              strip=True)
+                                              strip=False)
 
             # Adding a PROCPOLY time stamp to the PHU
             gt.mark_history(adinput=ad, primname=self.myself(),
@@ -79,3 +77,5 @@ class GHOSTPrimitives(CalibrationPrimitives):
 
         # Upload polyfit(s) to cal system
         rc.run("storeCalibration")
+
+        yield rc
