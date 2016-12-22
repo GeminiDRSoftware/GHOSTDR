@@ -214,8 +214,8 @@ class GHOSTPrimitives(GMOSPrimitives,
             log.stdinfo("MosaicAD: Using tile: %s ..." % tile)
 
             # trick mosaicing software into working for GHOST data
-            ad.types.append('GSAOI')  # masquerade (briefly) as GSAOI
-            ad.phu_set_key_value(
+            ad.types.append('GSAOI')  # bypass the GSAOI-/GMOS-only check
+            ad.phu_set_key_value(  # force use of geometry file under our tree
                 'INSTRUME', '../../../astrodata_GHOST/ADCONFIG_GHOST/lookups')
 
             mo = MosaicAD(
@@ -224,10 +224,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             adout = mo.as_astrodata(tile=tile)
 
             # undo hacks to trick mosaicing software
-            ad.phu_set_key_value('INSTRUME', 'GHOST')
             adout.phu_set_key_value('INSTRUME', 'GHOST')
-            ad.types.pop()
-            ad.refresh_types()
             adout.refresh_types()
 
             # Add the appropriate time stamps to the PHU
@@ -623,7 +620,3 @@ class GHOSTPrimitives(GMOSPrimitives,
             key = '%s_%s_%s' % (key, arm, res_mode)
 
         return key
-
-
-
-
