@@ -397,12 +397,18 @@ class Polyspect(object):
                                     xi + search_pix + 1]
                 xs[i, j] += np.argmax(peakpix) - search_pix
 
-        #!!!! HERE 
         fitted_params=self.fit_to_x(xs, xparams, ys=ys, xdeg=xdeg)
         if inspect:
             #This will plot the result of the fit once successful so
             #the user can inspect the result.
-            dummy=self.adjust_model(data, xparams=fitted_params,convolve=False)
+            plt.imshow((data - np.median(data)) / 1e2)
+            x_int,wave_int,blaze_int = self.spectral_format(wparams=None,
+                                                            xparams=fitted_params)
+            y = np.meshgrid(np.arange(data.shape[1]),
+                            np.arange(x_int.shape[0]))[0]
+            plt.plot(y,x_int + data.shape[0]//2,
+                     color='green', linestyle='None', marker='.')
+            plt.show()
 
         return fitted_params
 

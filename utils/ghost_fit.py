@@ -15,6 +15,7 @@ import astropy.io.fits as pyfits
 #plt.ion()
 
 
+
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 #arc_file  = "/home/jbento/code/pymfe/data/ghost/blue/std/arcstd_blue.fits"
 flat_file = "flathigh_red.fits"
