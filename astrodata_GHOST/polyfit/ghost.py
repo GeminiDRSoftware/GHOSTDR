@@ -152,6 +152,10 @@ class Arm(Polyspect):
             print("Unknown mode!")
             raise UserWarning
 
+        Polyspect.__init__(self,self.mode,self.m_ref,self.szx,self.szy,
+                           self.m_min,self.m_max,self.transpose,self.extra_rot,
+                           self.nl,self.fiber_separation,self.profile_sigma)
+
     def make_lenslets(self, fluxes=[], seeing=0.8, llet_offset=0):
         """Make an image of the lenslets with sub-pixel sampling.
            This is potentially to become part of the simulator.

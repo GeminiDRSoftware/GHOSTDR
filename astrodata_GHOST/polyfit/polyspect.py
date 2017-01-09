@@ -20,6 +20,25 @@ class Polyspect(object):
     Contains functions related to polynomial modelling of spectrograph orders.
     """
 
+    def __init__(self,mode,m_ref,szx,szy,m_min,m_max,
+                 transpose,extra_rot,nl,fiber_separation,profile_sigma):
+        """ Initialisation function for this class"""
+
+        # All necessary parameters are listed here and initialised by the
+        # parent class
+        self.mode=mode
+        self.m_ref=m_ref
+        self.szx=szx
+        self.szy=szy
+        self.m_min=m_min
+        self.m_max=m_max
+        self.transpose=transpose
+        self.extra_rot=extra_rot
+        self.nl=nl
+        self.fiber_separation=fiber_separation
+        self.profile_sigma=profile_sigma
+               
+    
     def wave_fit_resid(self, params, ms, waves, ys, ydeg=3, xdeg=3):
         """A fit function for read_lines_and_fit (see that function for details)
         to be used in scipy.optimize.leastsq as the minimisation function. 
