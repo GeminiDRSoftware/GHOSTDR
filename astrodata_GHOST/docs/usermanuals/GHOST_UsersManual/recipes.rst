@@ -145,20 +145,68 @@ This produces a ``obj100_1.0_std_red_darkCorrected.fits`` (or similar) file, a
 bias and dark corrected GHOST spectrum frame.
 
 
+Reducing Slit Viewing Images
+----------------------------
+
+Reducing slit viewer images is very similar to reducing standard images,
+including steps to generate bias and dark calibration frames, plus a final step
+to process the slit viewer frames (which removes cosmic rays and computes the
+mean exposure epoch).  The first step, computing the bias calibrator, may be
+skipped in favour of simply pointing to a slit bias frame (of type
+``GHOST_SLITV_BIAS``).  Or, follow these steps to produce one by stacking
+multiple frames together:
+
+    typewalk --types GHOST_SLITV_BIAS --dir <path_to>/data_folder -o
+    slit_bias.list
+
+    reduce @<path_to>/slit_bias.list
+
+The next step is to generate the dark calibrator.  Follow these steps to produce
+one:
+
+    typewalk --types GHOST_SLITV_DARK --dir <path_to>/data_folder -o
+    slit_dark.list
+
+    reduce @<path_to>/slit_dark.list --override_cal
+    processed_bias:calibrations/storedcals/bias_1_SLIT_bias.fits
+
+A step that is not currently implemented (but will be for the next release) is
+to generate the slit mask calibration as a byproduct of the normal flat image
+processing.  When this is done, you will point to this calibrator using the
+``--override_cal processed_slitmask:...`` option to the ``reduce`` script
+invocation below.
+
+The final step is to use all of the above calibrators in a call to ``reduce`` a
+set of slit viewer images taken concurrently with a science frame, usually found
+in files named as ``obj100_1.0_std_SLIT.fits`` (following this convention:
+``obj{exptime}_{seeing}_{resolution}_SLIT.fits``). If you run ``typewalk`` on
+the folder containing these, you'll see that they are identified as
+``GHOST_SLITV_IMAGE``::
+
+    typewalk --dir <path_to>/data_folder
+
+This informs the reduction framework to run the ``makeProcessedSlitG`` GHOST
+recipe on them.  Run the reduction as follows:
+
+    reduce <path_to>/data_folder/obj100_1.0_std_SLIT.fits --override_cal
+    processed_bias:calibrations/storedcals/bias_1_SLIT_bias.fits
+    processed_dark:calibrations/storedcals/dark100_1_SLIT_dark.fits
+
+
 Finding apertures
 -----------------
 
 This is the second iteration of this documentation. At this stage this process
 is done purely within python but is soon to be implemented as a primitive.
 
-The principle behind this process is that the format of the spectral orders 
+The principle behind this process is that the format of the spectral orders
 and the wavelength scale can be modelled uniquely using polynomials of
-polynomials. e.g. A series of polynomials as a function of order number are 
-combined in a polynomial fashion as a function of y position on the chip. 
+polynomials. e.g. A series of polynomials as a function of order number are
+combined in a polynomial fashion as a function of y position on the chip.
 
-The polyfit module is used at this stage and requires knowledge of the 
-spectrograph arm, mode and a reduced flat field image (tested only with 
-flats from the simulator). 
+The polyfit module is used at this stage and requires knowledge of the
+spectrograph arm, mode and a reduced flat field image (tested only with
+flats from the simulator).
 
 Usage follows::
 
@@ -181,14 +229,14 @@ After acquiring the flat field data::
   flat_file = "location_to_flat/flatfield_frame.fits"
   flat_data = pyfits.getdata(flat_file)
 
-a convolution map is required. This is done so that, irrespective of the 
-number of fibers per order, the model is adjusted against an 
-equivalent map that has maxima where the middle of the order lies. 
+a convolution map is required. This is done so that, irrespective of the
+number of fibers per order, the model is adjusted against an
+equivalent map that has maxima where the middle of the order lies.
 
-Either a supplied model of the slit profile (from the slit viewer) or a 
-default uniform illumination profile is convolved with every column of the 
-flat field image along the spatial direction, resulting in a series of 
-images that match the centers of the orders. 
+Either a supplied model of the slit profile (from the slit viewer) or a
+default uniform illumination profile is convolved with every column of the
+flat field image along the spatial direction, resulting in a series of
+images that match the centers of the orders.
 
 This is then fed into the ``adjust_model`` function for visual inspection
 of the initial model::
@@ -197,7 +245,7 @@ of the initial model::
   adjusted_xparams=ghost_format.adjust_model(flat_conv,xparams=xparams,convolve=False,percentage_variation=10)
 
 The ``percentage_variation`` refers to the percentage range of values that each
-parameter is allowed to be varied by the matplotlib slider widgets. 
+parameter is allowed to be varied by the matplotlib slider widgets.
 
 The ``Submit`` button saves the current version of the model onto the
 calibrations directory. The ``adjust_model`` function is for engineering
@@ -210,7 +258,7 @@ Once the model is close, the model can be fitted::
 This function takes the convolution map and adjusts the model to the local
 maximum along each order. The ``inspect`` parameter set to True displays the
 result of the fit and, if it is satisfactory, pressing the ``submit`` button
-again will save it. 
+again will save it.
 
 At this point, the input to the flux extraction code is available for testing.
 
@@ -218,4 +266,3 @@ At this point, the input to the flux extraction code is available for testing.
 Other Processing Flows
 ======================
 include scientific flow charts, include associated recipes
-

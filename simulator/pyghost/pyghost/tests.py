@@ -32,8 +32,10 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, split=False):
     # Our default overscan
     overscan = 32
 
-    # Our default duration
-    duration = 100
+    # Our default duration (pick something not a multiple of the default slit
+    # viewer duration [10] so that partial science/slitviewer exposure overlaps
+    # can be tested)
+    duration = 95
 
     noise = {}
     scaling = {}

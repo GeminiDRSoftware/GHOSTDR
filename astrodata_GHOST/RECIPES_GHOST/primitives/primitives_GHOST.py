@@ -6,11 +6,16 @@ from gempy.gemini import gemini_tools as gt
 from gempy.adlibrary.mosaicAD import MosaicAD
 from gempy.gemini.gemMosaicFunction import gemini_mosaic_function
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import timestamp_keywords as ghost_stamps
-from gempy.gemini.eti.gireduceparam import subtract_overscan_hardcoded_params
+from gempy.gemini.eti.gireduceparam import subtract_overscan_hardcoded_params as extra_gireduce_params
+from gempy.gemini.eti.gemcombineparam import hardcoded_params as extra_gemcombine_params
 from pyraf import iraf
 import numpy as np
 import scipy
 import functools
+import pyfits as pf
+import os
+import inspect
+import datetime
 
 from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import GMOSPrimitives
 from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import StackPrimitives
@@ -159,6 +164,21 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         yield rc
 
+    def fork(self, rc):
+        """
+        Fork a new stream by copying the current stream's inputs to the
+        outputs of the new stream.  Has the same effect as (but without the
+        disk write penalty incurred by) the following construct:
+
+            addToList(purpose=save_to_disk)
+            getList(purpose=save_to_disk, to_stream=new_stream_name)
+        """
+        adoutput_list = rc.get_inputs_as_astrodata()
+        rc.report_output(adoutput_list)
+        if rc['newStream']:
+            rc.populate_stream(adoutput_list, stream=rc['newStream'])
+        yield rc
+
     def mosaicADdetectors(self, rc):
         """
         This primitive will mosaic the SCI frames of the input images, along
@@ -241,6 +261,201 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         # Report the list of output AstroData objects to the reduction
         # context
+        rc.report_output(adoutput_list)
+
+        yield rc
+
+    def processSlits(self, rc):
+        me = inspect.currentframe().f_code.co_name
+
+        # Instantiate the log
+        log = logutils.get_logger(__name__)
+
+        # Log the standard "starting primitive" debug message
+        log.debug(gt.log_message("primitive", me, "starting"))
+
+        # Define the keyword to be used for the time stamp for this primitive
+        timestamp_key = self.timestamp_keys[me]
+
+        # Initialize the list of output AstroData objects
+        adoutput_list = []
+        adinput = rc.get_inputs_as_astrodata()
+
+        # Check for a user-supplied slit
+        slit = None
+        if rc['slit'] is not None:
+            slit = AstroData(rc['slit'])
+        elif rc['slitStream'] is not None:
+            slit = rc.get_stream(rc['slitStream'])[0].ad
+        else:
+            slit = rc.get_cal(adinput[0], "processed_slit")
+
+        # If no appropriate slit is found, it is ok not to subtract the
+        # slit in QA context; otherwise, raise error
+        if slit is None:
+            if "qa" in rc.context:
+                adoutput_list = adinput  # pass along data with no processing
+                adinput = []  # causes the for loop below to be skipped
+                log.warning("No changes will be made since no appropriate "
+                            "slit could be retrieved")
+            else:
+                raise Errors.PrimitiveError("No processed slit found")
+
+        # # Check for a user-supplied slitmask
+        # mask = None
+        # if rc['mask'] is not None:
+        #     mask = AstroData(rc['mask'])
+        # else:
+        #     mask = rc.get_cal(adinput[0], "processed_slitmask")
+
+        # if mask is None:
+        #     if "qa" in rc.context:
+        #         adoutput_list = adinput  # pass along data with no processing
+        #         adinput = []  # causes the for loop below to be skipped
+        #         log.warning("No changes will be made since no appropriate "
+        #                     "slitmask could be retrieved")
+        #     else:
+        #         raise Errors.PrimitiveError("No processed slitmask found")
+
+        # some loop-invariant vars based on the median slit frame
+        sldata = slit['SCI', 1].hdulist[1].data
+        std = np.std(sldata)
+        sigma = std * 9.5
+        log.stdinfo("   sigma: %s" % (sigma))
+
+        # accumulators for computing the mean epoch
+        sum_of_weights = 0.0
+        accum_weighted_time = 0.0
+
+        # Loop over each input AstroData object in the input list
+        for ad in adinput:
+
+            # Check whether this primitive has been run previously
+            if ad.phu_get_key_value(timestamp_key):
+                log.warning("No changes will be made to %s, since it has "
+                            "already been processed by %s"
+                            % (ad.filename, me))
+                # Append the input AstroData object to the list of output
+                # AstroData objects without further processing
+                adoutput_list.append(ad)
+                continue
+
+            # Check the inputs have matching binning and SCI shapes.
+            gt.check_inputs_match(ad1=ad, ad2=slit, check_filter=False)
+            # gt.check_inputs_match(ad1=ad, ad2=mask, check_filter=False)
+
+            log.fullinfo("Using this slit to reject cosmics from the input "
+                         "AstroData object (%s):\n%s" % (ad.filename,
+                                                         slit.filename))
+
+            if False:  # set to True to output the residuals for debugging
+                addata = ad['SCI', 1].hdulist[1].data
+                ad['SCI', 1].hdulist[1].data = abs(addata - sldata)
+            else:
+                # replace CR-affected pixels with those from the median slit
+                # viewer image (subtract the median slit frame and threshold
+                # against the residuals); not sure VAR/DQ planes appropriately
+                # handled here
+                addata = ad['SCI', 1].hdulist[1].data
+                indices = abs(addata - sldata) > sigma
+                flux_before = np.sum(addata)  # TODO: mask non-fibre pixels
+                addata[indices] = sldata[indices]
+                flux_after = np.sum(addata)  # TODO: mask non-fibre pixels
+                ad['SCI', 1].hdulist[1].data = addata
+
+                # log results
+                log.stdinfo("   %s: nPixReplaced = %s, flux = %s -> %s" % (
+                    ad.filename, (indices).sum(), flux_before, flux_after))
+
+                # record how many CR-affected pixels were replaced
+                ad['SCI', 1].hdulist[1].header['CRPIXREJ'] = (
+                    (indices).sum(), '# of CR pixels replaced by mean')
+
+                # get science and slit view image start/end times
+                sc_start = datetime.datetime.strptime(
+                    ad.phu.header['UTSTART'], "%H:%M:%S.%f")
+                sc_end = datetime.datetime.strptime(
+                    ad.phu.header['UTEND'], "%H:%M:%S.%f")
+                sv_start = datetime.datetime.strptime(
+                    ad['SCI', 1].hdulist[1].header['EXPUTST'], "%H:%M:%S.%f")
+                sv_end = datetime.datetime.strptime(
+                    ad['SCI', 1].hdulist[1].header['EXPUTEND'], "%H:%M:%S.%f")
+
+                # compute overlap percentage and slit view image duration
+                latest_start = max(sc_start, sv_start)
+                earliest_end = min(sc_end, sv_end)
+                overlap = (earliest_end - latest_start).seconds
+                sv_duration = ad['SCI', 1].hdulist[1].header['EXPTIME']
+                overlap /= sv_duration  # convert into a percentage
+                sv_duration = datetime.timedelta(seconds=sv_duration)
+
+                # compute the offset (the value to be weighted), in seconds,
+                # from the start of the science exposure
+                if sc_start <= sv_start and sv_end <= sc_end:
+                    offset = sv_start - sc_start + sv_duration / 2
+                elif sv_start < sc_start:
+                    offset = overlap * sv_duration / 2
+                elif sv_end > sc_end:
+                    offset = overlap * sv_duration.seconds / 2.0
+                    offset += (sv_start - sc_start).seconds
+                    offset = datetime.timedelta(seconds=offset)
+
+                # add flux-weighted offset (plus weight itself) to
+                # accumulators
+                weight = flux_after * overlap
+                sum_of_weights += weight
+                accum_weighted_time += weight * offset.seconds
+
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=ad, primname=self.myself(), keyword=timestamp_key)
+
+            # Change the filename
+            ad.filename = gt.filename_updater(
+                adinput=ad, suffix=rc["suffix"], strip=True)
+
+            # Append the output AstroData object to the list
+            # of output AstroData objects
+            adoutput_list.append(ad)
+
+        # final mean exposure epoch computation
+        mean_epoch = accum_weighted_time / sum_of_weights
+        mean_epoch = datetime.timedelta(seconds=mean_epoch)
+        for ad in adinput:
+            sc_start = datetime.datetime.strptime(
+                ad.phu.header['UTSTART'], "%H:%M:%S.%f")
+            sc_start += mean_epoch
+            ad.phu.header['AVGEPOCH'] = (  # is the right keyword string?
+                sc_start.strftime("%H:%M:%S.%f")[:-3], 'Mean Exposure Epoch')
+
+        # Report the list of output AstroData objects to the reduction
+        # context
+        rc.report_output(adoutput_list)
+
+        yield rc
+
+    def promote(self, rc):
+        """
+        Promote extensions to full AstroData instances so validateData will
+        allow them to pass; also unify the extension names/numbers and give
+        each a unique ORIGNAME so stackFrames will operate properly.
+
+        This primitive is only used for preparing slit viewing images and
+        is usually the first thing called in recipes that process these
+        images.
+        """
+        # use AstroData slicing (aka "sub-data") to promote all extensions
+        adoutput_list = [ad[i]  # noqa
+            for ad in rc.get_inputs_as_astrodata()
+            for i in range(ad.count_exts())]
+
+        # contortions to make stacking (eti.gemcombineeti.GemcombineETI) work
+        for i, sub in enumerate(adoutput_list[1:]):
+            sub.phu = sub.phu.copy()  # AstroData slices share a common PHU
+            sub.rename_ext('SCI', 1)  # can't just set EXTVER to 1
+            sub.phu.header['ORIGNAME'] = \
+                gt.filename_updater(adinput=sub, suffix=str(i))
+
         rc.report_output(adoutput_list)
 
         yield rc
@@ -519,7 +734,21 @@ class GHOSTPrimitives(GMOSPrimitives,
         This is a test of autodoc's abilities.
 
         """
-        iraf.setVerbose(value=2)
+        if rc['hsigma']:
+            extra_gemcombine_params['hsigma'] = float(rc['hsigma'])
+        if rc['hthresh']:
+            extra_gemcombine_params['hthreshold'] = float(rc['hthresh'])
+        if rc['lsigma']:
+            extra_gemcombine_params['lsigma'] = float(rc['lsigma'])
+        if rc['lthresh']:
+            extra_gemcombine_params['lthreshold'] = float(rc['lthresh'])
+        if rc['pclip']:
+            extra_gemcombine_params['pclip'] = float(rc['pclip'])
+        if rc['sigscale']:
+            extra_gemcombine_params['sigscale'] = float(rc['sigscale'])
+        if rc['verbose']:
+            iraf.setVerbose(value=2)
+
         return StackPrimitives.stackFrames(self, rc)
 
     def standardizeHeaders(self, rc):
@@ -547,9 +776,6 @@ class GHOSTPrimitives(GMOSPrimitives,
         This is a test of autodoc's abilities.
 
         """
-        #log = logutils.get_logger(__name__)
-        #log.debug(gt.log_message("primitive", "standardizeHeaders", "starting"))
-        #timestamp_key = self.timestamp_keys["standardizeHeaders"]
         rc.run('standardizeGeminiHeaders')
         yield rc
 
@@ -574,12 +800,22 @@ class GHOSTPrimitives(GMOSPrimitives,
             alterations.
 
         """
-        iraf.setVerbose(value=2)
+        if rc['verbose']:
+            iraf.setVerbose(value=2)
+
         # supply extra required param in gireduce's ETI wrapper; can also
         # override DETTYPE defaults this way (the alternative is to extend
         # gireduce to support our DETTYPE)
-        subtract_overscan_hardcoded_params['order'] = 1
+        extra_gireduce_params['order'] = 1
         return GMOSPrimitives.subtractOverscan(self, rc)
+
+    def switchTo(self, rc):
+        """
+        Make the specified stream the current stream
+        """
+        if rc['streamName']:
+            rc.switch_stream(rc['streamName'])
+        yield rc
 
     def _get_polyfit_key(self, adinput=None):
         """

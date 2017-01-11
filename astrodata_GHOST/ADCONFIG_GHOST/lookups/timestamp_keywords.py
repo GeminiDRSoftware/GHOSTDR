@@ -5,5 +5,6 @@ timestamp_keys = {
     # writing a timestamp keyword to the header once the user level function
     # has completed
     "findApertures": "FINDAPER",
+    "processSlits": "PROCSLIT",
     "standardizeHeaders": "SDZHDRS",
     }

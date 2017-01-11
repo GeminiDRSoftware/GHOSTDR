@@ -364,7 +364,8 @@ class SlitViewer(object):
         self.slitcam_ysz = 160       # Slit viewer y size in binned pix.
         self.slit_mode_offsets = {"high": -1000.0, "std": 1000.0}
         self.duration = 0
-        self.nexp = 0
+        self.sci_duration = None
+        self.nexp = 1
         self.images = None
         self.cosims = []
         self.flux_profile = None
@@ -373,7 +374,7 @@ class SlitViewer(object):
         self.crplane = crplane
         self.split = split
 
-    def set_exposure(self, duration, nexp, flux_profile, utstart):
+    def set_exposure(self, duration, sci_duration, flux_profile, utstart):
         """
         Set the exposure parameters for the slit viewing camera.
 
@@ -395,7 +396,9 @@ class SlitViewer(object):
             keywords
         """
         self.duration = duration
-        self.nexp = nexp if nexp > 0 else 1
+        self.sci_duration = sci_duration
+        if duration:  # to avoid divide by 0 (which uses nexp default of 1)
+            self.nexp = int(math.ceil(float(sci_duration)/duration)) or 1
         self.utstart = utstart
         if flux_profile is None:
             self.flux_profile = np.ones((self.nexp))
@@ -453,6 +456,17 @@ class SlitViewer(object):
         header['CCDNAME'] = ('Sony-ICX674', 'CCD name')
         header['ORIGFN'] = fname + 'SLIT.fits'
 
+        # perhaps wrongly (and out of line with their comments), the ghost
+        # recipes interpret these keywords as the start/end times of the science
+        # exposure taken concurrently with this series of slit viewer images
+        # (and when the MEF-splitter primitive is written, it must remember to
+        # populate them as such)
+        header['UTSTART'] = (self.utstart.strftime("%H:%M:%S.%f")[:-3],
+            'UT time at observation start')  # noqa
+        header['UTEND'] = (
+            (self.utstart + datetime.timedelta(seconds=self.sci_duration))
+            .strftime("%H:%M:%S.%f")[:-3], 'UT time at observation end')
+
         hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
         crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
         for expid, image in enumerate(self.images):
@@ -474,6 +488,8 @@ class SlitViewer(object):
             hdr['EXPID'] = expid
 
             # And all the other headers
+            hdr['RDNOISE'] = (readnoise, 'Readout noise')
+            hdr['GAIN'] = (gain, 'Amplifier gain')
             hdr['CAMERA'] = 'Slit'
             hdr['DETSIZE'] = detsz
             hdr['CCDSIZE'] = detsz
@@ -655,9 +671,9 @@ class Arm(object):
             self.order_min = 34
             self.order_max = 67
             self.dettype = 'E2V-CCD-231-C6'
-            self.slitview_wave = [0.6, 0.76] #Slit viewer wavelength in microns
-            self.slitview_frac = 0.02        #Fractional slit viewer flux.
-            self.slitview_offset = [15.0, -1500.0] #(x,y) Slit plane offset in microns
+            self.slitview_wave = [0.6, 0.76]  # wavelength in microns
+            self.slitview_frac = 0.02         # Fractional flux.
+            self.slitview_offset = [15.0, -1500.0]  # (x,y) plane offset, micron
         elif arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
             self.extra_rot = 2.0
@@ -673,9 +689,9 @@ class Arm(object):
             self.order_min = 63
             self.order_max = 95
             self.dettype = 'E2V-CCD-231-84'
-            self.slitview_wave = [0.43, 0.6] #Slit viewer wavelength in microns
-            self.slitview_frac = 0.02        #Fractional slit viewer flux.
-            self.slitview_offset = [-15.0, 1500.0] #(x,y) Slit plane offset in microns
+            self.slitview_wave = [0.43, 0.6]  # wavelength in microns
+            self.slitview_frac = 0.02         # Fractional flux.
+            self.slitview_offset = [-15.0, 1500.0]  # (x,y) plane offset, micron
         else:
             raise RuntimeError('Order information not provided in Arm class '
                                'for arm %s - aborting' % (self.arm, ))
@@ -1675,6 +1691,7 @@ class Arm(object):
         hdr['HA'] = (hra.to_string(unit=u.deg, sep=':'), 'Telescope hour angle')
         hdr['AMSTART'] = (horz_start.secz.value, 'Airmass at start of exposure')
         hdr['AMEND'] = (horz_end.secz.value, 'Airmass at end of exposure')
+        # assumes linear transition from AMSTART to AMEND which is likely wrong
         mean_airmass = (horz_end.secz.value + horz_start.secz.value)/2
         hdr['AIRMASS'] = (mean_airmass, 'Mean airmass for the observation')
 
@@ -1927,8 +1944,8 @@ class Ghost(object):
         utstart = datetime.datetime.utcnow()
 
         if (sv_duration > 0) and (duration > 0):
-            self.sv.set_exposure(sv_duration, int(duration/sv_duration),
-                sv_flux_profile, utstart)  # noqa
+            self.sv.set_exposure(
+                sv_duration, duration, sv_flux_profile, utstart)
         else:
             self.sv.set_exposure(0.0, 0, None, utstart)
 
