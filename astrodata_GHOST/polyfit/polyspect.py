@@ -21,7 +21,8 @@ class Polyspect(object):
     """
 
     def __init__(self, mode, m_ref, szx, szy, m_min, m_max,
-                 transpose, extra_rot, nlenslets, fiber_separation, profile_sigma):
+                 transpose, extra_rot, nlenslets, fiber_separation,
+                 profile_sigma):
         """ Initialisation function for this class"""
 
         # All necessary parameters are listed here and initialised by the
@@ -113,8 +114,10 @@ class Polyspect(object):
         This means that the simplest spectrograph model should have:
         :math: `q_{00}` : central wavelength or order m_ref
         :math: `q_{01}` : central wavelength or order m_ref
-        :math: `q_{10}` : central_wavelength/R_pix, with R_pix the resolving power / pixel.
-        :math: `q_{11}` : central_wavelength/R_pix, with R_pix the resolving power / pixel.
+        :math: `q_{10}` : central_wavelength/R_pix,
+        with R_pix the resolving power / pixel.
+        :math: `q_{11}` : central_wavelength/R_pix,
+        with R_pix the resolving power / pixel.
         ... with everything else approximately zero.
 
         Parameters
@@ -170,12 +173,13 @@ class Polyspect(object):
                 # python.
                 y_values = np.append(y_values, self.szy - pix[:, 1])
 
-        init_resid = self.wave_fit_resid(init_mod, orders, waves, y_values, ydeg=ydeg,
-                                         xdeg=xdeg)
-        bestp = op.leastsq(self.wave_fit_resid, init_mod, args=(orders, waves, y_values,
+        init_resid = self.wave_fit_resid(init_mod, orders, waves,
+                                         y_values, ydeg=ydeg, xdeg=xdeg)
+        bestp = op.leastsq(self.wave_fit_resid, init_mod, args=(orders, waves,
+                                                                y_values,
                                                                 ydeg, xdeg))
-        final_resid = self.wave_fit_resid(bestp[0], orders, waves, y_values, ydeg=ydeg,
-                                          xdeg=xdeg)
+        final_resid = self.wave_fit_resid(bestp[0], orders, waves, y_values,
+                                          ydeg=ydeg, xdeg=xdeg)
         # Output the fit residuals.
         wave_and_resid = np.array([waves, orders, final_resid]).T
         print("Fit residual RMS (Angstroms): {0:6.3f}".format(
@@ -254,7 +258,8 @@ class Polyspect(object):
                     polyq = np.poly1d(wparams[i, :])
                     polynomials[i] = polyq(mprime)
                 polyp = np.poly1d(polynomials)
-                wave_int[order - self.m_min, :] = polyp(y_values - self.szy // 2)
+                wave_int[order - self.m_min, :] = polyp(y_values -
+                                                        self.szy // 2)
 
             if xparams is not None:
                 # Find the polynomial coefficients for each order.
@@ -270,8 +275,8 @@ class Polyspect(object):
             wcen = wave_int[order - self.m_min, self.szy / 2]
             disp = wave_int[order - self.m_min, self.szy / 2 + 1] - wcen
             order_width = (wcen / order) / disp
-            blaze_int[order - self.m_min, :] = np.sinc((y_values - self.szy / 2) /
-                                                       order_width)**2
+            blaze_int[order - self.m_min, :] = np.sinc((y_values - self.szy / 2)
+                                                       / order_width)**2
 
         # Plot this if we have an image file
         if (img is not None) and (xparams is not None):
@@ -310,7 +315,8 @@ class Polyspect(object):
         # Create an array with a single pixel with the value 1.0 at the
         # expected peak of each order.
         single_pix_orders = np.zeros(image.shape)
-        xygrid = np.meshgrid(np.arange(old_x.shape[0]), np.arange(old_x.shape[1]))
+        xygrid = np.meshgrid(np.arange(old_x.shape[0]),
+                             np.arange(old_x.shape[1]))
         single_pix_orders[np.round(xygrid[1]).astype(int),
                           np.round(old_x.T + self.szx // 2).astype(int)] = 1.0
 
@@ -375,12 +381,16 @@ class Polyspect(object):
         image_med = image.reshape((image.shape[0] // decrease_dim,
                                    decrease_dim, image.shape[1]))
         image_med = np.median(image_med, axis=1)
-        order_y = np.meshgrid(np.arange(xbase.shape[1]), np.arange(xbase.shape[0]) +
-                              self.m_min)
+        order_y = np.meshgrid(np.arange(xbase.shape[1]),
+                              np.arange(xbase.shape[0]) + self.m_min)
         y_values = order_y[0]
-        y_values = np.average(y_values.reshape(x_values.shape[0], x_values.shape[1] // decrease_dim,
+        y_values = np.average(y_values.reshape(x_values.shape[0],
+                                               x_values.shape[1] //
+                                               decrease_dim,
                                                decrease_dim), axis=2)
-        x_values = np.average(x_values.reshape(x_values.shape[0], x_values.shape[1] // decrease_dim,
+        x_values = np.average(x_values.reshape(x_values.shape[0],
+                                               x_values.shape[1] //
+                                               decrease_dim,
                                                decrease_dim), axis=2)
 
         # Now go through and find the peak pixel values.
@@ -395,13 +405,15 @@ class Polyspect(object):
                                     xind + search_pix + 1]
                 x_values[i, j] += np.argmax(peakpix) - search_pix
 
-        fitted_params = self.fit_to_x(x_values, xparams, y_values=y_values, xdeg=xdeg)
+        fitted_params = self.fit_to_x(x_values, xparams, y_values=y_values,
+                                      xdeg=xdeg)
         if inspect:
             # This will plot the result of the fit once successful so
             # the user can inspect the result.
             plt.imshow((data - np.median(data)) / 1e2)
             x_int, wave_int, blaze_int = self.spectral_format(wparams=None,
-                                                              xparams=fitted_params)
+                                                              xparams=
+                                                              fitted_params)
             ygrid = np.meshgrid(np.arange(data.shape[1]),
                                 np.arange(x_int.shape[0]))[0]
             plt.plot(ygrid, x_int + data.shape[0] // 2,
@@ -450,20 +462,26 @@ class Polyspect(object):
 
         # Create an array of y and m values.
         x_values = x_to_fit.copy()
-        order_y = np.meshgrid(np.arange(x_values.shape[1]), np.arange(x_values.shape[0]) +
-                              self.m_min)
+        order_y = np.meshgrid(np.arange(x_values.shape[1]),
+                              np.arange(x_values.shape[0]) + self.m_min)
         if len(y_values) == 0:
             y_values = order_y[0]
         orders = order_y[1]
 
         # Allow a dimensional decrease, for speed
         if decrease_dim > 1:
-            orders = np.average(orders.reshape(x_values.shape[0], x_values.shape[1] //
-                                               decrease_dim, decrease_dim), axis=2)
-            y_values = np.average(y_values.reshape(x_values.shape[0], x_values.shape[1] //
-                                                   decrease_dim, decrease_dim), axis=2)
-            x_values = np.average(x_values.reshape(x_values.shape[0], x_values.shape[1] //
-                                                   decrease_dim, decrease_dim), axis=2)
+            orders = np.average(orders.reshape(x_values.shape[0],
+                                               x_values.shape[1] //
+                                               decrease_dim, decrease_dim),
+                                axis=2)
+            y_values = np.average(y_values.reshape(x_values.shape[0],
+                                                   x_values.shape[1] //
+                                                   decrease_dim, decrease_dim),
+                                  axis=2)
+            x_values = np.average(x_values.reshape(x_values.shape[0],
+                                                   x_values.shape[1] //
+                                                   decrease_dim, decrease_dim),
+                                  axis=2)
 
         # Flatten arrays
         orders = orders.flatten()
@@ -556,10 +574,10 @@ class Polyspect(object):
         if not slit_profile:
             # At this point create a slit profile
             # Create a x baseline for convolution and assume a FWHM for profile
-            x = flat.shape[0]
-            profilex = np.arange(x) - x // 2
+            xbase = flat.shape[0]
+            profilex = np.arange(xbase) - xbase // 2
             # Now create a model of the slit profile
-            mod_slit = np.zeros(x)
+            mod_slit = np.zeros(xbase)
             if self.mode == 'high':
                 nfibers = 26
             else:
@@ -610,8 +628,8 @@ class Polyspect(object):
             How much should the percentage adjustment in each bin as a function
             of the parameter. Default is 10%
         vary_wrt_max: bool
-            Vary all parameters intelligently with a scaling of the maximum variation,
-            rather than just a percentage of each.
+            Vary all parameters intelligently with a scaling of the maximum
+            variation, rather than just a percentage of each.
 
         Returns
         -------
@@ -629,11 +647,12 @@ class Polyspect(object):
         # Grab the model to be plotted
         x_int, wave_int, blaze_int = self.spectral_format(wparams=wparams,
                                                           xparams=xparams)
-        ygrid = np.meshgrid(np.arange(data.shape[1]), np.arange(x_int.shape[0]))[0]
+        ygrid = np.meshgrid(np.arange(data.shape[1]),
+                            np.arange(x_int.shape[0]))[0]
         # The data must be flattened for the sliders to work.
         # Then plot it!
-        lplot, = plt.plot(ygrid.flatten()[::10], x_int.flatten()[::10] + nxbase // 2,
-                          color='green', linestyle='None', marker='.')
+        lplot, = plt.plot(ygrid.flatten()[::10], x_int.flatten()[::10] + nxbase
+                          // 2, color='green', linestyle='None', marker='.')
 
         if convolve:
             data = self.slit_flat_convolve(flat=data)
@@ -696,6 +715,7 @@ class Polyspect(object):
         # This is the triggered function on submit.
         # Currently only works for the xmod but should be generalised
         def submit(event):
+            """Function for the button tasks"""
             plt.close('all')
             return xparams
 
