@@ -1,3 +1,4 @@
+
 """This is a simple simulation code for GHOST or Veloce,
 with a class ARM that simulates
 a single arm of the instrument. The key default parameters
@@ -127,9 +128,9 @@ class Arm(Polyspect):
         # Now we determine the number of fibers based on mode.
         if mode == 'high':
             self.lenslet_width = self.lenslet_high_size
-            self.nl = 28
+            self.nlenslets = 28
             # Set default profiles - object, sky and reference
-            fluxes = np.zeros((self.nl, 3))
+            fluxes = np.zeros((self.nlenslets, 3))
             fluxes[2:21, 0] = 0.37
             fluxes[8:15, 0] = 0.78
             fluxes[11, 0] = 1.0
@@ -139,9 +140,9 @@ class Arm(Polyspect):
             fluxes[0, 2] = 1.0
         elif mode == 'std':
             self.lenslet_width = self.lenslet_std_size
-            self.nl = 17
+            self.nlenslets = 17
             # Set default profiles - object 1, sky and object 2
-            fluxes = np.zeros((self.nl, 3))
+            fluxes = np.zeros((self.nlenslets, 3))
             fluxes[0:7, 0] = 1.0
             fluxes[7:10, 1] = 1.0
             fluxes[10:, 2] = 1.0
@@ -151,7 +152,7 @@ class Arm(Polyspect):
 
         Polyspect.__init__(self, self.mode, self.m_ref, self.szx, self.szy,
                            self.m_min, self.m_max, self.transpose, self.extra_rot,
-                           self.nl, self.fiber_separation, self.profile_sigma)
+                           self.nlenslets, self.fiber_separation, self.profile_sigma)
 
     def make_lenslets(self, fluxes=[], seeing=0.8, llet_offset=0):
         """Make an image of the lenslets with sub-pixel sampling.
@@ -266,7 +267,7 @@ class Arm(Polyspect):
             # important for PRV simulation !!!
             # im_one = np.roll(np.roll(im_one, tilt_offsets[0,i], axis=1),
             # tilt_offsets[1,i], axis=0)*hbig
-            the_shift = int((llet_offset + i - self.nl / 2.0) *
+            the_shift = int((llet_offset + i - self.nlenslets / 2.0) *
                             self.lenslet_width / self.microns_pix)
             im_slit += np.roll(im_one, the_shift, axis=1)
         return im_slit
