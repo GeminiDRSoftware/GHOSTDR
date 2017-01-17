@@ -12,7 +12,7 @@ import matplotlib.cm as cm
 from matplotlib.widgets import Slider, Button
 import scipy.optimize as op
 
-
+# pylint: disable=maybe-no-member, too-many-instance-attributes
 
 class Polyspect(object):
     """A class containing tools common for any spectrograph.
@@ -529,15 +529,22 @@ class Polyspect(object):
                 # Create a matrix where we map input angles to output
                 # coordinates.
                 # TWO OF THE NECESSARY PARAMETERS DO NOT EXIST!!!!
+                # AND SHOULDN'T EXIST. THIS SHOULD BE AN ARBITRARY POLYNOMIAL
+                # PART OF THE INPUT MODEL FILE
                 slit_microns_per_det_pix = self.slit_microns_per_det_pix_first + \
                     float(i) / xbase.shape[0] * (self.slit_microns_per_det_pix_last -
                                                  self.slit_microns_per_det_pix_first)
-                amat[0, 0] = 1.0 / slit_microns_per_det_pix
+                # These are the two parameters to come from two files
+                slit_microns_per_det_pix_x = slit_microns_per_det_pix
+                slit_microns_per_det_pix_y = slit_microns_per_det_pix
+                amat[0, 0] = 1.0 / slit_microns_per_det_pix_x
                 amat[0, 1] = 0
                 amat[1, 0] = 0
-                amat[1, 1] = 1.0 / slit_microns_per_det_pix
+                amat[1, 1] = 1.0 / slit_microns_per_det_pix_y
                 # Apply an additional rotation matrix. If the simulation was
                 # complete, this wouldn't be required.
+                # extra_rot should be in radians and come from the third
+                # polynomial on the model file.
                 r_rad = np.radians(self.extra_rot)
                 dy_frac = (j - xbase.shape[1] / 2.0) / (xbase.shape[1] / 2.0)
                 extra_rot_mat = np.array([[np.cos(r_rad * dy_frac),

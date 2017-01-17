@@ -151,8 +151,9 @@ class Arm(Polyspect):
             raise UserWarning
 
         Polyspect.__init__(self, self.mode, self.m_ref, self.szx, self.szy,
-                           self.m_min, self.m_max, self.transpose, self.extra_rot,
-                           self.nlenslets, self.fiber_separation, self.profile_sigma)
+                           self.m_min, self.m_max, self.transpose,
+                           self.extra_rot,self.nlenslets, self.fiber_separation,
+                           self.profile_sigma)
 
     def make_lenslets(self, fluxes=[], seeing=0.8, llet_offset=0):
         """Make an image of the lenslets with sub-pixel sampling.

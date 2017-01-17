@@ -1,15 +1,5 @@
-"""Given (x,wave,matrices, slit_profile), extract the flux from each order. For
-readability, we keep this separate from the simulator.... but the simulator is
-required in order to run this.
+"""Given (x,wave,matrices, slit_profile), extract the flux from each order.
 
-To run, create a simulated fits file (e.g. "test_blue.fits") using ghost module 
-then:
-
-blue_high = pymfe.Extractor(pymfe.ghost.Arm('blue', 'high'))
-
-flux,var = blue_high.two_d_extract("test_blue.fits")
-
-plt.plot(blue_high.w_map[0,:], flux[0,:,0])
 """
 
 from __future__ import division, print_function
@@ -23,8 +13,7 @@ import matplotlib.cm as cm
 
 class Extractor():
     """A class for each arm of the spectrograph. The initialisation function
-    takes a single string representing the configuration. For GHOST, it can be
-    "red" or "blue".
+    takes a series of parameters from the ghost class.
 
     The extraction is defined by 3 key parameters: an "x_map", which is
     equivalent to 2dFDR's tramlines and contains a physical x-coordinate for
@@ -32,49 +21,46 @@ class Extractor():
     the wavelength corresponding to every y
     (dispersion direction) coordinate and order.
 
-    sim must include:
-
-    spectral_format_with_matrix()
-    make_lenslets(fluxes)
-
-    fluxes (nlenslets x nobj) array
-    nl (nlenslets)
-    szx (size in x [non-dispersion] direction)
-    mode (string,for error messages)
-    lenslet_width, im_slit_sz, microns_pix (together define the make_lenslets
-    output)
     """
 
-    def __init__(self, sim, transpose_data=True, badpixmask=[]):
-        self.sim = sim
-        self.transpose_data = transpose_data
+    def __init__(self, nlenslets, polyspect_class, transpose, im_slit_sz,
+                 microns_pix, mode, szx, m_min, gain = 1.0, rnoise = 3,
+                 badpixmask=[]):
+        """Initialisation function, must define all parameters needed"""
+        self.nlenslets = nlenslets
+        self.polyspect = polyspect_class
+        self.transpose = transpose
+        self.im_slit_sz =  im_slit_sz
+        self.gain = gain
+        self.rnoise = rnoise
+        self.m_min = m_min
         self.badpixmask = badpixmask
         self.x_map, self.w_map, self.blaze, self.matrices =\
-            self.sim.spectral_format_with_matrix()
+            self.polyspect.spectral_format_with_matrix()
         # Fill in the slit dimensions in "simulator pixel"s. based on if we are
         # in the high or standard resolution mode.
-        self.define_profile(sim.fluxes)  # !!! THIS STILL DOESN't WORK.
+        self.define_profile(self.fluxes)  # !!! THIS STILL DOESN't WORK.
 
         # Set some default pixel offsets for each lenslet, as used for a square
         # lenslet profile
         ny = self.x_map.shape[1]
         nm = self.x_map.shape[0]
-        pix_offset_ix = np.append(np.append([0], np.arange(1, sim.nl).repeat(2)),
-                                  sim.nl)
-        self.square_offsets = np.empty((2 * sim.nl, nm))
+        pix_offset_ix = np.append(np.append([0], np.arange(1,self.nlenslets).\
+                                            repeat(2)),self.nlenslets)
+        self.square_offsets = np.empty((2 * self.nlenslets, nm))
         # The [0,0] component of "matrices" measures the size of a detector
         # pixel in the simulated slit image space. i.e. slitmicrons/detpix.
-        for i in range(sim.nl):
-            self.square_offsets[:, i] = (pix_offset_ix - sim.nl / 2.0) *\
-                sim.lenslet_width /
+        for i in range(self.nlenslets):
+            self.square_offsets[:, i] = (pix_offset_ix - self.nlenslets / 2.0) *\
+                self.lenslet_width /
                 self.matrices[i,
                               self.x_map.shape[1] // 2, 0, 0]
-        self.sim_offsets = np.empty((self.sim.im_slit_sz, nm))
+        self.sim_offsets = np.empty((self.im_slit_sz, nm))
         # Creat an array of slit positions in microns. !!! Add an optional offset
         # to this, i.e. a 1D offset !!!
-        im_slit_pix_in_microns = (np.arange(self.sim.im_slit_sz) -
-                                  self.sim.im_slit_sz / 2.0) *\
-            self.sim.microns_pix
+        im_slit_pix_in_microns = (np.arange(self.im_slit_sz) -
+                                  self.im_slit_sz / 2.0) *\
+            self.microns_pix
         for i in range(nm):
             self.sim_offsets[:, i] = im_slit_pix_in_microns / \
                 self.matrices[i, self.x_map.shape[1] // 2, 0, 0]
@@ -93,18 +79,22 @@ class Extractor():
         """ Manually define the slit profile as used in lenslet extraction. As
         this is a low-level function, all lenslets must be defined. e.g. by
         convention, for the star lenslets of the high resolution mode, lenslets
-        0,1 and 21 through 27 would be zero. Also """
+        0,1 and 21 through 27 would be zero.
 
-        if fluxes.shape[0] != self.sim.nl:
-            print("Error: {0:s} resolution mode must have {1:d} lenslets".format(
-                self.sim.mode, self.sim.nl))
+        This function should not be needed, and instead the profile should just
+        be measured from """
+
+        if fluxes.shape[0] != self.nlenslets:
+            print("Error: {0:s} resolution mode must have {1:d} lenslets".\
+                  format(
+                self.mode, self.nlenslets))
         else:
             self.square_profile = np.empty(
                 (fluxes.shape[0] * 2, fluxes.shape[1]))
-            self.sim_profile = np.empty((self.sim.im_slit_sz, fluxes.shape[1]))
+            self.sim_profile = np.empty((self.im_slit_sz, fluxes.shape[1]))
             for i in range(fluxes.shape[1]):
                 self.square_profile[:, i] = np.array(fluxes[:, i]).repeat(2)
-                im_slit = self.sim.make_lenslets(fluxes=fluxes[:, i])
+                im_slit = self.make_lenslets(fluxes=fluxes[:, i])
                 self.sim_profile[:, i] = np.sum(im_slit, axis=0)
 
     def one_d_extract(self, data=[], file='', lenslet_profile='sim',
@@ -118,9 +108,9 @@ class Extractor():
 
         Parameters
         ----------
-        data: numpy array (optional) 
-            Image data, transposed so that dispersion is in the "y" direction. 
-            Note that this is the transpose of a conventional echellogram. 
+        data: numpy array (optional)
+            Image data, transposed so that dispersion is in the "y" direction.
+            Note that this is the transpose of a conventional echellogram.
             Either data or file must be given
 
         file: string (optional)
@@ -129,7 +119,7 @@ class Extractor():
 
         lenslet_profile: 'square' or 'sim'
             Shape of the profile of each fiber as used in the extraction. For a
-            final implementation, 'measured' should be a possibility. 'square' 
+            final implementation, 'measured' should be a possibility. 'square'
             assigns each pixel uniquely to a single lenslet. For testing only
 
         badpix: (float array, float array)
@@ -144,7 +134,7 @@ class Extractor():
             if len(file) == 0:
                 print("ERROR: Must input data or file")
             else:
-                if self.transpose_data:
+                if self.transpose:
                     # Transpose the data from the start.
                     data = pyfits.getdata(file).T
                 else:
@@ -152,7 +142,7 @@ class Extractor():
 
         ny = self.x_map.shape[1]
         nm = self.x_map.shape[0]
-        nx = self.sim.szx
+        nx = self.szx
 
         # Number of "objects"
         no = self.square_profile.shape[1]
@@ -161,7 +151,7 @@ class Extractor():
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
-        pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.sim.gain + rnoise**2)
+        pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + rnoise**2)
         pixel_inv_var[self.badpixmask] = 0.0
 
         # Loop through all orders then through all y pixels.
@@ -234,13 +224,13 @@ class Extractor():
         row (y-axis in code).
 
         One key difference to Sharp and Birchall is that c_kj (between equations
-        8 and 9) is the correct normalisation for a (fictitious) 1-pixel wide 
+        8 and 9) is the correct normalisation for a (fictitious) 1-pixel wide
         PSF centered exactly on a pixel, but not for a continuum. We normalise
-        correctly for a continuum by having one of the \phi functions being 
+        correctly for a continuum by having one of the \phi functions being
         one-pixel wide along the slit, and the other being unbounded in the
         dispersion direction.
 
-        Note that the input data has to be the transpose of a conventional 
+        Note that the input data has to be the transpose of a conventional
         echellogram
 
         TODO:
@@ -248,27 +238,27 @@ class Extractor():
 
         Parameters
         ----------
-        data: numpy array (optional) 
-            Image data, transposed so that dispersion is in the "y" direction. 
-            Note that this is the transpose of a conventional echellogram. 
+        data: numpy array (optional)
+            Image data, transposed so that dispersion is in the "y" direction.
+            Note that this is the transpose of a conventional echellogram.
             Either data or file must be given
 
         file: string (optional)
-            A fits file with conventional row/column directions containing the 
+            A fits file with conventional row/column directions containing the
             data to be extracted.
 
         lenslet_profile: 'square' or 'sim'
-            Shape of the profile of each fiber as used in the extraction. 
-            For a final implementation, 'measured' should be a possibility. 
-            'square' assigns each pixel uniquely to a single lenslet. 
+            Shape of the profile of each fiber as used in the extraction.
+            For a final implementation, 'measured' should be a possibility.
+            'square' assigns each pixel uniquely to a single lenslet.
             For testing only
 
         rnoise: float
             The assumed readout noise.
 
         deconvolve: bool
-            Do we deconvolve so that neighboring extracted spectral points 
-            are statistically independent? This is an approximate deconvolution 
+            Do we deconvolve so that neighboring extracted spectral points
+            are statistically independent? This is an approximate deconvolution
             (a linear function of 5 neighboring pixels) so is reasonably robust.
         """
 
@@ -281,7 +271,7 @@ class Extractor():
 
         ny = self.x_map.shape[1]
         nm = self.x_map.shape[0]
-        nx = self.sim.szx
+        nx = self.szx
 
         # Number of "objects"
         no = self.square_profile.shape[1]
@@ -303,7 +293,7 @@ class Extractor():
                 offsets = self.sim_offsets[:, i]
                 profile = self.sim_profile
             else:
-                print("Only sim lenslet profile available for 2D extraction 
+                print("Only sim lenslet profile available for 2D extraction
                 so far...")
                 raise userwarning
             nx_cutout = 2 * int((np.max(offsets) - np.min(offsets)) / 2) + 2
@@ -470,14 +460,14 @@ class Extractor():
             file containing lines """
 
         # First, extract the data
-        flux, var = self.one_d_extract(data=data, rnoise=self.sim.rnoise)
+        flux, var = self.one_d_extract(data=data, rnoise=self.rnoise)
         # Read in the lines
         lines = np.loadtxt(arcfile)
         # Only use the first lenslet.
         flux = flux[:, :, 0]
         ny = self.x_map.shape[1]
         nm = self.x_map.shape[0]
-        nx = self.sim.szx
+        nx = self.szx
         lines_out = []
         if len(flat_data) > 0:
             data_to_show = data - 0.05 * flat_data
@@ -495,7 +485,7 @@ class Extractor():
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
                 y -= np.min(y)  # Rough...
-                if np.max(y) < 25 * self.sim.rnoise:
+                if np.max(y) < 25 * self.rnoise:
                     continue
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
@@ -510,7 +500,7 @@ class Extractor():
                 plt.text(xpos + 10, ypos,
                          str(arclines_to_fit[i]), color='green', fontsize=10)
                 lines_out.append([arclines_to_fit[i], ypos, xpos, m_ix +
-                                  self.sim.m_min, g.amplitude.value,
+                                  self.m_min, g.amplitude.value,
                                   g.stddev.value * 2.3548])
         plt.axis([0, nx, ny, 0])
         lines_out = np.array(lines_out)
