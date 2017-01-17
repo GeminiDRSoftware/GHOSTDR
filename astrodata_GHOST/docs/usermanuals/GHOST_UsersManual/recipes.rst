@@ -115,6 +115,44 @@ the following flowchart (thanks Kathleen Labrie):
     :scale: 45
 
 
+Generating a Flat Calibration Frame
+-----------------------------------
+
+The procedure for generating a flat field calibration frame is similar to
+creating a dark or bias, although you have to ``typewalk`` over GHOST_FLAT files
+instead, e.g.::
+
+    typewalk --types GHOST_FLAT GHOST_RED --dir <path_to>/data_folder -o
+    flat.list
+
+Then, when you call ``reduce`` on the ``flat.list``, you must provide both
+the bias and flat file path explicitly::
+
+    reduce @<path_to>/dark.list  --override_cal
+    processed_bias:calibrations/storedcals/bias_0_red_bias.fits
+    processed_dark:calibrations/storedcals/dark_0_red_dark.fits
+
+(or whatever the filename of the processed dark turns out to be).
+
+After the flat field has been created, the spectrograph apertures are fit using
+a ``polyfit`` approach. The RecipeSystem will read in the appropriate aperture
+model from the ``lookups`` system, fit it to the flat field, and store the
+resulting model in the calibrations system.
+
+The selection of the appropriate ``polyfit`` model to start with is
+determined by the spectrograph arm, resolution, and the date the observations
+are made on. Ideally, there will only be one model per arm and resolution
+combination; however, spectrograph maintenance (i.e. dis- and re-assembly) may
+result in the model changing at a specific point in time. Therefore, the
+RecipeSystem *should* (see below) automatically choose the most recent
+applicable model for the dataset being considered.
+
+.. note:: Date-based model selection is currently not implemented - instead,
+          only a single model is provided for each arm/resolution combination.
+          This is sufficient for testing involving the simulator data.
+          Date-based selection will be implemented soon.
+
+
 Reducing an Object frame (Spectra)
 ----------------------------------
 
@@ -122,15 +160,15 @@ The GHOST simulator produces object spectra frames like
 ``obj100_1.0_std_red.fits`` whose names follow this convention:
 ``obj{exptime}_{seeing}_{resolution}_{arm}.fits``. If you run ``typewalk`` on
 the folder containing these, you'll see that they are identified as
-``GHOST_SPECT``::
+``GHOST_OBJECT``::
 
     typewalk --dir <path_to>/data_folder
 
 This informs the reduction framework to run the ``reduceG`` GHOST recipe on
-them, which should run to at least the ``darkCorrection`` step now that you
+them. which should run to at least the ``flatCorrect`` step now that you
 have dark and bias calibration frames (for the moment, we have commented the
 remaining steps out of the ``reduceG`` recipe so it will complete
-successfully::
+successfully)::
 
     reduce <path_to>/data_folder/obj100_1.0_std_red.fits
 
@@ -140,9 +178,17 @@ need to use the ``--override_cal`` option::
     reduce <path_to>/data_folder/obj100_red.fits --override_cal
     processed_bias:calibrations/storedcals/bias_0_red_bias.fits
     processed_dark:calibrations/storedcals/dark100_0_red_dark.fits
+    processed_flat:calibrations/storedcals/flat100_std_0_red_flat.fits
 
 This produces a ``obj100_1.0_std_red_darkCorrected.fits`` (or similar) file, a
-bias and dark corrected GHOST spectrum frame.
+bias, dark and flat corrected GHOST spectrum frame.
+
+.. warning:: The primitive ``rejectCosmicRays`` would normally be called as
+             part of ``reduceG``, after the ``darkCorrect`` step. It is
+             currently commented out - the underlying LACosmic algorithm is
+             working, but aperture removal/re-instatement is required to avoid
+             accidentally flagging spectral peaks and the edges of orders as
+             cosmic rays, and this has yet to be implemented.
 
 
 Reducing Slit Viewing Images

@@ -9,11 +9,10 @@ overscanCorrect
 mosaicADdetectors(tile=True)
 biasCorrect
 darkCorrect
-rejectCosmicRays
-#ADUToElectrons
-#addVar(poisson_noise=True)
-#flatCorrect
-#mosaicDetectors
+#rejectCosmicRays
+ADUToElectrons
+addVAR(poisson_noise=True)
+flatCorrect
 #makeFringe
 #fringeCorrect
 #alignAndStack
