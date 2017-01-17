@@ -557,6 +557,20 @@ class GHOSTPrimitives(GMOSPrimitives,
             The ReductionContext dictionary that holds the data stream
             processing information.
 
+        rc['n_steps']: int (default: 5)
+            The number of iterations that the LACosmic algorithm will make.
+
+        rc['subsampling']: int (default: 2)
+            The image subsampling factor LACosmic will use to generate the
+            input images for the algorithm. There is really no reason to
+            change this value from the default.
+
+        rc['sigma_lim']: float (default: 15.0)
+            The sigma-clipping limit to be applied to the noise map.
+
+        rc['f_lim']: float (default: 5.0)
+            The clipping limit for the fine-structure image.
+
         Yields
         ------
         rc : dict
@@ -908,14 +922,14 @@ class GHOSTPrimitives(GMOSPrimitives,
             The ReductionContext dictionary that holds the data stream
             processing information.
 
+        rc['verbose'] : <any> or None (default: None)
+            set the level of iraf verbosity
+
         Yields
         ------
         rc : dict
             The same ReductionContext dictionary, with any necessary
             alterations.
-
-        rc['verbose'] : <any> or None (default: None)
-            set the level of iraf verbosity
         """
 
         if rc['verbose'] is not None:
