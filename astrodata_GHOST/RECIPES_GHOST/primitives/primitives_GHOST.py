@@ -37,6 +37,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
     astrotype = "GHOST"
 
+    # -------------------------------------------------------------------------
     def init(self, rc):
         """
         GHOSTPrimitives init function.
@@ -57,10 +58,12 @@ class GHOSTPrimitives(GMOSPrimitives,
             The same ReductionContext dictionary, with any necessary
             alterations.
         """
+
         GMOSPrimitives.init(self, rc)
         self.timestamp_keys.update(ghost_stamps.timestamp_keys)
         return rc
 
+    # -------------------------------------------------------------------------
     def findApertures(self, rc):
         """
         Locate the apertures within a GHOST frame, and write out polyfit-
@@ -164,6 +167,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         yield rc
 
+    # -------------------------------------------------------------------------
     def fork(self, rc):
         """
         Fork a new stream by copying the current stream's inputs to the
@@ -172,22 +176,56 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             addToList(purpose=save_to_disk)
             getList(purpose=save_to_disk, to_stream=new_stream_name)
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        rc['newStream'] : string or None (default: None)
+            name of the stream to which to copy the current stream's inputs
+            (can be used to generate a new stream, or can be used to overwrite
+            the outputs of an existing stream)
+
+        Returns
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with the requested
+            alterations.
         """
+
         adoutput_list = rc.get_inputs_as_astrodata()
         rc.report_output(adoutput_list)
-        if rc['newStream']:
+        if rc['newStream'] is not None:
             rc.populate_stream(adoutput_list, stream=rc['newStream'])
         yield rc
 
+    # -------------------------------------------------------------------------
     def mosaicADdetectors(self, rc):
         """
         This primitive will mosaic the SCI frames of the input images, along
         with the VAR and DQ frames if they exist.
 
-        :param tile: tile images instead of mosaic
-        :type tile: Python boolean (True/False), default is False
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
 
+        rc['tile'] : bool (default: False)
+            tile images instead of mosaic (mosaic includes transformations)
+
+        rc['dq_planes'] : bool (default: False)
+            transform the DQ image, bit plane by bit plane
+
+        Returns
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
         """
+
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
@@ -265,7 +303,41 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         yield rc
 
+    # -------------------------------------------------------------------------
     def processSlits(self, rc):
+        """
+        This primitive replaces CR-affected pixels in each individual slit view-
+        er image (taken from the current stream) with their equivalents from the
+        median frame of those images.  It also computes the mean exposure epoch.
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        rc['mask'] : string or None (default: None)
+            name of the fibre mask (if not provided / set to None, the fibre
+            mask will be taken from the 'processed_slitmask' override_cal
+            command line argument)
+
+        rc['slit'] : string or None (default: None)
+            name of the median slit viewer frame (if not provided / set to None,
+            the median slit frame will be taken from rc['slitStream'])
+
+        rc['slitStream'] : string or None (default: None)
+            name of the stream from which to access the median slit viewer frame
+            (only the first AstroData instance is used; if not provided / set to
+            None, the median slit frame will be taken from the 'processed_slit'
+            override_cal command line argument)
+
+        Returns
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+        """
+
         me = inspect.currentframe().f_code.co_name
 
         # Instantiate the log
@@ -348,15 +420,15 @@ class GHOSTPrimitives(GMOSPrimitives,
                          "AstroData object (%s):\n%s" % (ad.filename,
                                                          slit.filename))
 
+            addata = ad['SCI', 1].hdulist[1].data
+
             if False:  # set to True to output the residuals for debugging
-                addata = ad['SCI', 1].hdulist[1].data
                 ad['SCI', 1].hdulist[1].data = abs(addata - sldata)
             else:
                 # replace CR-affected pixels with those from the median slit
                 # viewer image (subtract the median slit frame and threshold
                 # against the residuals); not sure VAR/DQ planes appropriately
                 # handled here
-                addata = ad['SCI', 1].hdulist[1].data
                 indices = abs(addata - sldata) > sigma
                 flux_before = np.sum(addata)  # TODO: mask non-fibre pixels
                 addata[indices] = sldata[indices]
@@ -372,9 +444,9 @@ class GHOSTPrimitives(GMOSPrimitives,
                     (indices).sum(), '# of CR pixels replaced by mean')
 
                 # get science and slit view image start/end times
-                sc_start = datetime.datetime.strptime(
+                sc_start = datetime.datetime.strptime(  # same for all slit exts
                     ad.phu.header['UTSTART'], "%H:%M:%S.%f")
-                sc_end = datetime.datetime.strptime(
+                sc_end = datetime.datetime.strptime(  # same for all slit extns
                     ad.phu.header['UTEND'], "%H:%M:%S.%f")
                 sv_start = datetime.datetime.strptime(
                     ad['SCI', 1].hdulist[1].header['EXPUTST'], "%H:%M:%S.%f")
@@ -387,24 +459,22 @@ class GHOSTPrimitives(GMOSPrimitives,
                 overlap = (earliest_end - latest_start).seconds
                 sv_duration = ad['SCI', 1].hdulist[1].header['EXPTIME']
                 overlap /= sv_duration  # convert into a percentage
-                sv_duration = datetime.timedelta(seconds=sv_duration)
 
                 # compute the offset (the value to be weighted), in seconds,
                 # from the start of the science exposure
                 if sc_start <= sv_start and sv_end <= sc_end:
-                    offset = sv_start - sc_start + sv_duration / 2
+                    offset = (sv_start - sc_start).seconds + sv_duration / 2.0
                 elif sv_start < sc_start:
-                    offset = overlap * sv_duration / 2
+                    offset = overlap * sv_duration / 2.0
                 elif sv_end > sc_end:
-                    offset = overlap * sv_duration.seconds / 2.0
+                    offset = overlap * sv_duration / 2.0
                     offset += (sv_start - sc_start).seconds
-                    offset = datetime.timedelta(seconds=offset)
 
                 # add flux-weighted offset (plus weight itself) to
                 # accumulators
                 weight = flux_after * overlap
                 sum_of_weights += weight
-                accum_weighted_time += weight * offset.seconds
+                accum_weighted_time += weight * offset
 
             # Add the appropriate time stamps to the PHU
             gt.mark_history(
@@ -419,14 +489,14 @@ class GHOSTPrimitives(GMOSPrimitives,
             adoutput_list.append(ad)
 
         # final mean exposure epoch computation
-        mean_epoch = accum_weighted_time / sum_of_weights
-        mean_epoch = datetime.timedelta(seconds=mean_epoch)
+        mean_offset = accum_weighted_time / sum_of_weights
+        mean_offset = datetime.timedelta(seconds=mean_offset)
         for ad in adinput:
-            sc_start = datetime.datetime.strptime(
+            sc_start = datetime.datetime.strptime(  # same for all slit extns
                 ad.phu.header['UTSTART'], "%H:%M:%S.%f")
-            sc_start += mean_epoch
-            ad.phu.header['AVGEPOCH'] = (  # is the right keyword string?
-                sc_start.strftime("%H:%M:%S.%f")[:-3], 'Mean Exposure Epoch')
+            mean_epoch = sc_start + mean_offset
+            ad.phu.header['AVGEPOCH'] = (  # is this the right keyword string?
+                mean_epoch.strftime("%H:%M:%S.%f")[:-3], 'Mean Exposure Epoch')
 
         # Report the list of output AstroData objects to the reduction
         # context
@@ -434,16 +504,32 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         yield rc
 
+    # -------------------------------------------------------------------------
     def promote(self, rc):
         """
-        Promote extensions to full AstroData instances so validateData will
-        allow them to pass; also unify the extension names/numbers and give
-        each a unique ORIGNAME so stackFrames will operate properly.
+        Promote extensions to full AstroData instances and homogenise their
+        extension names/number so validateData will allow them to pass; also
+        give each a unique ORIGNAME so stackFrames will operate properly (be-
+        cause it is iraf-based, stackFrames must first write its inputs to disk,
+        and it uses a variation of ORIGNAME to do so).
 
         This primitive is only used for preparing slit viewing images and
         is usually the first thing called in recipes that process these
         images.
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Returns
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
         """
+
         # use AstroData slicing (aka "sub-data") to promote all extensions
         adoutput_list = [ad[i]  # noqa
             for ad in rc.get_inputs_as_astrodata()
@@ -460,6 +546,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         yield rc
 
+    # -------------------------------------------------------------------------
     def rejectCosmicRays(self, rc):
         """
         Reject cosmic rays from GHOST data.
@@ -475,8 +562,8 @@ class GHOSTPrimitives(GMOSPrimitives,
         rc : dict
             The same ReductionContext dictionary, with any necessary
             alterations.
-
         """
+
         # Instantiate the log
         log = logutils.get_logger(__name__)
 
@@ -709,6 +796,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         yield rc
 
+    # -------------------------------------------------------------------------
     def stackFrames(self, rc):
         """
         Stack GHOST frames using IRAF.
@@ -722,35 +810,62 @@ class GHOSTPrimitives(GMOSPrimitives,
             The ReductionContext dictionary that holds the data stream
             processing information.
 
+        rc['hsigma'] : float or None (default: None)
+            expose the hsigma parameter of the underlying iraf gemcombine
+            script, allowing it to be set within a recipe
+
+        rc['hthresh'] : float or None (default: None)
+            expose the hthreshold parameter of the underlying iraf gemcombine
+            script, allowing it to be set within a recipe
+
+        rc['lsigma'] : float or None (default: None)
+            expose the lsigma parameter of the underlying iraf gemcombine
+            script, allowing it to be set within a recipe
+
+        rc['lthresh'] : float or None (default: None)
+            expose the lthreshold parameter of the underlying iraf gemcombine
+            script, allowing it to be set within a recipe
+
+        rc['pclip'] : float or None (default: None)
+            expose the pclip parameter of the underlying iraf gemcombine
+            script, allowing it to be set within a recipe
+
+        rc['sigscale'] : float or None (default: None)
+            expose the sigscale parameter of the underlying iraf gemcombine
+            script, allowing it to be set within a recipe
+
+        rc['verbose'] : <any> or None (default: None)
+            set the level of iraf verbosity
+
         Yields
         ------
         rc : dict
             The same ReductionContext dictionary, with any necessary
             alterations.
 
-
         Algorithms
         ----------
         This is a test of autodoc's abilities.
-
         """
-        if rc['hsigma']:
+
+        if rc['hsigma'] is not None:
             extra_gemcombine_params['hsigma'] = float(rc['hsigma'])
-        if rc['hthresh']:
+        if rc['hthresh'] is not None:
             extra_gemcombine_params['hthreshold'] = float(rc['hthresh'])
-        if rc['lsigma']:
+        if rc['lsigma'] is not None:
             extra_gemcombine_params['lsigma'] = float(rc['lsigma'])
-        if rc['lthresh']:
+        if rc['lthresh'] is not None:
             extra_gemcombine_params['lthreshold'] = float(rc['lthresh'])
-        if rc['pclip']:
+        if rc['pclip'] is not None:
             extra_gemcombine_params['pclip'] = float(rc['pclip'])
-        if rc['sigscale']:
+        if rc['sigscale'] is not None:
             extra_gemcombine_params['sigscale'] = float(rc['sigscale'])
-        if rc['verbose']:
+        if rc['verbose'] is not None:
             iraf.setVerbose(value=2)
 
         return StackPrimitives.stackFrames(self, rc)
 
+    # -------------------------------------------------------------------------
     def standardizeHeaders(self, rc):
         """
         Standardize the headers of GHOST data to Gemini standards.
@@ -770,15 +885,15 @@ class GHOSTPrimitives(GMOSPrimitives,
             The same ReductionContext dictionary, with any necessary
             alterations.
 
-
         Algorithms
         ----------
         This is a test of autodoc's abilities.
-
         """
+
         rc.run('standardizeGeminiHeaders')
         yield rc
 
+    # -------------------------------------------------------------------------
     def subtractOverscan(self, rc):
         """
         Subtract overscan from GHOST data.
@@ -799,8 +914,11 @@ class GHOSTPrimitives(GMOSPrimitives,
             The same ReductionContext dictionary, with any necessary
             alterations.
 
+        rc['verbose'] : <any> or None (default: None)
+            set the level of iraf verbosity
         """
-        if rc['verbose']:
+
+        if rc['verbose'] is not None:
             iraf.setVerbose(value=2)
 
         # supply extra required param in gireduce's ETI wrapper; can also
@@ -809,14 +927,32 @@ class GHOSTPrimitives(GMOSPrimitives,
         extra_gireduce_params['order'] = 1
         return GMOSPrimitives.subtractOverscan(self, rc)
 
+    # -------------------------------------------------------------------------
     def switchTo(self, rc):
         """
         Make the specified stream the current stream
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        rc['streamName'] : string or None (default: None)
+            the name of the stream to switch to (to make the current stream)
+
+        Yields
+        ------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
         """
-        if rc['streamName']:
+
+        if rc['streamName'] is not None:
             rc.switch_stream(rc['streamName'])
         yield rc
 
+    # -------------------------------------------------------------------------
     def _get_polyfit_key(self, adinput=None):
         """
         Helper function - returns the path for finding initial polyfit models
@@ -834,6 +970,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             calling _get_polyfit_key will need to open these files as
             required.
         """
+
         # The polyfit models are keyed by the instrument, and in the case of
         # GHOST, the arm, resolution mode, and date valid from.
         # Get the
