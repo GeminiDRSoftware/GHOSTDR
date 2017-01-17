@@ -91,5 +91,6 @@ primitive will trigger a call to
           (5.0) and ``n_passes`` (5) are a first-pass guess at what seems to
           flag roughly the correct number of cosmic rays. More complete
           testing, and the possible implementation of a table of preset values
-          on a case-by-case basis, will need to wait until a working
-          findApertures routine has been implemented.
+          on a case-by-case basis, will need to wait until the findApertures
+          routine (and related routines) are finalized and mixed in with the
+          cosmic ray finding.
