@@ -52,7 +52,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             The ReductionContext dictionary that holds the data stream
             processing information.
 
-        Returns
+        Yields
         -------
         rc : dict
             The same ReductionContext dictionary, with any necessary
@@ -75,7 +75,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             The ReductionContext dictionary that holds the data stream
             processing information.
 
-        Returns
+        Yields
         -------
         rc : dict
             The same ReductionContext dictionary, with any necessary
@@ -188,7 +188,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             (can be used to generate a new stream, or can be used to overwrite
             the outputs of an existing stream)
 
-        Returns
+        Yields
         -------
         rc : dict
             The same ReductionContext dictionary, with the requested
@@ -219,7 +219,7 @@ class GHOSTPrimitives(GMOSPrimitives,
         rc['dq_planes'] : bool (default: False)
             transform the DQ image, bit plane by bit plane
 
-        Returns
+        Yields
         -------
         rc : dict
             The same ReductionContext dictionary, with any necessary
@@ -331,7 +331,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             None, the median slit frame will be taken from the 'processed_slit'
             override_cal command line argument)
 
-        Returns
+        Yields
         -------
         rc : dict
             The same ReductionContext dictionary, with any necessary
@@ -523,7 +523,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             The ReductionContext dictionary that holds the data stream
             processing information.
 
-        Returns
+        Yields
         -------
         rc : dict
             The same ReductionContext dictionary, with any necessary

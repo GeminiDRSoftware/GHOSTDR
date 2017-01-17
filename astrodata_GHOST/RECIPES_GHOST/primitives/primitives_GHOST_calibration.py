@@ -37,6 +37,22 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         yield rc
 
     def _getProcessed(self, rc):
+        """
+        Helper function - prevents code duplication for the variety of
+        getProcessed* functions
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Returns
+        -------
+        Nil. The calling function is responsible for returning the
+        ReductionContext dict.
+
+        """
         # Instantiate the log
         log = logutils.get_logger(__name__)
 
@@ -88,6 +104,22 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         yield rc
 
     def _storeProcessed(self, rc, key):
+        """
+        Helper function - prevents code duplication for the variety of
+        storeProcessed* functions
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Returns
+        -------
+        Nil. The calling function is responsible for returning the
+        ReductionContext dict.
+
+        """
         # Instantiate the log
         log = logutils.get_logger(__name__)
 
