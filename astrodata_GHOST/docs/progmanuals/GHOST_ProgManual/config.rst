@@ -2,12 +2,16 @@ Configuration
 =============
 
 This chapter details configuration procedures that will almost always
-be undertaken by Gemini Observatory staff.
+be undertaken by Gemini Observatory staff. 
 
 Generating New ``Polyfit`` Models
 ---------------------------------
 
 .. note:: This is the second iteration of this documentation.
+
+This is necessary if the instrument is realigned at any point during its lifetime
+at the telecope. Much of this process is common with the normal data reduction,
+with the exception of the manual model adjustment.
 
 The principle behind this process is that the format of the spectral orders
 and the wavelength scale can be modelled uniquely using polynomials of
@@ -66,19 +70,28 @@ of the initial model::
   adjusted_xparams=ghost_format.adjust_model(flat_conv,xparams=xparams,convolve=False,percentage_variation=10)
 
 The ``percentage_variation`` refers to the percentage range of values that each
-parameter is allowed to be varied by the matplotlib slider widgets.
+parameter is allowed to be varied by the matplotlib slider widgets. This is set
+at 10 percent by default and should be enough for small changes. Increase if the
+large adjustment is needed. 
 
-The ``Submit`` button saves the current version of the model onto the
+If this is performed because of a recent alignment of the instrument, then
+the ``Submit`` button saves the current version of the model onto the
 calibrations directory. The ``adjust_model`` function is for engineering
 use only at this stage and the user should not have to see it.
 
 Once the model is close, the model can be fitted::
 
-  ghost_format.fit_x_to_image(flat_conv,xparams=adjusted_xparams, decrease_dim=8,inspect=True)
+  fitted_model=ghost_format.fit_x_to_image(flat_conv,xparams=adjusted_xparams, decrease_dim=8,inspect=True)
 
 This function takes the convolution map and adjusts the model to the local
 maximum along each order. The ``inspect`` parameter set to True displays the
-result of the fit and, if it is satisfactory, pressing the ``submit`` button
-again will save it.
+result of the fit.
 
-At this point, the input to the flux extraction code is available for testing.
+At this point, the ``fitted_model`` variable contains the result of the fit and should
+be used as the input to the flux extraction code. This new 2D array should overwrite the
+current default xmod file for this arm/mode in the correct location. At this point it is
+important to also place it in whatever location has been agreed so that the pipeline uses
+whichever model is appropriate for any date.
+
+
+
