@@ -25,9 +25,10 @@ TODO:
 import os
 import numpy as np
 from astrodata_GHOST.polyfit.polyspect import Polyspect
+from astrodata_GHOST.polyfit.extract import Extractor
 
 
-class Arm(Polyspect):
+class Arm(Polyspect,Extractor):
     """A class for each arm of the spectrograph. The initialisation
     function takes a series of strings representing the configuration.
     It can be "red" or "blue" for the arm (first string),
@@ -154,6 +155,8 @@ class Arm(Polyspect):
                            self.m_min, self.m_max, self.transpose,
                            self.extra_rot,self.nlenslets, self.fiber_separation,
                            self.profile_sigma)
+
+        Extractor.__init__(self, 
 
     def make_lenslets(self, fluxes=[], seeing=0.8, llet_offset=0):
         """Make an image of the lenslets with sub-pixel sampling.
