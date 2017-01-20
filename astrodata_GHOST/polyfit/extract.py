@@ -51,13 +51,12 @@ class Extractor():
         # The [0,0] component of "matrices" measures the size of a detector
         # pixel in the simulated slit image space. i.e. slitmicrons/detpix.
         for i in range(self.nlenslets):
-            self.square_offsets[:, i] = (pix_offset_ix - self.nlenslets / 2.0) *\
-                self.lenslet_width /
-                self.matrices[i,
-                              self.x_map.shape[1] // 2, 0, 0]
+            self.square_offsets[:, i] = (pix_offset_ix - self.nlenslets / 2.0)*\
+                self.lenslet_width / self.matrices[i,self.x_map.shape[1] //
+                                                   2, 0, 0]
         self.sim_offsets = np.empty((self.im_slit_sz, nm))
-        # Creat an array of slit positions in microns. !!! Add an optional offset
-        # to this, i.e. a 1D offset !!!
+        # Creat an array of slit positions in microns. !!! Add an optional
+        # offset to this, i.e. a 1D offset !!!
         im_slit_pix_in_microns = (np.arange(self.im_slit_sz) -
                                   self.im_slit_sz / 2.0) *\
             self.microns_pix
@@ -82,7 +81,7 @@ class Extractor():
         0,1 and 21 through 27 would be zero.
 
         This function should not be needed, and instead the profile should just
-        be measured from """
+        be measured from the slit viewer"""
 
         if fluxes.shape[0] != self.nlenslets:
             print("Error: {0:s} resolution mode must have {1:d} lenslets".\
