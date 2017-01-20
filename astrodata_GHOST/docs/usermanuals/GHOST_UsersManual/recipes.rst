@@ -128,7 +128,7 @@ instead, e.g.::
 Then, when you call ``reduce`` on the ``flat.list``, you must provide both
 the bias and flat file path explicitly::
 
-    reduce @<path_to>/dark.list  --override_cal
+    reduce @<path_to>/flat.list  --override_cal
     processed_bias:calibrations/storedcals/bias_0_red_bias.fits
     processed_dark:calibrations/storedcals/dark_0_red_dark.fits
 
@@ -220,7 +220,7 @@ to process the slit viewer frames (which removes cosmic rays and computes the
 mean exposure epoch).  The first step, computing the bias calibrator, may be
 skipped in favour of simply pointing to a slit bias frame (of type
 ``GHOST_SLITV_BIAS``).  Or, follow these steps to produce one by stacking
-multiple frames together:
+multiple frames together::
 
     typewalk --types GHOST_SLITV_BIAS --dir <path_to>/data_folder -o
     slit_bias.list
@@ -228,7 +228,7 @@ multiple frames together:
     reduce @<path_to>/slit_bias.list
 
 The next step is to generate the dark calibrator.  Follow these steps to produce
-one:
+one::
 
     typewalk --types GHOST_SLITV_DARK --dir <path_to>/data_folder -o
     slit_dark.list
@@ -252,7 +252,7 @@ the folder containing these, you'll see that they are identified as
     typewalk --dir <path_to>/data_folder
 
 This informs the reduction framework to run the ``makeProcessedSlitG`` GHOST
-recipe on them.  Run the reduction as follows:
+recipe on them.  Run the reduction as follows::
 
     reduce <path_to>/data_folder/obj100_1.0_std_SLIT.fits --override_cal
     processed_bias:calibrations/storedcals/bias_1_SLIT_bias.fits
