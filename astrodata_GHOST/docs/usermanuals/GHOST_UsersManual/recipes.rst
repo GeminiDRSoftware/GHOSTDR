@@ -122,9 +122,11 @@ The procedure for generating a flat field calibration frame is similar to
 creating a dark or bias, although you have to ``typewalk`` over GHOST_FLAT files
 instead, e.g.::
 
-    typewalk --types GHOST_FLAT GHOST_RED --dir <path_to>/data_folder -o
-    flat.list
+    typewalk --types GHOST_FLAT GHOST_RED GHOST_HIGH --dir <path_to>/data_folder
+    -o flat.list
 
+(Note this is the first place where we have to explicitly specify the
+resolution mode/type of the object file we ultimately intend to reduce.)
 Then, when you call ``reduce`` on the ``flat.list``, you must provide both
 the bias and flat file path explicitly::
 
@@ -190,17 +192,17 @@ have dark and bias calibration frames (for the moment, we have commented the
 remaining steps out of the ``reduceG`` recipe so it will complete
 successfully)::
 
-    reduce <path_to>/data_folder/obj100_1.0_std_red.fits
+    reduce <path_to>/data_folder/obj100_1.0_high_red.fits
 
 The above command will fail due to the faulty calibrations lookup. Again, we
 need to use the ``--override_cal`` option::
 
-    reduce <path_to>/data_folder/obj100_red.fits --override_cal
+    reduce <path_to>/data_folder/obj100_1.0_high_red.fits --override_cal
     processed_bias:calibrations/storedcals/bias_0_red_bias.fits
     processed_dark:calibrations/storedcals/dark100_0_red_dark.fits
     processed_flat:calibrations/storedcals/flat100_std_0_red_flat.fits
 
-This produces a ``obj100_1.0_std_red_darkCorrected.fits`` (or similar) file, a
+This produces a ``obj100_1.0_high_red_flatCorrected.fits`` (or similar) file, a
 bias, dark and flat corrected GHOST spectrum frame.
 
 .. warning:: The primitive ``rejectCosmicRays`` would normally be called as
