@@ -1,6 +1,10 @@
 GHOST DR Release Notes
 ======================
 
+MILESTONE-4
+  Milestone 4 release, including a working recipe for aperture finding
+
+
 MILESTONE-3
   Milestone 3 release, including a working recipe for dark subtraction
 

@@ -4,33 +4,66 @@
 Primitives
 **********
 
-Primitive #1  (alphabetical)
-============================
+.. module:: astrodata_GHOST.RECIPES_GHOST.primitives.primitives_GHOST
+.. autoclass:: GHOSTPrimitives
+    :members: stackFrames
 
-Purpose
--------
+    **Primitives**
 
-Inputs and Outputs
-------------------
+    .. method:: rejectCosmicRays(self, rc)
 
-Input parameters
-----------------
+        Reject cosmic rays from GHOST data.
 
-AstroData Type(s)
------------------
+        Parameters
+        ----------
 
-Inheritance and Primitive Set
------------------------------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
 
-Location
---------
+        Yields
+        ------
 
-Algorithms
-----------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
 
-Issues and Limitations
-----------------------
+    .. automethod:: standardizeHeaders
 
-
-Primitive #2
-============
+.. **********
+.. Primitives
+.. **********
+..
+.. Primitive #1  (alphabetical)
+.. ============================
+..
+.. Test text to make sure this file is being found
+..
+.. Purpose
+.. -------
+..
+.. Inputs and Outputs
+.. ------------------
+..
+.. Input parameters
+.. ----------------
+..
+.. AstroData Type(s)
+.. -----------------
+..
+.. Inheritance and Primitive Set
+.. -----------------------------
+..
+.. Location
+.. --------
+..
+.. Algorithms
+.. ----------
+..
+.. Issues and Limitations
+.. ----------------------
+..
+..
+.. Primitive #2
+.. ============
+..

@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>7. Configuration &mdash; GHOST Programmer&#39;s Manual 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/todo-styles.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GHOST Programmer&#39;s Manual 0.9 documentation" href="index.html" />
+    <link rel="prev" title="6. Test Suite" href="tests.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tests.html" title="6. Test Suite"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Programmer&#39;s Manual 0.9 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="configuration">
+<h1>7. Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h1>
+<p>This chapter details configuration procedures that will almost always
+be undertaken by Gemini Observatory staff.</p>
+<div class="section" id="generating-new-polyfit-models">
+<h2>7.1. Generating New <code class="docutils literal"><span class="pre">Polyfit</span></code> Models<a class="headerlink" href="#generating-new-polyfit-models" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This is the second iteration of this documentation.</p>
+</div>
+<p>This is necessary if the instrument is realigned at any point during its lifetime
+at the telecope. Much of this process is common with the normal data reduction,
+with the exception of the manual model adjustment.</p>
+<p>The principle behind this process is that the format of the spectral orders
+and the wavelength scale can be modelled uniquely using polynomials of
+polynomials. e.g. A series of polynomials as a function of order number are
+combined in a polynomial fashion as a function of y position on the chip.</p>
+<p>In an ideal world, there would only ever be one <code class="docutils literal"><span class="pre">polyfit</span></code> model for each
+configuration (i.e. arm and resolution) of the instrument, which can be
+determined during instrument commissioning and used forever after. However,
+it cannot be guaranteed that the instrument will remain stable for its entire
+lifetime. For example, minor earthquakes may cause optical components to shift
+ever so slightly, or maintenance may require disassembly of the instrument,
+which may alter the position of apertures on the detector.</p>
+<p>The process to generate a new <code class="docutils literal"><span class="pre">polyfit</span></code> configuration is done entirely
+within Python. A subset of these <code class="docutils literal"><span class="pre">polyfit</span></code> methods are used in the
+<code class="docutils literal"><span class="pre">findApertures</span></code> primitive in <code class="docutils literal"><span class="pre">astrodata_GHOST</span></code> to fit the models to
+observational data.</p>
+<p>The <code class="docutils literal"><span class="pre">polyfit</span></code> module is used at this stage and requires knowledge of the
+spectrograph arm, mode and a reduced flat field image (tested only with
+flats from the simulator).</p>
+<p>Usage follows:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">polyfit</span>
+<span class="kn">import</span> <span class="nn">astropy.io.fits</span> <span class="k">as</span> <span class="nn">pyfits</span>
+<span class="n">ghost</span> <span class="o">=</span> <span class="n">polyfit</span><span class="o">.</span><span class="n">ghost</span><span class="o">.</span><span class="n">Arm</span><span class="p">(</span><span class="s1">&#39;red&#39;</span><span class="p">,</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;high&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>At this stage it is important to an initial guess
+array for the polynomial model.</p>
+<p>At this point a location must be defined and the data imported (e.g.):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">model_file</span><span class="o">=</span><span class="s1">&#39;~.local/lib/python2.7/site-packages/ghostdr-0.1.0-py2.7.egg/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/red/161120/high/xmod.fits&#39;</span>
+<span class="n">xparams</span><span class="o">=</span><span class="n">pyfits</span><span class="o">.</span><span class="n">getdata</span><span class="p">(</span><span class="n">model_file</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>After acquiring the flat field data:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">flat_file</span> <span class="o">=</span> <span class="s2">&quot;location_to_flat/flatfield_frame.fits&quot;</span>
+<span class="n">flat_data</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">getdata</span><span class="p">(</span><span class="n">flat_file</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>a convolution map is required. This is done so that, irrespective of the
+number of fibers per order, the model is adjusted against an
+equivalent map that has maxima where the middle of the order lies.</p>
+<p>Either a supplied model of the slit profile (from the slit viewer) or a
+default uniform illumination profile is convolved with every column of the
+flat field image along the spatial direction, resulting in a series of
+images that match the centers of the orders.</p>
+<p>This is then fed into the <code class="docutils literal"><span class="pre">adjust_model</span></code> function for visual inspection
+of the initial model:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">flat_conv</span><span class="o">=</span><span class="n">ghost_format</span><span class="o">.</span><span class="n">slit_flat_convolve</span><span class="p">(</span><span class="n">flat_data</span><span class="p">)</span>
+<span class="n">adjusted_xparams</span><span class="o">=</span><span class="n">ghost_format</span><span class="o">.</span><span class="n">adjust_model</span><span class="p">(</span><span class="n">flat_conv</span><span class="p">,</span><span class="n">xparams</span><span class="o">=</span><span class="n">xparams</span><span class="p">,</span><span class="n">convolve</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">percentage_variation</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">percentage_variation</span></code> refers to the percentage range of values that each
+parameter is allowed to be varied by the matplotlib slider widgets. This is set
+at 10 percent by default and should be enough for small changes. Increase if the
+large adjustment is needed.</p>
+<p>If this is performed because of a recent alignment of the instrument, then
+the <code class="docutils literal"><span class="pre">Submit</span></code> button saves the current version of the model onto the
+calibrations directory. The <code class="docutils literal"><span class="pre">adjust_model</span></code> function is for engineering
+use only at this stage and the user should not have to see it.</p>
+<p>Once the model is close, the model can be fitted:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">fitted_model</span><span class="o">=</span><span class="n">ghost_format</span><span class="o">.</span><span class="n">fit_x_to_image</span><span class="p">(</span><span class="n">flat_conv</span><span class="p">,</span><span class="n">xparams</span><span class="o">=</span><span class="n">adjusted_xparams</span><span class="p">,</span> <span class="n">decrease_dim</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span><span class="n">inspect</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This function takes the convolution map and adjusts the model to the local
+maximum along each order. The <code class="docutils literal"><span class="pre">inspect</span></code> parameter set to True displays the
+result of the fit.</p>
+<p>At this point, the <code class="docutils literal"><span class="pre">fitted_model</span></code> variable contains the result of the fit and should
+be used as the input to the flux extraction code. This new 2D array should overwrite the
+current default xmod file for this arm/mode in the correct location. At this point it is
+important to also place it in whatever location has been agreed so that the pipeline uses
+whichever model is appropriate for any date.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">7. Configuration</a><ul>
+<li><a class="reference internal" href="#generating-new-polyfit-models">7.1. Generating New <code class="docutils literal"><span class="pre">Polyfit</span></code> Models</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tests.html"
+                        title="previous chapter">6. Test Suite</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/config.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tests.html" title="6. Test Suite"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Programmer&#39;s Manual 0.9 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, RSAA, The Australian National University &amp; Gemini.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.5.
+    </div>
+  </body>
+</html>

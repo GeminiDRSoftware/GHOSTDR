@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,15 +6,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>GHOS Programmer’s Manual &mdash; GHOS Programmer&#39;s Manual 0.9 documentation</title>
+    <title>GHOST Programmer’s Manual &mdash; GHOST Programmer&#39;s Manual 0.9 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="_static/todo-styles.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '0.9',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -26,37 +24,40 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="GHOS Programmer&#39;s Manual 0.9 documentation" href="#" />
+    <link rel="top" title="GHOST Programmer&#39;s Manual 0.9 documentation" href="#" />
     <link rel="next" title="1. Introduction to the Instrument" href="intro.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
           <a href="intro.html" title="1. Introduction to the Instrument"
              accesskey="N">next</a> |</li>
-        <li><a href="#">GHOS Programmer&#39;s Manual 0.9 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="#">GHOST Programmer&#39;s Manual 0.9 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
-  <div class="section" id="ghos-programmer-s-manual">
-<h1>GHOS Programmer&#8217;s Manual<a class="headerlink" href="#ghos-programmer-s-manual" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="ghost-programmer-s-manual">
+<h1>GHOST Programmer&#8217;s Manual<a class="headerlink" href="#ghost-programmer-s-manual" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="intro.html">1. Introduction to the Instrument</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="intro.html#general-description">1.1. General Description</a></li>
 <li class="toctree-l2"><a class="reference internal" href="intro.html#description-of-the-modes">1.2. Description of the Modes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="intro.html#required-calibration-and-associated-observations">1.3. Required Calibration and Associated Observations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="intro.html#important-instrument-characteristics-or-issues">1.4. Important Instrument Characteristics or Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#important-instrument-characteristics-and-issues">1.4. Important Instrument Characteristics and Issues</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="flows.html">2. Typical Data Reduction Flows</a><ul>
@@ -77,15 +78,15 @@
 <li class="toctree-l2"><a class="reference internal" href="recipes.html#issues-and-limitations">4.4. Issues and Limitations</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="primitives.html">5. Primitives</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="primitives.html#primitive-1-alphabetical">5.1. Primitive #1  (alphabetical)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="primitives.html#primitive-2">5.2. Primitive #2</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="primitives.html">5. Primitives</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tests.html">6. Test Suite</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tests.html#available-tests">6.1. Available Tests</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tests.html#missing-or-desirable-tests">6.2. Missing or Desirable Tests</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tests.html#running-the-tests">6.3. Running the Tests</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">7. Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="config.html#generating-new-polyfit-models">7.1. Generating New <code class="docutils literal"><span class="pre">Polyfit</span></code> Models</a></li>
 </ul>
 </li>
 </ul>
@@ -94,9 +95,9 @@
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
-<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
-<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
 </ul>
 </div>
 
@@ -104,56 +105,56 @@
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">GHOS Programmer&#8217;s Manual</a><ul>
-</ul>
-</li>
+<li><a class="reference internal" href="#">GHOST Programmer&#8217;s Manual</a></li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
 </ul>
 
   <h4>Next topic</h4>
   <p class="topless"><a href="intro.html"
                         title="next chapter">1. Introduction to the Instrument</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/index.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
           <a href="intro.html" title="1. Introduction to the Instrument"
              >next</a> |</li>
-        <li><a href="#">GHOS Programmer&#39;s Manual 0.9 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="#">GHOST Programmer&#39;s Manual 0.9 documentation</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, TBD.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, RSAA, The Australian National University &amp; Gemini.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.5.
     </div>
   </body>
 </html>
