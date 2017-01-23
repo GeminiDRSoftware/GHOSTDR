@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,15 +6,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>2. Recipes for GHOS &mdash; GHOS Users Manual 0.9.0 documentation</title>
+    <title>2. Recipes for GHOST &mdash; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="_static/todo-styles.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '0.9.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -26,37 +24,253 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="GHOS Users Manual 0.9.0 documentation" href="index.html" />
-    <link rel="next" title="3. Tips and Tricks for Processing GHOS" href="tipstricks.html" />
-    <link rel="prev" title="1. Overview of GHOS and its Data" href="instrument.html" /> 
+    <link rel="top" title="GHOST Users&#39; Manual 0.9.0 documentation" href="index.html" />
+    <link rel="next" title="3. Tips and Tricks for Processing GHOST" href="tipstricks.html" />
+    <link rel="prev" title="1. Overview of GHOST" href="instrument.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="tipstricks.html" title="3. Tips and Tricks for Processing GHOS"
+          <a href="tipstricks.html" title="3. Tips and Tricks for Processing GHOST"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="instrument.html" title="1. Overview of GHOS and its Data"
+          <a href="instrument.html" title="1. Overview of GHOST"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">GHOS Users Manual 0.9.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
-  <div class="section" id="recipes-for-ghos">
-<span id="ghos-recipes-and-flows"></span><h1>2. Recipes for GHOS<a class="headerlink" href="#recipes-for-ghos" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="recipes-for-ghost">
+<span id="ghost-recipes-and-flows"></span><h1>2. Recipes for GHOST<a class="headerlink" href="#recipes-for-ghost" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="typical-processing-flows">
 <h2>2.1. Typical Processing Flows<a class="headerlink" href="#typical-processing-flows" title="Permalink to this headline">¶</a></h2>
-<p>include scientific flow charts, include associated recipes</p>
+<p>Here we review some of the typical processing workflows for GHOST data
+reduction. For this discussion, it is assumed you&#8217;ve already installed the
+latest Ureka package and made a local clone of the <code class="docutils literal"><span class="pre">ghostdr</span></code> Hg repository.
+(For illustrative purposes, the text below assumes the clone&#8217;s working copy
+root is <code class="docutils literal"><span class="pre">wc/</span></code>.)</p>
+<p>Furthermore, for the commands given below to work properly, you must:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>initialize the Ureka environment: <code class="docutils literal"><span class="pre">ur_setup</span></code></li>
+<li>create a symlink named <code class="docutils literal"><span class="pre">wc/externals/gemini_python/astrodata_GHOST</span></code>
+pointing to <code class="docutils literal"><span class="pre">wc/astrodata_GHOST</span></code>,</li>
+<li>add <code class="docutils literal"><span class="pre">wc/externals/gemini_python</span></code> to the beginning of your <code class="docutils literal"><span class="pre">PYTHONPATH</span></code>,
+and</li>
+<li>add <code class="docutils literal"><span class="pre">wc/externals/gemini_python/astrodata/scripts</span></code> and
+<code class="docutils literal"><span class="pre">wc/externals/</span>
+<span class="pre">gemini_python/recipe_system/apps</span></code> to the beginning of your
+<code class="docutils literal"><span class="pre">PATH</span></code></li>
+</ol>
+</div></blockquote>
+<div class="section" id="generating-a-bias-calibration-frame">
+<h3>2.1.1. Generating a Bias Calibration frame<a class="headerlink" href="#generating-a-bias-calibration-frame" title="Permalink to this headline">¶</a></h3>
+<p>To generate a bias calibration frame you need 2 or more GHOST bias frames from
+the same arm.  Until the instrument is live, you can use the GHOST simulator to
+generate this data.  Its <code class="docutils literal"><span class="pre">testsim.py</span></code> script will create several types of
+frames, including 3 bias frames for each arm, 3 darks for each arm, and 3 flats
+for each arm and resolution combination. You can comment out the generation of
+non-bias frame types to speed things up.</p>
+<p>Once you have a few biases of the same arm to work with, generate a file list
+using the <code class="docutils literal"><span class="pre">typewalk</span></code> utility.  The following command assumes you have
+generated several red arm biases (if you don&#8217;t specify either <code class="docutils literal"><span class="pre">GHOST_RED</span></code> or
+<code class="docutils literal"><span class="pre">GHOST_BLUE</span></code>, you may get mixed red and blue frames which don&#8217;t stack well!):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_BIAS</span> <span class="n">GHOST_RED</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span>
+<span class="n">bias</span><span class="o">.</span><span class="n">list</span>
+</pre></div>
+</div>
+<p>Now you are ready to generate a bias calibration frame.  The following command
+(which runs the <code class="docutils literal"><span class="pre">makeProcessedBiasG</span></code> Gemini recipe behind the scenes) will
+stack the bias frames in listed <code class="docutils literal"><span class="pre">bias.list</span></code> and store the finished bias
+calibration in <code class="docutils literal"><span class="pre">calibrations/storedcals/</span></code>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">bias</span><span class="o">.</span><span class="n">list</span>
+</pre></div>
+</div>
+<p>Don&#8217;t forget the &#64; character in this line, e.g. if &lt;path_to&gt; is <code class="docutils literal"><span class="pre">data</span></code> then
+this command should be <code class="docutils literal"><span class="pre">reduce</span> <span class="pre">&#64;data/bias.list</span></code>. The &#64; parameter is a legacy
+from IRAF, and tells <code class="docutils literal"><span class="pre">reduce</span></code> that you&#8217;re passing a list of filenames instead
+of a data file.
+This code call will place a file named <code class="docutils literal"><span class="pre">bias_0_red_bias.fits</span></code> in the
+<code class="docutils literal"><span class="pre">calibrations/storedcals</span></code> directory of your present working directory.</p>
+<p>The whole process behind Gemini&#8217;s <code class="docutils literal"><span class="pre">makeProcessedBias</span></code> recipe is documented in
+the following flowchart (thanks Kathleen Labrie):</p>
+<a class="reference internal image-reference" href="_images/biasCalibration.png"><img alt="_images/biasCalibration.png" src="_images/biasCalibration.png" style="width: 586.8px; height: 720.45px;" /></a>
+</div>
+<div class="section" id="generating-a-dark-calibration-frame">
+<h3>2.1.2. Generating a Dark Calibration Frame<a class="headerlink" href="#generating-a-dark-calibration-frame" title="Permalink to this headline">¶</a></h3>
+<p>The procedure for generating a dark calibration frame is broadly similar to
+making a bias calibration frame. However, the type to be passed to <code class="docutils literal"><span class="pre">typewalk</span></code>
+should be <code class="docutils literal"><span class="pre">GHOST_DARK</span></code> instead of <code class="docutils literal"><span class="pre">GHOST_BIAS</span></code> (in addition to the
+necessary <code class="docutils literal"><span class="pre">GHOST_RED</span></code>/<code class="docutils literal"><span class="pre">GHOST_BLUE</span></code> type):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_DARK</span> <span class="n">GHOST_RED</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span>
+<span class="n">dark</span><span class="o">.</span><span class="n">list</span>
+</pre></div>
+</div>
+<p>Assuming <code class="docutils literal"><span class="pre">typewalk</span></code> has output your list of dark frames to <code class="docutils literal"><span class="pre">dark.list</span></code>,
+attempting to run:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">dark</span><span class="o">.</span><span class="n">list</span>
+</pre></div>
+</div>
+<p>will fail. This is because the framework cannot currently find calibrations
+stored on disk (it uses a much more complicated lookup scheme).  The workaround
+for the time being is to force it to look on disk in a particular area using the
+<code class="docutils literal"><span class="pre">--override_cal</span></code> option:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">dark</span><span class="o">.</span><span class="n">list</span>  <span class="o">--</span><span class="n">override_cal</span>
+<span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_0_red_bias</span><span class="o">.</span><span class="n">fits</span>
+</pre></div>
+</div>
+<p>(Depending on your specific bias.list contents, your bias calibration under
+your calibrations/storedcals directory may have a different name, so double-
+check.) This command will place a file <code class="docutils literal"><span class="pre">dark100_0_red_dark.fits</span></code> into the
+<code class="docutils literal"><span class="pre">calibrations/storedcals</span></code> directory.</p>
+<p>The whole process behind Gemini&#8217;s <code class="docutils literal"><span class="pre">makeProcessedDark</span></code> recipe is documented in
+the following flowchart (thanks Kathleen Labrie):</p>
+<a class="reference internal image-reference" href="_images/darkCalibration.png"><img alt="_images/darkCalibration.png" src="_images/darkCalibration.png" style="width: 585.0px; height: 828.45px;" /></a>
+</div>
+<div class="section" id="generating-a-flat-calibration-frame">
+<h3>2.1.3. Generating a Flat Calibration Frame<a class="headerlink" href="#generating-a-flat-calibration-frame" title="Permalink to this headline">¶</a></h3>
+<p>The procedure for generating a flat field calibration frame is similar to
+creating a dark or bias, although you have to <code class="docutils literal"><span class="pre">typewalk</span></code> over GHOST_FLAT files
+instead, e.g.:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_FLAT</span> <span class="n">GHOST_RED</span> <span class="n">GHOST_HIGH</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span>
+<span class="o">-</span><span class="n">o</span> <span class="n">flat</span><span class="o">.</span><span class="n">list</span>
+</pre></div>
+</div>
+<p>(Note this is the first place where we have to explicitly specify the
+resolution mode/type of the object file we ultimately intend to reduce.)
+Then, when you call <code class="docutils literal"><span class="pre">reduce</span></code> on the <code class="docutils literal"><span class="pre">flat.list</span></code>, you must provide both
+the bias and flat file path explicitly:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">flat</span><span class="o">.</span><span class="n">list</span>  <span class="o">--</span><span class="n">override_cal</span>
+<span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_0_red_bias</span><span class="o">.</span><span class="n">fits</span>
+<span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark_0_red_dark</span><span class="o">.</span><span class="n">fits</span>
+</pre></div>
+</div>
+<p>(or whatever the filename of the processed dark turns out to be).</p>
+<p>After the flat field has been created, the spectrograph apertures are fit using
+a <code class="docutils literal"><span class="pre">polyfit</span></code> approach. The RecipeSystem will read in the appropriate aperture
+model from the <code class="docutils literal"><span class="pre">lookups</span></code> system, fit it to the flat field, and store the
+resulting model in the calibrations system.</p>
+<p>The selection of the appropriate <code class="docutils literal"><span class="pre">polyfit</span></code> model to start with is
+determined by the spectrograph arm, resolution, and the date the observations
+are made on. Ideally, there will only be one model per arm and resolution
+combination; however, spectrograph maintenance (i.e. dis- and re-assembly) may
+result in the model changing at a specific point in time. Therefore, the
+RecipeSystem <em>should</em> (see below) automatically choose the most recent
+applicable model for the dataset being considered.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Date-based model selection is currently not implemented - instead,
+only a single model is provided for each arm/resolution combination.
+This is sufficient for testing involving the simulator data.
+Date-based selection will be implemented soon.</p>
+</div>
+<p>The process behind <code class="docutils literal"><span class="pre">makeProcessedFlatG</span></code> is summarized in the following
+flowchart (thanks Kathleen Labrie):</p>
+<a class="reference internal image-reference" href="_images/flatCalibration.png"><img alt="_images/flatCalibration.png" src="_images/flatCalibration.png" style="width: 627.75px; height: 893.7px;" /></a>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This is the originally-envisaged implementation of
+<code class="docutils literal"><span class="pre">makeProcessedFlatG</span></code>. It has since been decided that Gemini will
+guarantee that Gemini Observatory will always take at least three
+flat fields per arm per observation, which means that
+<code class="docutils literal"><span class="pre">rejectCosmicRays</span></code> is not required; <code class="docutils literal"><span class="pre">stackFrames</span></code> will remove
+almost all cosmic rays.</p>
+</div>
+</div>
+<div class="section" id="reducing-an-object-frame-spectra">
+<h3>2.1.4. Reducing an Object frame (Spectra)<a class="headerlink" href="#reducing-an-object-frame-spectra" title="Permalink to this headline">¶</a></h3>
+<p>The GHOST simulator produces object spectra frames like
+<code class="docutils literal"><span class="pre">obj100_1.0_std_red.fits</span></code> whose names follow this convention:
+<code class="docutils literal"><span class="pre">obj{exptime}_{seeing}_{resolution}_{arm}.fits</span></code>. If you run <code class="docutils literal"><span class="pre">typewalk</span></code> on
+the folder containing these, you&#8217;ll see that they are identified as
+<code class="docutils literal"><span class="pre">GHOST_OBJECT</span></code>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span>
+</pre></div>
+</div>
+<p>This informs the reduction framework to run the <code class="docutils literal"><span class="pre">reduceG</span></code> GHOST recipe on
+them. which should run to at least the <code class="docutils literal"><span class="pre">flatCorrect</span></code> step now that you
+have dark and bias calibration frames (for the moment, we have commented the
+remaining steps out of the <code class="docutils literal"><span class="pre">reduceG</span></code> recipe so it will complete
+successfully):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span><span class="o">/</span><span class="n">obj100_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_red</span><span class="o">.</span><span class="n">fits</span>
+</pre></div>
+</div>
+<p>The above command will fail due to the faulty calibrations lookup. Again, we
+need to use the <code class="docutils literal"><span class="pre">--override_cal</span></code> option:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span><span class="o">/</span><span class="n">obj100_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_red</span><span class="o">.</span><span class="n">fits</span> <span class="o">--</span><span class="n">override_cal</span>
+<span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_0_red_bias</span><span class="o">.</span><span class="n">fits</span>
+<span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark100_0_red_dark</span><span class="o">.</span><span class="n">fits</span>
+<span class="n">processed_flat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat100_std_0_red_flat</span><span class="o">.</span><span class="n">fits</span>
+</pre></div>
+</div>
+<p>This produces a <code class="docutils literal"><span class="pre">obj100_1.0_high_red_flatCorrected.fits</span></code> (or similar) file, a
+bias, dark and flat corrected GHOST spectrum frame.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The primitive <code class="docutils literal"><span class="pre">rejectCosmicRays</span></code> would normally be called as
+part of <code class="docutils literal"><span class="pre">reduceG</span></code>, after the <code class="docutils literal"><span class="pre">darkCorrect</span></code> step. It is
+currently commented out - the underlying LACosmic algorithm is
+working, but aperture removal/re-instatement is required to avoid
+accidentally flagging spectral peaks and the edges of orders as
+cosmic rays, and this has yet to be implemented.</p>
+</div>
+</div>
+<div class="section" id="reducing-slit-viewing-images">
+<h3>2.1.5. Reducing Slit Viewing Images<a class="headerlink" href="#reducing-slit-viewing-images" title="Permalink to this headline">¶</a></h3>
+<p>Reducing slit viewer images is very similar to reducing standard images,
+including steps to generate bias and dark calibration frames, plus a final step
+to process the slit viewer frames (which removes cosmic rays and computes the
+mean exposure epoch).  The first step, computing the bias calibrator, may be
+skipped in favour of simply pointing to a slit bias frame (of type
+<code class="docutils literal"><span class="pre">GHOST_SLITV_BIAS</span></code>).  Or, follow these steps to produce one by stacking
+multiple frames together:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_SLITV_BIAS</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span>
+<span class="n">slit_bias</span><span class="o">.</span><span class="n">list</span>
+
+<span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">slit_bias</span><span class="o">.</span><span class="n">list</span>
+</pre></div>
+</div>
+<p>The next step is to generate the dark calibrator.  Follow these steps to produce
+one:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_SLITV_DARK</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span>
+<span class="n">slit_dark</span><span class="o">.</span><span class="n">list</span>
+
+<span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">slit_dark</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span>
+<span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_SLIT_bias</span><span class="o">.</span><span class="n">fits</span>
+</pre></div>
+</div>
+<p>A step that is not currently implemented (but will be for the next release) is
+to generate the slit mask calibration as a byproduct of the normal flat image
+processing.  When this is done, you will point to this calibrator using the
+<code class="docutils literal"><span class="pre">--override_cal</span> <span class="pre">processed_slitmask:...</span></code> option to the <code class="docutils literal"><span class="pre">reduce</span></code> script
+invocation below.</p>
+<p>The final step is to use all of the above calibrators in a call to <code class="docutils literal"><span class="pre">reduce</span></code> a
+set of slit viewer images taken concurrently with a science frame, usually found
+in files named as <code class="docutils literal"><span class="pre">obj100_1.0_std_SLIT.fits</span></code> (following this convention:
+<code class="docutils literal"><span class="pre">obj{exptime}_{seeing}_{resolution}_SLIT.fits</span></code>). If you run <code class="docutils literal"><span class="pre">typewalk</span></code> on
+the folder containing these, you&#8217;ll see that they are identified as
+<code class="docutils literal"><span class="pre">GHOST_SLITV_IMAGE</span></code>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span>
+</pre></div>
+</div>
+<p>This informs the reduction framework to run the <code class="docutils literal"><span class="pre">makeProcessedSlitG</span></code> GHOST
+recipe on them.  Run the reduction as follows:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span><span class="o">/</span><span class="n">obj100_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_std_SLIT</span><span class="o">.</span><span class="n">fits</span> <span class="o">--</span><span class="n">override_cal</span>
+<span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_SLIT_bias</span><span class="o">.</span><span class="n">fits</span>
+<span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark100_1_SLIT_dark</span><span class="o">.</span><span class="n">fits</span>
+</pre></div>
+</div>
+</div>
 </div>
 <div class="section" id="other-processing-flows">
 <h2>2.2. Other Processing Flows<a class="headerlink" href="#other-processing-flows" title="Permalink to this headline">¶</a></h2>
@@ -68,12 +282,19 @@
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">2. Recipes for GHOS</a><ul>
-<li><a class="reference internal" href="#typical-processing-flows">2.1. Typical Processing Flows</a></li>
+<li><a class="reference internal" href="#">2. Recipes for GHOST</a><ul>
+<li><a class="reference internal" href="#typical-processing-flows">2.1. Typical Processing Flows</a><ul>
+<li><a class="reference internal" href="#generating-a-bias-calibration-frame">2.1.1. Generating a Bias Calibration frame</a></li>
+<li><a class="reference internal" href="#generating-a-dark-calibration-frame">2.1.2. Generating a Dark Calibration Frame</a></li>
+<li><a class="reference internal" href="#generating-a-flat-calibration-frame">2.1.3. Generating a Flat Calibration Frame</a></li>
+<li><a class="reference internal" href="#reducing-an-object-frame-spectra">2.1.4. Reducing an Object frame (Spectra)</a></li>
+<li><a class="reference internal" href="#reducing-slit-viewing-images">2.1.5. Reducing Slit Viewing Images</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#other-processing-flows">2.2. Other Processing Flows</a></li>
 </ul>
 </li>
@@ -81,50 +302,49 @@
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="instrument.html"
-                        title="previous chapter">1. Overview of GHOS and its Data</a></p>
+                        title="previous chapter">1. Overview of GHOST</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="tipstricks.html"
-                        title="next chapter">3. Tips and Tricks for Processing GHOS</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/recipes.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+                        title="next chapter">3. Tips and Tricks for Processing GHOST</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/recipes.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="tipstricks.html" title="3. Tips and Tricks for Processing GHOS"
+          <a href="tipstricks.html" title="3. Tips and Tricks for Processing GHOST"
              >next</a> |</li>
         <li class="right" >
-          <a href="instrument.html" title="1. Overview of GHOS and its Data"
+          <a href="instrument.html" title="1. Overview of GHOST"
              >previous</a> |</li>
-        <li><a href="index.html">GHOS Users Manual 0.9.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, Kathleen Labrie.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.5.
     </div>
   </body>
 </html>

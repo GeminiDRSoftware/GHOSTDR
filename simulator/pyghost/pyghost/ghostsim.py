@@ -25,17 +25,27 @@ import os
 # import matplotlib.cm as cm
 import numpy as np
 import pylab as plt
-import time
 import sys
+import datetime
+from dateutil import tz
+from astropy import wcs
+import astropy.units as u
+from astropy.time import Time
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+
+from pyghost import optics
+from pyghost import cosmic
+
+# uncomment to download the latest IERS predictions to avoid runtime warnings
+from astropy.utils.data import download_file
+from astropy.utils import iers
+iers.IERS.iers_table = iers.IERS_A.open(
+    download_file(iers.IERS_A_URL, cache=True))
 
 try:
     import astropy.io.fits as pf
 except ImportError:
     import pyfits as pf
-
-from astropy import wcs
-from pyghost import optics
-from pyghost import cosmic
 
 # The directory that this file is located in
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -56,6 +66,7 @@ N_SR_SCI = 7
 N_SR_SKY = 3
 N_SR_TOT = 2 * N_SR_SCI + N_SR_SKY
 N_GD = 6
+
 
 def split_image(image, namps, return_headers=False):
     """ Split the input image into sections for each readout amplifier. """
@@ -87,6 +98,7 @@ def split_image(image, namps, return_headers=False):
     else:
         return images
 
+
 def fftnoise(samples):
     """ Use an inverse FFT to generate noise. """
     samples = np.array(samples, dtype='complex')
@@ -96,6 +108,7 @@ def fftnoise(samples):
     samples[1:npoints+1] *= phases
     samples[-1:-1-npoints:-1] = np.conj(samples[1:npoints+1])
     return np.fft.ifft(samples).real
+
 
 def frequency_noise(noise_freqs, sample_rate, shape, mean=0.0, std=1.0):
     """ Simulate noise at specific frequencies in a 1D array. """
@@ -110,8 +123,10 @@ def frequency_noise(noise_freqs, sample_rate, shape, mean=0.0, std=1.0):
         samples[idx] = 1
     return mean + std/math.sqrt(2)*nsamples*fftnoise(samples).reshape(shape, order='F')
 
+
 def thar_spectrum():
-    """Calculates a ThAr spectrum.
+    """Calculates a ThAr spectrum. Note that the flux scaling here is roughly correct
+    for the lamp with no neutral density.
 
     Returns
     -------
@@ -131,10 +146,15 @@ def thar_spectrum():
     thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))
     thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
                             mode='same')
-    # Make the peak flux equal to 100
-    # FIXME I don't know the real flux of the ThAr lamp
-    thar_flux /= np.max(thar_flux) / 100.0
+    # McDermid email of 10 July 2015 to Mike Ireland:
+    # "For the arc, I integrated a single emission line of average brightness, and
+    # putting this into a single resolution element in GHOST, get 370 e- per second per
+    # pixel, averaging across the 3.4 pixel resolution element. "
+    # This results in a peak flux of 370 * 3.4**2 * 7 = 30,000 for an "average" line
+    # (of "strength" 3.0), or 300,000 for the brightest line (with a "strength" 4.0).
+    thar_flux /= np.max(thar_flux) / 3e5
     return np.array([thar_wave/1e4, thar_flux])
+
 
 def fits_in_dir(dirname, prefix=""):
     """ Return all fits files in the given directory """
@@ -142,6 +162,7 @@ def fits_in_dir(dirname, prefix=""):
         fullname = os.path.join(dirname, fname)
         if os.path.isfile(fullname) and fullname.endswith(".fits") and fname.startswith(prefix):
             yield fullname
+
 
 def load_sky_from_dir(dirname):
     """ Load the UVES sky spectrum from the given directory """
@@ -191,6 +212,7 @@ def load_sky_from_dir(dirname):
 
     return wavel, flux
 
+
 class Fibers(object):
     """ Represent the details of a fiber bundle. """
 
@@ -228,10 +250,11 @@ class Fibers(object):
             plt.annotate(int(label), xy=(x, y), xytext=(0, (ifu-1)*10), textcoords='offset points')
         plt.show()
 
+
 class SRFibers(Fibers):
-    """ Represent the details of the standard resolution fibers. 
-    
-    The fiber_order is the AAO's numbering system for the fibers in CY_RPT_50, where 
+    """ Represent the details of the standard resolution fibers.
+
+    The fiber_order is the AAO's numbering system for the fibers in CY_RPT_50, where
     numbers in the first bundle (low and high res) go from 1 to 41, and the numbers in the
     second bundle go from 42 to 61. Fiber 62 is the simultaneous calibration fiber."""
     fiber_order = np.array([2, 5, 3, 1, 6, 4, 7, 14, 15, 16, 43, 46, 44, 42, 47, 45, 48])
@@ -262,9 +285,10 @@ class SRFibers(Fibers):
     def __init__(self, lenslet_width, microns_pix):
         super(SRFibers, self).__init__(lenslet_width, microns_pix)
 
+
 class HRFibers(Fibers):
-    """ Represent the details of the high resolution fibers. 
-    
+    """ Represent the details of the high resolution fibers.
+
     See SRFibers for detail.
     """
     fiber_order = np.array([62, 0, 25, 31, 27, 32, 26, 30, 18, 21, 19, 17, 22, 20, 23, 28, 34, 24, 29, 33, 35,
@@ -291,35 +315,324 @@ class HRFibers(Fibers):
         34: (-S32, 1.5),
         35: (0, 2),
         # The following are the sky fibers
+        55: None,
         56: None,
         57: None,
         58: None,
         59: None,
         60: None,
         61: None,
+        # And fiber 62 is the simultaneous calibration source
         62: None
     }
 
     def __init__(self, lenslet_width, microns_pix):
         super(HRFibers, self).__init__(lenslet_width, microns_pix)
 
+
+class SlitViewer(object):
+    """A class for the slit viewer camera.  The initialisation function
+    takes the duration of each slit viewer exposure, and the total number
+    of exposures to be taken.  The data for each exposure will be filled
+    in by each Arm object in the simulate_frame function.
+
+    Parameters
+    ----------
+    cosmics: bool
+        whether to add in cosmic rays or not
+
+    crplane: bool
+        Output a fits file containing locations where CRs were injected?
+
+    split: bool
+        Indicate whether to produce a single MEF containing the frames taken
+        during the observation, or to generate individual files per frame
+    """
+
+    def __init__(self, cosmics, crplane, split):
+        # FIXME these values are duplicated in the Arm class
+        self.lenslet_std_size = 197.0   # Lenslet flat-to-flat in microns
+        self.microns_pix = 2.0  # slit image microns per pixel
+        # Below comes from CY_RPT_044, with 50mm/180mm demagnification and
+        # the Bigeye G-283 (Sony ICX674) with 4.54 micron pixels.
+        self.binning = 2  # Assumed that we bin in both directions
+        # Effective pixel size of the slit viewer in microns.
+        self.slitview_pxsize = 16.344 * self.binning
+        self.slit_length = 3540.0    # Slit length in microns
+        self.R_per_pixel = 195000.0  # Resolving power per pixel.
+        self.slitcam_xsz = 160       # Slit viewer x size in binned pix.
+        self.slitcam_ysz = 160       # Slit viewer y size in binned pix.
+        self.slit_mode_offsets = {"high": -1000.0, "std": 1000.0}
+        self.duration = 0
+        self.sci_duration = None
+        self.nexp = 1
+        self.images = None
+        self.cosims = []
+        self.flux_profile = None
+        self.utstart = datetime.datetime.utcnow()
+        self.cosmics = cosmics
+        self.crplane = crplane
+        self.split = split
+
+    def set_exposure(self, duration, sci_duration, flux_profile, utstart):
+        """
+        Set the exposure parameters for the slit viewing camera.
+
+        Parameters
+        ----------
+        duration: float
+            The duration of each slit viewing exposure
+
+        nexp: int
+            The number of slit viewing exposures to take
+
+        flux_profile: int[2,n]
+            The distribution of flux over the exposures.  Can be an array
+            of any length - it will be interpolated and scaled to fit the
+            actual number of exposures taken.
+
+        utstart: datetime
+            The UT start time from which to generate all time-related header
+            keywords
+        """
+        self.duration = duration
+        self.sci_duration = sci_duration
+        if duration:  # to avoid divide by 0 (which uses nexp default of 1)
+            self.nexp = int(math.ceil(float(sci_duration)/duration)) or 1
+        self.utstart = utstart
+        if flux_profile is None:
+            self.flux_profile = np.ones((self.nexp))
+        else:
+            flux_profile = np.asarray(flux_profile)
+            if (flux_profile[1].min() < 0) or (flux_profile[1].max() > 1):
+                raise ValueError(
+                    'Slit-viewing flux profile must have range in [0, 1]')
+            # Ensure that the flux profile is evenly spaced over the number of
+            # exposures we are taking.
+            x = flux_profile[0] * self.nexp / flux_profile[0, -1]
+            self.flux_profile = np.interp(
+                np.arange(self.nexp), x, flux_profile[1])
+
+        self.images = np.zeros(
+            (self.nexp, self.slitcam_ysz, self.slitcam_xsz), dtype=int)
+        if self.cosmics:
+            saturation = np.iinfo(np.uint16).max
+            self.cosims = []  # clear it if not already
+            for expid, image in enumerate(self.images):
+                cosim = cosmic.cosmic(
+                    image.shape, duration, 10, 2.0, False, [15, 15, 16])
+                cosim[cosim < 0] = 0
+                cosim[cosim > saturation] = saturation
+                cosim = cosim.astype(np.uint16)
+                self.images[expid] += cosim
+                self.cosims.append(cosim)
+
+    def save(self, fname, obstype, bias=1000, readnoise=8.0, gain=1.0):
+        """
+        Save the slit viewer frames in self.images.
+
+        Parameters
+        ----------
+        fname: string
+            FITS filename for saving the images
+        """
+
+        if self.images is None:
+            return
+
+        # Calculate the detector/ccd section
+        y0 = 804 // self.binning
+        x0 = 566 // self.binning
+        secstr = '[' + str(y0) + ":" + str(y0 + self.slitcam_ysz - 1) + "," + \
+                 str(x0) + ":" + str(x0 + self.slitcam_xsz - 1) + "]"
+        detsz = '[1:1928,1:1452]'  # TODO: per qsimaging.com, this is 1940x1460
+
+        header = pf.Header()
+        header['OBSERVAT'] = (
+            'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
+        header['TELESCOP'] = 'Gemini-South'
+        header['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
+        header['OBSTYPE'] = (obstype, 'Observation type')
+        header['CCDNAME'] = ('Sony-ICX674', 'CCD name')
+        header['ORIGFN'] = fname + 'SLIT.fits'
+
+        # perhaps wrongly (and out of line with their comments), the ghost
+        # recipes interpret these keywords as the start/end times of the science
+        # exposure taken concurrently with this series of slit viewer images
+        # (and when the MEF-splitter primitive is written, it must remember to
+        # populate them as such)
+        header['UTSTART'] = (self.utstart.strftime("%H:%M:%S.%f")[:-3],
+            'UT time at observation start')  # noqa
+        header['UTEND'] = (
+            (self.utstart + datetime.timedelta(seconds=self.sci_duration))
+            .strftime("%H:%M:%S.%f")[:-3], 'UT time at observation end')
+
+        hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
+        crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
+        for expid, image in enumerate(self.images):
+            # Construct a new header
+            hdr = pf.Header()
+
+            # Grab the image data
+            data = image / gain
+
+            # Add some readout noise (linear regime assumed, so order doesn't
+            # matter)
+            data += np.random.normal(
+                loc=bias, scale=readnoise / gain, size=data.shape)
+
+            # Now restrict to 14 bits (BigEye G283) and digitize
+            data = np.minimum(np.maximum(data, 0), 1 << 14).astype(np.int16)
+
+            # Set the id of this extension
+            hdr['EXPID'] = expid
+
+            # And all the other headers
+            hdr['RDNOISE'] = (readnoise, 'Readout noise')
+            hdr['GAIN'] = (gain, 'Amplifier gain')
+            hdr['CAMERA'] = 'Slit'
+            hdr['DETSIZE'] = detsz
+            hdr['CCDSIZE'] = detsz
+            hdr['DETSEC'] = secstr
+            hdr['CCDSEC'] = secstr
+            hdr['CCDNAME'] = 'Sony-ICX674'
+            hdr['CCDSUM'] = str(self.binning) + " " + str(self.binning)
+            hdr['EXPTIME'] = self.duration
+            utcnow = self.utstart + datetime.timedelta(
+                seconds=expid*self.duration)
+            hdr['EXPUTST'] = (utcnow.strftime("%H:%M:%S.%f")[:-3],
+                'UT time at exposure start')  # noqa
+            hdr['EXPUTEND'] = (
+                (utcnow + datetime.timedelta(seconds=self.duration))
+                .strftime("%H:%M:%S.%f")[:-3], 'UT time at exposure end')
+
+            if self.cosmics:
+                cosim = self.cosims[expid]
+                hdr['CRPIXEL'] = np.count_nonzero(cosim)
+
+                if self.crplane:
+                    crhdr = pf.Header()
+                    crhdr['DETSIZE'] = (detsz, 'Detector size')
+                    crhdr['DETSEC'] = (secstr, 'Detector section(s)')
+                    crhdu.append(pf.ImageHDU(data=cosim, header=crhdr))
+
+            hdulist.append(pf.ImageHDU(data=data, header=hdr))
+
+        if self.split:
+            print('Writing ' + fname + 'SLIT.fits')
+            hdulist.writeto(fname + 'SLIT.fits', clobber=True)
+            if self.cosmics and self.crplane:
+                print('Writing ' + fname + 'SLIT_CR.fits')
+                crhdu.writeto(fname + 'SLIT_CR.fits', clobber=True)
+        else:
+            return hdulist
+
+    def create_slitview_frames(self, im_slit, spectrum, slitview_wave,
+                               slitview_frac, slitview_offset, mode='high'):
+        """
+        Create slit viewer frames, and store them in self.images.
+
+        Parameters
+        ----------
+        im_slit: numpy array
+            Image of the slit, sampled at self.microns_pix sampling
+
+        spectrum: numpy array
+            (2, nwave) array of wavelengths and fluxes
+
+        slitview_wave: array (2)
+            the low and high wavelength cutoffs of this exposure
+
+        slitview_frac
+            the fraction of flux that is diverted into the slit viewing camera
+
+        slitview_offset
+            the slit plane offset in microns
+
+        mode: string
+            'high' or 'std'
+
+        """
+
+        # If the images have not been set up then there are no exposures on this
+        # camera.
+        if self.images is None:
+            return
+
+        # Create a sub-array with just enough pixels to sample the slit.
+        n_xpix = int(self.slit_length / self.slitview_pxsize) + 2
+        n_ypix = int(self.lenslet_std_size / self.slitview_pxsize) + 2
+        xy = np.meshgrid(np.arange(n_xpix) - n_xpix // 2,
+                         np.arange(n_ypix) - n_ypix // 2)
+        ycoord = (xy[1] * self.slitview_pxsize / self.microns_pix).astype(int)
+        ycoord += im_slit.shape[0]//2
+        xcoord = (xy[0] * self.slitview_pxsize / self.microns_pix).astype(int)
+        xcoord += im_slit.shape[1]//2
+
+        slit_camera_image = np.zeros( (n_ypix, n_xpix) )
+        #Roughly convolve with a pixel with a 4-point dither.
+        dither_pix = int(0.25 * self.slitview_pxsize / self.microns_pix)
+        for xdither in [-dither_pix, dither_pix]:
+            for ydither in [-dither_pix, dither_pix]:
+                slit_camera_image += im_slit[ycoord + ydither, xcoord + xdither]
+
+        #Re-normalize
+        slit_camera_image /= 4
+        slit_camera_image *= (self.slitview_pxsize / self.microns_pix)**2
+
+        # Multiply by total flux within our bandpass. First multiply by mean flux
+        # per resolution element, then scale WARNING: Doesn't work if min and max outside
+        wave_in_filter = (slitview_wave[0] < spectrum[0]) & \
+                         (spectrum[0] < slitview_wave[1])
+        if sum(wave_in_filter)==0:
+            wave_in_filter = np.argmin(np.abs(spectrum[0] - \
+                             0.5 * slitview_wave[0] - 0.5 * slitview_wave[1]))
+        slit_camera_image *= np.mean(spectrum[1, wave_in_filter])
+        frac_bw = 0.5*(slitview_wave[1] - slitview_wave[0]) / \
+                  (slitview_wave[1] + slitview_wave[0])
+        slit_camera_image *= self.duration * self.R_per_pixel * frac_bw * slitview_frac
+        slit_camera_image = np.maximum(slit_camera_image, 0)
+
+        # Store the full-sized image in units of photons.
+        xoffset = int(slitview_offset[0]/self.slitview_pxsize)
+        yoffset = int((self.slit_mode_offsets[mode] + \
+                       slitview_offset[1]) / self.slitview_pxsize)
+        xy = np.meshgrid(np.arange(n_xpix) - n_xpix // 2 + xoffset + self.slitcam_xsz // 2,
+                         np.arange(n_ypix) - n_ypix // 2 + yoffset + self.slitcam_ysz // 2)
+
+        for i, (image, profile) in enumerate(zip(self.images, self.flux_profile)):
+            image[xy] += np.random.poisson(profile * slit_camera_image)
+
+
 class Arm(object):
-    """A class for each arm of the spectrograph. The initialisation function
-    takes a single string representing the configuration. For GHOST, it can be
-    "red" or "blue"."""
+    """A class for each arm of the spectrograph.
+
+    Parameters
+    ----------
+    arm: string
+        identifies which arm of the GHOST spectrograph. one of either 'red' or
+        'blue'
+
+    crplane: bool
+        Output a fits file containing locations where CRs were injected?
+
+    split: bool
+        Indicate whether to produce a single MEF containing the frames taken
+        during the observation, or to generate individual files per frame
+    """
 
     ARM_OPTIONS = [
         'red',
         'blue',
     ]
-    MODE_OPTIONS = [
+    RES_OPTIONS = [
         'high',
         'std',
     ]
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, arm):
+    def __init__(self, arm, cosmics, crplane, split):
         if arm.lower() not in self.ARM_OPTIONS:
             raise ValueError('arm must be one of %s' % (
                 ','.join(self.ARM_OPTIONS),
@@ -337,6 +650,12 @@ class Arm(object):
         self.microns_arcsec = 400.0  # slit image plane microns per arcsec
         self.im_slit_sz = 2048  # Size of the image slit size in pixels.
         self.sample_rate = 1e6  # Sample rate of the pixels
+        self.cosmics = cosmics
+        self.crplane = crplane
+        self.split = split
+        # Do we need to re-compute the spectral format?
+        self.stale_spectral_format = True
+        # self.set_mode(mode)
         if arm == 'red':
             # Additional slit rotation across an order needed to match Zemax.
             self.extra_rot = 3.0
@@ -352,6 +671,9 @@ class Arm(object):
             self.order_min = 34
             self.order_max = 67
             self.dettype = 'E2V-CCD-231-C6'
+            self.slitview_wave = [0.6, 0.76]  # wavelength in microns
+            self.slitview_frac = 0.02         # Fractional flux.
+            self.slitview_offset = [15.0, -1500.0]  # (x,y) plane offset, micron
         elif arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
             self.extra_rot = 2.0
@@ -367,9 +689,47 @@ class Arm(object):
             self.order_min = 63
             self.order_max = 95
             self.dettype = 'E2V-CCD-231-84'
+            self.slitview_wave = [0.43, 0.6]  # wavelength in microns
+            self.slitview_frac = 0.02         # Fractional flux.
+            self.slitview_offset = [-15.0, 1500.0]  # (x,y) plane offset, micron
         else:
             raise RuntimeError('Order information not provided in Arm class '
                                'for arm %s - aborting' % (self.arm, ))
+
+    def set_mode(self, new_mode):
+        """Set a new mode (high or standard res) for tramline purposes.
+
+        THIS IS CURRENTLY ONLY USED FOR EXTRACTION (PYMFE) TESTING
+
+        A SIMILAR ROUTINE NEEDS TO START WITH HEADER KEYWORDS THEN THE
+        FLUXES FROM THE SLIT VIEWING CAMERA.
+        """
+        if (new_mode == 'high'):
+            self.mode=new_mode
+            self.lenslet_width = self.lenslet_high_size
+            self.nl = 28
+            ## Set default profiles - object, sky and reference
+            fluxes = np.zeros( (self.nl,3) )
+            fluxes[2:21,0] = 0.37
+            fluxes[8:15,0] = 0.78
+            fluxes[11,0] = 1.0
+            #NB if on the following line, fluxes[2:,1]=1.0 is set, sky will be
+            #subtracted automatically.
+            fluxes[2+19:,1]=1.0
+            fluxes[0,2]=1.0
+        elif (new_mode == 'std'):
+            self.mode=new_mode
+            self.lenslet_width = self.lenslet_std_size
+            self.nl = 17
+            ## Set default profiles - object 1, sky and object 2
+            fluxes = np.zeros( (self.nl,3) )
+            fluxes[0:7,0]  = 1.0
+            fluxes[7:10,1] = 1.0
+            fluxes[10:,2] = 1.0
+        else:
+            print("Unknown mode!")
+            raise UserWarning
+        self.fluxes=fluxes
 
     def spectral_format(self, xoff=0.0, yoff=0.0, ccd_centre=None, verbose=False):
         """Create a spectrum, with wavelengths sampled in 2 orders.
@@ -607,9 +967,17 @@ class Arm(object):
                 # (mapping output coordinates back onto the slit).
                 # print amat.shape
                 if np.any(np.isnan(amat)):
-                    matrices[i, j, :, :] = np.zeros_like(amat)
+                    #!!! Below this was zeros... !!!
+                    matrices[i, j, :, :] = np.eye(len(amat))
                 else:
                     matrices[i, j, :, :] = np.linalg.inv(amat)
+
+        # Store these key spectral format parameters as object properties
+        self.x = x_c
+        self.wave = w_c
+        self.blaze = b_c
+        self.matrices = matrices
+        self.stale_spectral_format = False
         return x_c, w_c, b_c, matrices
 
     def make_lenslets(self, fluxes=[], mode='', seeing=0.8, llet_offset=0, ifu=1):
@@ -707,7 +1075,8 @@ class Arm(object):
             im_cutout = optics.moffat2d(szy, \
                 seeing * self.microns_arcsec / self.microns_pix / 2, beta=4.0)
             im_object[:, szx/2-szy/2:szx/2+szy/2] = im_cutout
-            # Scale the image so the mean is 1.0
+            # Scale the image so the mean is 1.0, simply for rough numerical consistency
+            # with the no-seeing case above.
             im_object /= im_object.mean()
             fluxes = np.ones(len(xoffset))
 
@@ -736,7 +1105,18 @@ class Arm(object):
                 int((llet_offset + i - n_lenslets/2.0) *
                     lenslet_width/self.microns_pix)
             im_slit += np.roll(im_one, the_shift, axis=1)
+
+        # Now normalise the slit image to have a sum of 1.0. This is the easiest
+        # type of normalisation to deal with for conversion to physical units.
+        im_slit /= np.sum(im_slit)
         return im_slit
+
+    def get_solar_spectrum(self, flux_scale=100.0):
+        """Extract a default solar spectrum from a file and return as a 2D array"""
+        data = pf.getdata(os.path.join(LOCAL_DIR, 'data/ardata.fits.gz'))
+        spectrum = np.array([np.append(0.35, data['WAVELENGTH']) / 1e4,
+                             np.append(0.1, np.maximum(data['SOLARFLUX'],0))*flux_scale])
+        return spectrum
 
     def simulate_image(self, x, wave, blaze, matrices, im_slit, spectrum=None,
                        n_x=0, xshift=0.0, yshift=0.0, radvel=0.0):
@@ -757,16 +1137,15 @@ class Arm(object):
             If not given or zero, a square CCD is assumed.
         xshift: float
             Bulk shift to put in to the spectrum along the slit.
-        yshift: float
+        yshift: floatDROP SCE
             NOT IMPLEMENTED
         radvel: float
             Radial velocity in m/s.
         """
         # If no input spectrum, use the sun.
         if (spectrum is None) or len(spectrum) == 0:
-            data = pf.getdata(os.path.join(LOCAL_DIR, 'data/ardata.fits.gz'))
-            spectrum = np.array([np.append(0.35, data['WAVELENGTH']) / 1e4,
-                                 np.append(0.1, data['SOLARFLUX'])])
+            spectrum = self.get_solar_spectrum()
+
         n_orders = x.shape[0]
         n_y = x.shape[1]
         if n_x == 0:
@@ -814,8 +1193,11 @@ class Arm(object):
                                   cutout_shifted[1][w_ix])
                 slit_x = slit_x[w_ix]
                 slit_y = slit_y[w_ix]
+                # Find the flux scaling. The slit image is normalised to 1, and we
+                # normalize the re-sampled slit image to 1 by multiplying by the
+                # determinant of the slit-to-detector matrix.
                 image[cutout_shifted[1], cutout_shifted[0]] += blaze[i, j] * \
-                    flux * im_slit[slit_y, slit_x]
+                    flux * im_slit[slit_y, slit_x] * np.linalg.det(matrices[i,j])
             print('\r Doing orders {0:d} to {1:d}. Done order {2:d}'.format(self.order_min, self.order_max, i+self.order_min), end='\r')
             sys.stdout.flush()
             #time.sleep(0.1)
@@ -823,7 +1205,7 @@ class Arm(object):
             #outline.flush()
         print('\n')
         #outline.write('\n')
-        #Old code was: print('Done order: {0}'.format(i + self.order_min)) 
+        #Old code was: print('Done order: {0}'.format(i + self.order_min))
         return image
 
     def sky_background(self, mode):
@@ -840,9 +1222,9 @@ class Arm(object):
         """
 
         # Input checks
-        if mode not in self.MODE_OPTIONS:
+        if mode not in self.RES_OPTIONS:
             raise ValueError('Mode must be one of %s' % (
-                ', '.join(self.MODE_OPTIONS),
+                ', '.join(self.RES_OPTIONS),
             ))
 
         # Load the UVES sky
@@ -882,7 +1264,8 @@ class Arm(object):
 
     def simulate_frequency_noise(self, freq, mean, std):
         """ Simulate an image with noise of specific frequencies in it. """
-        image = frequency_noise(freq, self.sample_rate, (self.szx, self.szy), mean=mean, std=std)
+        image = frequency_noise(
+            freq, self.sample_rate, (self.szx, self.szy), mean=mean, std=std)
         return image
 
     def simulate_gradient(self, theta, mean, std):
@@ -904,13 +1287,14 @@ class Arm(object):
         return images
 
     def simulate_frame(self, duration=0.0, output_prefix='test_',
-                       spectrum=None, xshift=0.0, yshift=0.0, radvel=0.0,
+                       spectrum_in=None, xshift=0.0, yshift=0.0, radvel=0.0,
                        rv_thar=0.0, flux=1, rnoise=3.0, gain=[1.0],
-                       bias_level=10, overscan=32, namps=[1, 1],
-                       use_thar=True, mode='high', add_cosmic=True,
-                       add_sky=True, return_image=False, thar_flatlamp=False,
-                       flatlamp=False, obstype=None, additive_noise=None,
-                       scaling=None, seeing=0.8):
+                       bias_level=10, overscan=32, namps=[1, 1], use_thar=True,
+                       res='high', add_sky=True, return_image=False,
+                       thar_flatlamp=False, flatlamp=False, obstype=None,
+                       additive_noise=None, scaling=None, seeing=0.8,
+                       slit_viewer=None, data_label=1,
+                       utstart=datetime.datetime.utcnow()):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -927,9 +1311,12 @@ class Arm(object):
         output_prefix: string (optional)
             Prefix for the output filename.
 
-        spectrum: array of shape (2,n) where n is the number of
+        spectrum_in: array of shape (2,n) where n is the number of
             spectral samples input spectrum.
-            spectrum[0] is the wavelength array, spectrum[1] is the flux array.
+            spectrum[0] is the wavelength array, spectrum[1] is the flux array,
+            in units of recorded photons/spectral pixel/s, taking into account
+            the full instrument at order centers (i.e. excluding the blaze
+            function)
 
         xshift: float (optional)
             x-direction (along-slit) shift.
@@ -953,7 +1340,8 @@ class Arm(object):
             Readout noise in electrons/pix
 
         gain: float[namps] (optional)
-            Gain in electrons per ADU, per amplifier (or a single scalar for all amps).
+            Gain in electrons per ADU, per amplifier (or a single scalar for all
+            amps).
 
         bias_level: float (optional)
             Bias level in electrons, per amplifier (or a single scalar for
@@ -968,26 +1356,45 @@ class Arm(object):
         use_thar: bool (optional)
             Is the Thorium/Argon lamp in use?
 
-        mode: string (optional)
+        res: string (optional)
             Can be 'high' or 'std' for the resolution mode.
-
-        add_cosmic: bool (optional)
-            Are cosmic rays added to the frame?
 
         add_sky: bool (optional)
             Is the sky background added to the frame?
 
         return_image: bool (optional)
             Do we return an image as an array? The fits file is always written.
+
+        data_label: int (optional)
+            Indicates which frame of a sequence this is; written to the DATALAB
+            keyword
+
+        utstart: datetime (optional)
+            The UT start time from which to generate all time-related header
+            keywords
         """
 
         # Input checks
-        if mode not in self.MODE_OPTIONS:
+        if res not in self.RES_OPTIONS:
             raise ValueError('Mode must be one of %s' % (
-                ', '.join(self.MODE_OPTIONS),
+                ', '.join(self.RES_OPTIONS),
             ))
 
-        x, wave, blaze, matrices = self.spectral_format_with_matrix()
+        # If no input spectrum, use the sun with default scaling.
+        if (spectrum_in is None) or len(spectrum_in) == 0:
+            spectrum_in = self.get_solar_spectrum()
+
+        # Scale the spectrum as required.
+        spectrum = spectrum_in * flux
+
+        # Compute the spectral format if we need to
+        if self.stale_spectral_format:
+            x, wave, blaze, matrices = self.spectral_format_with_matrix()
+        else:
+            x = self.x
+            wave = self.wave
+            blaze = self.blaze
+            matrices = self.matrices
 
         # Deal with the values that can be scalars or arrays.
         # Turn them into arrays of the right size if they're scalars.
@@ -1009,17 +1416,22 @@ class Arm(object):
         # up our calculations later on
         duration = float(duration)
 
-        if mode == 'high':
-            if flatlamp:
-                slit_fluxes = np.ones(N_HR_SCI+N_HR_SKY)
-            else:
-                slit_fluxes = []
-            im_slit = self.make_lenslets(fluxes=slit_fluxes, mode='high', seeing=seeing,
-                                         llet_offset=2)
+        # WARNING: Logic below can be neatened... (e.g. doubled-up lines of
+        # code)
+        if res == 'high':
+            slit_fluxes = np.ones(N_HR_SCI+N_HR_SKY) if flatlamp else []
+            im_slit = self.make_lenslets(
+                fluxes=slit_fluxes, mode=res, seeing=seeing, llet_offset=2)
 
-            image = self.simulate_image(x, wave, blaze, matrices, im_slit,
-                                        spectrum=spectrum, n_x=self.szx,
-                                        xshift=xshift, radvel=radvel)
+            image = self.simulate_image(
+                x, wave, blaze, matrices, im_slit, spectrum=spectrum,
+                n_x=self.szx, xshift=xshift, radvel=radvel)
+
+            # Create the slit viewing camera image for the science flux.
+            if slit_viewer is not None:
+                slit_viewer.create_slitview_frames(
+                    im_slit, spectrum, self.slitview_wave, self.slitview_frac,
+                    self.slitview_offset, res)
 
             if use_thar:
                 # Create an appropriately convolved Thorium-Argon spectrum
@@ -1031,29 +1443,49 @@ class Arm(object):
                 '''
                 if thar_flatlamp:
                     thar_spect[1][:] = 10
+
                 # Now that we have our spectrum, create the Th/Ar image.
                 slit_fluxes = np.ones(1)
-                im_slit2 = self.make_lenslets(fluxes=slit_fluxes, mode='high',
-                                              llet_offset=0)
-                image += self.simulate_image(x, wave, blaze, matrices, im_slit2,
-                                             spectrum=thar_spect, n_x=self.szx,
-                                             xshift=xshift, radvel=rv_thar)
-        elif mode == 'std':
+                im_slit2 = self.make_lenslets(
+                    fluxes=slit_fluxes, mode=res, llet_offset=0)
+                image += self.simulate_image(
+                    x, wave, blaze, matrices, im_slit2, spectrum=thar_spect,
+                    n_x=self.szx, xshift=xshift, radvel=rv_thar)
+
+                # Add in the Th/Ar spectrum
+                if slit_viewer is not None:
+                    slit_viewer.create_slitview_frames(
+                        im_slit2, thar_spect, self.slitview_wave,
+                        self.slitview_frac, self.slitview_offset, res)
+
+        elif res == 'std':
             if flatlamp:
                 slit_fluxes = np.ones(N_SR_TOT)
-                im_slit = self.make_lenslets(fluxes=slit_fluxes, mode='std', seeing=seeing,
-                                              llet_offset=0)
+                im_slit = self.make_lenslets(
+                    fluxes=slit_fluxes, mode=res, seeing=seeing, llet_offset=0)
+
             else:
-                im_slit1 = self.make_lenslets(fluxes=[], mode='std', seeing=seeing,
-                                              llet_offset=0, ifu=1)
-                im_slit2 = self.make_lenslets(fluxes=[], mode='std', seeing=seeing,
-                                              llet_offset=N_SR_SCI+N_SR_SKY, ifu=2)
+                # WARNING:
+                im_slit1 = self.make_lenslets(
+                    fluxes=[], mode=res, seeing=seeing, llet_offset=0, ifu=1)
+                im_slit2 = self.make_lenslets(
+                    fluxes=[], mode=res, seeing=seeing, llet_offset=N_SR_SCI +
+                    N_SR_SKY, ifu=2)
                 im_slit = im_slit1 + im_slit2
-            image = self.simulate_image(x, wave, blaze, matrices, im_slit,
-                                        spectrum=spectrum, n_x=self.szx,
-                                        xshift=xshift, radvel=radvel)
+
+            image = self.simulate_image(
+                x, wave, blaze, matrices, im_slit, spectrum=spectrum,
+                n_x=self.szx, xshift=xshift, radvel=radvel)
+
+            # Create the slit viewing camera image for the science flux.
+            if slit_viewer is not None:
+                slit_viewer.create_slitview_frames(
+                    im_slit, spectrum, self.slitview_wave, self.slitview_frac,
+                    self.slitview_offset, res)
+
         else:
-            print("ERROR: unknown mode.")
+            # mode input check above makes this test unecessary/redundant
+            print("ERROR: unknown resolution.")
             raise UserWarning
 
         # Prevent any interpolation errors (negative flux)
@@ -1061,43 +1493,56 @@ class Arm(object):
         image = np.maximum(image, 0)
 
         # Scale to photons
-        image = duration * np.random.poisson(flux * image)
+        image = np.random.poisson(duration * image).astype(float)
 
-        if add_sky:
+        if add_sky and obstype != 'BIAS' and obstype != 'DARK':
             # Calculate the sky spectrum - the flux we calculate
             # is per fiber.
-            sky_spect = self.sky_background(mode)
+            sky_spect = self.sky_background(res)
             # Put it into all the fibers equally
-            if mode == 'high':
+            if res == 'high':
                 slit_fluxes = np.ones(N_HR_SCI + N_HR_SKY)
-                im_slit2 = self.make_lenslets(fluxes=slit_fluxes, mode=mode,
-                                              llet_offset=2)
-            elif mode == 'std':
+                im_slit2 = self.make_lenslets(
+                    fluxes=slit_fluxes, mode=res, llet_offset=2)
+
+            elif res == 'std':
                 slit_fluxes = np.ones(N_SR_TOT)
-                im_slit2 = self.make_lenslets(fluxes=slit_fluxes, mode=mode,
-                                              llet_offset=0)
-            sky_image = self.simulate_image(x, wave, blaze, matrices, im_slit2,
-                                            spectrum=sky_spect, n_x=self.szx,
-                                            xshift=xshift, radvel=0.0)
+                im_slit2 = self.make_lenslets(
+                    fluxes=slit_fluxes, mode=res, llet_offset=0)
+
+            sky_image = self.simulate_image(
+                x, wave, blaze, matrices, im_slit2, spectrum=sky_spect,
+                n_x=self.szx, xshift=xshift, radvel=0.0)
+
             sky_image = np.maximum(0, sky_image)
-            image += duration * np.random.poisson(flux * sky_image)
+            # Add to the science image
+            image += np.random.poisson(duration * sky_image)
+            # And to the slit viewing image
+            if slit_viewer is not None:
+                slit_viewer.create_slitview_frames(
+                    im_slit2, sky_spect, self.slitview_wave, self.slitview_frac,
+                    self.slitview_offset, res)
 
-        # Probably ignore atmospheric transmission for now
+        # We ignore atmospheric transmission and instrument throughput in this
+        # routine, because the input spectrum is assumed to include all of these
+        # effects other than the blaze function.
 
-        # Scale from photons to electrons by multiplying by QE
-        # FIXME do we want to simulate wavelength dependent QE?
-        image *= 0.8
-
-        if add_cosmic:
+        if self.cosmics:
             # Add cosmic rays
             # We hard code 2.0 rays/s/cm^2
             # A shield that only allows rays that originate within 10 degrees
             # of the zenith.
             # Pixel size of 15 x 15 x 16 um
             # FIXME Mike says the red detector is 4x thicker than the blue
-            cosmic_img = cosmic.cosmic(image.shape, duration, 10, 2.0, False,
-                                       [15, 15, 16])
+            cosmic_img = cosmic.cosmic(image.shape,     # Image shape
+                                       duration,        # Exposure length
+                                       10,              # CR shield angle
+                                       2.0,             # CR/s/cm/cm
+                                       False,           # Use effect area mask
+                                       [15, 15, 16]     # Pixel size (microns)
+                                       )
             image += cosmic_img
+            # import pdb; pdb.set_trace() #!!!MJI!!!
             # no_cr_pix = np.count_nonzero(cosmic_img)
         else:
             cosmic_img = np.zeros(image.shape)
@@ -1120,76 +1565,427 @@ class Arm(object):
 
         # For conventional axes transpose the image
         image = image.T
+        cosmic_img = cosmic_img.T
 
         # Split the image into sections for each readout amplifier
-        images, cxl, cxh, cyl, cyh = split_image(image, namps, return_headers=True)
-        cosmic_images = split_image(cosmic_img, namps, return_headers=False)
+        ampims, cxl, cxh, cyl, cyh = split_image(
+            image, namps, return_headers=True)
+        if self.cosmics:
+            cosmic_images = split_image(cosmic_img, namps, return_headers=False)
 
         # Add read noise for each amplifier
-        images = [i+r*np.random.normal(size=i.shape)
-                  for i, r in zip(images, rnoise)]
+        ampims = [i+r*np.random.normal(size=i.shape)
+            for i, r in zip(ampims, rnoise)]  # noqa
 
-        # Divide by the gain in e/ADU for each amplifier, scale, and add the bias level
-        images = [(s*a/g + b) for (a, g, b, s) in zip(images, gain, bias_level, scaling)]
+        # Divide by the gain in e/ADU for each amplifier, scale,
+        # and add the bias level
+        ampims = [(s*a/g + b) for (a, g, b, s) in
+            zip(ampims, gain, bias_level, scaling)]  # noqa
 
         # Add in the additive noise
         # This is assumed to be electronic noise, so it's in ADUs
         if additive_noise is not None:
-            images = [i + j for i, j in zip(images, additive_noise)]
+            ampims = [i + j for i, j in zip(ampims, additive_noise)]
 
         # Add overscan for each amplifier
         if overscan > 0:
             newimages = []
-            for (i, g, b, r) in zip(images, gain, bias_level, rnoise):
+            for (i, g, b, r) in zip(ampims, gain, bias_level, rnoise):
                 oimg = r * np.random.normal(size=(i.shape[0], overscan)) + b
                 oimg /= g
                 newimg = np.hstack((i, oimg))
                 newimages.append(newimg)
-            images = newimages
+            ampims = newimages
+            if self.cosmics:
+                newcosmic = []
+                for (i, g, b, r) in zip(cosmic_images, gain, bias_level,
+                                        rnoise):
+                    # oimg = r * np.random.normal(size=(i.shape[0], overscan)) + b
+                    oimg = np.zeros((i.shape[0], overscan))
+                    oimg /= g
+                    newcr = np.hstack((i, oimg))
+                    newcosmic.append(newcr)
+                cosmic_images = newcosmic
 
         # FIXME Apply non-linearity
 
         # Convert to unsigned short, and deal with saturation
-        newimages = []
         saturation = np.iinfo(np.uint16).max
-        for im_amp in images:
+        newimages = []
+        for im_amp in ampims:
             im_amp[im_amp < 0] = 0
             im_amp[im_amp > saturation] = saturation
             newimages.append(np.asarray(im_amp, dtype=np.uint16))
-        images = newimages
+        ampims = newimages
+
+        if return_image:
+            return ampims
+
+        if self.cosmics and self.crplane:
+            newcosmic = []
+            for im_amp in cosmic_images:
+                im_amp[im_amp < 0] = 0
+                im_amp[im_amp > saturation] = saturation
+                newcosmic.append(np.asarray(im_amp, dtype=np.uint16))
+            cosmic_images = newcosmic
+
+        # some datetimes for use in creating the header below
+        ltnow = utstart.replace(tzinfo=tz.tzutc())
+        ltnow = ltnow.astimezone(tz.tzlocal())
 
         # Now create our fits image!
         # By adding the DETSIZE and DETSEC keywords we can open the
         # raw image in ds9 as an IRAF mosaic.
         hdr = pf.Header()
-        hdr['INSTRUME'] = 'GHOST'
-        hdr['CAMERA'] = self.arm.upper()
-        hdr['OBSTYPE'] = obstype
-        if obstype == 'BIAS':
-            hdr['EXPTIME'] = 0.0
-        else:
-            hdr['EXPTIME'] = duration
-        hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
-        hdr['DETTYPE'] = self.dettype
-        hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
-        for i, im_amp in enumerate(images):
-            hdr = pf.Header()
-            hdr['CRPIXEL'] = np.count_nonzero(cosmic_images[i])
-            hdr['DETSIZE'] = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
-            hdr['DETSEC'] = "[%d:%d,%d:%d]" % (cxl[i]+1, cxh[i],
-                                               cyl[i]+1, cyh[i])
-            hdr['DATASEC'] = "[%d:%d,%d:%d]" % (1, im_amp.shape[1]-overscan,
-                                                1, im_amp.shape[0])
-            hdr['TRIMSEC'] = "[%d:%d,%d:%d]" % (1, im_amp.shape[1]-overscan,
-                                                1, im_amp.shape[0])
-            if overscan > 0:
-                hdr['BIASSEC'] = "[%d:%d,%d:%d]" % (im_amp.shape[1]-overscan+1,
-                                                    im_amp.shape[1], 1, im_amp.shape[0])
-            hdr['RDNOISE'] = rnoise[i]
-            hdr['GAIN'] = gain[i]
-            hdr['BUNIT'] = 'ADU'
-            hdulist.append(pf.ImageHDU(data=im_amp, header=hdr))
-        hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
+        hdr['OBSERVAT'] = (
+            'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
+        hdr['TELESCOP'] = 'Gemini-South'
+        hdr['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
+        hdr['OBSTYPE'] = (obstype, 'Observation type')
 
-        if return_image:
-            return images
+        # these are removed from the primary header when writing the MEF;
+        # conversely the MEF splitter primitive will (may?) need to add these
+        # to the split individual frame files in order for them to be correctly
+        # categorized by the type system
+        detsz = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
+        hdr['DETSIZE'] = (detsz, 'Detector size')
+        hdr['DETTYPE'] = (self.dettype, 'Detector array type')
+        hdr['CAMERA'] = (self.arm.upper(), 'Camera name')
+
+        # populate OBJECT keyword
+        obj = dict(FLAT='GCALflat', ARC='ThAr', OBJECT='V492 Car', BIAS='Bias',
+            DARK='Dark', SKY='')  # noqa
+        hdr['OBJECT'] = (obj[obstype], 'Object Name')
+
+        # populate OBSCLASS keyword
+        obsclass = dict(FLAT='partnerCal', ARC='partnerCal', OBJECT='science',
+            BIAS='dayCal', DARK='dayCal', SKY='')  # noqa
+        hdr['OBSCLASS'] = (obsclass[obstype], 'Observe class')
+
+        # populate GEMPRGID, OBSID, and DATALAB keywords
+        prgid = 'GS-2016B-Q-20'  # just choose a base at random
+        hdr['GEMPRGID'] = (prgid, 'Gemini programme ID')
+        obsid = dict(FLAT='2', ARC='2', OBJECT='2', BIAS='1', DARK='5', SKY='6')
+        hdr['OBSID'] = (prgid+'-'+obsid[obstype], 'Observation ID / Data label')
+        hdr['DATALAB'] = (prgid+'-'+obsid[obstype]+'-' + ('%03d' % data_label),
+            'DHS data label')  # noqa
+
+        # keywords that vary by time and position: first start with
+        # a spot in the sky that's always visible from Gemini South
+        my_ra, my_dec = 149.2442500, -69.1009167  # V492 Car
+        spot = SkyCoord(my_ra, my_dec, unit=u.deg, frame='fk5')
+        # location and UTC time at Gemini South
+        gs_locn = EarthLocation(
+            lat=-30.24075*u.deg, lon=-70.736693*u.deg, height=2722*u.m)
+        gs_time = Time(ltnow, location=gs_locn) - 3*u.hour
+        aa_start = AltAz(obstime=gs_time, location=gs_locn)
+        aa_end = AltAz(obstime=gs_time+duration*u.second, location=gs_locn)
+        horz_start = spot.transform_to(aa_start)
+        horz_end = spot.transform_to(aa_end)
+        hdr['RA'] = (my_ra, 'Right Ascension')
+        hdr['DEC'] = (my_dec, 'Declination of Target')
+        hdr['ELEVATIO'] = (horz_start.alt.deg, 'Current Elevation')
+        hdr['AZIMUTH'] = (horz_start.az.deg, 'Current Azimuth')
+        # TODO: use apparent sidereal time below instead of mean?
+        hra = gs_time.sidereal_time('mean') - my_ra*u.deg  # hour angle
+        hdr['HA'] = (hra.to_string(unit=u.deg, sep=':'), 'Telescope hour angle')
+        hdr['AMSTART'] = (horz_start.secz.value, 'Airmass at start of exposure')
+        hdr['AMEND'] = (horz_end.secz.value, 'Airmass at end of exposure')
+        # assumes linear transition from AMSTART to AMEND which is likely wrong
+        mean_airmass = (horz_end.secz.value + horz_start.secz.value)/2
+        hdr['AIRMASS'] = (mean_airmass, 'Mean airmass for the observation')
+
+        # keywords that are constant
+        hdr['EQUINOX'] = (2000., 'Equinox of coordinate system')
+        hdr['HUMIDITY'] = (39., 'The Relative Humidity (fraction, 0..101)')
+        hdr['TAMBIENT'] = (8.8, 'The ambient temp (C)')
+        hdr['PRESSURE'] = (546.95412, 'The atmospheric pressure (mm Hg)')
+        hdr['PA'] = (90., 'Sky Position Angle at start of exposure')
+        hdr['IAA'] = (359.78, 'Instrument Alignment Angle')
+        hdr['CRPA'] = (-187.344883172036, 'Current Cass Rotator Position Angle')
+        # hdr['CRFOLLOW'] = (0, '')  # TODO: where can I get this info?
+
+        # time-related keywords
+        hdr['EXPTIME'] = (duration, 'Exposure time in seconds')
+        hdr['DATE-OBS'] = (
+            utstart.strftime("%Y-%m-%d"), 'UT date at observation start')
+        hdr['UTSTART'] = (utstart.strftime("%H:%M:%S.%f")[:-3],
+            'UT time at observation start')  # noqa
+        hdr['UTEND'] = (
+            (utstart + datetime.timedelta(seconds=duration))
+            .strftime("%H:%M:%S.%f")[:-3], 'UT time at observation end')
+        hdr['LT'] = (ltnow.strftime("%H:%M:%S.%f")[:-3],
+            'Local time at start of observation')  # noqa
+
+        # resolution-related keywords
+        hdr['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
+        hdr['SMPPOS'] = (1 if res == 'high' else 2)
+
+        hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
+        crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
+        for i, ampim in enumerate(ampims):
+            hdr = pf.Header()
+            hdr['BUNIT'] = 'ADU'
+            # hdr['BSCALE'] = 1  # added by default
+            # hdr['BZERO'] = 32768  # added by default
+            hdr['CAMERA'] = (self.arm.upper(), 'Camera name')
+            hdr['RDNOISE'] = (rnoise[i], 'Readout noise')
+            hdr['GAIN'] = (gain[i], 'Amplifier gain')
+            hdr['EXPID'] = (data_label, 'Exposure ID')
+            hdr['PCOUNT'] = (0, 'Required keyword; must = 0')
+            hdr['GCOUNT'] = (1, 'Required keyword; must = 1')
+            hdr['EXPUTST'] = (utstart.strftime("%H:%M:%S.%f")[:-3],
+                'UT time at exposure start')  # noqa
+            hdr['EXPUTEND'] = (
+                (utstart + datetime.timedelta(seconds=duration))
+                .strftime("%H:%M:%S.%f")[:-3], 'UT time at exposure end')
+
+            hdr['DETSIZE'] = (detsz, 'Detector size')
+            hdr['CCDSIZE'] = (detsz, 'CCD size')
+
+            hdr['CCDNAME'] = (self.dettype, 'CCD name')
+            hdr['AMPNAME'] = (i, 'Amplifier name')
+            hdr['AMPSIZE'] = ("[1:%d,1:%d]" % (
+                ampim.shape[1], ampim.shape[0]), 'Amplifier size')
+
+            detsec = "[%d:%d,%d:%d]" % (cxl[i]+1, cxh[i], cyl[i]+1, cyh[i])
+            hdr['DETSEC'] = (detsec, 'Detector section(s)')
+            hdr['CCDSEC'] = (detsec, 'CCD section(s)')
+
+            # TODO: replace static value below with dynamically determined value
+            hdr['CCDSUM'] = ('1 1', 'CCD pixel summing')
+            # TODO: what's a realistic value for readout time?
+            hdr['DARKTIME'] = (duration + 5., 'Dark time (seconds)')
+
+            datasec = "[1:%d,1:%d]" % (ampim.shape[1]-overscan, ampim.shape[0])
+            hdr['DATASEC'] = (datasec, 'Data section(s)')
+            hdr['TRIMSEC'] = (datasec, 'Trim section(s)')
+
+            # TODO: where can I find these values?
+            hdr['DSPTIMBN'] = ('???', 'ARC timing board dsp code')
+            hdr['DSPTIMBV'] = (0, 'ARC timing board dsp version')
+
+            if overscan > 0:
+                hdr['BIASSEC'] = ("[%d:%d,1:%d]" % (
+                    ampim.shape[1]-overscan+1, ampim.shape[1], ampim.shape[0]),
+                    'Bias section(s)')
+
+            if self.cosmics:
+                cosim = cosmic_images[i]
+                hdr['CRPIXEL'] = np.count_nonzero(cosim)
+
+                if self.crplane:
+                    crhdr = pf.Header()
+                    crhdr['DETSIZE'] = ("[1:%d,1:%d]" % (
+                        cosim.shape[1], cosim.shape[0]), 'Detector size')
+                    crhdr['DETSEC'] = (detsec, 'Detector section(s)')
+                    cosdsec = "[1:%d,1:%d]" % (
+                        cosim.shape[1]-overscan, cosim.shape[0])
+                    crhdr['DATASEC'] = (cosdsec, 'Data section(s)')
+                    crhdr['TRIMSEC'] = (cosdsec, 'Trim section(s)')
+
+                    if overscan > 0:
+                        crhdr['BIASSEC'] = ("[%d:%d,1:%d]" % (
+                            cosim.shape[1]-overscan+1, cosim.shape[1],
+                            cosim.shape[0]), 'Bias section(s)')
+
+                    crhdu.append(
+                        pf.ImageHDU(data=cosim, header=crhdr, name='SCI'))
+
+            hdulist.append(pf.ImageHDU(data=ampim, header=hdr, name='SCI'))
+
+        if self.split:
+            print('Writing ' + output_prefix + self.arm + '.fits')
+            hdulist.writeto(output_prefix + self.arm + '.fits', clobber=True)
+
+            if self.cosmics and self.crplane:
+                print('Writing ' + output_prefix + self.arm + '_CR.fits')
+                crhdu.writeto(
+                    output_prefix + self.arm + '_CR.fits', clobber=True)
+        else:
+            return hdulist
+
+
+class Ghost(object):
+    """A class to encapsulate both Arm objects that represent the two arms of
+    the spectrograph. The initialisation function takes the fixed parameters for
+    the two detectors (the things that won't change between exposures).
+
+    Parameters
+    ----------
+    rnoise: float
+        The read noise for both detectors (assumed to be the same for now)
+
+    gain: float
+        The gain for both detectors (assumed to be the same for now)
+
+    namps: int[2]
+        The number of amplifiers in the row and column directions for both
+        detectors (assumed to be the same)
+
+    overscan: int
+        The number of columns of overscan for each amplifier (assumed to be
+        the same for all amplifiers on both detectors)
+
+    split: bool
+        Indicate whether to produce a single MEF containing the frames taken
+        during the observation, or to generate individual files per frame
+
+    bias_level: float
+        The bias level for both detectors (assumed to be the same for now)
+
+    additive_noise: dict{'red'/'blue': float[namps, ampsize]}
+        Additive noise (in ADUs) that will be added to every exposure.
+
+    scaling: dict{'red'/'blue': float[namps, ampsize]}
+        The scaling factor (i.e. pixel-to-pixel variation) for every exposure
+
+    cosmics: bool
+        Whether to add cosmic rays to frames or not
+
+    crplane: bool
+        Output a fits file containing locations where CRs were injected?
+    """
+
+    def __init__(self, rnoise, gain, namps, overscan, split, bias_level,
+                 additive_noise, scaling, cosmics, crplane):
+        self.blue = Arm('blue', cosmics, crplane, split)
+        self.red = Arm('red', cosmics, crplane, split)
+        self.rnoise = rnoise
+        self.gain = gain
+        self.namps = namps
+        self.overscan = overscan
+        self.bias_level = bias_level
+        self.additive_noise = additive_noise
+        self.scaling = scaling
+        self.cosmics = cosmics
+        self.crplane = crplane
+        self.split = split
+        self.sv = SlitViewer(cosmics, crplane, split)
+
+    def simulate_observation(self, duration=0.0, output_prefix='test_',
+                             spectrum_in=None, xshift=0.0, yshift=0.0,
+                             rv_thar=0.0, flux=1, use_thar=True, res='high',
+                             add_sky=True, radvel=0.0, thar_flatlamp=False,
+                             flatlamp=False, obstype=None, seeing=0.8,
+                             sv_duration=10.0, sv_flux_profile=None,
+                             data_label=1):
+        """
+        Simulate an observation with the whole instrument.
+        This includes slit-viewing exposures, a blue and a red science exposure.
+
+        Parameters
+        ----------
+        duration: float (optional)
+            Duration of the exposure in seconds
+
+        output_prefix: string (optional)
+            Prefix for the output filename.
+
+        spectrum_in: array of shape (2,n) where n is the number of
+            spectral samples input spectrum.
+            spectrum[0] is the wavelength array, spectrum[1] is the flux array,
+            in units of recorded photons/spectral pixel/s, taking into account
+            the full instrument at order centers (i.e. excluding the blaze
+            function)
+
+        xshift: float (optional)
+            x-direction (along-slit) shift.
+
+        yshift: float (optional)
+            y-direction (spectral direction) shift.
+
+        radvel: float (optional)
+            Radial velocity in m/s for the target star with respect to
+            the observer.
+
+        rv_thar: float (optional)
+            Radial velocity in m/s applied to the Thorium/Argon source.  It is
+            unlikely that this is useful (use yshift instead for common shifts
+            in the dispersion direction).
+
+        flux: float (optional) Flux multiplier for the reference spectrum to
+            give photons/pix/s.
+
+        use_thar: bool (optional)
+            Is the Thorium/Argon lamp in use?
+
+        res: string (optional)
+            Can be 'high' or 'std' for the resolution mode.
+
+        add_sky: bool (optional)
+            Is the sky background added to the frame?
+
+        thar_flatlamp: bool (optional)
+            Is the ThAr fiber illuminated with the flat lamp?
+
+        flatlamp: bool (optional)
+            Is the input spectrum evenly illuminating the slit, like a
+            flat lamp would?
+
+        obstype: string
+            The value for the OBSTYPE FITS keyword
+
+        seeing: float (optional)
+            Determines the flux in each fiber (if flatlamp=False)
+
+        sv_duration: the slit viewing camera exposure duration (in seconds)
+
+        sv_flux_profile: array of shape (2, n) where n is the number of samples
+            in the profile.  sv_flux_profile[0] is the sv exposure index array,
+            and sv_flux_profile[1] gives the flux of that exposure, relative to
+            the maximum possible (i.e. 0=no flux, 1=full flux).
+
+        data_label: int (optional)
+            Indicates which frame of a sequence this is; written to the DATALAB
+            keyword
+        """
+
+        utstart = datetime.datetime.utcnow()
+
+        if (sv_duration > 0) and (duration > 0):
+            self.sv.set_exposure(
+                sv_duration, duration, sv_flux_profile, utstart)
+        else:
+            self.sv.set_exposure(0.0, 0, None, utstart)
+
+        common_params = dict(
+            duration=duration, output_prefix=output_prefix, gain=self.gain,
+            spectrum_in=spectrum_in, xshift=xshift, yshift=yshift,
+            radvel=radvel, rv_thar=rv_thar, flux=flux, rnoise=self.rnoise,
+            bias_level=self.bias_level, overscan=self.overscan, add_sky=add_sky,
+            namps=self.namps, use_thar=use_thar, res=res, utstart=utstart,
+            thar_flatlamp=thar_flatlamp, seeing=seeing, data_label=data_label,
+            flatlamp=flatlamp, slit_viewer=self.sv, obstype=obstype)
+
+        blue_hdu = self.blue.simulate_frame(  # pylint: disable=star-args
+            additive_noise=self.additive_noise['blue'],
+            scaling=self.scaling['blue'], **common_params)
+        red_hdu = self.red.simulate_frame(  # pylint: disable=star-args
+            additive_noise=self.additive_noise['red'],
+            scaling=self.scaling['red'], **common_params)
+        slit_hdu = self.sv.save(output_prefix, obstype)
+
+        if self.split:
+            return
+
+        nslit_extns = 0 if slit_hdu is None else len(slit_hdu)-1
+
+        hdr = red_hdu[0].header
+        del hdr['DETTYPE']
+        del hdr['DETSIZE']
+        del hdr['CAMERA']
+        # hdr['EXTEND'] = True  # this has no effect for some reason
+        hdr['NEXTEND'] = (2*4 + nslit_extns, 'Number of extensions')
+        hdr['NREDEXP'] = (1, 'Number of red exposures')
+        hdr['NBLUEEXP'] = (1, 'Number of blue exposures')
+        hdr['NSLITEXP'] = (nslit_extns, 'Number of slit-viewing exposures')
+        hdulist = pf.HDUList([pf.PrimaryHDU(header=hdr)])
+        if slit_hdu is not None:
+            hdulist += slit_hdu[1:]
+        hdulist += red_hdu[1:]
+        hdulist += blue_hdu[1:]
+
+        print('Writing observation MEF to ' + output_prefix + 'MEF.fits')
+        hdulist[0].header['EXTEND'] = True  # this works
+        hdulist.writeto(output_prefix + 'MEF.fits', clobber=True)

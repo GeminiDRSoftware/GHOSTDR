@@ -8,6 +8,7 @@ Based on the setup.py from the gemini_python distribution.
 In this package:
     astrodata_GHOST  : Recipes, Primitives and astrodata configuration for GHOST
     pyghost          : GHOST simulator
+    polyfit          : GHOST find apertures and polynomial model fitting
     
 
 Usage:
@@ -43,9 +44,9 @@ for p in ADLIB_PACKAGES:
         PIFROOT = os.path.join('astrodata_'+p,'PIF_'+p,'pif'+p.lower())
         for root, dirs, files in os.walk(PIFROOT):
             if not svndir.search(root) and len(files) > 0:
-                pifmodules = map((lambda d: slash.sub('.','/'.join([root,d]))),\
+               pifmodules = map((lambda d: slash.sub('.','/'.join([root,d]))),\
                                  filter((lambda d: not svndir.search(d)), dirs))
-                PIF_MODULES.extend( pifmodules )
+               PIF_MODULES.extend( pifmodules )
     if os.path.isdir(os.path.join('astrodata_'+p, 'ADCONFIG_'+p)):
         ADCONFIG_MODULES.append('astrodata_'+p+'.ADCONFIG_'+p)
         ADCONFIG_MODULES.append('astrodata_'+p+'.ADCONFIG_'+p+'.descriptors')
@@ -106,6 +107,11 @@ for p in ADLIB_PACKAGES:
         if not svndir.search(root) and len(files) > 0:
             dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
             PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
+    #Add polyfit
+    for root, dirs, files in os.walk(os.path.join('astrodata_'+p,'polyfit')):
+        if not svndir.search(root) and len(files) > 0:
+            dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
+            PACKAGE_DATA['astrodata_'+p].extend( map((lambda f: os.path.join(dest, f)), files) )
 
     PACKAGE_DATA['astrodata_'+p+'.RECIPES_'+p] = []
     if os.path.isdir(os.path.join('astrodata_'+p,'RECIPES_'+p)):
@@ -125,6 +131,7 @@ PACKAGES.append('pyghost')
 PACKAGE_DIRS['pyghost'] = 'simulator/pyghost/pyghost'
 ENTRY_POINTS['console_scripts'] = ['ghost-sim=pyghost.tests:run']
 PACKAGE_DATA['pyghost'] = ['data/*']
+
 
 EXTENSIONS = None
 

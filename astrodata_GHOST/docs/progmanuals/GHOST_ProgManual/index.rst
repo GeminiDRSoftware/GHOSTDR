@@ -17,6 +17,7 @@ GHOST Programmer's Manual
    recipes
    primitives
    tests
+   config
 
 
 Indices and tables

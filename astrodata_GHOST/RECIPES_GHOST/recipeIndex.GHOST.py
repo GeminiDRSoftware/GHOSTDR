@@ -3,8 +3,13 @@
 # for example makeProcessedBias.
 
 localAstroTypeRecipeIndex = {
-                            "GHOST_BIAS"  : ["makeProcessedBiasG"],
-                            "GHOST_DARK"  : ["makeProcessedDarkG"],
-                            "GHOST_FLAT"  : ["makeProcessedFlatG"],
-                            "GHOST_SPECT" : ["reduceG"],
+                            "GHOST_BIAS":         ["makeProcessedBiasG"],
+                            "GHOST_DARK":         ["makeProcessedDarkG"],
+                            "GHOST_ARC":          ["makeProcessedArcG"],
+                            "GHOST_FLAT":         ["makeProcessedFlatG"],
+                            "GHOST_OBJECT":       ["reduceG"],
+                            "GHOST_SLITV_BIAS":   ["makeProcessedSlitBiasG"],
+                            "GHOST_SLITV_DARK":   ["makeProcessedSlitDarkG"],
+                            "GHOST_SLITV_FLAT":   ["makeProcessedSlitFlatG"],
+                            "GHOST_SLITV_IMAGE":  ["makeProcessedSlitG"],
                             }

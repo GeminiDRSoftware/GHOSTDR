@@ -1,0 +1,1139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>3. rejectCosmicRays &mdash; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/todo-styles.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.9.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="GHOST Users&#39; Manual 0.9.0 documentation" href="../index.html" />
+    <link rel="up" title="Primitives for GHOST" href="../primitives.html" />
+    <link rel="prev" title="2. Primitive #2 (alphabetical)" href="primitive2.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="primitive2.html" title="2. Primitive #2 (alphabetical)"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">Primitives for GHOST</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="rejectcosmicrays">
+<h1>3. rejectCosmicRays<a class="headerlink" href="#rejectcosmicrays" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="purpose">
+<h2>3.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<p>This primitive will mask cosmic rays in a GHOST data frame by updating the
+data mask.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The algorithm seems to work, but isn&#8217;t managing to update the
+DQ plane. I&#8217;m working on the issue. -MCW</p>
+</div>
+</div>
+<div class="section" id="inputs-and-outputs">
+<h2>3.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<p>The following options can be passed to rejectCosmicRays via the RecipeSystem,
+or overridden with a user configuration file, as marked:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="13%" />
+<col width="9%" />
+<col width="22%" />
+<col width="9%" />
+<col width="7%" />
+<col width="40%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head" rowspan="2">Parameter</th>
+<th class="head" rowspan="2">Type</th>
+<th class="head" rowspan="2">Default</th>
+<th class="head" colspan="2">Override?</th>
+<th class="head" rowspan="2">Description</th>
+</tr>
+<tr class="row-even"><th class="head">Recipe</th>
+<th class="head">User</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-odd"><td>suffix</td>
+<td>str</td>
+<td>_cosmicRaysRejected</td>
+<td>Y</td>
+<td>Y</td>
+<td>Suffix affixed to modified file.</td>
+</tr>
+<tr class="row-even"><td>subsampling</td>
+<td>int</td>
+<td>2</td>
+<td>Y</td>
+<td>Y</td>
+<td>The number of pixels to subsample in
+each direction of each pixel.</td>
+</tr>
+<tr class="row-odd"><td>sigma_lim</td>
+<td>float</td>
+<td>5.0</td>
+<td>Y</td>
+<td>Y</td>
+<td>Sigma clipping value.</td>
+</tr>
+<tr class="row-even"><td>f_lim</td>
+<td>float</td>
+<td>6.0</td>
+<td>Y</td>
+<td>Y</td>
+<td>Fine-structure clipping limit.</td>
+</tr>
+<tr class="row-odd"><td>n_passes</td>
+<td>int</td>
+<td>2</td>
+<td>Y</td>
+<td>Y</td>
+<td>Number of iterations to perform.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="algorithm">
+<h2>3.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
+<p>This primitive is a first-principles implementation of the LACosmic algorithm.
+NumPy array operations are used for maximum efficiency.
+For a full-discussion of the algorithm, see van Dokkum 2001, PASP <strong>113</strong>,
+1420-1427 (<a class="reference external" href="https://ui.adsabs.harvard.edu/#abs/2001PASP..113.1420V/abstract">ADS</a>).
+In summary (where the symbol <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">\ast</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ denotes convolution):</p>
+<ol class="arabic simple">
+<li>Create a Laplacian, <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">\mathcal{L}^+</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+, of the input data frame,
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">I</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+.<ul>
+<li>Subsample the image by a factor of <code class="docutils literal"><span class="pre">subsampling</span></code> and apply the
+Laplacian transformation;</li>
+<li>Set any negative sub-pixels to have value 0 instead;</li>
+<li>Re-sample the image back to its original resolution.</li>
+</ul>
+</li>
+<li>Generate the &#8216;sigma map&#8217;, <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">S</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+, of the frame.<ul>
+<li>Form a &#8216;noise image&#8217; of the data,
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">N=g^{-1}\sqrt{g(M_5\ast I)+\sigma_{rn}^2}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+, where <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">g</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ and
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">\sigma_{rn}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ are the data gain and read noise respectively.
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">M_5</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ is a <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">5\times 5</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ median filter used to smooth the data.</li>
+<li>The sigma map is then generated as <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">S=\mathcal{L}^+ /f_S N</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+, where
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">f_S</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ is the <code class="docutils literal"><span class="pre">subsampling</span></code> factor used.</li>
+<li>Smooth the sigma map to help remove sampling flux, resulting in
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">S^\prime = S - (S\ast M_5)</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+.</li>
+</ul>
+</li>
+<li>Generate the &#8216;fine-structure image&#8217; of the frame,
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">\mathcal{F}=(M_3\ast I) - ((M_3\ast I) \ast M_7)</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+, where <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">M_3</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+
+and <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">M_7</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ are <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">3\times 3</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ and <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">7\times 7</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ median filters,</li>
+<li>Mark pixels as cosmic rays (via the image quality plane) if:<ul>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">S^\prime &gt;</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ <code class="docutils literal"><span class="pre">sigma_lim</span></code>, and</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">\mathcal{L}^+ /\mathcal{F} &gt;</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ <code class="docutils literal"><span class="pre">f_lim</span></code>.</li>
+</ul>
+</li>
+<li>For the purposes of the algorithm (i.e. <strong>not</strong> in the data to be returned),
+replace cosmic rays pixels with the median value of surrounding pixels.</li>
+<li>Iterate over steps 1-5 until <code class="docutils literal"><span class="pre">n_passes</span></code> is reached, or the number of
+cosmic rays detected falls to 0.</li>
+</ol>
+</div>
+<div class="section" id="issues-and-limitations">
+<h2>3.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<p>Both strong spectral features and, in high-resolution mode, the ThXe calibration
+output may be incorrectly flagged as cosmic rays. Therefore, this
+primitive will trigger a call to
+<strong>need to add more here once this actually works</strong></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The current preset values of <code class="docutils literal"><span class="pre">sigma_lim</span></code> (15.0, 5.0), <code class="docutils literal"><span class="pre">f_lim</span></code>
+(5.0) and <code class="docutils literal"><span class="pre">n_passes</span></code> (5) are a first-pass guess at what seems to
+flag roughly the correct number of cosmic rays. More complete
+testing, and the possible implementation of a table of preset values
+on a case-by-case basis, will need to wait until the findApertures
+routine (and related routines) are finalized and mixed in with the
+cosmic ray finding.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">3. rejectCosmicRays</a><ul>
+<li><a class="reference internal" href="#purpose">3.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">3.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#algorithm">3.3. Algorithm</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">3.4. Issues and Limitations</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="primitive2.html"
+                        title="previous chapter">2. Primitive #2  (alphabetical)</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/primitives_pages/rejectCosmicRays.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="primitive2.html" title="2. Primitive #2 (alphabetical)"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >Primitives for GHOST</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.5.
+    </div>
+  </body>
+</html>

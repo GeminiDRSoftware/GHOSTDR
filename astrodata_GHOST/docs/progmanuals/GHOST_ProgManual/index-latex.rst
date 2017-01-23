@@ -5,7 +5,7 @@
    Manually edited by KL Fri Apr 4 2014
 
 GHOST Programmer's Manual
-========================
+=========================
 
 .. toctree::
    :numbered:
@@ -17,6 +17,7 @@ GHOST Programmer's Manual
    recipes
    primitives
    tests
+   config
 
 
 .. todolist::
