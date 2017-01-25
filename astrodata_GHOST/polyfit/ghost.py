@@ -156,7 +156,7 @@ class Arm(Polyspect,Extractor):
                            self.extra_rot,self.nlenslets, self.fiber_separation,
                            self.profile_sigma)
 
-        Extractor.__init__(self, 
+#        Extractor.__init__(self, 
 
     def make_lenslets(self, fluxes=[], seeing=0.8, llet_offset=0):
         """Make an image of the lenslets with sub-pixel sampling.

@@ -292,8 +292,7 @@ class Extractor():
                 offsets = self.sim_offsets[:, i]
                 profile = self.sim_profile
             else:
-                print("Only sim lenslet profile available for 2D extraction
-                so far...")
+                print("Only sim lenslet profile available for 2D extraction so far...")
                 raise userwarning
             nx_cutout = 2 * int((np.max(offsets) - np.min(offsets)) / 2) + 2
             ny_cutout = 2 * \
