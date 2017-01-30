@@ -112,8 +112,8 @@ class Polyspect(object):
         with :math: `m^{prime} = m_{\rm ref}/m - 1`
 
         This means that the simplest spectrograph model should have:
-        :math: `q_{00}` : central wavelength or order m_ref
-        :math: `q_{01}` : central wavelength or order m_ref
+        :math: `q_{00}` : central wavelength of order m_ref
+        :math: `q_{01}` : central wavelength of order m_ref
         :math: `q_{10}` : central_wavelength/R_pix,
         with R_pix the resolving power / pixel.
         :math: `q_{11}` : central_wavelength/R_pix,
