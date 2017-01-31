@@ -501,9 +501,53 @@ class Polyspect(object):
 
         return params
 
-    def spectral_format_with_matrix(self):
+    def spectral_format_with_matrix(self,xmod,wavemod,spatmod,specmod,rotmod):
         """Create a spectral format, including a detector to slit matrix at
            every point.
+
+           The input parameters are required for this to work and represent
+           the polynomial coefficients for second order descriptions of
+           how the spectral and spatial scales vary as a function of order
+           for each mode as well as a slit rotation indicator.
+
+        The functional form is:
+
+        .. math::
+
+            scale(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ...
+
+        with :math:`mprime = m_{\rm ref}/m - 1 
+
+        and :math: scale(m) = whichever scale is being referred to
+
+        This means that the simplest model should have:
+        :math:`q_{00}`:  spatial/spectral/rotation scale at the reference order
+        :math:`q_{01}`:  variation as a function of orders divided by the number
+        of orders
+        ... with everything else approximately zero.
+
+        Parameters
+        ----------
+
+        xmod: float array
+            pixel position model parameters. Used in the spectral format
+            function. See documentation there for more details
+        wavemod: float array
+            pixel position model parameters. Used in the spectral format
+            function. See documentation there for more details
+
+        spatmod: float array
+            Parameters from the spatial scale second order polynomial
+            describing how the slit image varies in the spatial direction
+            as a function of order on the CCD
+        specmod: float array
+            Parameters from the spectral scale second order polynomial
+            describing how the slit image varies in the spectral direction
+            as a function of order on the CCD
+        rotmod: float array
+            Parameters from the extra rotation second order polynomial
+            describing how the slit image rotation varies
+            as a function of order on the CCD
 
         Returns
         -------
@@ -520,27 +564,39 @@ class Polyspect(object):
             2x2 slit rotation matrices, mapping output co-ordinates back
             to the slit.
         """
-        xbase, waves, blaze = self.spectral_format()
+        xbase, waves, blaze = self.spectral_format(xparams=xmod,wparams=wmod)
         matrices = np.zeros((xbase.shape[0], xbase.shape[1], 2, 2))
         amat = np.zeros((2, 2))
 
-        for i in range(xbase.shape[0]):  # i is the order
+        for order in range(self.m_min, self.m_max + 1):
+            mprime = self.m_ref / order - 1
+
+            # Now obtain the spatial and spectral scales for this order
+            # Start with the spatial scale
+            polyq = np.poly1d(spatmod)
+            slit_microns_per_det_pix_x = polyq(mprime)
+            # Then the spectral direction
+            polyq = np.poly1d(specmod)
+            slit_microns_per_det_pix_y = polyq(mprime)
+
+            # Then populate the matrix for this location.
+            amat[0, 0] = 1.0 / slit_microns_per_det_pix_x
+            amat[0, 1] = 0
+            amat[1, 0] = 0
+            amat[1, 1] = 1.0 / slit_microns_per_det_pix_y
+
+            # Now work out the rotation as a function of pixel along the order
             for j in range(xbase.shape[1]):
                 # Create a matrix where we map input angles to output
                 # coordinates.
-                # TWO OF THE NECESSARY PARAMETERS DO NOT EXIST!!!!
-                # AND SHOULDN'T EXIST. THIS SHOULD BE AN ARBITRARY POLYNOMIAL
-                # PART OF THE INPUT MODEL FILE
-                slit_microns_per_det_pix = self.slit_microns_per_det_pix_first + \
-                    float(i) / xbase.shape[0] * (self.slit_microns_per_det_pix_last -
-                                                 self.slit_microns_per_det_pix_first)
-                # These are the two parameters to come from two files
-                slit_microns_per_det_pix_x = slit_microns_per_det_pix
-                slit_microns_per_det_pix_y = slit_microns_per_det_pix
-                amat[0, 0] = 1.0 / slit_microns_per_det_pix_x
-                amat[0, 1] = 0
-                amat[1, 0] = 0
-                amat[1, 1] = 1.0 / slit_microns_per_det_pix_y
+
+                # This section is now deprecated
+
+                # slit_microns_per_det_pix = self.slit_microns_per_det_pix_first
+                # + \ float(i) / xbase.shape[0] *
+                # (self.slit_microns_per_det_pix_last -
+                # self.slit_microns_per_det_pix_first)
+
                 # Apply an additional rotation matrix. If the simulation was
                 # complete, this wouldn't be required.
                 # extra_rot should be in radians and come from the third
