@@ -21,7 +21,7 @@ class Polyspect(object):
     """
 
     def __init__(self, mode, m_ref, szx, szy, m_min, m_max,
-                 transpose, extra_rot, nlenslets, fiber_separation,
+                 transpose, nlenslets, fiber_separation,
                  profile_sigma):
         """ Initialisation function for this class"""
 
@@ -34,10 +34,34 @@ class Polyspect(object):
         self.m_min = m_min
         self.m_max = m_max
         self.transpose = transpose
-        self.extra_rot = extra_rot
         self.nlenslets = nlenslets
         self.fiber_separation = fiber_separation
         self.profile_sigma = profile_sigma
+
+
+    def evaluate_poly(self, params, mprime, y_values):
+        """ Function used to evaluate a polynomial of polynomials at specific
+        points. This is a function designed to avoid code repetition.
+
+        Parameters
+        ----------
+
+        params: float array
+            Model parameters with the coefficients to evaluate.
+        mprime: float
+            This is the mprime as defined in the spectral format function. This
+            parameter is what the first order of polynomials are evaluated
+            against
+        y_values: float array
+            This is the value or array of values for the second order polynomial
+            functions to be aveluated against."""
+        ydeg = params.shape[0] - 1
+        polynomials = np.empty((ydeg + 1))
+        for i in range(ydeg + 1):
+            polyq = np.poly1d(params[i, :])
+            polynomials[i] = polyq(mprime)
+        polyp = np.poly1d(polynomials)
+        return polyp(y_values - self.szy // 2)
 
     def wave_fit_resid(self, params, orders, waves, y_values, ydeg=3, xdeg=3):
         """A fit function for read_lines_and_fit (see that function for details)
@@ -252,24 +276,15 @@ class Polyspect(object):
 
             if wparams is not None:
                 # Find the polynomial coefficients for each order.
-                ydeg = wparams.shape[0] - 1
-                polynomials = np.empty((ydeg + 1))
-                for i in range(ydeg + 1):
-                    polyq = np.poly1d(wparams[i, :])
-                    polynomials[i] = polyq(mprime)
-                polyp = np.poly1d(polynomials)
-                wave_int[order - self.m_min, :] = polyp(y_values -
-                                                        self.szy // 2)
+                wave_int[order - self.m_min, :] = self.evaluate_poly(wparams,
+                                                                     mprime,
+                                                                     y_values)
 
             if xparams is not None:
                 # Find the polynomial coefficients for each order.
-                ydeg = xparams.shape[0] - 1
-                polynomials = np.empty((ydeg + 1))
-                for i in range(ydeg + 1):
-                    polyq = np.poly1d(xparams[i, :])
-                    polynomials[i] = polyq(mprime)
-                polyp = np.poly1d(polynomials)
-                x_int[order - self.m_min, :] = polyp(y_values - self.szy // 2)
+                x_int[order - self.m_min, :] = self.evaluate_poly(xparams,
+                                                                  mprime,
+                                                                  y_values)
 
             # Finally, the blaze
             wcen = wave_int[order - self.m_min, self.szy / 2]
@@ -501,7 +516,8 @@ class Polyspect(object):
 
         return params
 
-    def spectral_format_with_matrix(self,xmod,wavemod,spatmod,specmod,rotmod):
+    def spectral_format_with_matrix(self, xmod, wavemod, spatmod=None,
+                                    specmod=None, rotmod=None):
         """Create a spectral format, including a detector to slit matrix at
            every point.
 
@@ -510,17 +526,10 @@ class Polyspect(object):
            how the spectral and spatial scales vary as a function of order
            for each mode as well as a slit rotation indicator.
 
-        The functional form is:
+        The functional form is equivalent to all other models in the spectral
+        format. For the 3 new parameters the simplest interpretation of the
+        model files is as follows:
 
-        .. math::
-
-            scale(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ...
-
-        with :math:`mprime = m_{\rm ref}/m - 1 
-
-        and :math: scale(m) = whichever scale is being referred to
-
-        This means that the simplest model should have:
         :math:`q_{00}`:  spatial/spectral/rotation scale at the reference order
         :math:`q_{01}`:  variation as a function of orders divided by the number
         of orders
@@ -536,15 +545,15 @@ class Polyspect(object):
             pixel position model parameters. Used in the spectral format
             function. See documentation there for more details
 
-        spatmod: float array
+        spatmod: (optional) float array
             Parameters from the spatial scale second order polynomial
             describing how the slit image varies in the spatial direction
             as a function of order on the CCD
-        specmod: float array
+        specmod: (optional) float array
             Parameters from the spectral scale second order polynomial
             describing how the slit image varies in the spectral direction
             as a function of order on the CCD
-        rotmod: float array
+        rotmod: (optional) float array
             Parameters from the extra rotation second order polynomial
             describing how the slit image rotation varies
             as a function of order on the CCD
@@ -564,45 +573,58 @@ class Polyspect(object):
             2x2 slit rotation matrices, mapping output co-ordinates back
             to the slit.
         """
-        xbase, waves, blaze = self.spectral_format(xparams=xmod,wparams=wmod)
-        matrices = np.zeros((xbase.shape[0], xbase.shape[1], 2, 2))
-        amat = np.zeros((2, 2))
 
+        if (xmod is None) and (wavemod is None):
+            return 'Must provide at least one of xparams or wparams'
+
+        if (spatmod is None) and (specmod is None) and (rotmod is None):
+            return 'Must provide at least one of spatmod, specmod or rotmod,\
+            otherwise there is no point in running this function.'
+
+        #Get the basic spectral format
+        xbase, waves, blaze = self.spectral_format(xparams=xmod,
+                                                   wparams=wavemod)
+        matrices = np.zeros((xbase.shape[0], xbase.shape[1], 2, 2))
+        # Initialise key variables in case models are not supplied.
+        amat = np.zeros((2, 2))
+        slit_microns_per_det_pix_x = 1.
+        slit_microns_per_det_pix_y = 1.
+        rotation = 0.
+
+        #Loop through orders
         for order in range(self.m_min, self.m_max + 1):
             mprime = self.m_ref / order - 1
-
-            # Now obtain the spatial and spectral scales for this order
-            # Start with the spatial scale
-            polyq = np.poly1d(spatmod)
-            slit_microns_per_det_pix_x = polyq(mprime)
-            # Then the spectral direction
-            polyq = np.poly1d(specmod)
-            slit_microns_per_det_pix_y = polyq(mprime)
-
-            # Then populate the matrix for this location.
-            amat[0, 0] = 1.0 / slit_microns_per_det_pix_x
-            amat[0, 1] = 0
-            amat[1, 0] = 0
-            amat[1, 1] = 1.0 / slit_microns_per_det_pix_y
-
             # Now work out the rotation as a function of pixel along the order
-            for j in range(xbase.shape[1]):
+            for yvalue in range(self.szy):
                 # Create a matrix where we map input angles to output
                 # coordinates.
+                # Now obtain the spatial and spectral scales for this order
 
-                # This section is now deprecated
-
-                # slit_microns_per_det_pix = self.slit_microns_per_det_pix_first
-                # + \ float(i) / xbase.shape[0] *
-                # (self.slit_microns_per_det_pix_last -
-                # self.slit_microns_per_det_pix_first)
+                # Start with the spatial scale
+                if spatmod is not None:
+                    # Find the polynomial coefficients for each order.
+                    slit_microns_per_det_pix_x = self.evaluate_poly(spatmod,
+                                                                    mprime,
+                                                                    yvalue)
+                if specmod is not None:
+                    # Find the polynomial coefficients for each order.
+                    slit_microns_per_det_pix_y = self.evaluate_poly(specmod,
+                                                                    mprime,
+                                                                    yvalue)
+                # Then populate the matrix for this location.
+                amat[0, 0] = 1.0 / slit_microns_per_det_pix_x
+                amat[0, 1] = 0
+                amat[1, 0] = 0
+                amat[1, 1] = 1.0 / slit_microns_per_det_pix_y
 
                 # Apply an additional rotation matrix. If the simulation was
                 # complete, this wouldn't be required.
                 # extra_rot should be in radians and come from the third
                 # polynomial on the model file.
-                r_rad = np.radians(self.extra_rot)
-                dy_frac = (j - xbase.shape[1] / 2.0) / (xbase.shape[1] / 2.0)
+                if rotmod is not None:
+                    rotation = self.evaluate_poly(rotmod, mprime, yvalue)
+                r_rad = np.radian(rotation)
+                dy_frac = 1. / (xbase.shape[1] / 2.0)
                 extra_rot_mat = np.array([[np.cos(r_rad * dy_frac),
                                            np.sin(r_rad * dy_frac)],
                                           [-np.sin(r_rad * dy_frac),
@@ -610,8 +632,10 @@ class Polyspect(object):
                 amat = np.dot(extra_rot_mat, amat)
                 # We actually want the inverse of this (mapping output
                 # coordinates back onto the slit.
-                matrices[i, j, :, :] = np.linalg.inv(amat)
+                matrices[order, yvalue, :, :] = np.linalg.inv(amat)
         return xbase, waves, blaze, matrices
+
+
 
     def slit_flat_convolve(self, flat, slit_profile=None):
         """Function that takes a flat field image and a slit profile and

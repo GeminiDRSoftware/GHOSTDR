@@ -76,7 +76,7 @@ class Arm(Polyspect,Extractor):
             self.arm + '/161120/' + self.mode))
         if arm == 'red':
             # Additional slit rotation across an order needed to match Zemax.
-            self.extra_rot = 3.0
+            #self.extra_rot = 3.0
             self.szx = 6144
             self.szy = 6160
             self.f_cam = 264.0
@@ -102,7 +102,7 @@ class Arm(Polyspect,Extractor):
                 self.profile_sigma = 0.7
         elif arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
-            self.extra_rot = 2.0
+            #self.extra_rot = 2.0
             self.szx = 4096
             self.szy = 4112
             self.f_cam = 264.0
