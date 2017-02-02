@@ -56,6 +56,8 @@ class Polyspect(object):
             This is the value or array of values for the second order polynomial
             functions to be aveluated against."""
         ydeg = params.shape[0] - 1
+        if params.ndim==1:
+            ydeg=0
         polynomials = np.empty((ydeg + 1))
         for i in range(ydeg + 1):
             polyq = np.poly1d(params[i, :])

@@ -153,7 +153,7 @@ class Arm(Polyspect,Extractor):
 
         Polyspect.__init__(self, self.mode, self.m_ref, self.szx, self.szy,
                            self.m_min, self.m_max, self.transpose,
-                           self.extra_rot,self.nlenslets, self.fiber_separation,
+                           self.nlenslets, self.fiber_separation,
                            self.profile_sigma)
 
 #        Extractor.__init__(self, 
