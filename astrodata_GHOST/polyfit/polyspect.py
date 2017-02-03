@@ -750,10 +750,15 @@ class Polyspect(object):
             r_rad = np.radians(rotation)
             dy_frac = 1. / (xbase.shape[1] / 2.0)
             extra_rot_mat = np.zeros((self.szy,2, 2))
+            # This needs to be done separately because of the
+            # matrix structure
             extra_rot_mat[:,0,0] = np.cos(r_rad * dy_frac)
             extra_rot_mat[:,0,1] = np.sin(r_rad * dy_frac)
             extra_rot_mat[:,1,0] = -np.sin(r_rad * dy_frac)
             extra_rot_mat[:,1,1] = np.cos(r_rad * dy_frac)
+            # This loop may be replaced by some fancy lines instead.
+            # Right now, though, I can't figure out how to do a dot
+            # product of all matrices in one line. 
             for i in range(self.szy):
                 amat2 = np.dot(extra_rot_mat[i], amat[i])
                 # We actually want the inverse of this (mapping output
