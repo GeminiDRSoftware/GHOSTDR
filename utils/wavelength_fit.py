@@ -36,7 +36,7 @@ test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
 wmodel_file=test_files_dir+'wparams_blue_std.fits'
 spatmod_file=test_files_dir+'spatmod.fits'
 specmod_file=test_files_dir+'specmod.fits'
-rotmod_file=test_files_dir+'rotmod.fits'
+rotmod_file=test_files_dir+'rotmod2.fits'
 
 #Get the initial default model from the lookup location
 xpars=pyfits.getdata(xmodel_file)
@@ -46,10 +46,13 @@ specpars=pyfits.getdata(specmod_file)
 rotpars=pyfits.getdata(rotmod_file)
 
 #Create an initial model of the spectrograph.
-xx, wave, blaze= ghost.spectral_format(xparams=xpars,wparams=wpars)
+#xx, wave, blaze= ghost.spectral_format(xparams=xpars,wparams=wpars)
 
 xx, wave, blaze, matrices = ghost.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
+
+xxfast, wavefast, blazefast, matricesfast = ghost.spectral_format_with_matrix_fast(xpars,wpars,spatpars,specpars,rotpars)
 pdb.set_trace()
+
 
 #The reference wavelength is chosen as a bright line, just to the right of two bright (but a bit fainter) lines in the same order as the reference order for xmod. Wavelength selected from the arc line list for the simulator.
 nx = arc_data.shape[0]
