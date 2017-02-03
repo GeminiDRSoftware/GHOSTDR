@@ -57,13 +57,16 @@ class Polyspect(object):
             functions to be aveluated against."""
         ydeg = params.shape[0] - 1
         if params.ndim==1:
-            ydeg=0
-        polynomials = np.empty((ydeg + 1))
-        for i in range(ydeg + 1):
-            polyq = np.poly1d(params[i, :])
-            polynomials[i] = polyq(mprime)
-        polyp = np.poly1d(polynomials)
-        return polyp(y_values - self.szy // 2)
+            polyp = np.poly1d(params)
+            evaluation = polyp(mprime)
+        else:            
+            polynomials = np.empty((ydeg + 1))
+            for i in range(ydeg + 1):
+                polyq = np.poly1d(params[i, :])
+                polynomials[i] = polyq(mprime)
+            polyp = np.poly1d(polynomials)
+            evaluation = polyp(y_values - self.szy // 2)
+        return evaluation
 
     def wave_fit_resid(self, params, orders, waves, y_values, ydeg=3, xdeg=3):
         """A fit function for read_lines_and_fit (see that function for details)
@@ -289,8 +292,8 @@ class Polyspect(object):
                                                                   y_values)
 
             # Finally, the blaze
-            wcen = wave_int[order - self.m_min, self.szy / 2]
-            disp = wave_int[order - self.m_min, self.szy / 2 + 1] - wcen
+            wcen = wave_int[int(order - self.m_min), int(self.szy / 2)]
+            disp = wave_int[int(order - self.m_min), int(self.szy / 2 + 1)] - wcen
             order_width = (wcen / order) / disp
             blaze_int[order - self.m_min, :] = np.sinc((y_values - self.szy / 2)
                                                        / order_width)**2
@@ -625,7 +628,7 @@ class Polyspect(object):
                 # polynomial on the model file.
                 if rotmod is not None:
                     rotation = self.evaluate_poly(rotmod, mprime, yvalue)
-                r_rad = np.radian(rotation)
+                r_rad = np.radians(rotation)
                 dy_frac = 1. / (xbase.shape[1] / 2.0)
                 extra_rot_mat = np.array([[np.cos(r_rad * dy_frac),
                                            np.sin(r_rad * dy_frac)],
@@ -634,7 +637,7 @@ class Polyspect(object):
                 amat = np.dot(extra_rot_mat, amat)
                 # We actually want the inverse of this (mapping output
                 # coordinates back onto the slit.
-                matrices[order, yvalue, :, :] = np.linalg.inv(amat)
+                matrices[order-self.m_min, yvalue, :, :] = np.linalg.inv(amat)
         return xbase, waves, blaze, matrices
 
 
