@@ -521,6 +521,7 @@ class Polyspect(object):
 
         return params
 
+    @profile
     def spectral_format_with_matrix(self, xmod, wavemod, spatmod=None,
                                     specmod=None, rotmod=None):
         """Create a spectral format, including a detector to slit matrix at
@@ -640,6 +641,7 @@ class Polyspect(object):
                 matrices[order-self.m_min, yvalue, :, :] = np.linalg.inv(amat)
         return xbase, waves, blaze, matrices
 
+    @profile
     def spectral_format_with_matrix_fast(self, xmod, wavemod, spatmod=None,
                                     specmod=None, rotmod=None):
         """Create a spectral format, including a detector to slit matrix at
