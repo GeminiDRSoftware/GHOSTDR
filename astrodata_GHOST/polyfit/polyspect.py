@@ -521,7 +521,6 @@ class Polyspect(object):
 
         return params
 
-    @profile
     def spectral_format_with_matrix(self, xmod, wavemod, spatmod=None,
                                     specmod=None, rotmod=None):
         """Create a spectral format, including a detector to slit matrix at
@@ -641,7 +640,6 @@ class Polyspect(object):
                 matrices[order-self.m_min, yvalue, :, :] = np.linalg.inv(amat)
         return xbase, waves, blaze, matrices
 
-    @profile
     def spectral_format_with_matrix_fast(self, xmod, wavemod, spatmod=None,
                                     specmod=None, rotmod=None):
         """Create a spectral format, including a detector to slit matrix at
@@ -852,12 +850,147 @@ class Polyspect(object):
 
         Returns
         -------
-        Either a success or an error message.
+        xparams: 2D float array
+             New adjusted x parameters
 
         """
         # Must provide at least one of the model parameters
         if (xparams is None) and (wparams is None):
             return 'Must provide at least one of xparams or wparams'
+
+        nxbase = data.shape[0]
+        # Start by setting up the graphical part
+        fig, axx = plt.subplots()
+        axcolor = 'lightgoldenrodyellow'
+        # Grab the model to be plotted
+        x_int, wave_int, blaze_int = self.spectral_format(wparams=wparams,
+                                                          xparams=xparams)
+        ygrid = np.meshgrid(np.arange(data.shape[1]),
+                            np.arange(x_int.shape[0]))[0]
+        # The data must be flattened for the sliders to work.
+        # Then plot it!
+        lplot, = plt.plot(ygrid.flatten()[::10], x_int.flatten()[::10] + nxbase
+                          // 2, color='green', linestyle='None', marker='.')
+
+        if convolve:
+            data = self.slit_flat_convolve(flat=data)
+        # Now over plot the image.
+        axx.imshow((data - np.median(data)) / 1e2)
+
+        # Create a second window for sliders.
+        slide_fig = plt.figure()
+
+        # This function is executed on each slider change.
+        # spectral_format is updated.
+        def update(val):
+            """ Function used to trigger updates on sliders """
+            for i in range(npolys):
+                for j in range(polyorder):
+                    xparams[i, j] = sliders[i][j].val
+            xbase, wave, blaze = self.spectral_format(wparams=wparams,
+                                                      xparams=xparams)
+            lplot.set_ydata(xbase.flatten()[::10] + nxbase // 2)
+            fig.canvas.draw_idle()
+
+        polyorder = xparams.shape[1]
+        npolys = xparams.shape[0]
+        # Now we start putting sliders in depending on number of parameters
+        height = 1. / (npolys * 2)
+        width = 1. / (polyorder * 2)
+        # Use this to adjust in a percentage how much to let each parameter
+        # vary
+        frac_xparams = np.absolute(xparams * (percentage_variation / 100))
+        if vary_wrt_max:
+            for i in range(npolys):
+                frac_xparams[i] = np.max(
+                    frac_xparams[-1]) / (nxbase / 2.0)**(npolys - 1 - i)
+        axq = [[0 for x in range(polyorder)] for y in range(npolys)]
+        sliders = [[0 for x in range(polyorder)] for y in range(npolys)]
+        # Now put all the sliders in the new figure based on position in the
+        # array
+        for i in range(npolys):
+            for j in range(polyorder):
+                left = j * width * 2
+                bottom = 1 - (i + 1) * height * 2 + height
+                axq[i][j] = plt.axes([left, bottom, width, height],
+                                     axisbg=axcolor)
+                if xparams[i, j] == 0:
+                    sliders[i][j] = Slider(axq[i][j],
+                                           'test' + str(i) + str(j), 0, 0.1,
+                                           valinit=xparams[i, j])
+                else:
+                    sliders[i][j] = Slider(axq[i][j], 'test' + str(i) + str(j),
+                                           xparams[i, j] - frac_xparams[i, j],
+                                           xparams[i, j] + frac_xparams[i, j],
+                                           valinit=xparams[i, j])
+                plt.legend(loc=3)
+                sliders[i][j].on_changed(update)
+
+        # Have a button to output the current model to the correct file
+        submitax = plt.axes([0.8, 0.025, 0.1, 0.04])
+        button = Button(submitax, 'Submit', color=axcolor, hovercolor='0.975')
+
+        # This is the triggered function on submit.
+        # Currently only works for the xmod but should be generalised
+        def submit(event):
+            """Function for the button tasks"""
+            plt.close('all')
+            return xparams
+
+        button.on_clicked(submit)
+
+        plt.show()
+        return xparams
+
+
+    def adjust_model_with_matrices(self, data, xparams,
+                                   wparams, spatmod, specmod,
+                                   rotmod, percentage_variation=10,
+                                   vary_wrt_max=True):
+        """Function that uses matplotlib slider widgets to adjust a polynomial
+        model overlaid on top of an image. In practice this will be
+        overlaid on top of the result of convolving the flat with a slit
+        profile in 2D for the xmod only, and then an arc frame for all other 
+        parameters. User MUST provide an initial model for all 5 aspects.
+
+        This function actually works by displaying the result of the model on
+        top of an image of some sort, while bringing up other windows with 
+        either sliders or value boxes for the polynomial parameters and include
+        update buttons for the user to play around with values. This should 
+        be used by the engineering team to manually work out an initial model
+        before running the fitting function. 
+
+        Parameters
+        ----------
+        data: float array
+            an array containing data to be used as a visual comparison of the
+            model
+        xparams: float array
+            2D array containing the initial wavelength
+            model parameters.
+        wparams: float array
+            2D array containing the initial order location model parameters.
+        spatmod: float array
+            2D array containing the initial spatial direction
+            slit model parameters.
+        specmod: float array
+            2D array containing the initial spectral direction
+            slit model.
+        rotmod: float array
+            2D array containing the initial slit rotation model parameters.
+        percentage_variation: int
+            How much should the percentage adjustment in each bin as a function
+            of the parameter. Default is 10%
+        vary_wrt_max: bool
+            Vary all parameters intelligently with a scaling of the maximum
+            variation, rather than just a percentage of each.
+
+        Returns
+        -------
+        Either a success or an error message.
+
+        """
+        
 
         nxbase = data.shape[0]
         # Start by setting up the graphical part
