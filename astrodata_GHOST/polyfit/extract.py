@@ -10,10 +10,9 @@ import pdb
 from astropy.modeling import models, fitting
 import matplotlib.cm as cm
 
-
 class Extractor():
-    def __init__(self, nlenslets, polyspect_instance, im_slit_sz,
-                 microns_pix, mode, szx, m_min, gain = 1.0, rnoise = 3,
+    def __init__(self, polyspect_instance, slitview_instance, 
+                 gain = 1.0, rnoise = 3,
                  badpixmask=[], transpose=False):
         """A class to extract data for each arm of the spectrograph. 
         
@@ -24,31 +23,44 @@ class Extractor():
 
         Parameters
         ----------
-        nlenslets: int
+        polyspect_instance: Polyspect object
+            This defines e.g. whether the camera is "red" or "blue"
         
-        polyspect_instance: instance of a polyspec object
+        slitview_instance: SlitView object
+            This defines whether the mode is "std" or "high"
+        
+        gain: float
+            gain in electrons per ADU. From fits header.
+        
+        rnoise: float
+            Expected readout noise in electrons. From fits header.
+        
+        badpixmask: numpy array
+            A list of [y,x] bad pixel co-ordinates
             
         transpose: bool (optional)
             Do we transpose the data before extraction? 
         """
-        self.nlenslets = nlenslets
-        self.polyspect = polyspect_instance
+        self.arm = polyspect_instance
         self.transpose = transpose
         self.im_slit_sz =  im_slit_sz
         self.gain = gain
         self.rnoise = rnoise
-        self.m_min = m_min
         self.badpixmask = badpixmask
         self.x_map, self.w_map, self.blaze, self.matrices =\
-            self.polyspect.spectral_format_with_matrix()
-        # Fill in the slit dimensions in "simulator pixel"s. based on if we are
-        # in the high or standard resolution mode.
-        self.define_profile(self.fluxes)  # !!! THIS STILL DOESN't WORK.
+            self.arm.spectral_format_with_matrix()
 
         # Set some default pixel offsets for each lenslet, as used for a square
         # lenslet profile
         ny = self.x_map.shape[1]
         nm = self.x_map.shape[0]
+        
+        #Stuff do do with a slit profile.
+         # Fill in the slit dimensions in "simulator pixel"s. based on if we are
+        # in the high or standard resolution mode.
+        self.define_profile(self.fluxes)  # !!! THIS STILL DOESN't WORK.
+       
+        self.nlenslets = nlenslets
         pix_offset_ix = np.append(np.append([0], np.arange(1,self.nlenslets).\
                                             repeat(2)),self.nlenslets)
         self.square_offsets = np.empty((2 * self.nlenslets, nm))
@@ -502,7 +514,7 @@ class Extractor():
                 plt.text(xpos + 10, ypos,
                          str(arclines_to_fit[i]), color='green', fontsize=10)
                 lines_out.append([arclines_to_fit[i], ypos, xpos, m_ix +
-                                  self.m_min, g.amplitude.value,
+                                  self.arm.m_min, g.amplitude.value,
                                   g.stddev.value * 2.3548])
         plt.axis([0, nx, ny, 0])
         lines_out = np.array(lines_out)
