@@ -20,24 +20,18 @@ class Polyspect(object):
     Contains functions related to polynomial modelling of spectrograph orders.
     """
 
-    def __init__(self, mode, m_ref, szx, szy, m_min, m_max,
-                 transpose, nlenslets, fiber_separation,
-                 profile_sigma):
+    def __init__(self, m_ref, szx, szy, m_min, m_max, transpose):
         """ Initialisation function for this class"""
 
         # All necessary parameters are listed here and initialised by the
         # parent class
-        self.mode = mode
         self.m_ref = m_ref
         self.szx = szx
         self.szy = szy
         self.m_min = m_min
-        self.m_max = m_max
+        self.m_max = m_max# 
+        #True if the spectral dispersion dimention is over the x (column) axis
         self.transpose = transpose
-        self.nlenslets = nlenslets
-        self.fiber_separation = fiber_separation
-        self.profile_sigma = profile_sigma
-
 
     def evaluate_poly(self, params, mprime, y_values):
         """ Function used to evaluate a polynomial of polynomials at specific
@@ -401,8 +395,8 @@ class Polyspect(object):
         image_med = image.reshape((image.shape[0] // decrease_dim,
                                    decrease_dim, image.shape[1]))
         image_med = np.median(image_med, axis=1)
-        order_y = np.meshgrid(np.arange(xbase.shape[1]),
-                              np.arange(xbase.shape[0]) + self.m_min)
+        order_y = np.meshgrid(np.arange(xbase.shape[1]),                        #pylint: disable=maybe-no-member
+                              np.arange(xbase.shape[0]) + self.m_min)           #pylint: disable=maybe-no-member
         y_values = order_y[0]
         y_values = np.average(y_values.reshape(x_values.shape[0],
                                                x_values.shape[1] //
@@ -418,7 +412,7 @@ class Polyspect(object):
         # order for search_pix on either side of the initial
         # model pixels in the spatial direction.
         for i in range(x_values.shape[0]):  # Go through each order...
-            for j in range(x_values.shape[1]):
+            for j in range(x_values.shape[1]):                                  #pylint: disable=maybe-no-member
                 xind = int(np.round(x_values[i, j]))
                 peakpix = image_med[j, self.szx // 2 + xind -
                                     search_pix:self.szx // 2 +
@@ -435,7 +429,7 @@ class Polyspect(object):
                                                               xparams=
                                                               fitted_params)
             ygrid = np.meshgrid(np.arange(data.shape[1]),
-                                np.arange(x_int.shape[0]))[0]
+                                np.arange(x_int.shape[0]))[0]                   #pylint: disable=maybe-no-member
             plt.plot(ygrid, x_int + data.shape[0] // 2,
                      color='green', linestyle='None', marker='.')
             plt.show()
@@ -494,7 +488,7 @@ class Polyspect(object):
                                                x_values.shape[1] //
                                                decrease_dim, decrease_dim),
                                 axis=2)
-            y_values = np.average(y_values.reshape(x_values.shape[0],
+            y_values = np.average(y_values.reshape(x_values.shape[0],           #pylint: disable=maybe-no-member
                                                    x_values.shape[1] //
                                                    decrease_dim, decrease_dim),
                                   axis=2)
@@ -505,8 +499,8 @@ class Polyspect(object):
 
         # Flatten arrays
         orders = orders.flatten()
-        y_values = y_values.flatten()
-        x_values = x_values.flatten()
+        y_values = y_values.flatten()                                           #pylint: disable=maybe-no-member
+        x_values = x_values.flatten()                                           #pylint: disable=maybe-no-member
 
         # Do the fit!
         print("Fitting (this can sometimes take a while...)")
@@ -766,57 +760,12 @@ class Polyspect(object):
                 matrices[order-self.m_min, i, :, :] = np.linalg.inv(amat2)
         return xbase, waves, blaze, matrices
 
-
     def slit_flat_convolve(self, flat, slit_profile=None):
-        """Function that takes a flat field image and a slit profile and
+        """Dummy function that would takes a flat field image and a slit profile and
            convolves the two in 2D. Returns result of convolution, which
            should be used for tramline fitting.
-
-        Parameters
-        ----------
-        flat: float array
-            A flat field image from the spectrograph
-        slit_profile: float array
-            A 1D array with the slit profile fiber amplitudes. If none is
-            supplied this function will assume identical fibers and create
-            one to be used in the convolution based on default parameters
-            specified in the ghost class.
-
-        Returns
-        -------
-        flat_conv: float array
-            Returns the convolved 2D array.
-
         """
-        if not slit_profile:
-            # At this point create a slit profile
-            # Create a x baseline for convolution and assume a FWHM for profile
-            xbase = flat.shape[0]
-            profilex = np.arange(xbase) - xbase // 2
-            # Now create a model of the slit profile
-            mod_slit = np.zeros(xbase)
-            if self.mode == 'high':
-                nfibers = 26
-            else:
-                nfibers = self.nlenslets
-
-            for i in range(-nfibers // 2, nfibers // 2):
-                mod_slit += np.exp(-(profilex - i * self.fiber_separation)**2 /
-                                   2.0 / self.profile_sigma**2)
-        else:
-            mod_slit = slit_profile
-
-        # Normalise the slit model and fourier transform for convolution
-        mod_slit /= np.sum(mod_slit)
-        mod_slit_ft = np.fft.rfft(np.fft.fftshift(mod_slit))
-        # Fourier the flat for convolution
-        im_fft = np.fft.rfft(flat, axis=0)
-        flat_conv = np.zeros_like(im_fft)
-        # Now convolved in 2D
-        for i in range(im_fft.shape[1]):
-            flat_conv[:, i] = im_fft[:, i] * mod_slit_ft
-        flat_conv = np.fft.irfft(flat_conv, axis=0)
-        return flat_conv
+        return flat
 
     def adjust_model(self, data, wparams=None,
                      xparams=None, convolve=True,

@@ -15,11 +15,13 @@ import astropy.io.fits as pyfits
 #plt.ion()
 
 fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
+fitsdir='/Users/mireland/data/ghost/cal_frames/'
 
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 arc_file  = fitsdir+"arc95_std_blue.fits"
 flat_file = fitsdir+"flat95_std_2_blue_flat.fits"
 arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+arclinefile= '/Users/mireland/python/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
 #Get the data
 flat_data = pyfits.getdata(flat_file)
 arc_data = pyfits.getdata(arc_file)
@@ -33,6 +35,7 @@ ghost = polyfit.ghost.Arm('blue',mode='std')
 xmodel_file=fitsdir+'GHOST_1_1_blue_std_xmodPolyfit.fits'
 
 test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
+test_files_dir='/Users/mireland/data/ghost/cal_frames/testmodels/'
 wmodel_file=test_files_dir+'wparams_blue_std.fits'
 spatmod_file=test_files_dir+'spatmod.fits'
 specmod_file=test_files_dir+'specmod.fits'
@@ -51,7 +54,7 @@ rotpars=pyfits.getdata(rotmod_file)
 xx, wave, blaze, matrices = ghost.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
 xxfast, wavefast, blazefast, matricesfast = ghost.spectral_format_with_matrix_fast(xpars,wpars,spatpars,specpars,rotpars)
-pdb.set_trace()
+#pdb.set_trace()
 
 
 #The reference wavelength is chosen as a bright line, just to the right of two bright (but a bit fainter) lines in the same order as the reference order for xmod. Wavelength selected from the arc line list for the simulator.
@@ -68,7 +71,7 @@ xy = plt.ginput(1)
 ypix = xy[0][0]
 xpix = xy[0][1]
 ref_wave=4300.649946
-pdb.set_trace()
+#pdb.set_trace()
 
 #Convolve the flat field with the slit profile
 #If no slit profile is given, assume a standard one.

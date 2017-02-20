@@ -12,23 +12,27 @@ import matplotlib.cm as cm
 
 
 class Extractor():
-    """A class for each arm of the spectrograph. The initialisation function
-    takes a series of parameters from the ghost class.
-
-    The extraction is defined by 3 key parameters: an "x_map", which is
-    equivalent to 2dFDR's tramlines and contains a physical x-coordinate for
-    every y (dispersion direction) coordinate and order, and a "w_map", which is
-    the wavelength corresponding to every y
-    (dispersion direction) coordinate and order.
-
-    """
-
-    def __init__(self, nlenslets, polyspect_class, transpose, im_slit_sz,
+    def __init__(self, nlenslets, polyspect_instance, im_slit_sz,
                  microns_pix, mode, szx, m_min, gain = 1.0, rnoise = 3,
-                 badpixmask=[]):
-        """Initialisation function, must define all parameters needed"""
+                 badpixmask=[], transpose=False):
+        """A class to extract data for each arm of the spectrograph. 
+        
+        The extraction is defined by 3 key parameters: an "x_map", which is
+        equivalent to 2dFDR's tramlines and contains a physical x-coordinate for
+        every y (dispersion direction) coordinate and order, and a "w_map", which is
+        the wavelength corresponding to every y (dispersion direction) coordinate and order.
+
+        Parameters
+        ----------
+        nlenslets: int
+        
+        polyspect_instance: instance of a polyspec object
+            
+        transpose: bool (optional)
+            Do we transpose the data before extraction? 
+        """
         self.nlenslets = nlenslets
-        self.polyspect = polyspect_class
+        self.polyspect = polyspect_instance
         self.transpose = transpose
         self.im_slit_sz =  im_slit_sz
         self.gain = gain
