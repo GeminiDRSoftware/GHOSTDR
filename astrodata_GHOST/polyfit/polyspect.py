@@ -637,7 +637,7 @@ class Polyspect(object):
     def spectral_format_with_matrix_fast(self, xmod, wavemod, spatmod=None,
                                     specmod=None, rotmod=None):
         """Create a spectral format, including a detector to slit matrix at
-           every point.
+           every point. This is the faster version.
 
            The input parameters are required for this to work and represent
            the polynomial coefficients for second order descriptions of
@@ -652,6 +652,28 @@ class Polyspect(object):
         :math:`q_{01}`:  variation as a function of orders divided by the number
         of orders
         ... with everything else approximately zero.
+
+        The explanation of the matrix operations goes as follows:
+
+        We need a 2x2 matrix for every pixel long every order that describes the
+        rotation of the slit.
+        In order to obtain the final matrix we require a 2x2 diagonal matrix
+        containing the inverse of the slit microns per detector pixel scale in
+        the spacial and spectral directions as the (0,0) and (1,1) values.
+        We then require another 2x2 matrix with the rotation angle built in
+        the form:
+
+        [ cos(theta) , sin(theta) ]
+        [ -sin(theta), cos(theta) ]
+
+        These two matrices are then multiplied together with a dot product and
+        the desired result is the inverse matrix of the product. 
+
+        However, due to the diagonality of the scale matrix and the time it
+        takes to loop through the inversions, we have then explicitly done the
+        algebra in this way:
+
+        ( R . D )^-1 = D^-1 . R^-1 = D^-1 . R(-theta)
 
         Parameters
         ----------
@@ -729,11 +751,6 @@ class Polyspect(object):
                 slit_microns_per_det_pix_y = self.evaluate_poly(specmod,
                                                                 mprime,
                                                                 yvalue)
-            # Then populate the matrix for this location.
-            amat[:,0, 0] = 1.0 / slit_microns_per_det_pix_x
-            amat[:,0, 1] = 0
-            amat[:,1, 0] = 0
-            amat[:,1, 1] = 1.0 / slit_microns_per_det_pix_y
 
             # Apply an additional rotation matrix. If the simulation was
             # complete, this wouldn't be required.
@@ -746,18 +763,15 @@ class Polyspect(object):
             extra_rot_mat = np.zeros((self.szy,2, 2))
             # This needs to be done separately because of the
             # matrix structure
-            extra_rot_mat[:,0,0] = np.cos(r_rad * dy_frac)
-            extra_rot_mat[:,0,1] = np.sin(r_rad * dy_frac)
-            extra_rot_mat[:,1,0] = -np.sin(r_rad * dy_frac)
-            extra_rot_mat[:,1,1] = np.cos(r_rad * dy_frac)
-            # This loop may be replaced by some fancy lines instead.
-            # Right now, though, I can't figure out how to do a dot
-            # product of all matrices in one line. 
-            for i in range(self.szy):
-                amat2 = np.dot(extra_rot_mat[i], amat[i])
-                # We actually want the inverse of this (mapping output
-                # coordinates back onto the slit.
-                matrices[order-self.m_min, i, :, :] = np.linalg.inv(amat2)
+            extra_rot_mat[:,0,0] = np.cos(r_rad * dy_frac) * \
+                                   slit_microns_per_det_pix_x
+            extra_rot_mat[:,0,1] = -np.sin(r_rad * dy_frac) *\
+                                   slit_microns_per_det_pix_x
+            extra_rot_mat[:,1,0] = np.sin(r_rad * dy_frac) *\
+                                   slit_microns_per_det_pix_y
+            extra_rot_mat[:,1,1] = np.cos(r_rad * dy_frac) *\
+                                   slit_microns_per_det_pix_y
+            matrices[order-self.m_min, :, :, :] = extra_rot_mat
         return xbase, waves, blaze, matrices
 
     def slit_flat_convolve(self, flat, slit_profile=None):

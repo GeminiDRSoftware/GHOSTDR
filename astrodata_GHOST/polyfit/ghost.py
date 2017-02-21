@@ -38,9 +38,11 @@ class Arm(Polyspect):
         related to each configuration of the spectrograph.
         """
         if arm == 'red':
-            Polyspect.__init__(self, m_ref=50, szx=6144, szy=6160, m_min=34, m_max=67, transpose=True)
+            Polyspect.__init__(self, m_ref=50, szx=6144, szy=6160, m_min=34,
+                               m_max=67, transpose=True)
         elif arm == 'blue':
-            Polyspect.__init__(self, m_ref=80, szx=4096, szy=4112, m_min=63, m_max=95, transpose=True)
+            Polyspect.__init__(self, m_ref=80, szx=4096, szy=4112, m_min=63,
+                               m_max=95, transpose=True)
         else:
             print("Unknown spectrograph arm!")
             raise UserWarning
@@ -53,36 +55,6 @@ class Arm(Polyspect):
         self.lenslet_high_size = 118.0  # Lenslet flat-to-flat in microns
         self.lenslet_std_size = 197.0  # Lenslet flat-to-flat in microns
         self.mode = mode
-        if arm == 'red':
-            # Additional slit rotation across an order needed to match Zemax.
-            #self.extra_rot = 3.0
-
-            # Now put in the default fiber profile parameters for each mode.
-            # These are used by the convolution function on polyspect
-            # These were determined based on visual correspondence with
-            # simulated data and may need to be revised once we have real
-            # data. The same applies to the blue arm parameters.
-            if self.mode == 'std':
-                self.fiber_separation = 4.15
-                self.profile_sigma = 1.1
-            elif self.mode == 'high':
-                self.fiber_separation = 2.49
-                self.profile_sigma = 0.7
-        elif arm == 'blue':
-            # Additional slit rotation accross an order needed to match Zemax.
-            #self.extra_rot = 2.0
-
-            # Now put in the default fiber profile parameters for each mode.
-            # These are used by the convolution function on polyspect
-            if self.mode == 'std':
-                self.fiber_separation = 3.97
-                self.profile_sigma = 1.1
-            elif self.mode == 'high':
-                self.fiber_separation = 2.53
-                self.profile_sigma = 0.7
-        else:
-            print("Unknown spectrograph arm!")
-            raise UserWarning
 
         # Now we determine the number of fibers based on mode.
         if mode == 'high':
@@ -115,6 +87,34 @@ class Arm(Polyspect):
             Returns the convolved 2D array.
 
         """
+        if self.arm == 'red':
+            # Now put in the default fiber profile parameters for each mode.
+            # These are used by the convolution function on polyspect
+            # These were determined based on visual correspondence with
+            # simulated data and may need to be revised once we have real
+            # data. The same applies to the blue arm parameters.
+            if self.mode == 'std':
+                self.fiber_separation = 4.15
+                self.profile_sigma = 1.1
+            elif self.mode == 'high':
+                self.fiber_separation = 2.49
+                self.profile_sigma = 0.7
+        elif self.arm == 'blue':
+            # Additional slit rotation accross an order needed to match Zemax.
+            #self.extra_rot = 2.0
+
+            # Now put in the default fiber profile parameters for each mode.
+            # These are used by the convolution function on polyspect
+            if self.mode == 'std':
+                self.fiber_separation = 3.97
+                self.profile_sigma = 1.1
+            elif self.mode == 'high':
+                self.fiber_separation = 2.53
+                self.profile_sigma = 0.7
+        else:
+            print("Unknown spectrograph arm!")
+            raise UserWarning
+
         if not slit_profile:
             # At this point create a slit profile
             # Create a x baseline for convolution and assume a FWHM for profile
