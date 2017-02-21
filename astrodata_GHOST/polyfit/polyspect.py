@@ -663,8 +663,10 @@ class Polyspect(object):
         We then require another 2x2 matrix with the rotation angle built in
         the form:
 
-        [ cos(theta) , sin(theta) ]
-        [ -sin(theta), cos(theta) ]
+        \Biggl \lbracket
+        { cos(\theta) , sin(\theta) \atop 
+          -sin(theta), cos(theta) }
+        \rbracket
 
         These two matrices are then multiplied together with a dot product and
         the desired result is the inverse matrix of the product. 
@@ -673,7 +675,9 @@ class Polyspect(object):
         takes to loop through the inversions, we have then explicitly done the
         algebra in this way:
 
-        ( R . D )^-1 = D^-1 . R^-1 = D^-1 . R(-theta)
+        :math:`( R(\theta) . D )^-1 = D^-1 . R^-1 = D^-1 . R(-\theta)`
+
+        if R is the rotation matrix and D is the scale diagonal matrix
 
         Parameters
         ----------
