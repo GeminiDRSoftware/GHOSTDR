@@ -7,7 +7,7 @@ import matplotlib.cm as cm
 
 
 class SlitView(object):
-    def __init__(self, slit_image, microns_pix=4.54*180/50*2, mode='std',
+    def __init__(self, slit_image, flat_image, microns_pix=4.54*180/50*2, mode='std',
                  slit_length=3600.):
         """
         A class containing tools common processing the dark and bias corrected
@@ -46,13 +46,25 @@ class SlitView(object):
         if mode == 'std':
             self.central_pix = {'red': [84, 59], 'blue': [84, 150]}
             self.extract_half_width = 2
+            #Boundaries for lower and upper pixels that contain *only* sky.
+            #!!! WARNING: Change this.
+            self.sky_pix_only_boundaries = {'red': [74,94], 'blue': [74,94]}
+            #Boundaries for extracting the object. !!! WARNING: Change this.
+            self.object_boundaries = {'red': [[30,75],[93,130]], 'blue': [[30,75],[93,130]]}
         elif mode == 'high':
             self.central_pix = {'red': [84, 95], 'blue': [84, 4]}
             self.extract_half_width = 3
+            #Boundaries for lower and upper pixels that contain *only* sky.
+            #!!! WARNING: Change this.
+            self.sky_pix_only_boundaries = {'red': [34,54], 'blue': [34,54]}
+            #!!! WARNING: Change this. The 2nd "object" from the point of view of
+            #the extractor is the simultaneous Th/Xe. This could become an 
+            #"object_type" parameter if we really cared.
+            self.object_boundaries = {'red': [[53,75],[25,30]], 'blue': [[53,75],[25,30]]}
         else:
             raise UserWarning("Invalid Mode")
 
-    def slit_profile(self, arm='red', return_centroid=False):
+    def slit_profile(self, arm='red', return_centroid=False, use_flat=False):
         """Extract the 1-dimensional slit profile.
 
         Parameters
@@ -72,12 +84,19 @@ class SlitView(object):
             central_pix = self.central_pix[arm]
         except:
             raise UserWarning("Invalid arm: " + arm)
+        
+        if use_flat:
+            this_slit_image = self.flat_image
+        else:
+            this_slit_image = self.slit_image
+            
         y_halfwidth = int(self.slit_length/self.microns_pix/2)
-        cutout = self.slit_image[
+        cutout = this_slit_image[
             central_pix[0]-y_halfwidth:central_pix[0]+y_halfwidth+1,
             central_pix[1]-self.extract_half_width:central_pix[1]+
             self.extract_half_width+1]
-        profile = np.sum(cutout, 1)
+        #Sum over the 2nd axis, i.e. the x-coordinate.
+        profile = np.sum(cutout, axis=1)
         if return_centroid:
             xcoord = np.arange(
                 -self.extract_half_width, self.extract_half_width+1)
@@ -87,3 +106,30 @@ class SlitView(object):
             return profile, centroid
         else:
             return profile
+
+    def object_slit_profiles(self, arm='red', correct_for_sky=True):
+        """
+        TODO: Figure out centroid array behaviour if needed.
+        """
+        object_boundaries = self.object_boundaries[arm]
+        #Find the slit profile.
+        full_profile = self.slit_profile(arm=arm)
+        
+        #WARNING: This is done in the extracted profile space. Is there any benefit to
+        #doing this in pixel space? Maybe yes for the centroid.
+        if correct_for_sky:
+            #Get the flat profile from the flat image.
+            flat_profile = self.slit_profile(arm=arm, use_flat=True)
+            flat_scaling = np.median(full_profile[sky_pix_only_boundaries[0]:sky_pix_only_boundaries[1]+1])/
+                np.median(flat_profile[sky_pix_only_boundaries[0]:sky_pix_only_boundaries[1]+1])
+            full_profile -= flat_scaling*flat_profile
+        
+        #Extract the objects. 
+        #WARNING: Dodgy code for now.
+        profiles = []
+        for boundary in object_boundaries:
+            profiles.append(full_profile)
+            profiles[-1][:boundary[0]]=0
+            profiles[-1][boundary[1]+1:]=0
+        
+        return profiles
