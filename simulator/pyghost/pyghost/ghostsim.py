@@ -420,7 +420,7 @@ class SlitViewer(object):
             self.cosims = []  # clear it if not already
             for expid, image in enumerate(self.images):
                 cosim = cosmic.cosmic(
-                    image.shape, duration, 10, 2.0, False, [15, 15, 16])
+                    image.shape, duration, 10, 2.0, False, [4.54, 4.54, 10])
                 cosim[cosim < 0] = 0
                 cosim[cosim > saturation] = saturation
                 cosim = cosim.astype(np.uint16)
@@ -1532,14 +1532,18 @@ class Arm(object):
             # We hard code 2.0 rays/s/cm^2
             # A shield that only allows rays that originate within 10 degrees
             # of the zenith.
-            # Pixel size of 15 x 15 x 16 um
-            # FIXME Mike says the red detector is 4x thicker than the blue
+
+            # red detector is 2.5x thicker than the blue (per Paul Jordan,
+            # "Sensor developments at e2v")
+            pix_depth = 40 if self.arm == 'red' else 16
+
+            # Pixel size of 15 um x 15 um x pixel_depth um
             cosmic_img = cosmic.cosmic(image.shape,     # Image shape
                                        duration,        # Exposure length
                                        10,              # CR shield angle
                                        2.0,             # CR/s/cm/cm
                                        False,           # Use effect area mask
-                                       [15, 15, 16]     # Pixel size (microns)
+                                       [15, 15, pix_depth]  # Pxl size (microns)
                                        )
             image += cosmic_img
             # import pdb; pdb.set_trace() #!!!MJI!!!
