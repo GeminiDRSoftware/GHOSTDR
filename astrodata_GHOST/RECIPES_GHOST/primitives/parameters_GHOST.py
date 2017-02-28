@@ -128,6 +128,15 @@
             "uiLevel":        "UIBASIC",
             },
         },
+    "storeProcessedSlitFlat": {
+        "suffix": {
+            "default":        "_slitFlat",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
     "validateData": {
         "suffix": {
             "default":        "_dataValidated",

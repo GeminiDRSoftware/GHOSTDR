@@ -1,0 +1,16 @@
+promote  # bypass the extn check in GMOS validateData
+prepare  # Gemini superprimitive
+addDQ
+addVAR
+biasCorrect  # subrecipe
+ADUToElectrons
+addVAR(poisson_noise=True)
+darkCorrect  # subrecipe (contains no "same duration" check)
+#addToList(purpose=forStack)
+#getList(purpose=forStack)
+stackFrames(operation=median, reject_method=none)
+fork(newStream=median)
+storeProcessedSlitFlat  # empties current stream
+#switchTo(streamName=median)
+#makeSlitMask  # if we wanted to make a mask dynamically
+#storeProcessedSlitMask  # empties current stream
