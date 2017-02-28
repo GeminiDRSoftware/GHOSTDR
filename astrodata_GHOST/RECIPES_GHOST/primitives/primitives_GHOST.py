@@ -391,9 +391,8 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         # some loop-invariant vars based on the median slit frame
         sldata = slit['SCI', 1].hdulist[1].data
-        std = np.std(sldata)
-        sigma = std * 9.5
-        log.stdinfo("   sigma: %s" % (sigma))
+        sigma = np.array([ad['SCI', 1].hdulist[1].data for ad in adinput])
+        sigma = self._mad(sigma, axis=0) * 60  # starts skipping CRs at 85x
 
         # accumulators for computing the mean epoch
         sum_of_weights = 0.0
@@ -422,59 +421,62 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             addata = ad['SCI', 1].hdulist[1].data
 
-            if False:  # set to True to output the residuals for debugging
-                ad['SCI', 1].hdulist[1].data = abs(addata - sldata)
-            else:
-                # replace CR-affected pixels with those from the median slit
-                # viewer image (subtract the median slit frame and threshold
-                # against the residuals); not sure VAR/DQ planes appropriately
-                # handled here
-                indices = abs(addata - sldata) > sigma
-                flux_before = np.sum(addata)  # TODO: mask non-fibre pixels
-                addata[indices] = sldata[indices]
-                flux_after = np.sum(addata)  # TODO: mask non-fibre pixels
-                ad['SCI', 1].hdulist[1].data = addata
+            # replace CR-affected pixels with those from the median slit
+            # viewer image (subtract the median slit frame and threshold
+            # against the residuals); not sure VAR/DQ planes appropriately
+            # handled here
+            indices = abs(addata - sldata) > sigma
+            flux_before = np.sum(addata)  # TODO: mask non-fibre pixels
+            addata[indices] = sldata[indices]
+            flux_after = np.sum(addata)  # TODO: mask non-fibre pixels
+            ad['SCI', 1].hdulist[1].data = addata
 
-                # log results
-                log.stdinfo("   %s: nPixReplaced = %s, flux = %s -> %s" % (
-                    ad.filename, (indices).sum(), flux_before, flux_after))
+            # # to output the residuals for debugging
+            # ad['SCI', 1].hdulist[1].data = abs(addata - sldata)
 
-                # record how many CR-affected pixels were replaced
-                ad['SCI', 1].hdulist[1].header['CRPIXREJ'] = (
-                    (indices).sum(), '# of CR pixels replaced by mean')
+            # # to output the indices for debugging
+            # ad['SCI', 1].hdulist[1].data = indices.astype(int)
 
-                # get science and slit view image start/end times
-                sc_start = datetime.datetime.strptime(  # same for all slit exts
-                    ad.phu.header['UTSTART'], "%H:%M:%S.%f")
-                sc_end = datetime.datetime.strptime(  # same for all slit extns
-                    ad.phu.header['UTEND'], "%H:%M:%S.%f")
-                sv_start = datetime.datetime.strptime(
-                    ad['SCI', 1].hdulist[1].header['EXPUTST'], "%H:%M:%S.%f")
-                sv_end = datetime.datetime.strptime(
-                    ad['SCI', 1].hdulist[1].header['EXPUTEND'], "%H:%M:%S.%f")
+            # log results
+            log.stdinfo("   %s: nPixReplaced = %s, flux = %s -> %s" % (
+                ad.filename, (indices).sum(), flux_before, flux_after))
 
-                # compute overlap percentage and slit view image duration
-                latest_start = max(sc_start, sv_start)
-                earliest_end = min(sc_end, sv_end)
-                overlap = (earliest_end - latest_start).seconds
-                sv_duration = ad['SCI', 1].hdulist[1].header['EXPTIME']
-                overlap /= sv_duration  # convert into a percentage
+            # record how many CR-affected pixels were replaced
+            ad['SCI', 1].hdulist[1].header['CRPIXREJ'] = (
+                (indices).sum(), '# of CR pixels replaced by mean')
 
-                # compute the offset (the value to be weighted), in seconds,
-                # from the start of the science exposure
-                if sc_start <= sv_start and sv_end <= sc_end:
-                    offset = (sv_start - sc_start).seconds + sv_duration / 2.0
-                elif sv_start < sc_start:
-                    offset = overlap * sv_duration / 2.0
-                elif sv_end > sc_end:
-                    offset = overlap * sv_duration / 2.0
-                    offset += (sv_start - sc_start).seconds
+            # get science and slit view image start/end times
+            sc_start = datetime.datetime.strptime(  # same for all slit exts
+                ad.phu.header['UTSTART'], "%H:%M:%S.%f")
+            sc_end = datetime.datetime.strptime(  # same for all slit extns
+                ad.phu.header['UTEND'], "%H:%M:%S.%f")
+            sv_start = datetime.datetime.strptime(
+                ad['SCI', 1].hdulist[1].header['EXPUTST'], "%H:%M:%S.%f")
+            sv_end = datetime.datetime.strptime(
+                ad['SCI', 1].hdulist[1].header['EXPUTEND'], "%H:%M:%S.%f")
 
-                # add flux-weighted offset (plus weight itself) to
-                # accumulators
-                weight = flux_after * overlap
-                sum_of_weights += weight
-                accum_weighted_time += weight * offset
+            # compute overlap percentage and slit view image duration
+            latest_start = max(sc_start, sv_start)
+            earliest_end = min(sc_end, sv_end)
+            overlap = (earliest_end - latest_start).seconds
+            sv_duration = ad['SCI', 1].hdulist[1].header['EXPTIME']
+            overlap /= sv_duration  # convert into a percentage
+
+            # compute the offset (the value to be weighted), in seconds,
+            # from the start of the science exposure
+            if sc_start <= sv_start and sv_end <= sc_end:
+                offset = (sv_start - sc_start).seconds + sv_duration / 2.0
+            elif sv_start < sc_start:
+                offset = overlap * sv_duration / 2.0
+            elif sv_end > sc_end:
+                offset = overlap * sv_duration / 2.0
+                offset += (sv_start - sc_start).seconds
+
+            # add flux-weighted offset (plus weight itself) to
+            # accumulators
+            weight = flux_after * overlap
+            sum_of_weights += weight
+            accum_weighted_time += weight * offset
 
             # Add the appropriate time stamps to the PHU
             gt.mark_history(
@@ -1007,3 +1009,12 @@ class GHOSTPrimitives(GMOSPrimitives,
             key = '%s_%s_%s' % (key, arm, res_mode)
 
         return key
+
+    # -------------------------------------------------------------------------
+    def _mad(self, data, axis=None):
+        """
+        Median Absolute Deviation: a "Robust" version of standard deviation.
+        Indices variabililty of the sample.
+        https://en.wikipedia.org/wiki/Median_absolute_deviation
+        """
+        return np.median(np.absolute(data - np.median(data, axis)), axis)
