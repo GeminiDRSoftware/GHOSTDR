@@ -7,8 +7,8 @@ import matplotlib.cm as cm
 
 
 class SlitView(object):
-    def __init__(self, slit_image, flat_image, microns_pix=4.54*180/50*2, mode='std',
-                 slit_length=3600.):
+    def __init__(self, slit_image, flat_image, microns_pix=4.54*180/50*2,
+                 mode='std', slit_length=3600.):
         """
         A class containing tools common processing the dark and bias corrected
         slit-viewer images.
@@ -29,12 +29,9 @@ class SlitView(object):
 
         slit_length: float
             Physical slit length to be extracted in microns.
-
-        !!!Lance - there need to be additional parameters here for you, stating
-        the y-axis slit coordinate (or, if needed, y-axis pixels) corresponding
-        to the boundaries of object 1 and 2 fluxes.
         """
         self.slit_image = slit_image
+        self.flat_image = flat_image
         self.mode = mode
         self.slit_length = slit_length
         self.microns_pix = microns_pix
@@ -42,29 +39,32 @@ class SlitView(object):
         # The central pixel in the y-direction (along-slit) defines the slit
         # profile offset, i.e. it interacts directly with the tramline fitting
         # and a change to one is a change to the other.
-        # Co-ordinates are in standard pythong co-ordinates, i.e. y then x
+        # Co-ordinates are in standard python co-ordinates, i.e. y then x
         if mode == 'std':
             self.central_pix = {'red': [84, 59], 'blue': [84, 150]}
             self.extract_half_width = 2
-            #Boundaries for lower and upper pixels that contain *only* sky.
-            #!!! WARNING: Change this.
-            self.sky_pix_only_boundaries = {'red': [74,94], 'blue': [74,94]}
-            #Boundaries for extracting the object. !!! WARNING: Change this.
-            self.object_boundaries = {'red': [[30,75],[93,130]], 'blue': [[30,75],[93,130]]}
-            #The sky_pix_boundaries is the boundary in pixels of all pixels contaning some 
-            #sky contribution (including the object pixels, which are really object + sky)
-            self.sky_pix_boundaries = {'red' : [30,130], 'blue': [30,130]}
+            # Boundaries for lower and upper pixels that contain *only* sky.
+            # !!! WARNING: Change this.
+            self.sky_pix_only_boundaries = {'red': [74, 94], 'blue': [74, 94]}
+            # Boundaries for extracting the object. !!! WARNING: Change this.
+            self.object_boundaries = {
+                'red': [[30, 75], [93, 130]], 'blue': [[30, 75], [93, 130]]}
+            # The sky_pix_boundaries is the boundary in pixels of all pixels
+            # contaning some sky contribution (including the object pixels,
+            # which are really object + sky)
+            self.sky_pix_boundaries = {'red': [30, 130], 'blue': [30, 130]}
         elif mode == 'high':
             self.central_pix = {'red': [84, 95], 'blue': [84, 4]}
             self.extract_half_width = 3
-            #Boundaries for lower and upper pixels that contain *only* sky.
-            #!!! WARNING: Change this.
-            self.sky_pix_only_boundaries = {'red': [34,54], 'blue': [34,54]}
-            #!!! WARNING: Change this. The 2nd "object" from the point of view of
-            #the extractor is the simultaneous Th/Xe. This could become an 
-            #"object_type" parameter if we really cared.
-            self.object_boundaries = {'red': [[53,75],[25,30]], 'blue': [[53,75],[25,30]]}
-            self.sky_pix_boundaries = {'red' : [31,75], 'blue': [31,75]}
+            # Boundaries for lower and upper pixels that contain *only* sky.
+            # !!! WARNING: Change this.
+            self.sky_pix_only_boundaries = {'red': [34, 54], 'blue': [34, 54]}
+            # !!! WARNING: Change this. The 2nd "object" from the point of view
+            # of the extractor is the simultaneous Th/Xe. This could become an
+            # "object_type" parameter if we really cared.
+            self.object_boundaries = {
+                'red': [[53, 75], [25, 30]], 'blue': [[53, 75], [25, 30]]}
+            self.sky_pix_boundaries = {'red': [31, 75], 'blue': [31, 75]}
         else:
             raise UserWarning("Invalid Mode")
 
@@ -88,18 +88,18 @@ class SlitView(object):
             central_pix = self.central_pix[arm]
         except:
             raise UserWarning("Invalid arm: " + arm)
-        
+
         if use_flat:
             this_slit_image = self.flat_image
         else:
             this_slit_image = self.slit_image
-            
+
         y_halfwidth = int(self.slit_length/self.microns_pix/2)
         cutout = this_slit_image[
             central_pix[0]-y_halfwidth:central_pix[0]+y_halfwidth+1,
             central_pix[1]-self.extract_half_width:central_pix[1]+
             self.extract_half_width+1]
-        #Sum over the 2nd axis, i.e. the x-coordinate.
+        # Sum over the 2nd axis, i.e. the x-coordinate.
         profile = np.sum(cutout, axis=1)
         if return_centroid:
             xcoord = np.arange(
@@ -111,42 +111,48 @@ class SlitView(object):
         else:
             return profile
 
-    def object_slit_profiles(self, arm='red', correct_for_sky=True, append_sky=True,
-        normalise_profiles=True):
+    def object_slit_profiles(self, arm='red', correct_for_sky=True,
+                             append_sky=True, normalise_profiles=True):
         """
         TODO: Figure out centroid array behaviour if needed.
         """
         object_boundaries = self.object_boundaries[arm]
-        #Find the slit profile.
+        # Find the slit profile.
         full_profile = self.slit_profile(arm=arm)
-        
-        #WARNING: This is done in the extracted profile space. Is there any benefit to
-        #doing this in pixel space? Maybe yes for the centroid.
+
+        # WARNING: This is done in the extracted profile space. Is there any
+        # benefit to doing this in pixel space? Maybe yes for the centroid.
         if correct_for_sky:
-            #Get the flat profile from the flat image.
+            # Get the flat profile from the flat image.
             flat_profile = self.slit_profile(arm=arm, use_flat=True)
-            flat_scaling = np.median(full_profile[sky_pix_only_boundaries[0]:sky_pix_only_boundaries[1]+1])/
-                np.median(flat_profile[sky_pix_only_boundaries[0]:sky_pix_only_boundaries[1]+1])
+            flat_scaling = np.median(full_profile[
+                self.sky_pix_only_boundaries[0]:
+                self.sky_pix_only_boundaries[1] + 1
+            ]) / np.median(flat_profile[
+                self.sky_pix_only_boundaries[0]:
+                self.sky_pix_only_boundaries[1] + 1
+            ])
             full_profile -= flat_scaling*flat_profile
-        
-        #Extract the objects. 
-        #WARNING: Dodgy code for now.
+
+        # Extract the objects.
+        # WARNING: Dodgy code for now.
         profiles = []
         for boundary in object_boundaries:
             profiles.append(full_profile)
-            profiles[-1][:boundary[0]]=0
-            profiles[-1][boundary[1]+1:]=0
+            profiles[-1][:boundary[0]] = 0
+            profiles[-1][boundary[1]+1:] = 0
         profiles = np.array(profiles)
-        
-        #Append the "sky" if needed
-        profiles.append(flat_profile)
-        profiles[-1][:self.sky_pix_boundary[arm][0]]=0
-        profiles[-1][self.sky_pix_boundary[arm][1]+1:]=0
-        
-        #Normalise profiles if requested (not needed if the total flux is what you're 
-        #after, e.g. for an mean exposure epoch calculation)
-        for prof in profiles:
-            prof /= np.sum(prof)
-        
+
+        # Append the "sky" if needed
+        if append_sky:
+            profiles.append(flat_profile)
+            profiles[-1][:self.sky_pix_boundaries[arm][0]] = 0
+            profiles[-1][self.sky_pix_boundaries[arm][1]+1:] = 0
+
+        # Normalise profiles if requested (not needed if the total flux is what
+        # you're after, e.g. for an mean exposure epoch calculation)
+        if normalise_profiles:
+            for prof in profiles:
+                prof /= np.sum(prof)
+
         return profiles
-        
