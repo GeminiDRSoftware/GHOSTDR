@@ -51,6 +51,9 @@ class SlitView(object):
             self.sky_pix_only_boundaries = {'red': [74,94], 'blue': [74,94]}
             #Boundaries for extracting the object. !!! WARNING: Change this.
             self.object_boundaries = {'red': [[30,75],[93,130]], 'blue': [[30,75],[93,130]]}
+            #The sky_pix_boundaries is the boundary in pixels of all pixels contaning some 
+            #sky contribution (including the object pixels, which are really object + sky)
+            self.sky_pix_boundaries = {'red' : [30,130], 'blue': [30,130]}
         elif mode == 'high':
             self.central_pix = {'red': [84, 95], 'blue': [84, 4]}
             self.extract_half_width = 3
@@ -61,6 +64,7 @@ class SlitView(object):
             #the extractor is the simultaneous Th/Xe. This could become an 
             #"object_type" parameter if we really cared.
             self.object_boundaries = {'red': [[53,75],[25,30]], 'blue': [[53,75],[25,30]]}
+            self.sky_pix_boundaries = {'red' : [31,75], 'blue': [31,75]}
         else:
             raise UserWarning("Invalid Mode")
 
@@ -107,7 +111,8 @@ class SlitView(object):
         else:
             return profile
 
-    def object_slit_profiles(self, arm='red', correct_for_sky=True):
+    def object_slit_profiles(self, arm='red', correct_for_sky=True, append_sky=True,
+        normalise_profiles=True):
         """
         TODO: Figure out centroid array behaviour if needed.
         """
@@ -131,5 +136,17 @@ class SlitView(object):
             profiles.append(full_profile)
             profiles[-1][:boundary[0]]=0
             profiles[-1][boundary[1]+1:]=0
+        profiles = np.array(profiles)
+        
+        #Append the "sky" if needed
+        profiles.append(flat_profile)
+        profiles[-1][:self.sky_pix_boundary[arm][0]]=0
+        profiles[-1][self.sky_pix_boundary[arm][1]+1:]=0
+        
+        #Normalise profiles if requested (not needed if the total flux is what you're 
+        #after, e.g. for an mean exposure epoch calculation)
+        for prof in profiles:
+            prof /= np.sum(prof)
         
         return profiles
+        
