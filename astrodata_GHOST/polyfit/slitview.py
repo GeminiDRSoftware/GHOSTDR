@@ -115,7 +115,6 @@ class SlitView(object):
         """
         TODO: Figure out centroid array behaviour if needed.
         """
-        object_boundaries = self.object_boundaries[arm]
         # Find the slit profile.
         full_profile = self.slit_profile(arm=arm)
 
@@ -125,18 +124,18 @@ class SlitView(object):
             # Get the flat profile from the flat image.
             flat_profile = self.slit_profile(arm=arm, use_flat=True)
             flat_scaling = np.median(full_profile[
-                self.sky_pix_only_boundaries[0]:
-                self.sky_pix_only_boundaries[1] + 1
+                self.sky_pix_only_boundaries[arm][0]:
+                self.sky_pix_only_boundaries[arm][1] + 1
             ]) / np.median(flat_profile[
-                self.sky_pix_only_boundaries[0]:
-                self.sky_pix_only_boundaries[1] + 1
+                self.sky_pix_only_boundaries[arm][0]:
+                self.sky_pix_only_boundaries[arm][1] + 1
             ])
             full_profile -= flat_scaling*flat_profile
 
         # Extract the objects.
         # WARNING: Dodgy code for now.
         profiles = []
-        for boundary in object_boundaries:
+        for boundary in self.object_boundaries[arm]:
             profiles.append(full_profile)
             profiles[-1][:boundary[0]] = 0
             profiles[-1][boundary[1]+1:] = 0
