@@ -41,22 +41,20 @@ class SlitView(object):
         # and a change to one is a change to the other.
         # Co-ordinates are in standard python co-ordinates, i.e. y then x
         if mode == 'std':
-            self.central_pix = {'red': [84, 59], 'blue': [84, 150]}
-            self.extract_half_width = 2
+            self.central_pix = {'red': [77, 65], 'blue': [77, 156]}
+            self.extract_half_width = 3
             # Boundaries for lower and upper pixels that contain *only* sky.
-            # !!! WARNING: Change this.
-            self.sky_pix_only_boundaries = {'red': [74, 94], 'blue': [74, 94]}
-            # Boundaries for extracting the object
-            # !!! WARNING: Change this.
+            self.sky_pix_only_boundaries = {'red': [69, 85], 'blue': [69, 85]}
+            # Boundaries for extracting the objects
             self.object_boundaries = {
-                'red': [[30, 75], [93, 130]], 'blue': [[30, 75], [93, 130]]}
+                'red': [[25, 68], [86, 128]], 'blue': [[25, 68], [86, 128]]}
             # The sky_pix_boundaries is the boundary in pixels of all pixels
             # contaning some sky contribution (including the object pixels,
             # which are really object + sky)
-            self.sky_pix_boundaries = {'red': [30, 130], 'blue': [30, 130]}
+            self.sky_pix_boundaries = {'red': [68, 86], 'blue': [68, 86]}
         elif mode == 'high':
             self.central_pix = {'red': [84, 95], 'blue': [84, 4]}
-            self.extract_half_width = 3
+            self.extract_half_width = 2
             # Boundaries for lower and upper pixels that contain *only* sky.
             self.sky_pix_only_boundaries = {
                 'red': [105, 129], 'blue': [105, 129]}
@@ -98,7 +96,7 @@ class SlitView(object):
         y_halfwidth = int(self.slit_length/self.microns_pix/2)
         cutout = this_slit_image[
             central_pix[0]-y_halfwidth:central_pix[0]+y_halfwidth+1,
-            central_pix[1]-self.extract_half_width:central_pix[1]+
+            central_pix[1]-self.extract_half_width:central_pix[1] +
             self.extract_half_width+1]
         # Sum over the 2nd axis, i.e. the x-coordinate.
         profile = np.sum(cutout, axis=1)
