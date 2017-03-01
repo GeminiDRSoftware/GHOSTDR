@@ -427,7 +427,7 @@ class SlitViewer(object):
                 self.images[expid] += cosim
                 self.cosims.append(cosim)
 
-    def save(self, fname, obstype, bias=1000, readnoise=8.0, gain=1.0):
+    def save(self, fname, obstype, res, bias=1000, readnoise=8.0, gain=1.0):
         """
         Save the slit viewer frames in self.images.
 
@@ -466,6 +466,10 @@ class SlitViewer(object):
         header['UTEND'] = (
             (self.utstart + datetime.timedelta(seconds=self.sci_duration))
             .strftime("%H:%M:%S.%f")[:-3], 'UT time at observation end')
+
+        # resolution-related keywords
+        header['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
+        header['SMPPOS'] = (1 if res == 'high' else 2)
 
         hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
         crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
@@ -569,38 +573,41 @@ class SlitViewer(object):
         xcoord = (xy[0] * self.slitview_pxsize / self.microns_pix).astype(int)
         xcoord += im_slit.shape[1]//2
 
-        slit_camera_image = np.zeros( (n_ypix, n_xpix) )
-        #Roughly convolve with a pixel with a 4-point dither.
+        slit_camera_image = np.zeros((n_ypix, n_xpix))
+        # Roughly convolve with a pixel with a 4-point dither.
         dither_pix = int(0.25 * self.slitview_pxsize / self.microns_pix)
         for xdither in [-dither_pix, dither_pix]:
             for ydither in [-dither_pix, dither_pix]:
                 slit_camera_image += im_slit[ycoord + ydither, xcoord + xdither]
 
-        #Re-normalize
+        # Re-normalize
         slit_camera_image /= 4
         slit_camera_image *= (self.slitview_pxsize / self.microns_pix)**2
 
-        # Multiply by total flux within our bandpass. First multiply by mean flux
-        # per resolution element, then scale WARNING: Doesn't work if min and max outside
+        # Multiply by total flux within our bandpass. First multiply by mean
+        # flux # per resolution element, then scale WARNING: Doesn't work if
+        # min and max outside
         wave_in_filter = (slitview_wave[0] < spectrum[0]) & \
                          (spectrum[0] < slitview_wave[1])
-        if sum(wave_in_filter)==0:
-            wave_in_filter = np.argmin(np.abs(spectrum[0] - \
-                             0.5 * slitview_wave[0] - 0.5 * slitview_wave[1]))
+        if sum(wave_in_filter) == 0:
+            wave_in_filter = np.argmin(np.abs(
+                spectrum[0] - 0.5 * slitview_wave[0] - 0.5 * slitview_wave[1]))
         slit_camera_image *= np.mean(spectrum[1, wave_in_filter])
         frac_bw = 0.5*(slitview_wave[1] - slitview_wave[0]) / \
-                  (slitview_wave[1] + slitview_wave[0])
-        slit_camera_image *= self.duration * self.R_per_pixel * frac_bw * slitview_frac
+            (slitview_wave[1] + slitview_wave[0])
+        slit_camera_image *= self.duration * self.R_per_pixel * frac_bw * \
+            slitview_frac
         slit_camera_image = np.maximum(slit_camera_image, 0)
 
         # Store the full-sized image in units of photons.
         xoffset = int(slitview_offset[0]/self.slitview_pxsize)
-        yoffset = int((self.slit_mode_offsets[mode] + \
+        yoffset = int((self.slit_mode_offsets[mode] +
                        slitview_offset[1]) / self.slitview_pxsize)
-        xy = np.meshgrid(np.arange(n_xpix) - n_xpix // 2 + xoffset + self.slitcam_xsz // 2,
-                         np.arange(n_ypix) - n_ypix // 2 + yoffset + self.slitcam_ysz // 2)
+        xy = np.meshgrid(
+            np.arange(n_xpix) - n_xpix // 2 + xoffset + self.slitcam_xsz // 2,
+            np.arange(n_ypix) - n_ypix // 2 + yoffset + self.slitcam_ysz // 2)
 
-        for i, (image, profile) in enumerate(zip(self.images, self.flux_profile)):
+        for image, profile in zip(self.images, self.flux_profile):
             image[xy] += np.random.poisson(profile * slit_camera_image)
 
 
@@ -656,7 +663,7 @@ class Arm(object):
         # Do we need to re-compute the spectral format?
         self.stale_spectral_format = True
         # self.set_mode(mode)
-        if arm == 'red':
+        if self.arm == 'red':
             # Additional slit rotation across an order needed to match Zemax.
             self.extra_rot = 3.0
             self.szx = 6144
@@ -671,10 +678,11 @@ class Arm(object):
             self.order_min = 34
             self.order_max = 67
             self.dettype = 'E2V-CCD-231-C6'
+            self.thick = 40        # detector thickness in microns
             self.slitview_wave = [0.6, 0.76]  # wavelength in microns
             self.slitview_frac = 0.02         # Fractional flux.
             self.slitview_offset = [15.0, -1500.0]  # (x,y) plane offset, micron
-        elif arm == 'blue':
+        elif self.arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
             self.extra_rot = 2.0
             self.szx = 4096
@@ -689,6 +697,7 @@ class Arm(object):
             self.order_min = 63
             self.order_max = 95
             self.dettype = 'E2V-CCD-231-84'
+            self.thick = 16        # detector thickness in microns
             self.slitview_wave = [0.43, 0.6]  # wavelength in microns
             self.slitview_frac = 0.02         # Fractional flux.
             self.slitview_offset = [-15.0, 1500.0]  # (x,y) plane offset, micron
@@ -704,32 +713,31 @@ class Arm(object):
         A SIMILAR ROUTINE NEEDS TO START WITH HEADER KEYWORDS THEN THE
         FLUXES FROM THE SLIT VIEWING CAMERA.
         """
-        if (new_mode == 'high'):
-            self.mode=new_mode
+        self.mode = new_mode.lower()
+        if self.mode == 'high':
             self.lenslet_width = self.lenslet_high_size
             self.nl = 28
-            ## Set default profiles - object, sky and reference
-            fluxes = np.zeros( (self.nl,3) )
-            fluxes[2:21,0] = 0.37
-            fluxes[8:15,0] = 0.78
-            fluxes[11,0] = 1.0
-            #NB if on the following line, fluxes[2:,1]=1.0 is set, sky will be
-            #subtracted automatically.
-            fluxes[2+19:,1]=1.0
-            fluxes[0,2]=1.0
-        elif (new_mode == 'std'):
-            self.mode=new_mode
+            # Set default profiles - object, sky and reference
+            fluxes = np.zeros((self.nl, 3))
+            fluxes[2:21, 0] = 0.37
+            fluxes[8:15, 0] = 0.78
+            fluxes[11, 0] = 1.0
+            # NB if on the following line, fluxes[2:,1]=1.0 is set, sky will be
+            # subtracted automatically.
+            fluxes[2+19:, 1] = 1.0
+            fluxes[0, 2] = 1.0
+        elif self.mode == 'std':
             self.lenslet_width = self.lenslet_std_size
             self.nl = 17
-            ## Set default profiles - object 1, sky and object 2
-            fluxes = np.zeros( (self.nl,3) )
-            fluxes[0:7,0]  = 1.0
-            fluxes[7:10,1] = 1.0
-            fluxes[10:,2] = 1.0
+            # Set default profiles - object 1, sky and object 2
+            fluxes = np.zeros((self.nl, 3))
+            fluxes[0:7, 0]  = 1.0
+            fluxes[7:10, 1] = 1.0
+            fluxes[10:, 2] = 1.0
         else:
             print("Unknown mode!")
             raise UserWarning
-        self.fluxes=fluxes
+        self.fluxes = fluxes
 
     def spectral_format(self, xoff=0.0, yoff=0.0, ccd_centre=None, verbose=False):
         """Create a spectrum, with wavelengths sampled in 2 orders.
@@ -1533,17 +1541,13 @@ class Arm(object):
             # A shield that only allows rays that originate within 10 degrees
             # of the zenith.
 
-            # red detector is 2.5x thicker than the blue (per Paul Jordan,
-            # "Sensor developments at e2v")
-            pix_depth = 40 if self.arm == 'red' else 16
-
             # Pixel size of 15 um x 15 um x pixel_depth um
             cosmic_img = cosmic.cosmic(image.shape,     # Image shape
                                        duration,        # Exposure length
                                        10,              # CR shield angle
                                        2.0,             # CR/s/cm/cm
                                        False,           # Use effect area mask
-                                       [15, 15, pix_depth]  # Pxl size (microns)
+                                       [15, 15, self.thick]  # Pxl sz (microns)
                                        )
             image += cosmic_img
             # import pdb; pdb.set_trace() #!!!MJI!!!
@@ -1968,7 +1972,7 @@ class Ghost(object):
         red_hdu = self.red.simulate_frame(  # pylint: disable=star-args
             additive_noise=self.additive_noise['red'],
             scaling=self.scaling['red'], **common_params)
-        slit_hdu = self.sv.save(output_prefix, obstype)
+        slit_hdu = self.sv.save(output_prefix, obstype, res)
 
         if self.split:
             return
