@@ -46,7 +46,8 @@ class SlitView(object):
             # Boundaries for lower and upper pixels that contain *only* sky.
             # !!! WARNING: Change this.
             self.sky_pix_only_boundaries = {'red': [74, 94], 'blue': [74, 94]}
-            # Boundaries for extracting the object. !!! WARNING: Change this.
+            # Boundaries for extracting the object
+            # !!! WARNING: Change this.
             self.object_boundaries = {
                 'red': [[30, 75], [93, 130]], 'blue': [[30, 75], [93, 130]]}
             # The sky_pix_boundaries is the boundary in pixels of all pixels
@@ -57,14 +58,14 @@ class SlitView(object):
             self.central_pix = {'red': [84, 95], 'blue': [84, 4]}
             self.extract_half_width = 3
             # Boundaries for lower and upper pixels that contain *only* sky.
-            # !!! WARNING: Change this.
-            self.sky_pix_only_boundaries = {'red': [34, 54], 'blue': [34, 54]}
-            # !!! WARNING: Change this. The 2nd "object" from the point of view
-            # of the extractor is the simultaneous Th/Xe. This could become an
-            # "object_type" parameter if we really cared.
+            self.sky_pix_only_boundaries = {
+                'red': [105, 129], 'blue': [105, 129]}
+            # The 2nd "object" from the point of view of the extractor is the
+            # simultaneous Th/Xe. This could become an "object_type" parameter
+            # if we really cared.
             self.object_boundaries = {
-                'red': [[53, 75], [25, 30]], 'blue': [[53, 75], [25, 30]]}
-            self.sky_pix_boundaries = {'red': [31, 75], 'blue': [31, 75]}
+                'red': [[35, 104], [27, 32]], 'blue': [[35, 104], [27, 32]]}
+            self.sky_pix_boundaries = {'red': [103, 129], 'blue': [103, 129]}
         else:
             raise UserWarning("Invalid Mode")
 
@@ -143,7 +144,8 @@ class SlitView(object):
             profiles[-1][boundary[1]+1:] = 0
         profiles = np.array(profiles)
 
-        # Append the "sky" if needed
+        # Append the "sky" if needed (be aware that the top & bottom pixel
+        # borders [the "edges" of the profile] contain some object flux)
         if append_sky:
             profiles.append(flat_profile)
             profiles[-1][:self.sky_pix_boundaries[arm][0]] = 0
