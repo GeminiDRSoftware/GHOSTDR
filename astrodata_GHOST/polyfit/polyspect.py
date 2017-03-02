@@ -49,6 +49,13 @@ class Polyspect(object):
         y_values: float array
             This is the value or array of values for the second order polynomial
             functions to be aveluated against."""
+        #params needs to be a np.array
+        if not isinstance(params,np.ndarray):
+            raise TypeError('Please provide params as a numpy float array')
+        if not isinstance(mprime,float):
+            raise TypeError('Please ensure mprime is a float number')
+        if not isinstance(y_values,np.ndarray):
+            raise TypeError('Please provide y_values as a numpy float array')
         ydeg = params.shape[0] - 1
         if params.ndim==1:
             polyp = np.poly1d(params)
@@ -61,6 +68,7 @@ class Polyspect(object):
             polyp = np.poly1d(polynomials)
             evaluation = polyp(y_values - self.szy // 2)
         return evaluation
+    
 
     def wave_fit_resid(self, params, orders, waves, y_values, ydeg=3, xdeg=3):
         """A fit function for read_lines_and_fit (see that function for details)
@@ -92,6 +100,16 @@ class Polyspect(object):
 
         The residual between the model and data supplied.
         """
+        #params needs to be a np.array
+        if not isinstance(params,np.ndarray):
+            raise TypeError('Please provide params as a numpy float array')
+        if not isinstance(orders,np.ndarray):
+            raise TypeError('Please ensure orders is a numpy float array')
+        if not isinstance(y_values,np.ndarray):
+            raise TypeError('Please provide y_values as a numpy float array')
+        if not isinstance(waves,np.ndarray):
+            raise TypeError('Please provide waves as a numpy float array')
+
         if np.prod(params.shape) != (xdeg + 1) * (ydeg + 1):
             print("Parameters are flattened - xdeg and ydeg must be correct!")
             raise UserWarning
@@ -266,7 +284,11 @@ class Polyspect(object):
         blaze_int = np.zeros((norders, self.szy))
 
         if (xparams is None) and (wparams is None):
-            return 'Must provide at least one of xparams or wparams'
+            raise UserWarning('Must provide at least one of xparams or wparams')
+        if (xparams is not None) and (not isinstance(xparams,np.ndarray) ):
+            raise UserWarning('xparams provided with invalid format')
+        if (wparams is not None) and (not isinstance(wparams,np.ndarray) ):
+            raise UserWarning('xparams provided with invalid format')
         y_values = np.arange(self.szy)
         # Loop through order
         for order in np.arange(self.m_min, self.m_max + 1):
@@ -292,8 +314,14 @@ class Polyspect(object):
             blaze_int[order - self.m_min, :] = np.sinc((y_values - self.szy / 2)
                                                        / order_width)**2
 
+
         # Plot this if we have an image file
         if (img is not None) and (xparams is not None):
+            if not isinstance(img,ndarray):
+                raise UserWarning('img must be numpy array')
+            if img.ndim != 2:
+                raise UserWarning('Image array provided is not a 2 dimensional\
+                array')
             if not self.transpose:
                 img = img.T
             plt.clf()
@@ -326,6 +354,13 @@ class Polyspect(object):
         -------
         A new value of the x array.
         """
+        if not isinstance(old_x, np.ndarray):
+            raise TypeError('old_x must be a numpy array')
+        if not isinstance(image, np.ndarray):
+            raise TypeError('image must be a numpy array')
+        if image.ndim != 2:
+            raise UserWarning('image array must be 2 dimentional')
+        
         # Create an array with a single pixel with the value 1.0 at the
         # expected peak of each order.
         single_pix_orders = np.zeros(image.shape)
