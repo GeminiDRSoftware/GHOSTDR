@@ -1,7 +1,4 @@
-import pdb
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
@@ -44,26 +41,26 @@ class SlitView(object):
             self.central_pix = {'red': [77, 65], 'blue': [77, 156]}
             self.extract_half_width = 3
             # Boundaries for lower and upper pixels that contain *only* sky.
-            self.sky_pix_only_boundaries = {'red': [69, 85], 'blue': [69, 85]}
+            self.sky_pix_only_boundaries = {'red': [47, 63], 'blue': [47, 63]}
             # Boundaries for extracting the objects
             self.object_boundaries = {
-                'red': [[25, 68], [86, 128]], 'blue': [[25, 68], [86, 128]]}
+                'red': [[3, 46], [64, 107]], 'blue': [[3, 46], [64, 107]]}
             # The sky_pix_boundaries is the boundary in pixels of all pixels
             # contaning some sky contribution (including the object pixels,
             # which are really object + sky)
-            self.sky_pix_boundaries = {'red': [68, 86], 'blue': [68, 86]}
+            self.sky_pix_boundaries = {'red': [46, 64], 'blue': [46, 64]}
         elif mode == 'high':
-            self.central_pix = {'red': [84, 95], 'blue': [84, 4]}
+            self.central_pix = {'red': [78, 95], 'blue': [78, 4]}
             self.extract_half_width = 2
             # Boundaries for lower and upper pixels that contain *only* sky.
             self.sky_pix_only_boundaries = {
-                'red': [105, 129], 'blue': [105, 129]}
+                'red': [82, 106], 'blue': [82, 106]}
             # The 2nd "object" from the point of view of the extractor is the
             # simultaneous Th/Xe. This could become an "object_type" parameter
             # if we really cared.
             self.object_boundaries = {
-                'red': [[35, 104], [27, 32]], 'blue': [[35, 104], [27, 32]]}
-            self.sky_pix_boundaries = {'red': [103, 129], 'blue': [103, 129]}
+                'red': [[11, 81], [4, 9]], 'blue': [[11, 81], [4, 9]]}
+            self.sky_pix_boundaries = {'red': [80, 106], 'blue': [80, 106]}
         else:
             raise UserWarning("Invalid Mode")
 
@@ -98,6 +95,7 @@ class SlitView(object):
             central_pix[0]-y_halfwidth:central_pix[0]+y_halfwidth+1,
             central_pix[1]-self.extract_half_width:central_pix[1] +
             self.extract_half_width+1]
+
         # Sum over the 2nd axis, i.e. the x-coordinate.
         profile = np.sum(cutout, axis=1)
         if return_centroid:
@@ -136,7 +134,7 @@ class SlitView(object):
         # WARNING: Dodgy code for now.
         profiles = []
         for boundary in self.object_boundaries[arm]:
-            profiles.append(full_profile)
+            profiles.append(np.copy(full_profile))
             profiles[-1][:boundary[0]] = 0
             profiles[-1][boundary[1]+1:] = 0
         profiles = np.array(profiles)
