@@ -42,6 +42,7 @@ class Extractor():
             Do we transpose the data before extraction? 
         """
         self.arm = polyspect_instance
+        self.slitview = slitview_instance
         self.transpose = transpose
         self.im_slit_sz =  im_slit_sz
         self.gain = gain
@@ -109,10 +110,13 @@ class Extractor():
             self.sim_profile = np.empty((self.im_slit_sz, fluxes.shape[1]))
             for i in range(fluxes.shape[1]):
                 self.square_profile[:, i] = np.array(fluxes[:, i]).repeat(2)
-                im_slit = self.make_lenslets(fluxes=fluxes[:, i])
-                self.sim_profile[:, i] = np.sum(im_slit, axis=0)
+                #!!! Temporarily set the sim_profile to the square profile. 
+                #We may not actually ever need it !!!
+                self.sim_profile = self.square_profile.copy()
+                #im_slit = self.make_lenslets(fluxes=fluxes[:, i])
+                #self.sim_profile[:, i] = np.sum(im_slit, axis=0)
 
-    def one_d_extract(self, data=[], file='', lenslet_profile='sim',
+    def one_d_extract(self, data=[], file='', lenslet_profile='slitview',
                       rnoise=3.0):
         """ Extract flux by integrating down columns (the "y" direction),
         using an optimal extraction method.
@@ -132,7 +136,7 @@ class Extractor():
             A fits file with conventional row/column directions containing the
             data to be extracted.
 
-        lenslet_profile: 'square' or 'sim'
+        lenslet_profile: 'square' or 'sim' or 'slitview'
             Shape of the profile of each fiber as used in the extraction. For a
             final implementation, 'measured' should be a possibility. 'square'
             assigns each pixel uniquely to a single lenslet. For testing only
@@ -180,6 +184,12 @@ class Extractor():
             elif lenslet_profile == 'sim':
                 offsets = self.sim_offsets[:, i]
                 profile = self.sim_profile
+            elif lenslet_profile == 'slitview':
+                profile = self.slitview_instance.slit_profile(arm=self.arm.arm)
+                #!!! Think about this...
+                offsets = np.zeros_like(self.square_offsets)
+            else:
+                raise UserWarning("Unknown lenslet profile...")
             nx_cutout = 2 * int((np.max(offsets) - np.min(offsets)) / 2) + 2
             phi = np.empty((nx_cutout, no))
             for j in range(ny):

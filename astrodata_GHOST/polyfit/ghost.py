@@ -26,7 +26,7 @@ import os
 import numpy as np
 from astrodata_GHOST.polyfit.polyspect import Polyspect
 
-class Arm(Polyspect):
+class GhostArm(Polyspect):
     """A class for each arm of the spectrograph. The initialisation
     function takes a series of strings representing the configuration.
     It can be "red" or "blue" for the arm (first string),
