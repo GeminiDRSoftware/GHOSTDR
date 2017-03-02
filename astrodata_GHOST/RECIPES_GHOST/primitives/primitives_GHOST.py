@@ -22,6 +22,7 @@ from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import StackPri
 from astrodata_GHOST.RECIPES_GHOST.primitives.primitives_GHOST_calibration import GHOST_CalibrationPrimitives
 
 from astrodata_GHOST import polyfit
+from astrodata_GHOST.polyfit import slitview
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import PolyfitDict
 
 class GHOSTPrimitives(GMOSPrimitives,
@@ -316,9 +317,9 @@ class GHOSTPrimitives(GMOSPrimitives,
             The ReductionContext dictionary that holds the data stream
             processing information.
 
-        rc['mask'] : string or None (default: None)
-            name of the fibre mask (if not provided / set to None, the fibre
-            mask will be taken from the 'processed_slitmask' override_cal
+        rc['flat'] : string or None (default: None)
+            name of the slitflat (if not provided / set to None, the slit-
+            flat will be taken from the 'processed_slitflat' override_cal
             command line argument)
 
         rc['slit'] : string or None (default: None)
@@ -360,7 +361,9 @@ class GHOSTPrimitives(GMOSPrimitives,
         elif rc['slitStream'] is not None:
             slit = rc.get_stream(rc['slitStream'])[0].ad
         else:
+            rc.run("getProcessedSlit")
             slit = rc.get_cal(adinput[0], "processed_slit")
+            slit = AstroData(slit)
 
         # If no appropriate slit is found, it is ok not to subtract the
         # slit in QA context; otherwise, raise error
@@ -373,24 +376,29 @@ class GHOSTPrimitives(GMOSPrimitives,
             else:
                 raise Errors.PrimitiveError("No processed slit found")
 
-        # # Check for a user-supplied slitmask
-        # mask = None
-        # if rc['mask'] is not None:
-        #     mask = AstroData(rc['mask'])
-        # else:
-        #     mask = rc.get_cal(adinput[0], "processed_slitmask")
+        # Check for a user-supplied slitflat
+        flat = None
+        if rc['flat'] is not None:
+            flat = AstroData(rc['flat'])
+        else:
+            rc.run("getProcessedSlitFlat")
+            flat = rc.get_cal(adinput[0], 'processed_slitflat')  # from cache
+            flat = AstroData(flat)
 
-        # if mask is None:
-        #     if "qa" in rc.context:
-        #         adoutput_list = adinput  # pass along data with no processing
-        #         adinput = []  # causes the for loop below to be skipped
-        #         log.warning("No changes will be made since no appropriate "
-        #                     "slitmask could be retrieved")
-        #     else:
-        #         raise Errors.PrimitiveError("No processed slitmask found")
+        if flat is None:
+            if "qa" in rc.context:
+                adoutput_list = adinput  # pass along data with no processing
+                adinput = []  # causes the for loop below to be skipped
+                log.warning("No changes will be made since no appropriate "
+                            "slitflat could be retrieved")
+            else:
+                raise Errors.PrimitiveError("No processed slitflat found")
 
-        # some loop-invariant vars based on the median slit frame
-        sldata = slit['SCI', 1].hdulist[1].data
+        # the median slit frame data and the slit flat frame data
+        sv_sci = slit['SCI', 1].hdulist[1].data
+        sv_flat = flat[0].hdulist[1].data
+
+        # per-pixel median absolute deviation, appropriately threshold weighted
         sigma = np.array([ad['SCI', 1].hdulist[1].data for ad in adinput])
         sigma = self._mad(sigma, axis=0) * 60  # starts skipping CRs at 85x
 
@@ -413,29 +421,43 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Check the inputs have matching binning and SCI shapes.
             gt.check_inputs_match(ad1=ad, ad2=slit, check_filter=False)
-            # gt.check_inputs_match(ad1=ad, ad2=mask, check_filter=False)
+            gt.check_inputs_match(ad1=ad, ad2=flat, check_filter=False)
 
             log.fullinfo("Using this slit to reject cosmics from the input "
                          "AstroData object (%s):\n%s" % (ad.filename,
                                                          slit.filename))
 
             addata = ad['SCI', 1].hdulist[1].data
+            res = 'high' if ad.phu.header['SMPNAME'] == 'HI_ONLY' else 'std'
+
+            # pre-CR-corrected flux computation
+            flux_before = self._obj_flux(res, addata, sv_flat)
 
             # replace CR-affected pixels with those from the median slit
             # viewer image (subtract the median slit frame and threshold
             # against the residuals); not sure VAR/DQ planes appropriately
             # handled here
-            indices = abs(addata - sldata) > sigma
-            flux_before = np.sum(addata)  # TODO: mask non-fibre pixels
-            addata[indices] = sldata[indices]
-            flux_after = np.sum(addata)  # TODO: mask non-fibre pixels
+            residuals = abs(addata - sv_sci)
+            indices = residuals > sigma
+            addata[indices] = sv_sci[indices]
+
+            # post-CR-corrected flux computation
+            flux_after = self._obj_flux(res, addata, sv_flat)
+
+            # output the CR-corrected slit view frame
             ad['SCI', 1].hdulist[1].data = addata
 
-            # # to output the residuals for debugging
-            # ad['SCI', 1].hdulist[1].data = abs(addata - sldata)
+            # # uncomment to output the residuals for debugging
+            # myresid = AstroData(data=residuals)
+            # myresid.filename = gt.filename_updater(
+            #     adinput=ad, suffix='_resid')
+            # myresid.write()
 
-            # # to output the indices for debugging
-            # ad['SCI', 1].hdulist[1].data = indices.astype(int)
+            # # uncomment to output the indices for debugging
+            # myindex = AstroData(data=indices.astype(int))
+            # myindex.filename = gt.filename_updater(
+            #     adinput=ad, suffix='_index')
+            # myindex.write()
 
             # log results
             log.stdinfo("   %s: nPixReplaced = %s, flux = %s -> %s" % (
@@ -1018,3 +1040,40 @@ class GHOSTPrimitives(GMOSPrimitives,
         https://en.wikipedia.org/wiki/Median_absolute_deviation
         """
         return np.median(np.absolute(data - np.median(data, axis)), axis)
+
+    # -------------------------------------------------------------------------
+    def _obj_flux(self, res, data, flat_data):
+        """
+        combined red/blue object flux calculation. uses the slitview object to
+        determine sky-subtracted object profiles. in high res mode, the arc
+        profile is returned as an "object" profile, so we discard it explicitly
+        from this calculation
+
+        Parameters
+        ----------
+        res : string
+            either 'high' or 'std'
+
+        data : np.ndarray
+            the slit viewer image data from which to extract the object profiles
+
+        flat_data : np.ndarray
+            the bias-/dark-corrected slit view flat field image used to de-
+            termine sky background levels
+
+        Returns
+        -------
+        flux : float
+            the sky-subtracted object flux, summed
+        """
+        svobj = slitview.SlitView(data, flat_data, mode=res)
+        reds = svobj.object_slit_profiles(  # removes sky by default
+            'red', append_sky=False, normalise_profiles=False)
+        blues = svobj.object_slit_profiles(  # removes sky by default
+            'blue', append_sky=False, normalise_profiles=False)
+        # discard the arc profiles if high res
+        if res == 'high':
+            blues = blues[:1]
+            reds = reds[:1]
+        return reduce(
+            lambda x, y: x+y, [np.sum(z) for z in reds+blues])

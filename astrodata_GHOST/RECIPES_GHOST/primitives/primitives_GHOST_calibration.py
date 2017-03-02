@@ -32,6 +32,10 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         self._getProcessed(rc)
         yield rc
 
+    def getProcessedSlitFlat(self, rc):
+        self._getProcessed(rc)
+        yield rc
+
     def getProcessedPolyfit(self, rc):
         self._getProcessed(rc)
         yield rc
@@ -80,12 +84,12 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
                     if first:
                         log.stdinfo("getCalibration: Results")
                         first = False
-                    log.stdinfo("   %s\n      for %s" % (cal.filename,
-                                                         ad.filename))
+                    log.stdinfo(
+                        "   %s\n      for %s" % (cal.filename, ad.filename))
             else:
                 if "qa" not in rc.context:
-                    raise Errors.InputError("Calibration not found for %s" %
-                                            ad.filename)
+                    raise Errors.InputError(
+                        "Calibration not found for %s" % ad.filename)
 
     def storeProcessedSlit(self, rc):
         self._storeProcessed(rc, 'PRSLITIM')
