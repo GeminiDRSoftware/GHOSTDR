@@ -468,8 +468,9 @@ class SlitViewer(object):
             .strftime("%H:%M:%S.%f")[:-3], 'UT time at observation end')
 
         # resolution-related keywords
-        header['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
-        header['SMPPOS'] = (1 if res == 'high' else 2)
+        if obstype != 'BIAS' and obstype != 'DARK':
+            header['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
+            header['SMPPOS'] = (1 if res == 'high' else 2)
 
         hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
         crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
@@ -1726,8 +1727,9 @@ class Arm(object):
             'Local time at start of observation')  # noqa
 
         # resolution-related keywords
-        hdr['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
-        hdr['SMPPOS'] = (1 if res == 'high' else 2)
+        if obstype != 'BIAS' and obstype != 'DARK':
+            hdr['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
+            hdr['SMPPOS'] = (1 if res == 'high' else 2)
 
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
         crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
