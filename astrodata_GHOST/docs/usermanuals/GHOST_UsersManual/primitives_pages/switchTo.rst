@@ -21,4 +21,6 @@ make current.
 Issues and Limitations
 ----------------------
 
-None.
+Be careful not to specify the parameter ``streamName`` as simply ``stream`` as
+this is a reserved parameter name with special meaning to the recipe framework
+and odd behaviour results when used.
