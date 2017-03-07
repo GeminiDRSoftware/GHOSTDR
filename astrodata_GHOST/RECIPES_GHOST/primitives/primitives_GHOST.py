@@ -65,6 +65,85 @@ class GHOSTPrimitives(GMOSPrimitives,
         return rc
 
     # -------------------------------------------------------------------------
+    def extractProfile(self, rc):
+        """
+        Extract the object profile from a slit or flat image.
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        rc['arm'] : string or None (default: None)
+            The current arm of the spectrograph. Defaults to None, which
+            ought to throw an error.
+
+        rc['slit'] : string or None (default: None)
+            Name of the (processed & stacked) slit image to use for extraction
+            of the profile. If not provided/set to None, the primitive will
+            attempt to pull a processed slit image from rc['slitStream'].
+
+        rc['flat'] : string or None (default: None)
+            Name of the (processed) slit flat image to use for extraction
+            of the profile. If not provided, set to None, the RecipeSystem
+            will attempt to pull a slit flat from the calibrations system (or,
+            if specified, the --override_cal processed_slitflat command-line
+            option)
+
+        rc['slitStream'] : string or None (default: None)
+            The RecipeSystem stream from which to access the (processed &
+            stacked) slit image ot use for extraction of the profile,
+            assuming rc['slit'] is undefined/None. Only the first AstroData
+            in the stream will be used. If not set/set to None, the
+            processed slit image will attempt to be found in the calibrations
+            system (or, if specified, the --override_cal processed_slitflat
+            command-line option)
+
+        Returns
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+        """
+
+        # This is a total bare-bones skeleton, which describes the guts of the
+        # primitive. The underlying code does not yet work, and it still
+        # requires the surrounding primitive gumph (i.e. timestamp keys,
+        # logger calls etc.)
+
+        if rc['slit'] is not None:
+            slit = AstroData(rc['slit'])
+        elif rc['slitStream'] is not None:
+            slit = rc.get_stream(rc['slitStream'])[0].ad
+        else:
+            rc.run('getProcessedSlit')
+            slit = rc.get_val(adinput[0], 'processed_slit')
+            slit = AstroData(slit)
+
+        if rc['flat'] is not None:
+            flat = AstroData(rc['flat'])
+        else:
+            rc.run("getProcessedSlitFlat")
+            flat = rc.get_cal(adinput[0], 'processed_slitflat')  # from cache
+            flat = AstroData(flat)
+
+        for ad in adinput:
+            # Replace these with calls to get actual arm and res info for each
+            # frame
+            arm = 'red'
+            mode = 'std'
+
+            arm = GhostArm(arm=arm, mode=mode)
+            slitview = SlitView(slit[0].data, flat[0].data, mode=mode)
+            extractor = Extractor(arm, slitview)
+            extracted_flux, extracted_var = extractor.one_d_extract(
+                ad['SCI'].data)
+
+            # FIXME How/where to save/use?
+
+        yield rc
+
+    # -------------------------------------------------------------------------
     def findApertures(self, rc):
         """
         Locate the apertures within a GHOST frame, and write out polyfit-
