@@ -400,7 +400,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         # per-pixel median absolute deviation, appropriately threshold weighted
         sigma = np.array([ad['SCI', 1].hdulist[1].data for ad in adinput])
-        sigma = self._mad(sigma, axis=0) * 60  # starts skipping CRs at 85x
+        sigma = self._mad(sigma, axis=0) * 20
 
         # accumulators for computing the mean epoch
         sum_of_weights = 0.0
@@ -481,11 +481,13 @@ class GHOSTPrimitives(GMOSPrimitives,
             latest_start = max(sc_start, sv_start)
             earliest_end = min(sc_end, sv_end)
             overlap = (earliest_end - latest_start).seconds
+            overlap = 0.0 if overlap < 0.0 else overlap  # no overlap edge case
             sv_duration = ad['SCI', 1].hdulist[1].header['EXPTIME']
             overlap /= sv_duration  # convert into a percentage
 
             # compute the offset (the value to be weighted), in seconds,
             # from the start of the science exposure
+            offset = 42.0  # init value: overridden if overlap, else 0-scaled
             if sc_start <= sv_start and sv_end <= sc_end:
                 offset = (sv_start - sc_start).seconds + sv_duration / 2.0
             elif sv_start < sc_start:
