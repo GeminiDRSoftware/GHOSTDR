@@ -14,28 +14,34 @@ import matplotlib.cm as cm
 import astropy.io.fits as pyfits
 #plt.ion()
 
-fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
-#fitsdir='/Users/mireland/data/ghost/cal_frames/'
+user = 'Mike'
+
+if user=='Mike':
+    fitsdir='/Users/mireland/data/ghost/cal_frames/'
+    arclinefile= '/Users/mireland/python/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+    test_files_dir='/Users/mireland/data/ghost/cal_frames/testmodels/'
+else:
+    fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
+    arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+    test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
 
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 arc_file  = fitsdir+"arc95_std_blue.fits"
 flat_file = fitsdir+"flat95_std_2_blue_flat.fits"
-arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
-#arclinefile= '/Users/mireland/python/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+
 #Get the data
 flat_data = pyfits.getdata(flat_file)
 arc_data = pyfits.getdata(arc_file)
 arcwaves, arcfluxes= np.loadtxt(arclinefile,usecols=[1,2]).T
 
 #instantiate the ghostsim arm
-ghost = polyfit.ghost.Arm('blue',mode='std')
+arm = polyfit.GhostArm('blue',mode='std')
 
 # Where is the default location for the model? By default it is a parameter 
 # in the ghost class. If this needs to be overwritten, go ahead.
 xmodel_file=fitsdir+'GHOST_1_1_blue_std_xmodPolyfit.fits'
 
-test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
-#test_files_dir='/Users/mireland/data/ghost/cal_frames/testmodels/'
+# All the other models... which are currently in the "test" directory.
 wmodel_file=test_files_dir+'wparams_blue_std.fits'
 spatmod_file=test_files_dir+'spatmod.fits'
 specmod_file=test_files_dir+'specmod.fits'
@@ -48,12 +54,23 @@ spatpars=pyfits.getdata(spatmod_file)
 specpars=pyfits.getdata(specmod_file)
 rotpars=pyfits.getdata(rotmod_file)
 
+#Input the slit arrays.
+arc_image_array = pyfits.getdata(fitsdir + 'arc95_std_SLIT.fits').astype(float)
+arc_image_array -= np.median(arc_image_array)
+flat_image_array = arc_image_array.copy()
+
 #Create an initial model of the spectrograph.
 #xx, wave, blaze= ghost.spectral_format(xparams=xpars,wparams=wpars)
 
-xx, wave, blaze, matrices = ghost.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
+#(self, xmod, wavemod, spatmod=None,specmod=None, rotmod=None)
+arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
-xxfast, wavefast, blazefast, matricesfast = ghost.spectral_format_with_matrix_fast(xpars,wpars,spatpars,specpars,rotpars)
+#!!! These actually go after the wmodel_file tweaking !!!
+slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='std')
+extractor = polyfit.Extractor(arm, slitview)
+extracted_flux, extracted_var = extractor.one_d_extract(arc_data)
+
+#xxfast, wavefast, blazefast, matricesfast = ghost.spectral_format_with_matrix_fast(xpars,wpars,spatpars,specpars,rotpars)
 #pdb.set_trace()
 sys.exit()
 

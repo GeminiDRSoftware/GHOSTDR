@@ -12,7 +12,7 @@ import matplotlib.cm as cm
 
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance, 
-                 gain = 1.0, rnoise = 3,
+                 gain = 1.0, rnoise = 3.0,
                  badpixmask=[], transpose=False):
         """A class to extract data for each arm of the spectrograph. 
         
@@ -20,6 +20,10 @@ class Extractor():
         equivalent to 2dFDR's tramlines and contains a physical x-coordinate for
         every y (dispersion direction) coordinate and order, and a "w_map", which is
         the wavelength corresponding to every y (dispersion direction) coordinate and order.
+        
+        The slit parameters is defined by the slitview_instance. If a different slit 
+        profile is to be assumed, then another (e.g. simplified or fake) slitview instance
+        should be made, rather than modifying this class.
 
         Parameters
         ----------
@@ -44,80 +48,29 @@ class Extractor():
         self.arm = polyspect_instance
         self.slitview = slitview_instance
         self.transpose = transpose
-        self.im_slit_sz =  im_slit_sz
         self.gain = gain
         self.rnoise = rnoise
         self.badpixmask = badpixmask
-        self.x_map, self.w_map, self.blaze, self.matrices =\
-            self.arm.spectral_format_with_matrix()
-
-        # Set some default pixel offsets for each lenslet, as used for a square
-        # lenslet profile
-        ny = self.x_map.shape[1]
-        nm = self.x_map.shape[0]
         
-        #Stuff do do with a slit profile.
-         # Fill in the slit dimensions in "simulator pixel"s. based on if we are
-        # in the high or standard resolution mode.
-        self.define_profile(self.fluxes)  # !!! THIS STILL DOESN't WORK.
-       
-        self.nlenslets = nlenslets
-        pix_offset_ix = np.append(np.append([0], np.arange(1,self.nlenslets).\
-                                            repeat(2)),self.nlenslets)
-        self.square_offsets = np.empty((2 * self.nlenslets, nm))
-        # The [0,0] component of "matrices" measures the size of a detector
-        # pixel in the simulated slit image space. i.e. slitmicrons/detpix.
-        for i in range(self.nlenslets):
-            self.square_offsets[:, i] = (pix_offset_ix - self.nlenslets / 2.0)*\
-                self.lenslet_width / self.matrices[i,self.x_map.shape[1] //
-                                                   2, 0, 0]
-        self.sim_offsets = np.empty((self.im_slit_sz, nm))
-        # Creat an array of slit positions in microns. !!! Add an optional
-        # offset to this, i.e. a 1D offset !!!
-        im_slit_pix_in_microns = (np.arange(self.im_slit_sz) -
-                                  self.im_slit_sz / 2.0) *\
-            self.microns_pix
-        for i in range(nm):
-            self.sim_offsets[:, i] = im_slit_pix_in_microns / \
-                self.matrices[i, self.x_map.shape[1] // 2, 0, 0]
+        # TODO: This warning could probably be neater.
+        if not isinstance(self.arm.x_map,np.ndarray):
+            raise UserWarning('Input polyspect_instance requires spectral_format_with matrix to be run.')
+        
         # To aid in 2D extraction, let's explicitly compute the y offsets
         # corresponding to these x offsets...
         # The "matrices" map pixels back to slit co-ordinates.
+        ny = self.arm.x_map.shape[1]
+        nm = self.arm.x_map.shape[0]
         self.slit_tilt = np.zeros((nm, ny))
         for i in range(nm):
             for j in range(ny):
-                invmat = np.linalg.inv(self.matrices[i, j])
+                invmat = np.linalg.inv(self.arm.matrices[i, j])
                 # What happens to the +x direction?
                 x_dir_map = np.dot(invmat, [1, 0])
                 self.slit_tilt[i, j] = x_dir_map[1] / x_dir_map[0]
 
-    def define_profile(self, fluxes):
-        """ Manually define the slit profile as used in lenslet extraction. As
-        this is a low-level function, all lenslets must be defined. e.g. by
-        convention, for the star lenslets of the high resolution mode, lenslets
-        0,1 and 21 through 27 would be zero.
-
-        This function should not be needed, and instead the profile should just
-        be measured from the slit viewer"""
-
-        if fluxes.shape[0] != self.nlenslets:
-            print("Error: {0:s} resolution mode must have {1:d} lenslets".\
-                  format(
-                self.mode, self.nlenslets))
-        else:
-            self.square_profile = np.empty(
-                (fluxes.shape[0] * 2, fluxes.shape[1]))
-            self.sim_profile = np.empty((self.im_slit_sz, fluxes.shape[1]))
-            for i in range(fluxes.shape[1]):
-                self.square_profile[:, i] = np.array(fluxes[:, i]).repeat(2)
-                #!!! Temporarily set the sim_profile to the square profile. 
-                #We may not actually ever need it !!!
-                self.sim_profile = self.square_profile.copy()
-                #im_slit = self.make_lenslets(fluxes=fluxes[:, i])
-                #self.sim_profile[:, i] = np.sum(im_slit, axis=0)
-
     def one_d_extract(self, data=[], file='', lenslet_profile='slitview',
-                      rnoise=3.0):
+                      correct_for_sky=True):
         """ Extract flux by integrating down columns (the "y" direction),
         using an optimal extraction method.
 
@@ -136,16 +89,9 @@ class Extractor():
             A fits file with conventional row/column directions containing the
             data to be extracted.
 
-        lenslet_profile: 'square' or 'sim' or 'slitview'
-            Shape of the profile of each fiber as used in the extraction. For a
-            final implementation, 'measured' should be a possibility. 'square'
-            assigns each pixel uniquely to a single lenslet. For testing only
-
-        badpix: (float array, float array)
-            Output of e.g. np.where giving the bad pixel coordinates.
-
-        rnoise: float
-            The assumed readout noise.
+        correct_for_sky: bool
+            Do we correct the object slit profiles for sky? Should be yes for 
+            objects and no for flats/arcs.
 
         WARNING: Binning not implemented yet"""
 
@@ -159,66 +105,76 @@ class Extractor():
                 else:
                     data = pyfits.getdata(file)
 
-        ny = self.x_map.shape[1]
-        nm = self.x_map.shape[0]
-        nx = self.szx
+        ny = self.arm.x_map.shape[1]
+        nm = self.arm.x_map.shape[0]
+        nx = self.arm.szx
 
-        # Number of "objects"
-        no = self.square_profile.shape[1]
+        #Our profiles... TODO: extract x-centroids as well for PRV.
+        profiles = self.slitview.object_slit_profiles(arm=self.arm.arm, correct_for_sky=correct_for_sky)
+
+        # Number of "objects" and "slit pixels"
+        no = profiles.shape[0]
+        n_slitpix = profiles.shape[1]
+        profile_y_microns = (np.arange(n_slitpix) - n_slitpix//2)*self.slitview.microns_pix
+        
+        #To consider slit tilt for a 1D extraction, we need to know the profile centroids in the 
+        #"y" direction.
+        y_ix = np.arange(n_slitpix) - n_slitpix//2
+        y_centroids = np.empty( (no) )
+        x_centroids = np.zeros( (no) )
+        for y_centroid, profile in zip(y_centroids, profiles):
+            y_centroid = np.sum(profile * y_ix)/np.sum(profile)
+        centroids = np.array([x_centroids, y_centroids])
+              
+        #Our extracted arrays.
         extracted_flux = np.zeros((nm, ny, no))
         extracted_var = np.zeros((nm, ny, no))
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
-        pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + rnoise**2)
+        pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + self.rnoise**2)
         pixel_inv_var[self.badpixmask] = 0.0
 
         # Loop through all orders then through all y pixels.
         for i in range(nm):
-            print("Extracting order: {0:d}".format(i))
-            # Based on the profile we're using, create the local offsets and
-            # profile vectors
-            if lenslet_profile == 'square':
-                offsets = self.square_offsets[:, i]
-                profile = self.square_profile
-            elif lenslet_profile == 'sim':
-                offsets = self.sim_offsets[:, i]
-                profile = self.sim_profile
-            elif lenslet_profile == 'slitview':
-                profile = self.slitview_instance.slit_profile(arm=self.arm.arm)
-                #!!! Think about this...
-                offsets = np.zeros_like(self.square_offsets)
-            else:
-                raise UserWarning("Unknown lenslet profile...")
-            nx_cutout = 2 * int((np.max(offsets) - np.min(offsets)) / 2) + 2
+            print("Extracting order: {0:d}".format(i))      
+            
+            #Create an empty weight array. Base the size on the largest slit magnification
+            #for this order.
+            nx_cutout = int(np.ceil(self.slitview.slit_length/np.min(self.arm.matrices[i,:,0,0])))
             phi = np.empty((nx_cutout, no))
+
             for j in range(ny):
+                #Compute offsets in microns directly from the y_centroid and the matrix.
+                #Although this is 2D, we only worry ourselves about the 
+                slitim_offsets = np.dot(self.arm.matrices[i,j], centroids)
+                profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
+            
                 # Check for NaNs
-                if self.x_map[i, j] != self.x_map[i, j]:
+                if self.arm.x_map[i, j] != self.arm.x_map[i, j]:
                     extracted_var[i, j, :] = np.nan
                     continue
+                    
                 # Create our column cutout for the data and the PSF. !!! Is
                 # "round" correct on the next line???
                 x_ix = int(np.round(
-                    self.x_map[i, j])) - nx_cutout // 2 +\
+                    self.arm.x_map[i, j])) - nx_cutout // 2 +\
                     np.arange(nx_cutout, dtype=int) + nx // 2
                 for k in range(no):
                     phi[:, k] = np.interp(
-                        x_ix - self.x_map[i, j] - nx // 2, offsets,
-                        profile[:, k])
+                        x_ix - self.arm.x_map[i, j] - nx // 2, profile_y_pix,
+                        profiles[k])
                     phi[:, k] /= np.sum(phi[:, k])
                 # Deal with edge effects...
                 ww = np.where((x_ix >= nx) | (x_ix < 0))[0]
                 x_ix[ww] = 0
                 phi[ww, :] = 0.0
 
-                # Stop here.
-#                if i==10:
-#                    pdb.set_trace()
 
                 # Cut out our data and inverse variance.
                 col_data = data[j, x_ix]
                 col_inv_var = pixel_inv_var[j, x_ix]
+
                 # Fill in the "c" matrix and "b" vector from Sharp and Birchall
                 # equation 9 Simplify things by writing the sum in the
                 # computation of "b" as a matrix multiplication.
@@ -234,10 +190,10 @@ class Extractor():
                 extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
                 extracted_var[i, j, :] = np.dot(
                     1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights**2)
-                # if ((i % 5)==1) & (j==ny//2):
-                # if (i%5==1) & (j==ny//2):
-                # if (j==ny//2):
-                #    pdb.set_trace()
+                
+                if j==ny//2:      
+                    import pdb; pdb.set_trace() #!!! Testing
+
 
         return extracted_flux, extracted_var
 
