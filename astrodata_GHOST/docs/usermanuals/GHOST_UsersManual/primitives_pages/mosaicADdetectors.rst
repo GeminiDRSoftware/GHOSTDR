@@ -44,10 +44,12 @@ data, and are as follows:
   above).
 
 Until such time as ``astrodata_GHOST`` has been merged into ``astrodata_Gemini``
-(like GMOS and GSAOI have been), the above two hacks will be necessary in order
-for GHOST to make use of Gemini's mosaicing mechanism.
+(like GMOS and GSAOI have been), or ``astrodata_Gemini`` is refactored, the
+above two hacks will be necessary in order for GHOST to make use of Gemini's
+mosaicing mechanism.
 
 Issues and Limitations
 ----------------------
 
-Requires ugly hacks until integration with ``astrodata_Gemini`` is completed.
+Requires ugly hacks until integration with, or refactoring of,
+``astrodata_Gemini`` is completed.
