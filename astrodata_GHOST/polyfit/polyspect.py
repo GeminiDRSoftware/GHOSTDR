@@ -353,6 +353,9 @@ class Polyspect(object):
             An old x pixel array
         image: numpy array
             A 2D image array to be used as the basis for the adjustment.
+        num_xcorr: int
+            Size of the cross correlation function. This should be an indication
+            of how much the cross correlation should move. 
 
         Returns
         -------
@@ -411,9 +414,13 @@ class Polyspect(object):
             If true, once fit is done the adjust_model function
             is called so that the user can inspect the result of the
             fit and decide if it is good enough.
-        clobber: bool
-            If true this will automatically replace the existing model
-            with the fitted one.
+
+        Returns
+        -------
+
+        fitted_parameters: float array
+            The new model parameters fitted. 
+
         """
         xbase, wave, blaze = self.spectral_format(xparams=xparams)
         if self.transpose:
@@ -511,6 +518,12 @@ class Polyspect(object):
         decrease_dim: int
             The factor of decreased dimentionality for the fit.
             This needs to be an exact factor of the y size.
+
+        Returns
+        -------
+        
+        params: float array
+            Fitted parameters.
         """
 
         # Create an array of y and m values.
@@ -622,11 +635,15 @@ class Polyspect(object):
             describing how the slit image rotation varies
             as a function of order on the CCD
         return_arrays: (optional) bool
-            By default, we just set internal object properties. Return the arrays
-            themselves instead as an option.
+            By default, we just set internal object properties. Return the 
+            arrays themselves instead as an option.
 
         Returns
         -------
+
+        All returns are optional, function by default will only update class
+        attributes
+
         x: (norders, ny) float array
             The x-direction pixel co-ordinate corresponding to each y-pixel
             and each order (m).

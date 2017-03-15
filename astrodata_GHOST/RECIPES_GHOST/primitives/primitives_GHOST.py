@@ -147,7 +147,7 @@ class GHOSTPrimitives(GMOSPrimitives,
     def findApertures(self, rc):
         """
         Locate the apertures within a GHOST frame, and write out polyfit-
-        compliant FITS tables to the calibrations system
+        compliant FITS files to the calibrations system
 
         Parameters
         ----------
