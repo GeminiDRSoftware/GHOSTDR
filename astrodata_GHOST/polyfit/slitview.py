@@ -134,7 +134,7 @@ class SlitView(object):
         # WARNING: Dodgy code for now.
         profiles = []
         for boundary in self.object_boundaries[arm]:
-            profiles.append(full_profile)
+            profiles.append(np.copy(full_profile))
             profiles[-1][:boundary[0]] = 0
             profiles[-1][boundary[1]+1:] = 0
 
@@ -145,7 +145,6 @@ class SlitView(object):
             profiles[-1][:self.sky_pix_boundaries[arm][0]] = 0
             profiles[-1][self.sky_pix_boundaries[arm][1]+1:] = 0
         profiles = np.array(profiles)
-
 
         # Normalise profiles if requested (not needed if the total flux is what
         # you're after, e.g. for an mean exposure epoch calculation)
