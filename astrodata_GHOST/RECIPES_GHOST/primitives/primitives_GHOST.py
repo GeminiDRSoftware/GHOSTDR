@@ -210,7 +210,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Run the fitting procedure
             # Instantiate the GhostSim Arm
-            ghost_arm = polyfit.ghost.Arm(arm=ad.arm().as_str(),
+            ghost_arm = polyfit.ghost.GhostArm(arm=ad.arm().as_str(),
                                           mode=ad.res_mode().as_str())
 
             # Read in the model file

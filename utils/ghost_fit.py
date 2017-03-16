@@ -23,7 +23,7 @@ flat_file = "flathigh_red.fits"
 flat_data = pyfits.getdata(flat_file)
 
 #instantiate the ghostsim arm
-ghost = polyfit.ghost.Arm('red',mode='high')
+ghost = polyfit.ghost.GhostArm('red',mode='high')
 
 # Where is the default location for the model? By default it is a parameter 
 # in the ghost class. If this needs to be overwritten, go ahead.

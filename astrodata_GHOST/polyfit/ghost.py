@@ -22,7 +22,7 @@ TODO:
 1) Add spectrograph aberrations (just focus and coma)
 2) Add pupil illumination plus aberrations.
 """
-import os
+from __future__ import division, print_function
 import numpy as np
 from astrodata_GHOST.polyfit.polyspect import Polyspect
 
@@ -32,7 +32,7 @@ class GhostArm(Polyspect):
     It can be "red" or "blue" for the arm (first string),
     and "std" or "high" for the mode (second string).
     """
-            
+
     def __init__(self, arm='blue', mode='std'):
         """Initialisation function that sets all the mode specific parameters
         related to each configuration of the spectrograph.
@@ -46,7 +46,6 @@ class GhostArm(Polyspect):
         else:
             print("Unknown spectrograph arm!")
             raise UserWarning
-                            
         # A lot of these parameters are yet unused.
         # These are a legacy of the original simulator and are left here
         # because they may become useful in the future.
@@ -94,11 +93,11 @@ class GhostArm(Polyspect):
             # simulated data and may need to be revised once we have real
             # data. The same applies to the blue arm parameters.
             if self.mode == 'std':
-                self.fiber_separation = 4.15
-                self.profile_sigma = 1.1
+                fiber_separation = 4.15
+                profile_sigma = 1.1
             elif self.mode == 'high':
-                self.fiber_separation = 2.49
-                self.profile_sigma = 0.7
+                fiber_separation = 2.49
+                profile_sigma = 0.7
         elif self.arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
             #self.extra_rot = 2.0
@@ -106,11 +105,11 @@ class GhostArm(Polyspect):
             # Now put in the default fiber profile parameters for each mode.
             # These are used by the convolution function on polyspect
             if self.mode == 'std':
-                self.fiber_separation = 3.97
-                self.profile_sigma = 1.1
+                fiber_separation = 3.97
+                profile_sigma = 1.1
             elif self.mode == 'high':
-                self.fiber_separation = 2.53
-                self.profile_sigma = 0.7
+                fiber_separation = 2.53
+                profile_sigma = 0.7
         else:
             print("Unknown spectrograph arm!")
             raise UserWarning
@@ -128,8 +127,8 @@ class GhostArm(Polyspect):
                 nfibers = self.nlenslets
 
             for i in range(-nfibers // 2, nfibers // 2):
-                mod_slit += np.exp(-(profilex - i * self.fiber_separation)**2 /
-                                   2.0 / self.profile_sigma**2)
+                mod_slit += np.exp(-(profilex - i * fiber_separation)**2 /
+                                   2.0 / profile_sigma**2)
         else:
             mod_slit = slit_profile
 
