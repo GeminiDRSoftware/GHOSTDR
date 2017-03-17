@@ -376,7 +376,7 @@ class Polyspect(object):
 
         return old_x + the_shift
 
-    def fit_x_to_image(self, data, xparams, decrease_dim=10, search_pix=20,
+    def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=20,
                        xdeg=4, inspect=False):
         """Fit a "tramline" map. Note that an initial map has to be pretty
         close, i.e. within "search_pix" everywhere. To get within search_pix
@@ -421,9 +421,9 @@ class Polyspect(object):
         x_values = self.adjust_x(xbase, image)
 
         if image.shape[0] % decrease_dim != 0:
-            return "Can not decrease image dimention by this amount. " +\
+            raise UserWarning("Can not decrease image dimention by this amount. " +\
                 "Please check if the image size in the spectral dimention " +\
-                "is exactly divisible by this amount."
+                "is exactly divisible by this amount.")
         # Median-filter in the dispersion direction.
         # This process will 'collapse' the image in the spectral direction
         # and make sure the fit is faster.

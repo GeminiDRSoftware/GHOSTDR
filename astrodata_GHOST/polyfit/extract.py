@@ -192,6 +192,9 @@ class Extractor():
                 extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
                 extracted_var[i, j, :] = np.dot(
                     1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights**2)
+                    
+                if j==ny//2:
+                    import pdb; pdb.set_trace()
 
         return extracted_flux, extracted_var
 

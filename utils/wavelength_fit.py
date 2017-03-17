@@ -63,6 +63,9 @@ flat_image_array = arc_image_array.copy()
 #xx, wave, blaze= ghost.spectral_format(xparams=xpars,wparams=wpars)
 
 #(self, xmod, wavemod, spatmod=None,specmod=None, rotmod=None)
+print("Re-fitting to the xpars")
+conv_flat = arm.slit_flat_convolve(flat_data)
+xpars = arm.fit_x_to_image(conv_flat, xpars)
 arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
 #!!! These actually go after the wmodel_file tweaking !!!

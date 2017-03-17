@@ -126,7 +126,7 @@ class GhostArm(Polyspect):
             else:
                 nfibers = self.nlenslets
 
-            for i in range(-nfibers // 2, nfibers // 2):
+            for i in range(-(nfibers // 2), -(nfibers // 2) + nfibers):
                 mod_slit += np.exp(-(profilex - i * fiber_separation)**2 /
                                    2.0 / profile_sigma**2)
         else:
