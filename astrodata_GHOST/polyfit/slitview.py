@@ -116,11 +116,13 @@ class SlitView(object):
         # Find the slit profile.
         full_profile = self.slit_profile(arm=arm)
 
+        if correct_for_sky or append_sky:
+            # Get the flat profile from the flat image.
+            flat_profile = self.slit_profile(arm=arm, use_flat=True)
+            
         # WARNING: This is done in the extracted profile space. Is there any
         # benefit to doing this in pixel space? Maybe yes for the centroid.
         if correct_for_sky:
-            # Get the flat profile from the flat image.
-            flat_profile = self.slit_profile(arm=arm, use_flat=True)
             flat_scaling = np.median(full_profile[
                 self.sky_pix_only_boundaries[arm][0]:
                 self.sky_pix_only_boundaries[arm][1] + 1

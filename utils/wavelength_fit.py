@@ -68,7 +68,7 @@ arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 #!!! These actually go after the wmodel_file tweaking !!!
 slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='std')
 extractor = polyfit.Extractor(arm, slitview)
-extracted_flux, extracted_var = extractor.one_d_extract(arc_data)
+extracted_flux, extracted_var = extractor.one_d_extract(arc_data, correct_for_sky=False)
 
 #xxfast, wavefast, blazefast, matricesfast = ghost.spectral_format_with_matrix_fast(xpars,wpars,spatpars,specpars,rotpars)
 #pdb.set_trace()

@@ -99,11 +99,7 @@ class Extractor():
             if len(file) == 0:
                 print("ERROR: Must input data or file")
             else:
-                if self.transpose:
-                    # Transpose the data from the start.
-                    data = pyfits.getdata(file).T
-                else:
-                    data = pyfits.getdata(file)
+                data = pyfits.getdata(file)
 
         ny = self.arm.x_map.shape[1]
         nm = self.arm.x_map.shape[0]
@@ -111,7 +107,7 @@ class Extractor():
 
         #Our profiles... TODO: extract x-centroids as well for PRV.
         profiles = self.slitview.object_slit_profiles(arm=self.arm.arm, correct_for_sky=correct_for_sky)
-
+        
         # Number of "objects" and "slit pixels"
         no = profiles.shape[0]
         n_slitpix = profiles.shape[1]
@@ -171,9 +167,15 @@ class Extractor():
                 phi[ww, :] = 0.0
 
 
-                # Cut out our data and inverse variance.
-                col_data = data[j, x_ix]
-                col_inv_var = pixel_inv_var[j, x_ix]
+                # Cut out our data and inverse variance. This is where we worry about whether
+                #the data come with orders horizontal (default) or transposed (i.e. like the
+                #physical detector)
+                if self.transpose:
+                    col_data = data[j, x_ix]
+                    col_inv_var = pixel_inv_var[j, x_ix]
+                else:
+                    col_data = data[x_ix, j]
+                    col_inv_var = pixel_inv_var[x_ix, j]
 
                 # Fill in the "c" matrix and "b" vector from Sharp and Birchall
                 # equation 9 Simplify things by writing the sum in the
@@ -190,10 +192,6 @@ class Extractor():
                 extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
                 extracted_var[i, j, :] = np.dot(
                     1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights**2)
-                
-                if j==ny//2:      
-                    import pdb; pdb.set_trace() #!!! Testing
-
 
         return extracted_flux, extracted_var
 
