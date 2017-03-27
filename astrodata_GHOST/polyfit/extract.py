@@ -18,12 +18,13 @@ class Extractor():
         
         The extraction is defined by 3 key parameters: an "x_map", which is
         equivalent to 2dFDR's tramlines and contains a physical x-coordinate for
-        every y (dispersion direction) coordinate and order, and a "w_map", which is
-        the wavelength corresponding to every y (dispersion direction) coordinate and order.
+        every y (dispersion direction) coordinate and order, and a "w_map", 
+        which is the wavelength corresponding to every y (dispersion direction)
+        coordinate and order.
         
-        The slit parameters is defined by the slitview_instance. If a different slit 
-        profile is to be assumed, then another (e.g. simplified or fake) slitview instance
-        should be made, rather than modifying this class.
+        The slit parameters is defined by the slitview_instance. If a different
+        slit profile is to be assumed, then another (e.g. simplified or fake)
+        slitview instance should be made, rather than modifying this class.
 
         Parameters
         ----------
@@ -54,7 +55,8 @@ class Extractor():
         
         # TODO: This warning could probably be neater.
         if not isinstance(self.arm.x_map,np.ndarray):
-            raise UserWarning('Input polyspect_instance requires spectral_format_with matrix to be run.')
+            raise UserWarning('Input polyspect_instance requires \
+            spectral_format_with matrix to be run.')
         
         # To aid in 2D extraction, let's explicitly compute the y offsets
         # corresponding to these x offsets...
@@ -111,10 +113,11 @@ class Extractor():
         # Number of "objects" and "slit pixels"
         no = profiles.shape[0]
         n_slitpix = profiles.shape[1]
-        profile_y_microns = (np.arange(n_slitpix) - n_slitpix//2)*self.slitview.microns_pix
+        profile_y_microns = (np.arange(n_slitpix) -
+                             n_slitpix//2)*self.slitview.microns_pix
         
-        #To consider slit tilt for a 1D extraction, we need to know the profile centroids in the 
-        #"y" direction.
+        # To consider slit tilt for a 1D extraction, we need to know the profile
+        # centroids in the "y" direction.
         y_ix = np.arange(n_slitpix) - n_slitpix//2
         y_centroids = np.empty( (no) )
         x_centroids = np.zeros( (no) )
@@ -193,8 +196,8 @@ class Extractor():
                 extracted_var[i, j, :] = np.dot(
                     1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights**2)
                     
-                if j==ny//2:
-                    import pdb; pdb.set_trace()
+#                if j==ny//2:
+                    #import pdb; pdb.set_trace()
 
         return extracted_flux, extracted_var
 
@@ -428,40 +431,55 @@ class Extractor():
         else:
             return extracted_flux, extracted_var
 
-    def find_lines(self, data, arcfile='lines.txt', outfile='arclines.txt',
-                   hw=10, flat_data=[]):
+    def find_lines(self, flux, arclines, hw=10, flat_data=[],arcfile=[]):
         """Find lines near the locations of input arc lines.
 
         Parameters
         ----------
-        data: numpy array
-            data array
+        flux: numpy array
+            Flux data extracted with the 1D extractor. Just the flux, not the 
+            variance.
 
-        arcfile: string
-            file containing lines """
+        arclines: float array
+            Array containing the wavelength of the arc lines.
+
+        hw: int (optional)
+            Don't know yet what this is
+
+        flat_data: float array
+            Flat field data? For what?
+
+        arcfile: float array
+            Arc file data.
+
+        Returns
+        -------
+        
+        lines_out: float array
+            Whatever used to be placed in a file.
+        """
 
         # First, extract the data
-        flux, var = self.one_d_extract(data=data, rnoise=self.rnoise)
+        # flux, var = self.one_d_extract(data=data, rnoise=self.rnoise)
         # Read in the lines
-        lines = np.loadtxt(arcfile)
+        #lines = np.loadtxt(arcfile)
         # Only use the first lenslet.
         flux = flux[:, :, 0]
-        ny = self.x_map.shape[1]
-        nm = self.x_map.shape[0]
-        nx = self.szx
+        ny = flux.shape[1]
+        nm = flux.shape[0]
+        nx = self.arm.szx
         lines_out = []
         if len(flat_data) > 0:
+            data=arcfile
             data_to_show = data - 0.05 * flat_data
-        else:
-            data_to_show = data.copy()
-        plt.clf()
-        plt.imshow(np.arcsinh((data_to_show - np.median(data_to_show)) / 1e2),
-                   interpolation='nearest', aspect='auto', cmap=cm.gray)
+            plt.imshow(np.arcsinh((data_to_show - np.median(data_to_show)) / 1e2),
+                       interpolation='nearest', aspect='auto', cmap=cm.gray)
+        
         for m_ix in range(nm):
-            w_ix = np.interp(lines, self.w_map[m_ix, :], np.arange(ny))
+            w_ix = np.interp(arclines, self.arm.w_map[m_ix, :], np.arange(ny))
             ww = np.where((w_ix >= hw) & (w_ix < ny - hw))[0]
             w_ix = w_ix[ww]
-            arclines_to_fit = lines[ww]
+            arclines_to_fit = arclines[ww]
             for i, ix in enumerate(w_ix):
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
@@ -474,15 +492,18 @@ class Extractor():
                 g = fit_g(g_init, x, y)
                 #Wave, ypos, xpos, m, amplitude, fwhm
                 xpos = nx // 2 + \
-                    np.interp(g.mean.value, np.arange(ny), self.x_map[m_ix])
+                    np.interp(g.mean.value, np.arange(ny), self.arm.x_map[m_ix])
                 ypos = g.mean.value
-                plt.plot(xpos, ix, 'bx')
-                plt.plot(xpos, ypos, 'rx')  # !!! Maybe around the other way?
-                plt.text(xpos + 10, ypos,
-                         str(arclines_to_fit[i]), color='green', fontsize=10)
+                if len(flat_data) > 0:
+                    plt.plot(xpos, ix, 'bx')
+                    plt.plot(xpos, ypos, 'rx')  # !!! Maybe around the other way?
+                    plt.text(xpos + 10, ypos,
+                             str(arclines_to_fit[i]), color='green', fontsize=10)
                 lines_out.append([arclines_to_fit[i], ypos, xpos, m_ix +
                                   self.arm.m_min, g.amplitude.value,
                                   g.stddev.value * 2.3548])
-        plt.axis([0, nx, ny, 0])
-        lines_out = np.array(lines_out)
-        np.savetxt(outfile, lines_out, fmt='%9.4f %7.2f %7.2f %2d %7.1e %4.1f')
+        if len(flat_data) > 0:
+            plt.axis([0, nx, ny, 0])
+            plt.show()
+        return np.array(lines_out)
+        #np.savetxt(outfile, lines_out, fmt='%9.4f %7.2f %7.2f %2d %7.1e %4.1f')

@@ -134,14 +134,11 @@ class Polyspect(object):
             wave_mod[i] = polyp(y_values[i] - self.szy // 2)
         return wave_mod - waves
 
-    def read_lines_and_fit(self, init_mod, pixdir='',
-                           outdir='./', ydeg=3, xdeg=3, residfile='resid.txt'):
+    def read_lines_and_fit(self, init_mod, arclines, ydeg=3, xdeg=3):
         """Read in a series of text files that have a (Wavelength, pixel)
         format in file names like order99.txt and order100.txt.
         Fit an nth order polynomial to the wavelength as a function
-        of pixel value. THIS IS A PLACE HOLDER FUNCTION NOT PART OF THE
-        LATEST RELEASE. THIS WILL BE USED FOR WAVELENGTH FITTING.
-
+        of pixel value. 
         The functional form is:
 
         ..math::
@@ -170,14 +167,10 @@ class Polyspect(object):
 
         init_mod: 2D array
             initial model parameters.
-        pixdir: string
-            Alternative location for the directory containing the arclines info
-            THIS IS CURRENTLY NOT COMPLIENT WITH THE PROCEDURE WE WANT. ARC
-            LINES MUST BE FED WITHOUT A KNOWLEDGE OF THE FILE LOCATION.
+        arclines: 
+            wavelengths of lines from the find_lines function.
         xdeg, ydeg: int
             Order of polynomial
-        residfile: string
-            Residual file output name
 
         Returns
         -------
@@ -186,37 +179,15 @@ class Polyspect(object):
         wave_and_resid: float array
             Wavelength and fit residuals.
         """
-        if len(pixdir) == 0:
-            print('THIS REQUIRES FURTHER WORK.')
-        else:
-            if not isinstance(pixdir, str):
-                return 'Location for arcline files invalid'
         # The next loop reads in wavelengths from a file.
         # To make this neater, it could be a function that overrides this
         # base class.
         # This code needs more work since we will only have one format
         # for a GHOST arc line list
-        if os.path.exists(pixdir + "arclines.txt"):
-            lines = np.loadtxt(pixdir + "arclines.txt")
-            orders = lines[:, 3]
-            waves = lines[:, 0]
-            y_values = lines[:, 1]
-        else:
-            orders = np.array([])
-            waves = np.array([])
-            y_values = np.array([])
-            for order in range(self.m_min, self.m_max + 1):
-                fname = pixdir + "order{0:d}.txt".format(order)
-                try:
-                    pix = np.loadtxt(fname)
-                except:
-                    print("Error: arc line files don't exist!")
-                    raise UserWarning
-                orders = np.append(orders, order * np.ones(pix.shape[0]))
-                waves = np.append(waves, pix[:, 0])
-                # Tobias's definition of the y-axis is backwards compared to
-                # python.
-                y_values = np.append(y_values, self.szy - pix[:, 1])
+        lines = arclines
+        orders = lines[:, 3]
+        waves = lines[:, 0]
+        y_values = lines[:, 1]
 
         #init_resid = self.wave_fit_resid(init_mod, orders, waves,
         #                                 y_values, ydeg=ydeg, xdeg=xdeg)

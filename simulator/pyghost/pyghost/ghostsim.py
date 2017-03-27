@@ -138,7 +138,7 @@ def thar_spectrum():
         usecols=[0, 1, 2])
     # Create a fixed wavelength scale evenly spaced in log.
     thar_wave = 3600 * np.exp(np.arange(5e5)/5e5)
-    thar_flux = np.zeros(5e5)
+    thar_flux = np.zeros(int(5e5))
     # NB This is *not* perfect: we just find the nearest index of the
     # wavelength scale corresponding to each Th/Ar line.
     wave_ix = (np.log(thar[:, 1]/3600) * 5e5).astype(int)
