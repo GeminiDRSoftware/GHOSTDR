@@ -14,6 +14,7 @@ import matplotlib.cm as cm
 import astropy.io.fits as pyfits
 #plt.ion()
 
+refit_x_pars=False
 user = 'Joao'
 
 if user=='Mike':
@@ -84,15 +85,21 @@ flat_image_array = arc_image_array.copy()
 # xx, wave, blaze= ghost.spectral_format(xparams=xpars,wparams=wpars)
 
 #(self, xmod, wavemod, spatmod=None,specmod=None, rotmod=None)
-#print("Re-fitting to the xpars")
-#conv_flat = arm.slit_flat_convolve(flat_data)
-#xpars = arm.fit_x_to_image(conv_flat, xpars)
+if refit_x_pars:
+    print("Re-fitting to the xpars")
+    conv_flat = arm.slit_flat_convolve(flat_data)
+    xpars = arm.fit_x_to_image(conv_flat, xpars)
+
+slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='std')
 arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
-#!!! These actually go after the wmodel_file tweaking !!!
-slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='std')
+#!!! These lines below actually go after the wmodel_file tweaking !!!
+
+# The extractor is given the polyfit "arm" object, and a slitview object which has
+# been instantiated with the slit viewer data.
 extractor = polyfit.Extractor(arm, slitview)
-extracted_flux, extracted_var = extractor.one_d_extract(arc_data, correct_for_sky=False)
+flat_flux, flat_var = extractor.one_d_extract(flat_data, correct_for_sky=False)
+arc_flux, arc_var = extractor.one_d_extract(arc_data, correct_for_sky=False)
 
 #xxfast, wavefast, blazefast, matricesfast = ghost.spectral_format_with_matrix_fast(xpars,wpars,spatpars,specpars,rotpars)
 #pdb.set_trace()
