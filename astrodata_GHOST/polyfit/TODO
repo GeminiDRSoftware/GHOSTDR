@@ -1,7 +1,0 @@
-This file contains a mental picture of things that can be improved along the way.
-These are notes from Joao to (mostly) himself, in an attempt to keep track of things that could be improved.
-
----- polyspect module -------
-
-- Things can be made more efficient with the spectral format by not having the second loop and replacing it with a single line that does the dot product and matrix inversions.
-- Additionally, one could just avoid doing the evaluate_poly function only once per frame if the model is a single line.
