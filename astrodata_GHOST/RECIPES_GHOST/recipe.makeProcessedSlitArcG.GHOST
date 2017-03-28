@@ -1,0 +1,9 @@
+promote
+prepare  # Gemini superprimitive
+addDQ
+addVAR
+biasCorrect
+darkCorrect
+#rejectCosmicRays
+stackFrames(operation=median, reject_method=none)
+storeProcessedArc
