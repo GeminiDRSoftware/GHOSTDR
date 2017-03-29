@@ -151,3 +151,4 @@ lines_out=extractor.find_lines(extracted_flux, arcwaves, flat_data=flat_data.T,a
 #Now finally do the wavelength fit!
 fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,lines_out,ydeg=3,xdeg=3)
 #shutil.copyfile('wavemod.txt', 'data/subaru/wavemod.txt')
+
