@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.widgets import Slider, Button
 import scipy.optimize as op
+from scipy.interpolate import interp1d
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
@@ -752,7 +753,7 @@ class Polyspect(object):
                                                           xparams=xparams)
 
         # define what is to be plotted
-        def plot_data(model,xparams,wparams):
+        def plot_data(model,xparams,wparams,thar_interp=None):
             """ Function used for working out and defining
             the data to be plotted as a function of purpose 
 
@@ -778,11 +779,19 @@ class Polyspect(object):
             if model=='position':
                 return xbase.flatten()[::10]
             elif model=='wavelength':
+                # This ensures that the thorium argon interpolation is within
+                # range
+                thar_interp[0]=wave.min()
                 return 
             else:
                 raise UserWarning('invalid model type for plot_data')
             return plot_vals
 
+
+        if model=='wavelength':
+            interp_thar=interp1d(thar_spectrum[0],thar_spectrum[1])
+            
+            
         nxbase = data.shape[0]
         # Start by setting up the graphical part
         fig, axx = plt.subplots()
