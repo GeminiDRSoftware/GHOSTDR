@@ -782,7 +782,7 @@ class Polyspect(object):
             xbase, wave, blaze = self.spectral_format(wparams=wparams,
                                                       xparams=xparams)
             if model=='position':
-                return ygrid.flatten()[::10], xbase.flatten()[::10] + nxbase
+                return ygrid.flatten()[::10], xbase.flatten()[::10] + (nxbase //2)
             elif model=='wavelength':
                 # This ensures that the thorium argon interpolation is within
                 # range
@@ -797,15 +797,11 @@ class Polyspect(object):
                 thar_threshold = np.average(flux)*10.
                 ygrid_filtered = ygrid[np.where(flux>thar_threshold)]
                 xbase_filtered = xbase[np.where(flux>thar_threshold)]
-                return ygrid_filtered.flatten(), xbase_filtered.flatten() + nxbase
+                return ygrid_filtered.flatten(), xbase_filtered.flatten() + (nxbase //2)
             else:
                 raise UserWarning('invalid model type for plot_data')
-            return plot_vals
 
 
-        if model=='wavelength':
-            interp_thar=interp1d(thar_spectrum[0],thar_spectrum[1])
-            
             
         nxbase = data.shape[0]
         # Start by setting up the graphical part
@@ -816,8 +812,10 @@ class Polyspect(object):
                             np.arange(x_int.shape[0]))[0]
         # The data must be flattened for the sliders to work.
         # Then plot it!
-        lplot, = plt.plot(ygrid.flatten()[::10], x_int.flatten()[::10] + nxbase
-                          // 2, color='green', linestyle='None', marker='.')
+        to_plot=plot_data(model,xparams,wparams,nxbase,ygrid,
+                                    thar_spectrum)
+        lplot, = plt.plot(to_plot[0],to_plot[1],
+                          color='green', linestyle='None', marker='.')
 
         # Now over plot the image.
         axx.imshow((data - np.median(data)) / 1e2)
@@ -831,22 +829,34 @@ class Polyspect(object):
             """ Function used to trigger updates on sliders """
             for i in range(npolys):
                 for j in range(polyorder):
-                    xparams[i, j] = sliders[i][j].val
-            lplot.set_ydata(xbase.flatten()[::10] + nxbase // 2)
+                    params[i, j] = sliders[i][j].val
+            if model=='position':
+                to_plot=plot_data(model,params,wparams,nxbase,ygrid,
+                                    thar_spectrum)
+            elif model=='wavelength':
+                to_plot=plot_data(model,xparams,params,nxbase,ygrid,
+                                    thar_spectrum)
+            lplot.set_xdata(to_plot[0])
+            lplot.set_ydata(to_plot[1])
             fig.canvas.draw_idle()
 
-        polyorder = xparams.shape[1]
-        npolys = xparams.shape[0]
+        if model=='position':
+            params=xparams
+        elif model=='wavelength':
+            params=wparams
+
+        polyorder = params.shape[1]
+        npolys = params.shape[0]
         # Now we start putting sliders in depending on number of parameters
         height = 1. / (npolys * 2)
         width = 1. / (polyorder * 2)
         # Use this to adjust in a percentage how much to let each parameter
         # vary
-        frac_xparams = np.absolute(xparams * (percentage_variation / 100))
+        frac_params = np.absolute(params * (percentage_variation / 100))
         if vary_wrt_max:
             for i in range(npolys):
-                frac_xparams[i] = np.max(
-                    frac_xparams[-1]) / (nxbase / 2.0)**(npolys - 1 - i)
+                frac_params[i] = np.max(
+                    frac_params[-1]) / (nxbase / 2.0)**(npolys - 1 - i)
         axq = [[0 for x in range(polyorder)] for y in range(npolys)]
         sliders = [[0 for x in range(polyorder)] for y in range(npolys)]
         # Now put all the sliders in the new figure based on position in the
@@ -857,15 +867,15 @@ class Polyspect(object):
                 bottom = 1 - (i + 1) * height * 2 + height
                 axq[i][j] = plt.axes([left, bottom, width, height],
                                      axisbg=axcolor)
-                if xparams[i, j] == 0:
+                if params[i, j] == 0:
                     sliders[i][j] = Slider(axq[i][j],
                                            'coeff' + str(i) + str(j), 0, 0.1,
-                                           valinit=xparams[i, j])
+                                           valinit=params[i, j])
                 else:
                     sliders[i][j] = Slider(axq[i][j], 'coeff' + str(i) + str(j),
-                                           xparams[i, j] - frac_xparams[i, j],
-                                           xparams[i, j] + frac_xparams[i, j],
-                                           valinit=xparams[i, j])
+                                           params[i, j] - frac_params[i, j],
+                                           params[i, j] + frac_params[i, j],
+                                           valinit=params[i, j])
                 plt.legend(loc=3)
                 sliders[i][j].on_changed(update)
 
@@ -878,11 +888,11 @@ class Polyspect(object):
         def submit(event):
             """Function for the button tasks"""
             plt.close('all')
-            return xparams
+            return params
 
         button.on_clicked(submit)
 
         plt.show()
-        return xparams
+        return params
 
 
