@@ -695,7 +695,7 @@ class Polyspect(object):
         return flat
 
     def manual_model_adjust(self, data, model='position', wparams=None,
-                            xparams=None, thar_spectrum,
+                            xparams=None, thar_spectrum=None,
                             percentage_variation=10, vary_wrt_max=True):
         """Function that uses matplotlib slider widgets to adjust a polynomial
         model overlaid on top of a flat field image. In practice this will be
@@ -724,13 +724,13 @@ class Polyspect(object):
             model parameters.
         xparams: float array 
             2D array containing the initial order location model parameters.
-        thar_spectrum: floar array
+        thar_spectrum: floar array (optional)
             2D array containing the thar spectrum (from the simulator code) as a
             function of wavelenght.
-        percentage_variation: int
+        percentage_variation: int (optional)
             How much should the percentage adjustment in each bin as a function
             of the parameter. Default is 10%
-        vary_wrt_max: bool
+        vary_wrt_max: bool (optional)
             Vary all parameters intelligently with a scaling of the maximum
             variation, rather than just a percentage of each.
 
@@ -753,7 +753,7 @@ class Polyspect(object):
                                                           xparams=xparams)
 
         # define what is to be plotted
-        def plot_data(model,xparams,wparams,thar_interp=None):
+        def plot_data(model,xparams,wparams,nxbase,ygrid,thar_spectrum=None):
             """ Function used for working out and defining
             the data to be plotted as a function of purpose 
 
@@ -767,7 +767,12 @@ class Polyspect(object):
                 The (adjusted) position model parameters
             wparams: float array
                 The (adjusted) wavelenght model parameters 
-            
+            nxbase: float array
+                The amount to add to the xbase after the spectral format
+            ygrid: float array
+                The grid of y values to plot against. This needs to be modified
+            in order to ensure it is the quickest plot method possible.
+
             Returns
             -------
             
@@ -777,12 +782,22 @@ class Polyspect(object):
             xbase, wave, blaze = self.spectral_format(wparams=wparams,
                                                       xparams=xparams)
             if model=='position':
-                return xbase.flatten()[::10]
+                return ygrid.flatten()[::10], xbase.flatten()[::10] + nxbase
             elif model=='wavelength':
                 # This ensures that the thorium argon interpolation is within
                 # range
-                thar_interp[0]=wave.min()
-                return 
+                thar_spectrum[0][0]=wave.min()
+                thar_spectrum[0][-1]=wave.max()
+                thar_spectrum[1][0]=0.0
+                thar_spectrum[1][-1]=0.0
+                interp_thar=interp1d(thar_spectrum[0],thar_spectrum[1])
+                flux = interp_thar(wave)
+                # Now remove anything that is below 100 times the average sigma.
+                # This means only the very brightest lines are displayed.
+                thar_threshold = np.average(flux)*10.
+                ygrid_filtered = ygrid[np.where(flux>thar_threshold)]
+                xbase_filtered = xbase[np.where(flux>thar_threshold)]
+                return ygrid_filtered.flatten(), xbase_filtered.flatten() + nxbase
             else:
                 raise UserWarning('invalid model type for plot_data')
             return plot_vals
