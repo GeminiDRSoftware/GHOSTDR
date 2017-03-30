@@ -5,8 +5,7 @@ from astrodata.utils import Errors
 
 from gempy.gemini import gemini_tools as gt
 
-from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_calibration import \
-    CalibrationPrimitives
+from primitives_calibration import CalibrationPrimitives
 
 class GHOST_CalibrationPrimitives(CalibrationPrimitives):
     """

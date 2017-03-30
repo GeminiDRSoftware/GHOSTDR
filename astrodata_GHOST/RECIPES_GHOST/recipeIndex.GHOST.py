@@ -12,5 +12,5 @@ localAstroTypeRecipeIndex = {
                             "GHOST_SLITV_DARK":   ["makeProcessedSlitDarkG"],
                             "GHOST_SLITV_ARC":    ["makeProcessedSlitArcG"],
                             "GHOST_SLITV_FLAT":   ["makeProcessedSlitFlatG"],
-                            "GHOST_SLITV_IMAGE":  ["makeProcessedSlitG"],
+                            "GHOST_SLITV_IMAGE":  ["reduceSlitG"],
                             }

@@ -4,6 +4,15 @@
 # This is a dictionary of dictionaries of dictionaries (... not that bad.)
 
 {
+    "correctSlitCosmics": {
+        "suffix": {
+            "default":        "_slitCosmicsCorrected",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
     "findApertures": {
         "suffix": {
             "default":        "_findAper",

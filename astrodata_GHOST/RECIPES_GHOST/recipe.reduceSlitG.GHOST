@@ -6,10 +6,7 @@ biasCorrect  # subrecipe
 ADUToElectrons
 addVAR(poisson_noise=True)
 darkCorrect  # subrecipe
-fork(newStream=preMedian)
-stackFrames(operation=median, reject_method=none)
-fork(newStream=medianSlit)
-switchTo(streamName=preMedian)
-processSlits(slitStream=medianSlit)
+correctSlitCosmics
+processSlits
 stackFrames(operation=average, reject_method=none)
 storeProcessedSlit  # empties current stream

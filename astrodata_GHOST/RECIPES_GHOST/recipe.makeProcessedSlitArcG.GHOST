@@ -4,6 +4,6 @@ addDQ
 addVAR
 biasCorrect
 darkCorrect
-#rejectCosmicRays
+correctSlitCosmics #rejectCosmicRays
 stackFrames(operation=median, reject_method=none)
 storeProcessedArc
