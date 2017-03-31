@@ -13,6 +13,15 @@
             "uiLevel":        "UIBASIC",
             },
         },
+    "extractProfile": {
+      "suffix": {
+            "default":        "_extProf",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
     "findApertures": {
         "suffix": {
             "default":        "_findAper",

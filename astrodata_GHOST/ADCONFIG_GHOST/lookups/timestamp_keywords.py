@@ -5,6 +5,7 @@ timestamp_keys = {
     # writing a timestamp keyword to the header once the user level function
     # has completed
     "correctSlitCosmics": "FXSLITCR",
+    "extractProfile": "EXTRPROF",
     "findApertures": "FINDAPER",
     "processSlits": "PROCSLIT",
     "standardizeHeaders": "SDZHDRS",

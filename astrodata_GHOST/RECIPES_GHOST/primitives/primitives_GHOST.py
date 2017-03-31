@@ -78,6 +78,10 @@ class GHOSTPrimitives(GMOSPrimitives,
             The current arm of the spectrograph. Defaults to None, which
             ought to throw an error.
 
+        rc['mode'] : string or None (default: None)
+            The current mode of the spectrograph. Default to None, which
+            ought to throw an error.
+
         rc['slit'] : string or None (default: None)
             Name of the (processed & stacked) slit image to use for extraction
             of the profile. If not provided/set to None, the primitive will
@@ -106,10 +110,17 @@ class GHOSTPrimitives(GMOSPrimitives,
             alterations.
         """
 
-        # This is a total bare-bones skeleton, which describes the guts of the
-        # primitive. The underlying code does not yet work, and it still
-        # requires the surrounding primitive gumph (i.e. timestamp keys,
-        # logger calls etc.)
+        log = logutils.get_logger(__name__)
+
+        # Log the standard "starting primitive" debug message
+        log.debug(gt.log_message("primitive", "extractProfile", "starting"))
+
+        # Define the keyword to be used for the time stamp for this primitive
+        timestamp_key = self.timestamp_keys["extractProfile"]
+
+        # Initialize the list of output AstroData objects
+        # These will be object profile extractions of the ad input list
+        adoutput_list = []
 
         if rc['slit'] is not None:
             slit = AstroData(rc['slit'])
@@ -127,11 +138,11 @@ class GHOSTPrimitives(GMOSPrimitives,
             flat = rc.get_cal(adinput[0], 'processed_slitflat')  # from cache
             flat = AstroData(flat)
 
-        for ad in adinput:
+        for ad in rc.get_inputs_as_astrodata():
             # Replace these with calls to get actual arm and res info for each
             # frame
-            arm = 'red'
-            mode = 'std'
+            arm = rc['arm']
+            mode = rc['mode']
 
             arm = GhostArm(arm=arm, mode=mode)
             slitview = SlitView(slit[0].data, flat[0].data, mode=mode)
