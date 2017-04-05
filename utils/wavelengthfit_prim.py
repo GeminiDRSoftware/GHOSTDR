@@ -48,7 +48,9 @@ slitview = polyfit.SlitView(image_array, flat_image_array, mode='std')
 extractor = polyfit.Extractor(arm, slitview)
 
 #Now find the other lines, after first re-loading into the extractor.
-lines_out=extractor.find_lines(extracted_flux, arcwaves)
+# the inspect parameter is a verbose option for visualising the line
+# finding results
+lines_out=extractor.find_lines(extracted_flux, arcwaves, inspect=False)
 
 #Now finally do the wavelength fit!
 fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,lines_out,ydeg=3,xdeg=3)
