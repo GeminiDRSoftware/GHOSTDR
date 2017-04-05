@@ -431,7 +431,8 @@ class Extractor():
         else:
             return extracted_flux, extracted_var
 
-    def find_lines(self, flux, arclines, hw=10, flat_data=[],arcfile=[]):
+    def find_lines(self, flux, arclines, hw=10, flat_data=[],arcfile=[],
+                   inspect=False):
         """Find lines near the locations of input arc lines.
 
         Parameters
@@ -444,13 +445,17 @@ class Extractor():
             Array containing the wavelength of the arc lines.
 
         hw: int (optional)
-            Don't know yet what this is
+            Number of pixels from each order end to be ignored due to proximity
+            with the edge of the chip.
 
         flat_data: float array
             Flat field data? For what?
 
         arcfile: float array
             Arc file data.
+
+        inspect: boolean (optional)
+            If true, show display of lines and where they are predicted to fall
 
         Returns
         -------
@@ -459,32 +464,46 @@ class Extractor():
             Whatever used to be placed in a file.
         """
 
-        # First, extract the data
-        # flux, var = self.one_d_extract(data=data, rnoise=self.rnoise)
-        # Read in the lines
-        #lines = np.loadtxt(arcfile)
-        # Only use the first lenslet.
-        flux = flux[:, :, 0]
+        # Only use the middle object.
+        # In High res mode this will be the object, in std mode it's the sky
+        flux = flux[:, :, 1]
         ny = flux.shape[1]
         nm = flux.shape[0]
         nx = self.arm.szx
         lines_out = []
+        # If flat is provided, do a quick flat subtraction.
         if len(flat_data) > 0:
             data=arcfile
             data_to_show = data - 0.05 * flat_data
             plt.imshow(np.arcsinh((data_to_show - np.median(data_to_show)) / 1e2),
                        interpolation='nearest', aspect='auto', cmap=cm.gray)
-        
+        else:
+            data_to_show = data
+        if inspect:
+            plt.imshow(np.arcsinh((data_to_show - np.median(data_to_show)) / 1e2),
+                       interpolation='nearest', aspect='auto', cmap=cm.gray)
+        # Let's try the median absolute deviation as a measure of background
+        # noise.
+        noise_level = np.median(np.abs(data_to_show-np.median(data_to_show)))
         for m_ix in range(nm):
-            w_ix = np.interp(arclines, self.arm.w_map[m_ix, :], np.arange(ny))
+            filtered_arclines=arclines[(arclines >=  self.arm.w_map[m_ix, :].min())
+                                       & (arclines <= self.arm.w_map[m_ix, :].max())]
+            w_ix = np.interp(filtered_arclines, self.arm.w_map[m_ix, :], np.arange(ny))
             ww = np.where((w_ix >= hw) & (w_ix < ny - hw))[0]
             w_ix = w_ix[ww]
-            arclines_to_fit = arclines[ww]
+            arclines_to_fit = filtered_arclines[ww]
+            print('order ', m_ix)
             for i, ix in enumerate(w_ix):
+                # This ensures that lines too close together are not used in the
+                # fit, whilst avoiding looking at indeces that don't exist.
+                if (np.abs(ix-w_ix[i-1])<1.5*hw):
+                    continue
+                elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.5*hw):
+                    continue
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
-                y -= np.min(y)  # Rough...
-                if np.max(y) < 25 * self.rnoise:
+                # Any line with peak S/N under a value is not considered.
+                if np.max(y) < 100 * noise_level:
                     continue
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
@@ -494,16 +513,16 @@ class Extractor():
                 xpos = nx // 2 + \
                     np.interp(g.mean.value, np.arange(ny), self.arm.x_map[m_ix])
                 ypos = g.mean.value
-                if len(flat_data) > 0:
+                if inspect:
                     plt.plot(xpos, ix, 'bx')
-                    plt.plot(xpos, ypos, 'rx')  # !!! Maybe around the other way?
+                    plt.plot(xpos, ypos, 'rx')
                     plt.text(xpos + 10, ypos,
                              str(arclines_to_fit[i]), color='green', fontsize=10)
                 lines_out.append([arclines_to_fit[i], ypos, xpos, m_ix +
                                   self.arm.m_min, g.amplitude.value,
                                   g.stddev.value * 2.3548])
-        if len(flat_data) > 0:
+        if inspect:
             plt.axis([0, nx, ny, 0])
             plt.show()
         return np.array(lines_out)
-        #np.savetxt(outfile, lines_out, fmt='%9.4f %7.2f %7.2f %2d %7.1e %4.1f')
+

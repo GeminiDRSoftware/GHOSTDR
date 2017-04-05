@@ -124,7 +124,7 @@ def frequency_noise(noise_freqs, sample_rate, shape, mean=0.0, std=1.0):
     return mean + std/math.sqrt(2)*nsamples*fftnoise(samples).reshape(shape, order='F')
 
 
-def thar_spectrum():
+def thar_spectrum(ar_only=False):
     """Calculates a ThAr spectrum. Note that the flux scaling here is roughly correct
     for the lamp with no neutral density.
 
@@ -133,9 +133,14 @@ def thar_spectrum():
     wave, flux: ThAr spectrum (wavelength in um, flux in photons/s?)
     """
 
-    thar = np.loadtxt(
-        os.path.join(LOCAL_DIR, 'data/mnras0378-0221-SD1.txt'),
-        usecols=[0, 1, 2])
+    if ar_only:
+        thar = np.loadtxt(
+            os.path.join(LOCAL_DIR, 'data/mnras_ar_only.txt'),
+            usecols=[0, 1, 2])
+    else:
+        thar = np.loadtxt(
+            os.path.join(LOCAL_DIR, 'data/mnras0378-0221-SD1.txt'),
+            usecols=[0, 1, 2])
     # Create a fixed wavelength scale evenly spaced in log.
     thar_wave = 3600 * np.exp(np.arange(5e5)/5e5)
     thar_flux = np.zeros(int(5e5))
