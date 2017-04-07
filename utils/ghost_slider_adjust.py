@@ -58,7 +58,7 @@ if (model!='W') and (model!='X'):
     sys.exit()
 # Regardless, need to initialise a few things.
 
-mode = 'std'
+mode = 'high'
 cam = 'red'
 user='Joao'
 #instantiate the ghostsim arm
@@ -79,8 +79,8 @@ if user=='Joao':
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_xmodPolyfit.fits'
-
+    #xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_xmodPolyfit.fits'
+    xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'  
     # All the other models... which are currently in the "test" directory.
     #wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
@@ -126,7 +126,7 @@ if model=='X':
     if q.upper()=='Y':
         #Re-fit. Make fit return new model.
         adjusted_params=ghost.fit_x_to_image(flat_conv,xparams=adjusted_params,
-                                             decrease_dim=8,inspect=True)
+                                             decrease_dim=8,search_pix=30,inspect=True)
 
 elif model=='W':
     #

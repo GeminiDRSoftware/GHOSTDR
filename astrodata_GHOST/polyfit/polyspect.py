@@ -54,7 +54,7 @@ class Polyspect(object):
             against
         y_values: float array
             This is the value or array of values for the second order polynomial
-            functions to be aveluated against."""
+            functions to be evaluated against."""
         # params needs to be a np.array
         if not isinstance(params, np.ndarray):
             raise TypeError('Please provide params as a numpy float array')
@@ -426,12 +426,18 @@ class Polyspect(object):
                                     search_pix:self.szx // 2 +
                                     xind + search_pix + 1]
                 x_values[i, j] += np.argmax(peakpix) - search_pix
-
+        if inspect:
+            plt.clf()
+            plt.imshow(data)
+            plt.plot(y_values,x_values+self.szx//2,'.')
+            plt.show()
+        
         fitted_params = self.fit_to_x(x_values, xparams, y_values=y_values,
                                       xdeg=xdeg)
         if inspect:
             # This will plot the result of the fit once successful so
             # the user can inspect the result.
+            plt.clf()
             plt.imshow((data - np.median(data)) / 1e2)
             x_int, wave_int, blaze_int = \
                 self.spectral_format(wparams=None, xparams=fitted_params)
