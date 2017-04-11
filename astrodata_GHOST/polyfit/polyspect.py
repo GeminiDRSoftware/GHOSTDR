@@ -39,41 +39,8 @@ class Polyspect(object):
         self.blaze = None
         self.matrices = None
 
-    def evaluate_poly(self, params, mprime, y_values):
-        """ Function used to evaluate a polynomial of polynomials at specific
-        points. This is a function designed to avoid code repetition.
 
-        Parameters
-        ----------
-
-        params: float array
-            Model parameters with the coefficients to evaluate.
-        mprime: float
-            This is the mprime as defined in the spectral format function. This
-            parameter is what the first order of polynomials are evaluated
-            against
-        y_values: float array
-            This is the value or array of values for the second order polynomial
-            functions to be evaluated against."""
-        # params needs to be a np.array
-        if not isinstance(params, np.ndarray):
-            raise TypeError('Please provide params as a numpy float array')
-        if not isinstance(y_values, np.ndarray):
-            raise TypeError('Please provide y_values as a numpy float array')
-        ydeg = params.shape[0] - 1
-        if params.ndim == 1:
-            polyp = np.poly1d(params)
-            evaluation = polyp(mprime)
-        else:
-            polynomials = np.empty((ydeg + 1))
-            for i in range(ydeg + 1):
-                polyq = np.poly1d(params[i, :])
-                polynomials[i] = polyq(mprime)
-            polyp = np.poly1d(polynomials)
-            evaluation = polyp(y_values - self.szy // 2)
-        return evaluation
-
-    def evaluate_poly_fit(self, params):
+    def evaluate_poly(self, params):
         """ Function used to evaluate a polynomial of polynomials given model
         parameters. This is a function designed to avoid code repetition.
 
@@ -99,7 +66,8 @@ class Polyspect(object):
         y_values, orders = np.meshgrid(np.arange(self.szy),
                                        np.arange(self.m_max - self.m_min + 1) +
                                        self.m_min)
-        mprime = self.m_ref / orders - 1
+        orders = orders[:,0]
+        mprime = np.float(self.m_ref) / orders - 1
         if params.ndim == 1:
             polyp = np.poly1d(params)
             evaluation = polyp(mprime)
@@ -109,7 +77,7 @@ class Polyspect(object):
             for i in range(ydeg + 1):
                 polyq = np.poly1d(params[i, :])
                 polynomials[:, i] = polyq(mprime)
-            evaluation = np.empty(len(orders))
+            evaluation = np.empty(y_values.shape)
             for i in range(len(orders)):
                 polyp = np.poly1d(polynomials[i, :])
                 evaluation[i] = polyp(y_values[i] - self.szy // 2)
