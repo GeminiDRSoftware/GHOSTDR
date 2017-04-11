@@ -58,8 +58,8 @@ if (model!='W') and (model!='X'):
     sys.exit()
 # Regardless, need to initialise a few things.
 
-mode = 'high'
-cam = 'red'
+mode = 'std'
+cam = 'blue'
 user='Joao'
 #instantiate the ghostsim arm
 ghost = polyfit.ghost.GhostArm(cam,mode=mode)
@@ -79,14 +79,14 @@ if user=='Joao':
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
-    #xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_xmodPolyfit.fits'
-    xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'  
+    xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_xmodPolyfit.fits'
+    #xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'  
     # All the other models... which are currently in the "test" directory.
-    #wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
+    wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/wmod.txt'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/fitted_wmod.fits'
-    wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'    
+    #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'    
     spatmod_file=test_files_dir+'spatmod.fits'
     specmod_file=test_files_dir+'specmod.fits'
     rotmod_file=test_files_dir+'rotmod2.fits'

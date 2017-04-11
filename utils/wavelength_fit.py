@@ -46,12 +46,12 @@ elif user=='Joao':
     #arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
     test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-    arc_file  = fitsdir+"arcs_full/arc95_std_red_arc.fits"
-    flat_file = fitsdir+"flat95_std_1_red_flat.fits"
+    arc_file  = fitsdir+"arcs_full/arc95_std_blue_arc.fits"
+    flat_file = fitsdir+"flat95_std_1_blue_flat.fits"
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_red_std_xmodPolyfit.fits'
+    xmodel_file=fitsdir+'GHOST_1_1_blue_std_xmodPolyfit.fits'
 
     # All the other models... which are currently in the "test" directory.
     #wmodel_file=test_files_dir+'wparams_red_std.fits'
@@ -71,7 +71,7 @@ arc_data = pyfits.getdata(arc_file)
 arcwaves, arcfluxes= np.loadtxt(arclinefile,usecols=[1,2]).T
 
 #instantiate the ghostsim arm
-arm = polyfit.GhostArm('red',mode='std')
+arm = polyfit.GhostArm('blue',mode='std')
 
 
 #Get the initial default model from the lookup location

@@ -39,8 +39,41 @@ class Polyspect(object):
         self.blaze = None
         self.matrices = None
 
+    def evaluate_poly(self, params, mprime, y_values):
+        """ Function used to evaluate a polynomial of polynomials at specific
+        points. This is a function designed to avoid code repetition.
 
-    def evaluate_poly(self, params):
+        Parameters
+        ----------
+
+        params: float array
+            Model parameters with the coefficients to evaluate.
+        mprime: float
+            This is the mprime as defined in the spectral format function. This
+            parameter is what the first order of polynomials are evaluated
+            against
+        y_values: float array
+            This is the value or array of values for the second order polynomial
+            functions to be evaluated against."""
+        # params needs to be a np.array
+        if not isinstance(params, np.ndarray):
+            raise TypeError('Please provide params as a numpy float array')
+        if not isinstance(y_values, np.ndarray):
+            raise TypeError('Please provide y_values as a numpy float array')
+        ydeg = params.shape[0] - 1
+        if params.ndim == 1:
+            polyp = np.poly1d(params)
+            evaluation = polyp(mprime)
+        else:
+            polynomials = np.empty((ydeg + 1))
+            for i in range(ydeg + 1):
+                polyq = np.poly1d(params[i, :])
+                polynomials[i] = polyq(mprime)
+            polyp = np.poly1d(polynomials)
+            evaluation = polyp(y_values - self.szy // 2)
+        return evaluation
+
+    def evaluate_poly_fit(self, params):
         """ Function used to evaluate a polynomial of polynomials given model
         parameters. This is a function designed to avoid code repetition.
 
