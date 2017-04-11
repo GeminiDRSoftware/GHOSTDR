@@ -103,7 +103,7 @@ class Polyspect(object):
         mprime = np.float(self.m_ref) / orders - 1
         if params.ndim == 1:
             polyp = np.poly1d(params)
-            evaluation = polyp(mprime)
+            evaluation = np.meshgrid(np.arange(self.szy),polyp(mprime))[1]
         else:
             polynomials = np.empty((len(orders), ydeg + 1))
             # Find the polynomial coefficients for each order.
