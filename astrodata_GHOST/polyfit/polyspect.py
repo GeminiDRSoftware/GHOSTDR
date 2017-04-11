@@ -248,6 +248,86 @@ class Polyspect(object):
         params = bestp[0].reshape((ydeg + 1, xdeg + 1))
         return params, wave_and_resid
 
+    def spectral_format_simple(self, wparams=None, xparams=None, img=None):
+        """Create a spectrum, with wavelengths sampled in 2 orders based on
+           a pre-existing wavelength and x position polynomial model.
+           This code takes the polynomial model and calculates the result as
+           a function of order number scaled to the reference order and then
+           as a function of y position.
+           Optionally a file can be supplied for the model to be overlayed
+           on top of.
+
+        Parameters
+        ----------
+        wparams: float array (optional)
+            2D array with polynomial parameters for wavelength scale
+        xparams: float array (optional)
+            2D array with polynomial parameters for x scale
+        img: 2D array (optional)
+            2D array containing an image. This function
+            uses this image and over plots the created position model.
+
+        Returns
+        -------
+        x:  (nm, ny) float array
+            The x-direction pixel co-ordinate corresponding to each y-pixel and
+            each order (m).
+        wave: (nm, ny) float array
+            The wavelength co-ordinate corresponding to each y-pixel and each
+            order (m).
+        blaze: (nm, ny) float array
+            The blaze function (pixel flux divided by order center flux)
+            corresponding to each y-pixel and each order (m).
+        ccd_centre: dict
+            NOT YET IMPLEMENTED
+            Parameters of the internal co-ordinate system describing the
+            center of the CCD.
+        """
+
+        # Now lets interpolate onto a pixel grid rather than the arbitrary
+        # wavelength grid we began with.
+        norders = self.m_max - self.m_min + 1
+
+        if (xparams is None) and (wparams is None):
+            raise UserWarning(
+                'Must provide at least one of xparams or wparams')
+        if (xparams is not None) and (not isinstance(xparams, np.ndarray)):
+            raise UserWarning('xparams provided with invalid format')
+        if (wparams is not None) and (not isinstance(wparams, np.ndarray)):
+            raise UserWarning('xparams provided with invalid format')
+
+        y_values, orders = np.meshgrid(np.arange(self.szy),
+                                       np.arange(self.m_max - self.m_min + 1) +
+                                       self.m_min)
+        order = orders[:,0]
+        wave_int = self.evaluate_poly_fit(wparams)
+        x_int = self.evaluate_poly_fit(xparams)
+        
+        # Finally, the blaze
+        wcen = wave_int[:, int(self.szy / 2)]
+        disp = wave_int[:, int(self.szy / 2 + 1)] - wcen
+        order_width = (wcen / order) / disp
+        order_width = np.meshgrid(np.arange(self.szy),order_width)[1]
+        blaze_int = np.sinc((y_values - self.szy / 2)
+                                                   / order_width)**2
+
+        # Plot this if we have an image file
+        if (img is not None) and (xparams is not None):
+            if not isinstance(img, np.ndarray):
+                raise UserWarning('img must be numpy array')
+            if img.ndim != 2:
+                raise UserWarning('Image array provided is not a 2 dimensional\
+                array')
+            if not self.transpose:
+                img = img.T
+            plt.clf()
+            plt.imshow(np.arcsinh((img - np.median(img)) / 100), aspect='auto',
+                       interpolation='nearest', cmap=cm.gray)
+            plt.axis([0, img.shape[1], img.shape[0], 0])
+            plt.plot(x_int.T + + self.szx // 2)
+
+        return x_int, wave_int, blaze_int
+
     def spectral_format(self, wparams=None, xparams=None, img=None):
         """Create a spectrum, with wavelengths sampled in 2 orders based on
            a pre-existing wavelength and x position polynomial model.
