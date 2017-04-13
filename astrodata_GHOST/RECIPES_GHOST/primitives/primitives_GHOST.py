@@ -139,18 +139,23 @@ class GHOSTPrimitives(GMOSPrimitives,
             flat = AstroData(flat)
 
         for ad in rc.get_inputs_as_astrodata():
-            # Replace these with calls to get actual arm and res info for each
-            # frame
+            # FIXME Replace these with calls to get actual arm and res info for
+            # each frame
             arm = rc['arm']
             mode = rc['mode']
 
             arm = GhostArm(arm=arm, mode=mode)
+            # FIXME Read in parameters from calibration system
+            # FIXME
+            arm.spectral_format_with_matrix()
+
             slitview = SlitView(slit[0].data, flat[0].data, mode=mode)
             extractor = Extractor(arm, slitview)
             extracted_flux, extracted_var = extractor.one_d_extract(
                 ad['SCI'].data)
 
-            # FIXME How/where to save/use?
+            # TODO send outputs to RC, one output per input
+            # FIXME determine output file format and headers
 
         yield rc
 
@@ -257,6 +262,50 @@ class GHOSTPrimitives(GMOSPrimitives,
         rc.report_output(adoutput_list)
 
         yield rc
+
+    # -------------------------------------------------------------------------
+    def fitWavelength(self, rc):
+        """
+        Fit wavelength solution to a GHOST ARC frame
+        
+        Parameters
+        ----------
+        rc
+
+        Returns
+        -------
+
+        """
+
+        # TODO Add generic start-up gumph
+
+        # FIXME only run on prepared GHOST ARC
+
+        for ad in rc.get_inputs_as_astrodata():
+            pass
+            # extracted_flux, extracted_var are two data extensions in the AD
+            # at this point (this is run after extractProfiles)
+
+            # FIXME Read in all relevant polyfit files (x5)
+
+            # FIXME Read in the arc line list - RS needs to be set up to do this
+            arclinefile = None
+            arcwaves, arcfluxes = np.loadtxt(arclinefile, usecols=[1, 2]).T
+
+            mode = rc['mode']
+            arm = rc['arm']
+            arm = polyfit.GhostArm(arm, mode=mode)
+            arm.spectral_format_with_matrix(xpars, wpars, spatpars, specpars,
+                                            rotpars)
+
+            extractor = polyfit.Extractor(arm, None)  # slitview=None for this
+                                                      # application
+            lines_out = extractor.find_lines(extracted_flux, arcwaves,
+                                             inspect=False)
+
+            fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,
+                                                                   lines_out)
+
 
     # -------------------------------------------------------------------------
     def fork(self, rc):
