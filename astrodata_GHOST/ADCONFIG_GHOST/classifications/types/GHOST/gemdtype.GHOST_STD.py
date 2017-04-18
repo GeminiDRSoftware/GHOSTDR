@@ -5,7 +5,7 @@ class GHOST_STD(DataClassification):
         '''
         
     parent = "GHOST_SPECT"
-    requirement = ISCLASS('GHOST_SPECT') & PHU(SMPNAME='LO_ONLY')
+    requirement = (ISCLASS('GHOST_SPECT') | ISCLASS('GHOST_SLITV')) & PHU(SMPNAME='LO_ONLY')
 
 newtypes.append(GHOST_STD())
 
