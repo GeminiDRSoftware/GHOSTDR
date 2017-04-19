@@ -83,7 +83,7 @@ class SlitView(object):
         try:
             central_pix = self.central_pix[arm]
         except:
-            raise UserWarning("Invalid arm: " + arm)
+            raise UserWarning("Invalid arm: '%s'" % arm)
 
         if use_flat:
             this_slit_image = self.flat_image
