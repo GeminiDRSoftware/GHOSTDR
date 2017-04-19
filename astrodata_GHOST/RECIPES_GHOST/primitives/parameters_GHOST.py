@@ -15,7 +15,7 @@
         },
     "extractProfile": {
       "suffix": {
-            "default":        "_extProf",
+            "default":        "_extractedProfile",
             "type":           "str",
             "recipeOverride": True,
             "userOverride":   True,

@@ -23,6 +23,9 @@ from primitives_GHOST_calibration import GHOST_CalibrationPrimitives
 
 from astrodata_GHOST import polyfit
 from astrodata_GHOST.polyfit import slitview
+from astrodata_GHOST.polyfit.ghost import GhostArm
+from astrodata_GHOST.polyfit.extract import Extractor
+from astrodata_GHOST.polyfit.slitview import SlitView
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import PolyfitDict
 
 class GHOSTPrimitives(GMOSPrimitives,
@@ -122,40 +125,92 @@ class GHOSTPrimitives(GMOSPrimitives,
         # These will be object profile extractions of the ad input list
         adoutput_list = []
 
-        if rc['slit'] is not None:
-            slit = AstroData(rc['slit'])
-        elif rc['slitStream'] is not None:
-            slit = rc.get_stream(rc['slitStream'])[0].ad
-        else:
-            rc.run('getProcessedSlit')
-            slit = rc.get_val(adinput[0], 'processed_slit')
-            slit = AstroData(slit)
-
-        if rc['flat'] is not None:
-            flat = AstroData(rc['flat'])
-        else:
-            rc.run("getProcessedSlitFlat")
-            flat = rc.get_cal(adinput[0], 'processed_slitflat')  # from cache
-            flat = AstroData(flat)
+        adoutput_list = []
 
         for ad in rc.get_inputs_as_astrodata():
-            # FIXME Replace these with calls to get actual arm and res info for
-            # each frame
-            arm = rc['arm']
-            mode = rc['mode']
+            log.info(ad.info())
 
-            arm = GhostArm(arm=arm, mode=mode)
-            # FIXME Read in parameters from calibration system
-            # FIXME
-            arm.spectral_format_with_matrix()
+            if rc['slit'] is not None:
+                slit = AstroData(rc['slit'])
+            elif rc['slitStream'] is not None:
+                slit = rc.get_stream(rc['slitStream'])[0].ad
+            else:
+                rc.run('getProcessedSlit')
+                slit = rc.get_cal(ad, 'processed_slit')
+                slit = AstroData(slit)
 
-            slitview = SlitView(slit[0].data, flat[0].data, mode=mode)
+            if rc['flat'] is not None:
+                flat = AstroData(rc['flat'])
+            else:
+                rc.run("getProcessedSlitFlat")
+                flat = rc.get_cal(ad,
+                                  'processed_slitflat')  # from cache
+                flat = AstroData(flat)
+
+            arm = GhostArm(arm=ad.arm().as_str(), mode=ad.res_mode().as_str())
+            # The 'xmod' file we need is the one that was spat out to
+            # the calibrations system at the end of the flat processing
+            rc.run('getProcessedPolyfit')
+            xpars = rc.get_cal(ad, 'processed_polyfit')
+            xpars = AstroData(xpars)
+            # Need to read in all other parameters from the lookups system
+            key = self._get_polyfit_key(ad)
+            if np.all([key in _ for _ in [
+                PolyfitDict.wavemod_dict,
+                PolyfitDict.spatmod_dict,
+                PolyfitDict.specmod_dict,
+                PolyfitDict.rotmod_dict,
+            ]]):
+                # Get configs
+                poly_wave = lookup_path(PolyfitDict.wavemod_dict[key])
+                wpars = AstroData(poly_wave)
+                poly_spat = lookup_path(PolyfitDict.spatmod_dict[key])
+                spatpars = AstroData(poly_spat)
+                poly_spec = lookup_path(PolyfitDict.specmod_dict[key])
+                specpars = AstroData(poly_spec)
+                poly_rot = lookup_path(PolyfitDict.rotmod_dict[key])
+                rotpars = AstroData(poly_rot)
+            else:
+                # Don't know how to fit this file, so probably not necessary
+                # Move to the next
+                log.warning('Not sure which initial model to use for %s; '
+                            'skipping' % ad.filename)
+                continue
+
+            arm.spectral_format_with_matrix(xpars[0].data,
+                                            wpars[0].data,
+                                            spatpars[0].data,
+                                            specpars[0].data,
+                                            rotpars[0].data)
+
+            slitview = SlitView(slit[0].data, flat[0].data, mode=ad.res_mode())
             extractor = Extractor(arm, slitview)
             extracted_flux, extracted_var = extractor.one_d_extract(
                 ad['SCI'].data)
 
-            # TODO send outputs to RC, one output per input
-            # FIXME determine output file format and headers
+            # For now, let's just dump the outputs into the SCI and VAR planes
+            # of a new AstroData object, and worry about the bookkeeping later
+            adoutput = AstroData(data=extracted_flux, mode='new')
+            log.warning('AD len: %d' % len(ad))
+            # Bodge the SCI header to insert the VAR information
+            varhdr = adoutput['SCI'].header.copy()
+            varhdr['EXTNAME'] = 'VAR'
+            varhdr['EXTVER'] = 1
+            adoutput.insert(1, data=extracted_var,
+                            header=varhdr,
+                            extname='VAR', extver=1)
+            # adoutput.phu.header = ad.phu.header  # Copy across input PHU
+            log.info(adoutput.info())
+            # Note that the reference to ['SCI', 1] here tells insert to put
+            # the VAR HDU in before the SCI one
+
+            adoutput_list.append(adoutput)
+
+        # Report the list of output AstroData objects to the reduction context
+        # FIXME reduce reports successful, but fatal, unexplained error on file
+        # writeout
+        log.warning('Attempting to write out files')
+        rc.report_output(adoutput_list)
 
         yield rc
 

@@ -12,3 +12,4 @@ biasCorrect
 darkCorrect
 #rejectCosmicRays
 storeProcessedArc
+extractProfile
