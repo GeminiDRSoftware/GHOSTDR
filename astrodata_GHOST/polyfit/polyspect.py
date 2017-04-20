@@ -157,9 +157,6 @@ class Polyspect(object):
         if not isinstance(waves, np.ndarray):
             raise TypeError('Please provide waves as a numpy float array')
 
-        if np.prod(params.shape) != (xdeg + 1) * (ydeg + 1):
-            print("Parameters are flattened - xdeg and ydeg must be correct!")
-            raise UserWarning
         params = params.reshape((ydeg + 1, xdeg + 1))
         if len(orders) != len(y_values):
             print("orders and y_values must all be the same length!")

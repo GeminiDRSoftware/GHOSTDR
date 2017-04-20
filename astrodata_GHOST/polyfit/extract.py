@@ -431,7 +431,7 @@ class Extractor():
         else:
             return extracted_flux, extracted_var
 
-    def find_lines(self, flux, arclines, hw=10, flat_data=[], arcfile=[],
+    def find_lines(self, flux, arclines, hw=10, arcfile=[],
                    inspect=False):
         """Find lines near the locations of input arc lines.
 
@@ -471,29 +471,18 @@ class Extractor():
         nm = flux.shape[0]
         nx = self.arm.szx
         lines_out = []
-
+        # Let's try the median absolute deviation as a measure of background
+        # noise.
+        noise_level = np.median(np.abs(flux-np.median(flux)))
+        
+        if inspect and len(arcfile) == 0:
+            print('Must provide an arc image for the inpection')
+            raise UserWarning
         if inspect:
-            # If flat is provided, do a quick flat subtraction.
-            if len(flat_data) > 0:
-                data = arcfile
-                data_to_show = data - 0.05 * flat_data
-                plt.imshow(np.arcsinh((data_to_show - np.median(data_to_show)) /
-                                      1e2),
-                           interpolation='nearest', aspect='auto', cmap=cm.gray)
-            else:
-                data_to_show = data
-            plt.imshow(np.arcsinh((data_to_show - np.median(data_to_show)) /
+            plt.imshow(np.arcsinh((arcfile - np.median(arcfile)) /
                                   1e2),
                        interpolation='nearest', aspect='auto', cmap=cm.gray)
 
-        # Let's try the median absolute deviation as a measure of background
-        # noise.
-        if inspect:
-            noise_level = np.median(np.abs(data_to_show-np.median(data_to_show)))
-        else:
-            # FIXME Needs an actual noise level calculation based on flux
-            # (or flux variance?)
-            noise_level = 0.
 
         for m_ix in range(nm):
             filtered_arclines=arclines[(arclines >=  self.arm.w_map[m_ix, :].min())
