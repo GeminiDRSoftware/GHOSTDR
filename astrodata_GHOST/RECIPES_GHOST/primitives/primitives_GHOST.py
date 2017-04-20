@@ -27,6 +27,7 @@ from astrodata_GHOST.polyfit.ghost import GhostArm
 from astrodata_GHOST.polyfit.extract import Extractor
 from astrodata_GHOST.polyfit.slitview import SlitView
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import PolyfitDict
+from astrodata_GHOST.ADCONFIG_GHOST.lookups import line_list
 
 class GHOSTPrimitives(GMOSPrimitives,
                       GHOST_CalibrationPrimitives):
@@ -338,10 +339,14 @@ class GHOSTPrimitives(GMOSPrimitives,
             extracted_flux, extracted_var = extractor.one_d_extract(
                 ad['SCI'].data)
 
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=ad, primname=self.myself(), keyword=timestamp_key)
+
             # For now, let's just dump the outputs into the SCI and VAR planes
             # of a new AstroData object, and worry about the bookkeeping later
             adoutput = AstroData(data=extracted_flux, mode='new')
-            log.warning('AD len: %d' % len(ad))
+            # log.warning('AD len: %d' % len(ad))
             # Bodge the SCI header to insert the VAR information
             varhdr = adoutput['SCI'].header.copy()
             varhdr['EXTNAME'] = 'VAR'
@@ -349,17 +354,27 @@ class GHOSTPrimitives(GMOSPrimitives,
             adoutput.insert(1, data=extracted_var,
                             header=varhdr,
                             extname='VAR', extver=1)
-            # adoutput.phu.header = ad.phu.header  # Copy across input PHU
-            log.info(adoutput.info())
+            adoutput.phu.header = ad.phu.header  # Copy across input PHU
+            adoutput.filename = ad.filename
+            # log.info(adoutput.info())
             # Note that the reference to ['SCI', 1] here tells insert to put
             # the VAR HDU in before the SCI one
+
+            # Different idea - let's heavily alter the input AD instead. Maybe
+            # this will fix our flow through/write out errors?
+            for i in range(len(ad))[::-1]:
+                ad.remove(i)
+
+            # Change the filename
+            # log.warning('Current RC suffix: %s' % rc["suffix"])
+            adoutput.filename = gt.filename_updater(
+                adinput=adoutput, suffix=rc["suffix"], strip=True)
 
             adoutput_list.append(adoutput)
 
         # Report the list of output AstroData objects to the reduction context
-        # FIXME reduce reports successful, but fatal, unexplained error on file
-        # writeout
-        log.warning('Attempting to write out files')
+        # FIXME reduce reports successful, but unexplained error on file write
+        # log.warning('Attempting to write out files')
         rc.report_output(adoutput_list)
 
         yield rc
@@ -491,37 +506,102 @@ class GHOSTPrimitives(GMOSPrimitives,
         timestamp_key = self.timestamp_keys["fitWavelength"]
 
         # Initialize the list of output AstroData objects
-        # Note this will simply be the input list, with the timestamp_key
-        # added
         adoutput_list = []
 
-        # FIXME only run on prepared GHOST ARC
+        # log.warning('I can see %d inputs' % len(rc.get_inputs_as_astrodata()))
 
         for ad in rc.get_inputs_as_astrodata():
-            pass
-            # extracted_flux, extracted_var are two data extensions in the AD
-            # at this point (this is run after extractProfiles)
+            ad.refresh_types()
+            # extracted_flux, extracted_var are the sole data extensions in the
+            # AD at this point (this is run after extractProfiles)
 
-            # FIXME Read in all relevant polyfit files (x5)
+            # Primitive only to be run on prepared GHOST_ARC files
+            # Also, see if the file has had profile extraction performed
+            if 'PROCESSED_ARC' not in ad.types:
+                log.warning('fitWavelength is only run on prepared GHOST '
+                            'arc files - skipping %s' % ad.filename)
+                log.warning('%s has types: %s' % (ad.filename,
+                                                  ','.join(ad.types)))
+                # log.warning('ad header: %s' % ad.phu.header.tostring())
+                continue
+            if not ad.phu_get_key_value(self.timestamp_keys["extractProfile"]):
+                log.warning('extractProfile has not been run on %s - '
+                            'fitWavelength will therefore skip this file' %
+                            ad.filename())
 
-            # FIXME Read in the arc line list - RS needs to be set up to do this
-            arclinefile = None
+            # Read in all relevant polyfit files (x5)
+            # The 'xmod' file we need is the one that was spat out to
+            # the calibrations system at the end of the flat processing
+            rc.run('getProcessedPolyfit')
+            xpars = rc.get_cal(ad, 'processed_polyfit')
+            xpars = AstroData(xpars)
+            # Need to read in all other parameters from the lookups system
+            key = self._get_polyfit_key(ad)
+            if np.all([key in _ for _ in [
+                PolyfitDict.wavemod_dict,
+                PolyfitDict.spatmod_dict,
+                PolyfitDict.specmod_dict,
+                PolyfitDict.rotmod_dict,
+            ]]):
+                # Get configs
+                poly_wave = lookup_path(PolyfitDict.wavemod_dict[key])
+                wpars = AstroData(poly_wave)
+                poly_spat = lookup_path(PolyfitDict.spatmod_dict[key])
+                spatpars = AstroData(poly_spat)
+                poly_spec = lookup_path(PolyfitDict.specmod_dict[key])
+                specpars = AstroData(poly_spec)
+                poly_rot = lookup_path(PolyfitDict.rotmod_dict[key])
+                rotpars = AstroData(poly_rot)
+            else:
+                # Don't know how to fit this file, so probably not necessary
+                # Move to the next
+                log.warning('Not sure which initial model to use for %s; '
+                            'skipping' % ad.filename)
+                continue
+
+            # Read in the arc line list
+            # FIXME Hack to remove .py from MNRAS line list - best way to fix?
+            arclinefile = lookup_path(line_list.line_list).split('.py')[0]
             arcwaves, arcfluxes = np.loadtxt(arclinefile, usecols=[1, 2]).T
 
-            mode = rc['mode']
-            arm = rc['arm']
-            arm = polyfit.GhostArm(arm, mode=mode)
-            arm.spectral_format_with_matrix(xpars, wpars, spatpars, specpars,
-                                            rotpars)
+            arm = polyfit.GhostArm(ad.arm(), mode=ad.res_mode())
+            arm.spectral_format_with_matrix(xpars[0].data,
+                                            wpars[0].data,
+                                            spatpars[0].data,
+                                            specpars[0].data,
+                                            rotpars[0].data)
 
             extractor = polyfit.Extractor(arm, None)  # slitview=None for this
                                                       # application
-            lines_out = extractor.find_lines(extracted_flux, arcwaves,
+            lines_out = extractor.find_lines(ad['SCI'].data,
+                                             arcwaves,
                                              inspect=False)
 
-            fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,
-                                                                   lines_out)
+            # FIXME Currently broken - JB to fix - write lines_out to test rest
+            # fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,
+            #                                                        lines_out)
 
+            # Much like the solution for findApertures, create a minimum-spec
+            # AstroData object to prepare the result for storage in the
+            # calibrations system
+            ad_xmod = AstroData(
+                data=lines_out
+            )
+            # Add an INSTRUME keyword so RecipeSystem recognizes these as
+            # GHOST files
+            ad_xmod.phu.header['INSTRUME'] = 'GHOST'
+            ad_xmod.filename = key + '.fits'
+
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=ad_xmod, primname=self.myself(),
+                keyword=timestamp_key)
+
+            adoutput_list.append(ad_xmod)
+
+        rc.report_output(adoutput_list)
+
+        yield rc
 
     # -------------------------------------------------------------------------
     def fork(self, rc):

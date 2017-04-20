@@ -39,6 +39,10 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         self._getProcessed(rc)
         yield rc
 
+    def getProcessedWavefit(self, rc):
+        self._getProcessed(rc)
+        yield rc
+
     def _getProcessed(self, rc):
         """
         Helper function - prevents code duplication for the variety of
@@ -108,6 +112,10 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
 
     def storeProcessedPolyfit(self, rc):
         self._storeProcessed(rc, 'PRPOLYFT')
+        yield rc
+
+    def storeProcessedWavefit(self, rc):
+        self._storeProcessed(rc, 'PRWAVLFT')
         yield rc
 
     def _storeProcessed(self, rc, key):

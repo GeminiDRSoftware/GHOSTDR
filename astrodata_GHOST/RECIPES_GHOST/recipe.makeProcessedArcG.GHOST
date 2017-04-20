@@ -13,3 +13,5 @@ darkCorrect
 #rejectCosmicRays
 storeProcessedArc
 extractProfile
+fitWavelength
+storeProcessedWavefit

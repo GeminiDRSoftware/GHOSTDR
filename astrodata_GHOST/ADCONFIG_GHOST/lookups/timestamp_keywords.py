@@ -7,6 +7,7 @@ timestamp_keys = {
     "correctSlitCosmics": "FXSLITCR",
     "extractProfile": "EXTRPROF",
     "findApertures": "FINDAPER",
+    "fitWavelength": "FITWAVLN",
     "processSlits": "PROCSLIT",
     "standardizeHeaders": "SDZHDRS",
     }

@@ -31,6 +31,15 @@
             "uiLevel":        "UIBASIC",
             },
         },
+    "fitWavelength": {
+        "suffix": {
+            "default":        "_fitWavl",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
     "processSlits": {
         "suffix": {
             "default":        "_slitsProcessed",
@@ -149,6 +158,15 @@
     "storeProcessedSlitFlat": {
         "suffix": {
             "default":        "_slitFlat",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
+    "storeProcessedWavefit": {
+        "suffix": {
+            "default":        "_wmodPolyfit",
             "type":           "str",
             "recipeOverride": True,
             "userOverride":   True,

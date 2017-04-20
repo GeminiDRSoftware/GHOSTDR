@@ -169,6 +169,34 @@ flowchart (thanks Kathleen Labrie):
           almost all cosmic rays.
 
 
+Generating an Arc Calibration Frame
+-----------------------------------
+
+.. warning:: You *must* have performed a full slit viewer reduction before
+             attempting to make an arc calibrator - the results of the slit
+             flat and slit image reduction are required to make the profile
+             extraction and subsequent wavelength fitting work. See
+             :ref:`reducing-slit-viewing-images` for details.
+
+Making an arc calibration frame is similar to the previous calibration steps.
+The correct type to ``typewalk`` across is ``GHOST_ARC``::
+
+    typewalk --types GHOST_FLAT GHOST_RED GHOST_HIGH --dir <path_to>/data_folder -o flat.list
+
+Additional calibrators required are reduced slit viewer flats and slit viewer
+images, as well as the aperture fit made during the generation of the
+flat calibration image::
+
+    reduce @<path_to>/flat.list --override_cal processed_bias:calibrations/storedcals/bias_0_red_bias.fits processed_dark:calibrations/storedcals/dark_0_red_dark.fits processed_slit:obj95_1.0_high_SLIT_stack_slit.fits processed_slitflat:flat95_high_1_SLIT_stack_slitFlat.fits processed_polyfit:GHOST_1_1_red_high_xmodPolyfit.fits
+
+Arc reduction not only generates a reduced arc image and places it in the
+calibrations directory, but also uses the ``polyfit`` module to extract the
+flux profiles of the object/sky fibres in the input image. It then uses this
+fit, and a line set stored in the RecipeSystem lookups system, to make a
+wavelength fit to the arc image. This fit is also stored in the calibrations
+directory/system.
+
+
 Reducing an Object frame (Spectra)
 ----------------------------------
 
@@ -203,6 +231,7 @@ bias, dark and flat corrected GHOST spectrum frame.
              accidentally flagging spectral peaks and the edges of orders as
              cosmic rays, and this has yet to be implemented.
 
+.. _reducing-slit-viewing-images:
 
 Reducing Slit Viewing Images
 ----------------------------
