@@ -135,12 +135,17 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         ReductionContext dict.
 
         """
+
+        # can't use self.myself(): it returns "_storeProcessed" here; instead,
+        # we want it to return the caller of _storeProcessed (_storeProcessed
+        # is just a delegate)
+        me = inspect.currentframe().f_back.f_code.co_name
+
         # Instantiate the log
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive",  # noqa
-            inspect.currentframe().f_back.f_code.co_name, "starting"))
+        log.debug(gt.log_message("primitive", me, "starting"))
 
         # Loop over each input AstroData object in the input list
         for ad in rc.get_inputs_as_astrodata():
@@ -150,7 +155,7 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
                                               strip=False)
 
             # Adding a time stamp to the PHU
-            gt.mark_history(adinput=ad, primname=self.myself(), keyword=key)
+            gt.mark_history(adinput=ad, primname=me, keyword=key)
 
             # Refresh the AD types to reflect new processed status
             ad.refresh_types()

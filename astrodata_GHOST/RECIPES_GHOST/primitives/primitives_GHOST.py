@@ -5,27 +5,25 @@ from astrodata.utils.ConfigSpace import lookup_path
 from gempy.gemini import gemini_tools as gt
 from gempy.adlibrary.mosaicAD import MosaicAD
 from gempy.gemini.gemMosaicFunction import gemini_mosaic_function
-from astrodata_GHOST.ADCONFIG_GHOST.lookups import timestamp_keywords as ghost_stamps
-from gempy.gemini.eti.gireduceparam import subtract_overscan_hardcoded_params as extra_gireduce_params
-from gempy.gemini.eti.gemcombineparam import hardcoded_params as extra_gemcombine_params
+from astrodata_GHOST.ADCONFIG_GHOST.lookups import timestamp_keywords \
+    as ghost_stamps
+from gempy.gemini.eti.gireduceparam import subtract_overscan_hardcoded_params \
+    as extra_gireduce_params
+from gempy.gemini.eti.gemcombineparam import hardcoded_params \
+    as extra_gemcombine_params
 from pyraf import iraf
 import numpy as np
 import scipy
 import functools
-import pyfits as pf
-import os
-import inspect
 import datetime
 
 from primitives_GMOS import GMOSPrimitives
 from primitives_stack import StackPrimitives
 from primitives_GHOST_calibration import GHOST_CalibrationPrimitives
 
-from astrodata_GHOST import polyfit
-from astrodata_GHOST.polyfit import slitview
-from astrodata_GHOST.polyfit.ghost import GhostArm
-from astrodata_GHOST.polyfit.extract import Extractor
-from astrodata_GHOST.polyfit.slitview import SlitView
+from astrodata_GHOST.polyfit import GhostArm
+from astrodata_GHOST.polyfit import Extractor
+from astrodata_GHOST.polyfit import SlitView
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import PolyfitDict
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import line_list
 
@@ -97,16 +95,14 @@ class GHOSTPrimitives(GMOSPrimitives,
             alterations.
         """
 
-        me = inspect.currentframe().f_code.co_name
-
         # Instantiate the log
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive", me, "starting"))
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
         # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys[me]
+        timestamp_key = self.timestamp_keys[self.myself()]
 
         # Initialize the list of output AstroData objects
         adoutput_list = []
@@ -152,7 +148,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             if ad.phu_get_key_value(timestamp_key):
                 log.warning("No changes will be made to %s, since it has "
                             "already been processed by %s"
-                            % (ad.filename, me))
+                            % (ad.filename, self.myself()))
                 # Append the input AstroData object to the list of output
                 # AstroData objects without further processing
                 adoutput_list.append(ad)
@@ -267,15 +263,13 @@ class GHOSTPrimitives(GMOSPrimitives,
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive", "extractProfile", "starting"))
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
         # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys["extractProfile"]
+        timestamp_key = self.timestamp_keys[self.myself()]
 
         # Initialize the list of output AstroData objects
         # These will be object profile extractions of the ad input list
-        adoutput_list = []
-
         adoutput_list = []
 
         for ad in rc.get_inputs_as_astrodata():
@@ -294,8 +288,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                 flat = AstroData(rc['flat'])
             else:
                 rc.run("getProcessedSlitFlat")
-                flat = rc.get_cal(ad,
-                                  'processed_slitflat')  # from cache
+                flat = rc.get_cal(ad, 'processed_slitflat')  # from cache
                 flat = AstroData(flat)
 
             arm = GhostArm(arm=ad.arm().as_str(), mode=ad.res_mode().as_str())
@@ -334,8 +327,8 @@ class GHOSTPrimitives(GMOSPrimitives,
                                             specpars[0].data,
                                             rotpars[0].data)
 
-            slitview = SlitView(slit[0].data, flat[0].data, mode=ad.res_mode())
-            extractor = Extractor(arm, slitview)
+            sview = SlitView(slit[0].data, flat[0].data, mode=ad.res_mode())
+            extractor = Extractor(arm, sview)
             extracted_flux, extracted_var = extractor.one_d_extract(
                 ad['SCI'].data)
 
@@ -401,10 +394,10 @@ class GHOSTPrimitives(GMOSPrimitives,
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive", "findApertures", "starting"))
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
         # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys["findApertures"]
+        timestamp_key = self.timestamp_keys[self.myself()]
 
         # Initialize the list of output AstroData objects
         # Note this will simply be the input list, with the timestamp_key
@@ -446,8 +439,8 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Run the fitting procedure
             # Instantiate the GhostSim Arm
-            ghost_arm = polyfit.ghost.GhostArm(arm=ad.arm().as_str(),
-                                          mode=ad.res_mode().as_str())
+            ghost_arm = GhostArm(
+                arm=ad.arm().as_str(), mode=ad.res_mode().as_str())
 
             # Read in the model file
             xparams = AstroData(poly_xmod)
@@ -466,12 +459,9 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Add the appropriate time stamps to the PHU
             gt.mark_history(
-                adinput=ad, primname=self.myself(),
-                keyword=timestamp_key)
+                adinput=ad, primname=self.myself(), keyword=timestamp_key)
 
-            ad_xmod = AstroData(
-                data=fitted_params
-            )
+            ad_xmod = AstroData(data=fitted_params)
             # Add an INSTRUME keyword so RecipeSystem recognizes these as
             # GHOST files
             ad_xmod.phu.header['INSTRUME'] = 'GHOST'
@@ -487,7 +477,7 @@ class GHOSTPrimitives(GMOSPrimitives,
     def fitWavelength(self, rc):
         """
         Fit wavelength solution to a GHOST ARC frame
-        
+
         Parameters
         ----------
         rc
@@ -500,10 +490,10 @@ class GHOSTPrimitives(GMOSPrimitives,
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive", "fitWavelength", "starting"))
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
         # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys["fitWavelength"]
+        timestamp_key = self.timestamp_keys[self.myself()]
 
         # Initialize the list of output AstroData objects
         adoutput_list = []
@@ -564,15 +554,14 @@ class GHOSTPrimitives(GMOSPrimitives,
             arclinefile = lookup_path(line_list.line_list).split('.py')[0]
             arcwaves, arcfluxes = np.loadtxt(arclinefile, usecols=[1, 2]).T
 
-            arm = polyfit.GhostArm(ad.arm(), mode=ad.res_mode())
+            arm = GhostArm(ad.arm(), mode=ad.res_mode())
             arm.spectral_format_with_matrix(xpars[0].data,
                                             wpars[0].data,
                                             spatpars[0].data,
                                             specpars[0].data,
                                             rotpars[0].data)
 
-            extractor = polyfit.Extractor(arm, None)  # slitview=None for this
-                                                      # application
+            extractor = Extractor(arm, None)  # slitview=None for this usage
             lines_out = extractor.find_lines(ad['SCI'].data,
                                              arcwaves,
                                              inspect=False)
@@ -584,9 +573,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             # Much like the solution for findApertures, create a minimum-spec
             # AstroData object to prepare the result for storage in the
             # calibrations system
-            ad_xmod = AstroData(
-                data=lines_out
-            )
+            ad_xmod = AstroData(data=lines_out)
             # Add an INSTRUME keyword so RecipeSystem recognizes these as
             # GHOST files
             ad_xmod.phu.header['INSTRUME'] = 'GHOST'
@@ -594,8 +581,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Add the appropriate time stamps to the PHU
             gt.mark_history(
-                adinput=ad_xmod, primname=self.myself(),
-                keyword=timestamp_key)
+                adinput=ad_xmod, primname=self.myself(), keyword=timestamp_key)
 
             adoutput_list.append(ad_xmod)
 
@@ -665,10 +651,10 @@ class GHOSTPrimitives(GMOSPrimitives,
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive", "mosaicADdetectors", "starting"))
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
         # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys["mosaicADdetectors"]
+        timestamp_key = self.timestamp_keys[self.myself()]
 
         # Initialize the list of output AstroData objects
         adoutput_list = []
@@ -742,9 +728,7 @@ class GHOSTPrimitives(GMOSPrimitives,
     # -------------------------------------------------------------------------
     def processSlits(self, rc):
         """
-        This primitive replaces CR-affected pixels in each individual slit view-
-        er image (taken from the current stream) with their equivalents from the
-        median frame of those images.  It also computes the mean exposure epoch.
+        This primitive computes the mean exposure epoch.
 
         Parameters
         ----------
@@ -764,16 +748,14 @@ class GHOSTPrimitives(GMOSPrimitives,
             alterations.
         """
 
-        me = inspect.currentframe().f_code.co_name
-
         # Instantiate the log
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive", me, "starting"))
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
         # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys[me]
+        timestamp_key = self.timestamp_keys[self.myself()]
 
         # Initialize the list of output AstroData objects
         adoutput_list = []
@@ -815,7 +797,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             if ad.phu_get_key_value(timestamp_key):
                 log.warning("No changes will be made to %s, since it has "
                             "already been processed by %s"
-                            % (ad.filename, me))
+                            % (ad.filename, self.myself()))
                 # Append the input AstroData object to the list of output
                 # AstroData objects without further processing
                 adoutput_list.append(ad)
@@ -892,7 +874,6 @@ class GHOSTPrimitives(GMOSPrimitives,
         rc.report_output(adoutput_list)
 
         yield rc
-
 
     # -------------------------------------------------------------------------
     def promote(self, rc):
@@ -972,11 +953,10 @@ class GHOSTPrimitives(GMOSPrimitives,
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive", "rejectCosmicRays",
-                                 "starting"))
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
         # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys["rejectCosmicRays"]
+        timestamp_key = self.timestamp_keys[self.myself()]
 
         # Initialise a list of output AstroData objects
         adoutput_list = []
@@ -1432,7 +1412,7 @@ class GHOSTPrimitives(GMOSPrimitives,
         flux : float
             the sky-subtracted object flux, summed
         """
-        svobj = slitview.SlitView(data, flat_data, mode=res)
+        svobj = SlitView(data, flat_data, mode=res)
         reds = svobj.object_slit_profiles(  # removes sky by default
             'red', append_sky=False, normalise_profiles=False)
         blues = svobj.object_slit_profiles(  # removes sky by default
