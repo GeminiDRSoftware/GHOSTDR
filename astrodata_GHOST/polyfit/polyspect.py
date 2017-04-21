@@ -40,7 +40,7 @@ class Polyspect(object):
         self.matrices = None
 
    
-    def evaluate_poly(self, params):
+    def evaluate_poly(self, params, data = None):
         """ Function used to evaluate a polynomial of polynomials given model
         parameters. This is a function designed to avoid code repetition.
 
@@ -49,6 +49,8 @@ class Polyspect(object):
 
         params: float array
             Model parameters with the coefficients to evaluate.
+        data: list (optional)
+            Optional data input for the y_values and orders. 
 
         Returns
         -------
@@ -63,15 +65,20 @@ class Polyspect(object):
             raise TypeError('Please provide params as a numpy float array')
         # The polynomial degree as a function of y position.
         ydeg = params.shape[0] - 1
-        # Create the y_values and orders.
-        # This is essentially the purpose of creating this function. These
-        # parameters can be easily derived from class propoerties and should
-        # not have to be provided as inputs. 
-        y_values, orders = np.meshgrid(np.arange(self.szy),
-                                       np.arange(self.m_max - self.m_min + 1) +
-                                       self.m_min)
+
+        if data is not None:
+            y_values, orders = data
+        else:
+            # Create the y_values and orders.
+            # This is essentially the purpose of creating this function. These
+            # parameters can be easily derived from class propoerties and should
+            # not have to be provided as inputs. 
+            y_values, orders = np.meshgrid(np.arange(self.szy),
+                                           np.arange(self.m_max - self.m_min + 1) +
+                                           self.m_min)
         # However, we should just use the orders as a single array.
-        orders = orders[:,0]
+        if orders.ndim > 1:
+            orders = orders[:,0]
         mprime = np.float(self.m_ref) / orders - 1
         # In case of a single polynomial, this solves the index problem.
         if params.ndim == 1:
@@ -92,7 +99,8 @@ class Polyspect(object):
         return evaluation
 
     
-    def wave_fit_resid(self, params, orders, waves, y_values, ydeg=3, xdeg=3):
+    def wave_fit_resid(self, params, orders, waves, y_values, ydeg=3, xdeg=3,
+                       norders = 33, ylen = 514, sigma = None):
         """A fit function for read_lines_and_fit (see that function for details)
         to be used in scipy.optimize.leastsq as the minimisation function.
         The same function is used in fit_to_x, but in that case
@@ -132,25 +140,15 @@ class Polyspect(object):
         if not isinstance(waves, np.ndarray):
             raise TypeError('Please provide waves as a numpy float array')
 
-        if np.prod(params.shape) != (xdeg + 1) * (ydeg + 1):
-            print("Parameters are flattened - xdeg and ydeg must be correct!")
-            raise UserWarning
         params = params.reshape((ydeg + 1, xdeg + 1))
         if len(orders) != len(y_values):
             print("orders and y_values must all be the same length!")
             raise UserWarning
-        mprime = self.m_ref / orders - 1
-
-        polynomials = np.empty((len(orders), ydeg + 1))
-        # Find the polynomial coefficients for each order.
-        for i in range(ydeg + 1):
-            polyq = np.poly1d(params[i, :])
-            polynomials[:, i] = polyq(mprime)
-        wave_mod = np.empty(len(orders))
-        for i in range(len(orders)):
-            polyp = np.poly1d(polynomials[i, :])
-            wave_mod[i] = polyp(y_values[i] - self.szy // 2)
-        return wave_mod - waves
+        
+        result = self.evaluate_poly(params,(y_values,orders))
+        if sigma is None:
+            sigma = np.ones_like(result)
+        return (waves - result) / sigma
 
 
     
@@ -275,6 +273,8 @@ class Polyspect(object):
                                        np.arange(self.m_max - self.m_min + 1) +
                                        self.m_min)
         order = orders[:,0]
+        if wparams is None:
+            wparams = np.ones((3,3))
         wave_int = self.evaluate_poly(wparams)
         x_int = self.evaluate_poly(xparams)
         
@@ -523,6 +523,7 @@ class Polyspect(object):
                                                    decrease_dim, decrease_dim),
                                   axis=2)
 
+        
         # Flatten arrays
         orders = orders.flatten()
         y_values = y_values.flatten()  # pylint: disable=maybe-no-member
