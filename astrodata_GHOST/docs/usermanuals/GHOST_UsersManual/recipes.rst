@@ -181,13 +181,13 @@ Generating an Arc Calibration Frame
 Making an arc calibration frame is similar to the previous calibration steps.
 The correct type to ``typewalk`` across is ``GHOST_ARC``::
 
-    typewalk --types GHOST_FLAT GHOST_RED GHOST_HIGH --dir <path_to>/data_folder -o flat.list
+    typewalk --types GHOST_ARC GHOST_RED GHOST_HIGH --dir <path_to>/data_folder -o arc.list
 
 Additional calibrators required are reduced slit viewer flats and slit viewer
 images, as well as the aperture fit made during the generation of the
 flat calibration image::
 
-    reduce @<path_to>/flat.list --override_cal processed_bias:calibrations/storedcals/bias_0_red_bias.fits processed_dark:calibrations/storedcals/dark_0_red_dark.fits processed_slit:obj95_1.0_high_SLIT_stack_slit.fits processed_slitflat:flat95_high_1_SLIT_stack_slitFlat.fits processed_polyfit:GHOST_1_1_red_high_xmodPolyfit.fits
+    reduce @<path_to>/arc.list --override_cal processed_bias:calibrations/storedcals/bias_0_red_bias.fits processed_dark:calibrations/storedcals/dark_0_red_dark.fits processed_slit:calibrations/storedcals/obj95_1.0_high_SLIT_stack_slit.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits processed_polyfit:calibrations/storedcals/GHOST_1_1_red_high_xmodPolyfit.fits
 
 Arc reduction not only generates a reduced arc image and places it in the
 calibrations directory, but also uses the ``polyfit`` module to extract the
