@@ -258,12 +258,12 @@ additional type to ``typewalk`` that identifies the resolution of the data that
 you wish to process (as mixing resolutions would be nonsensical).  Follow these
 steps as an example::
 
-    typewalk --types GHOST_SLITV_FLAT GHOST_SLITV_STD --dir <path_to>/data_folder -o slit_flat_std.list
+    typewalk --types GHOST_SLITV_FLAT GHOST_SLITV_HIGH --dir <path_to>/data_folder -o slit_flat_high.list
     reduce @<path_to>/slit_flat_std.list --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits processed_dark:calibrations/storedcals/dark95_1_SLIT_stack_slitDark.fits
 
 The final step is to use all of the above calibrators in a call to ``reduce`` a
 set of slit viewer images taken concurrently with a science frame, usually found
-in files named like ``obj95_1.0_std_SLIT.fits`` (following this convention:
+in files named like ``obj95_1.0_high_SLIT.fits`` (following this convention:
 ``obj{exptime}_{seeing}_{resolution}_SLIT.fits``).  If you run ``typewalk`` on
 the folder containing these, you'll see that they are identified as
 ``GHOST_SLITV_IMAGE``.  This informs the reduction framework to run the
@@ -271,7 +271,7 @@ the folder containing these, you'll see that they are identified as
 (note that the flat is provided to ``--override_cal`` as ``process_slitflat``
 and not simply ``processed_flat``)::
 
-    reduce <path_to>/data_folder/obj95_1.0_std_SLIT.fits --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits processed_dark:calibrations/storedcals/dark95_1_SLIT_stack_slitDark.fits processed_slitflat:calibrations/storedcals/flat95_std_1_SLIT_stack_slitFlat.fits
+    reduce <path_to>/data_folder/obj95_1.0_high_SLIT.fits --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits processed_dark:calibrations/storedcals/dark95_1_SLIT_stack_slitDark.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits
 
 
 Other Processing Flows
