@@ -99,8 +99,8 @@ class Polyspect(object):
         return evaluation
 
     
-    def wave_fit_resid(self, params, orders, waves, y_values, ydeg=3, xdeg=3,
-                       norders = 33, ylen = 514, sigma = None):
+    def fit_resid(self, params, orders, y_values, data, ydeg=3, xdeg=3,
+                       sigma = None):
         """A fit function for read_lines_and_fit (see that function for details)
         to be used in scipy.optimize.leastsq as the minimisation function.
         The same function is used in fit_to_x, but in that case
@@ -114,16 +114,19 @@ class Polyspect(object):
             model to be compared with the real data.
         orders: int array
             The order numbers for the residual fit repeated ys times.
-        waves: float array
-            This parameter is the argument for the second set of polynomials.
-            Either the wavelengths or the x positions on the chip
         y_values: float array
             This is an orders x y sized array with pixel indeces on y direction
             for each order.
+        data: float array
+            This is the data to be fitted, which will have the model subtracted
+            from
         ydeg: int
             Polynomial degree as a function of order
         xdeg: int
             Polynomial degree as a function of y
+        sigma: float array
+            Array containing uncertainties for each point. Must have the same 
+            format as data. 
 
         Returns
         -------
@@ -137,8 +140,8 @@ class Polyspect(object):
             raise TypeError('Please ensure orders is a numpy float array')
         if not isinstance(y_values, np.ndarray):
             raise TypeError('Please provide y_values as a numpy float array')
-        if not isinstance(waves, np.ndarray):
-            raise TypeError('Please provide waves as a numpy float array')
+        if not isinstance(data, np.ndarray):
+            raise TypeError('Please provide data as a numpy float array')
 
         params = params.reshape((ydeg + 1, xdeg + 1))
         if len(orders) != len(y_values):
@@ -148,7 +151,7 @@ class Polyspect(object):
         result = self.evaluate_poly(params,(y_values,orders))
         if sigma is None:
             sigma = np.ones_like(result)
-        return (waves - result) / sigma
+        return (data - result) / sigma
 
 
     
@@ -206,13 +209,14 @@ class Polyspect(object):
         orders = lines[:, 3]
         waves = lines[:, 0]
         y_values = lines[:, 1]
-
-        #init_resid = self.wave_fit_resid(init_mod, orders, waves,
+        ydeg=init_mod.shape[0]-1
+        xdeg=init_mod.shape[1]-1
+        
+        #init_resid = self.fit_resid(init_mod, orders, waves,
         #                                 y_values, ydeg=ydeg, xdeg=xdeg)
-        bestp = op.leastsq(self.wave_fit_resid, init_mod, args=(orders, waves,
-                                                                y_values,
-                                                                ydeg, xdeg))
-        final_resid = self.wave_fit_resid(bestp[0], orders, waves, y_values,
+        bestp = op.leastsq(self.fit_resid, init_mod, args=(orders, y_values,
+                                                           waves, ydeg, xdeg))
+        final_resid = self.fit_resid(bestp[0], orders, y_values, waves,
                                           ydeg=ydeg, xdeg=xdeg)
         # Output the fit residuals.
         wave_and_resid = np.array([waves, orders, final_resid]).T
@@ -356,7 +360,7 @@ class Polyspect(object):
         return old_x + the_shift
 
     def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=20,
-                       xdeg=4, inspect=False):
+                       inspect=False):
         """Fit a "tramline" map. Note that an initial map has to be pretty
         close, i.e. within "search_pix" everywhere. To get within search_pix
         everywhere, a simple model with a few paramers is fitted manually.
@@ -420,6 +424,7 @@ class Polyspect(object):
                                                x_values.shape[1] //
                                                decrease_dim,
                                                decrease_dim), axis=2)
+        sigma = np.ones_like(x_values)
 
         # Now go through and find the peak pixel values.
         # Do this by searching for the maximum value along the
@@ -433,6 +438,7 @@ class Polyspect(object):
                                     search_pix:self.szx // 2 +
                                     xind + search_pix + 1]
                 x_values[i, j] += np.argmax(peakpix) - search_pix
+                sigma[i,j] = 1./np.max(peakpix)
         if inspect:
             plt.clf()
             plt.imshow(data)
@@ -440,7 +446,7 @@ class Polyspect(object):
             plt.show()
         
         fitted_params = self.fit_to_x(x_values, xparams, y_values=y_values,
-                                      xdeg=xdeg)
+                                      sigma=sigma)
         if inspect:
             # This will plot the result of the fit once successful so
             # the user can inspect the result.
@@ -456,8 +462,8 @@ class Polyspect(object):
 
         return fitted_params
 
-    def fit_to_x(self, x_to_fit, init_mod, ydeg=2,
-                 xdeg=4, y_values=[], decrease_dim=1):
+    def fit_to_x(self, x_to_fit, init_mod, y_values=[], sigma=None,
+                 decrease_dim=1):
         """Fit to an (norders,ny) array of x-values.
 
         The functional form is:
@@ -485,10 +491,10 @@ class Polyspect(object):
             x values to fit. This should be an (orders,y) shape array.
         init_mod_file: float array
             Initial model parameters
-        xdeg, ydeg: int
-            Order of polynomial
         y_values: float array
             Y positions on the CCD
+        sigma: float array
+            Uncertainties in the y_values
         decrease_dim: int
             The factor of decreased dimentionality for the fit.
             This needs to be an exact factor of the y size.
@@ -528,15 +534,18 @@ class Polyspect(object):
         orders = orders.flatten()
         y_values = y_values.flatten()  # pylint: disable=maybe-no-member
         x_values = x_values.flatten()  # pylint: disable=maybe-no-member
-
+        sigma = sigma.flatten()
+        
+        ydeg=init_mod.shape[0]-1
+        xdeg=init_mod.shape[1]-1
         # Do the fit!
         print("Fitting (this can sometimes take a while...)")
-        init_resid = self.wave_fit_resid(
-            init_mod, orders, x_values, y_values, ydeg=ydeg, xdeg=xdeg)
-        bestp = op.leastsq(self.wave_fit_resid, init_mod,
-                           args=(orders, x_values, y_values, ydeg, xdeg))
-        final_resid = self.wave_fit_resid(
-            bestp[0], orders, x_values, y_values, ydeg=ydeg, xdeg=xdeg)
+        init_resid = self.fit_resid(init_mod, orders, y_values, x_values,
+                                    ydeg=ydeg, xdeg=xdeg, sigma=sigma)
+        bestp = op.leastsq(self.fit_resid, init_mod,
+                           args=(orders, y_values, x_values, ydeg, xdeg, sigma))
+        final_resid = self.fit_resid(bestp[0], orders, y_values, x_values,
+                                     ydeg=ydeg, xdeg=xdeg,sigma=sigma)
         params = bestp[0].reshape((ydeg + 1, xdeg + 1))
         print(init_resid, final_resid)
 
