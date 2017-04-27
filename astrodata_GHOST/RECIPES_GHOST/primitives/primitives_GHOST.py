@@ -566,14 +566,15 @@ class GHOSTPrimitives(GMOSPrimitives,
                                              arcwaves,
                                              inspect=False)
 
+            import pdb; pdb.set_trace()
             # FIXME Currently broken - JB to fix - write lines_out to test rest
-            # fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,
-            #                                                        lines_out)
+            fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,
+                                                                    lines_out)
 
             # Much like the solution for findApertures, create a minimum-spec
             # AstroData object to prepare the result for storage in the
             # calibrations system
-            ad_xmod = AstroData(data=lines_out)
+            ad_xmod = AstroData(data=fitted_params)
             # Add an INSTRUME keyword so RecipeSystem recognizes these as
             # GHOST files
             ad_xmod.phu.header['INSTRUME'] = 'GHOST'
