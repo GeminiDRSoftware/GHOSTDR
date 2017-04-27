@@ -5,6 +5,7 @@ class GHOST_SLITV_CAL(DataClassification):
         """
     parent = "GHOST_SLITV"
     requirement = ISCLASS("GHOST_SLITV") & OR([
+        ISCLASS("GHOST_SLITV_ARC"),
         ISCLASS("GHOST_SLITV_BIAS"),
         ISCLASS("GHOST_SLITV_DARK"),
         ISCLASS("GHOST_SLITV_FLAT")])

@@ -1,6 +1,10 @@
 GHOST DR Release Notes
 ======================
 
+MILESTONE-5
+  Milestone 5 release, including a wavelength solution
+
+
 MILESTONE-4
   Milestone 4 release, including a working recipe for aperture finding
 

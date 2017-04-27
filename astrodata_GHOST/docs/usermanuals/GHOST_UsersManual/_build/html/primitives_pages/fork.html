@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>2. fork &mdash; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/todo-styles.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.9.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="GHOST Users&#39; Manual 0.9.0 documentation" href="../index.html" />
+    <link rel="up" title="Primitives for GHOST" href="../primitives.html" />
+    <link rel="next" title="3. mosaicADdetectors" href="mosaicADdetectors.html" />
+    <link rel="prev" title="1. findApertures" href="findApertures.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="mosaicADdetectors.html" title="3. mosaicADdetectors"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="findApertures.html" title="1. findApertures"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">Primitives for GHOST</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="fork">
+<h1>2. fork<a class="headerlink" href="#fork" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="purpose">
+<h2>2.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<p>This primitive creates a new stream by copying the current stream&#8217;s inputs to
+the outputs of the new stream.  Has the same effect as (but without the disk
+write penalty incurred by) the following construct:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">addToList</span><span class="p">(</span><span class="n">purpose</span><span class="o">=</span><span class="n">save_to_disk</span><span class="p">)</span>
+<span class="n">getList</span><span class="p">(</span><span class="n">purpose</span><span class="o">=</span><span class="n">save_to_disk</span><span class="p">,</span> <span class="n">to_stream</span><span class="o">=</span><span class="n">new_stream_name</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="inputs-and-outputs">
+<h2>2.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<p>The only parameter <code class="docutils literal"><span class="pre">fork</span></code> takes is <code class="docutils literal"><span class="pre">newStream</span></code>, the name of the new stream
+to be formed.</p>
+</div>
+<div class="section" id="issues-and-limitations">
+<h2>2.3. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<p>Be careful not to specify the parameter <code class="docutils literal"><span class="pre">newStream</span></code> as simply <code class="docutils literal"><span class="pre">stream</span></code> as
+this is a reserved parameter name with special meaning to the recipe framework
+and odd behaviour results when used.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">2. fork</a><ul>
+<li><a class="reference internal" href="#purpose">2.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">2.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">2.3. Issues and Limitations</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="findApertures.html"
+                        title="previous chapter">1. findApertures</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="mosaicADdetectors.html"
+                        title="next chapter">3. mosaicADdetectors</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/primitives_pages/fork.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="mosaicADdetectors.html" title="3. mosaicADdetectors"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="findApertures.html" title="1. findApertures"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >Primitives for GHOST</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.5.
+    </div>
+  </body>
+</html>

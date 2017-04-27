@@ -5,8 +5,7 @@ from astrodata.utils import Errors
 
 from gempy.gemini import gemini_tools as gt
 
-from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_calibration import \
-    CalibrationPrimitives
+from primitives_calibration import CalibrationPrimitives
 
 class GHOST_CalibrationPrimitives(CalibrationPrimitives):
     """
@@ -32,7 +31,15 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         self._getProcessed(rc)
         yield rc
 
+    def getProcessedSlitFlat(self, rc):
+        self._getProcessed(rc)
+        yield rc
+
     def getProcessedPolyfit(self, rc):
+        self._getProcessed(rc)
+        yield rc
+
+    def getProcessedWavefit(self, rc):
         self._getProcessed(rc)
         yield rc
 
@@ -80,12 +87,12 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
                     if first:
                         log.stdinfo("getCalibration: Results")
                         first = False
-                    log.stdinfo("   %s\n      for %s" % (cal.filename,
-                                                         ad.filename))
+                    log.stdinfo(
+                        "   %s\n      for %s" % (cal.filename, ad.filename))
             else:
                 if "qa" not in rc.context:
-                    raise Errors.InputError("Calibration not found for %s" %
-                                            ad.filename)
+                    raise Errors.InputError(
+                        "Calibration not found for %s" % ad.filename)
 
     def storeProcessedSlit(self, rc):
         self._storeProcessed(rc, 'PRSLITIM')
@@ -99,8 +106,16 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         self._storeProcessed(rc, 'PRSLITDA')
         yield rc
 
+    def storeProcessedSlitFlat(self, rc):
+        self._storeProcessed(rc, 'PRSLITFL')
+        yield rc
+
     def storeProcessedPolyfit(self, rc):
         self._storeProcessed(rc, 'PRPOLYFT')
+        yield rc
+
+    def storeProcessedWavefit(self, rc):
+        self._storeProcessed(rc, 'PRWAVLFT')
         yield rc
 
     def _storeProcessed(self, rc, key):
@@ -120,12 +135,17 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         ReductionContext dict.
 
         """
+
+        # can't use self.myself(): it returns "_storeProcessed" here; instead,
+        # we want it to return the caller of _storeProcessed (_storeProcessed
+        # is just a delegate)
+        me = inspect.currentframe().f_back.f_code.co_name
+
         # Instantiate the log
         log = logutils.get_logger(__name__)
 
         # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive",  # noqa
-            inspect.currentframe().f_back.f_code.co_name, "starting"))
+        log.debug(gt.log_message("primitive", me, "starting"))
 
         # Loop over each input AstroData object in the input list
         for ad in rc.get_inputs_as_astrodata():
@@ -135,7 +155,7 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
                                               strip=False)
 
             # Adding a time stamp to the PHU
-            gt.mark_history(adinput=ad, primname=self.myself(), keyword=key)
+            gt.mark_history(adinput=ad, primname=me, keyword=key)
 
             # Refresh the AD types to reflect new processed status
             ad.refresh_types()

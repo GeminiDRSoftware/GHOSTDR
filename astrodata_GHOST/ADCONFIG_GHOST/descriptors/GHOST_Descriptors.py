@@ -80,8 +80,8 @@ class GHOST_DescriptorCalc(GEMINI_DescriptorCalc):
 
         # Additional descriptors for each frame type
         dark_id = ["exposure_time", "coadds"]
-        flat_twilight_id = ["observation_id"]
-        science_id = ["observation_id"]
+        flat_twilight_id = ["observation_id", "res_mode"]
+        science_id = ["observation_id", "res_mode"]
 
         # Additional descriptors required for spectra (i.e. actual observations)
         required_spectra_descriptors = []
@@ -96,6 +96,8 @@ class GHOST_DescriptorCalc(GEMINI_DescriptorCalc):
             id_descriptor_list = []
         elif "GHOST_DARK" in data_types:
             id_descriptor_list = dark_id
+        elif "GHOST_FLAT" in data_types:
+            id_descriptor_list = flat_twilight_id
         else:
             id_descriptor_list = science_id
 

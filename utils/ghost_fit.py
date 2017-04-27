@@ -15,6 +15,7 @@ import astropy.io.fits as pyfits
 #plt.ion()
 
 
+
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 #arc_file  = "/home/jbento/code/pymfe/data/ghost/blue/std/arcstd_blue.fits"
 flat_file = "flathigh_red.fits"
@@ -22,7 +23,7 @@ flat_file = "flathigh_red.fits"
 flat_data = pyfits.getdata(flat_file)
 
 #instantiate the ghostsim arm
-ghost = polyfit.ghost.Arm('red',mode='high')
+ghost = polyfit.ghost.GhostArm('red',mode='high')
 
 # Where is the default location for the model? By default it is a parameter 
 # in the ghost class. If this needs to be overwritten, go ahead.
