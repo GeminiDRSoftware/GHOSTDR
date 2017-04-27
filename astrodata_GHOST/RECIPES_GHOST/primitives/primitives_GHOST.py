@@ -567,7 +567,6 @@ class GHOSTPrimitives(GMOSPrimitives,
                                              inspect=False)
 
             import pdb; pdb.set_trace()
-            # FIXME Currently broken - JB to fix - write lines_out to test rest
             fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,
                                                                     lines_out)
 
