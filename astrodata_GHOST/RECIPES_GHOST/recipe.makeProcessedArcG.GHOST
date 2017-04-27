@@ -7,6 +7,11 @@ prepare  # Gemini superprimitive
 addDQ
 addVAR
 overscanCorrect  # Gemini subrecipe
+mosaicADdetectors(tile=True)
 biasCorrect
 darkCorrect
-rejectCosmicRays
+#rejectCosmicRays
+storeProcessedArc
+extractProfile
+fitWavelength
+storeProcessedWavefit

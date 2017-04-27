@@ -12,6 +12,8 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, split=False):
     # Create the two arms
     blue = pyghost.Arm('blue', cosmics=cosmics, crplane=crplane, split=split)
     red = pyghost.Arm('red', cosmics=cosmics, crplane=crplane, split=split)
+    blue.extra_rot=10
+    red.extra_rot=10
 
     # Create a blank spectrum (used for the bias, dark, and sky)
     blank = np.array([[0.1, 1.0], [0.0, 0.0]])

@@ -1,0 +1,12 @@
+promote  # bypass the extn check in GMOS validateData
+prepare  # Gemini superprimitive
+addDQ
+addVAR
+biasCorrect  # subrecipe
+ADUToElectrons
+addVAR(poisson_noise=True)
+darkCorrect  # subrecipe
+correctSlitCosmics
+processSlits
+stackFrames(operation=average, reject_method=none)
+storeProcessedSlit  # empties current stream

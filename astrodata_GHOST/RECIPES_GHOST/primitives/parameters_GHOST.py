@@ -4,9 +4,36 @@
 # This is a dictionary of dictionaries of dictionaries (... not that bad.)
 
 {
+    "correctSlitCosmics": {
+        "suffix": {
+            "default":        "_slitCosmicsCorrected",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
+    "extractProfile": {
+      "suffix": {
+            "default":        "_extractedProfile",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
     "findApertures": {
         "suffix": {
             "default":        "_findAper",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
+    "fitWavelength": {
+        "suffix": {
+            "default":        "_fitWavl",
             "type":           "str",
             "recipeOverride": True,
             "userOverride":   True,
@@ -122,6 +149,24 @@
     "storeProcessedSlitDark": {
         "suffix": {
             "default":        "_slitDark",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
+    "storeProcessedSlitFlat": {
+        "suffix": {
+            "default":        "_slitFlat",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
+    "storeProcessedWavefit": {
+        "suffix": {
+            "default":        "_wmodPolyfit",
             "type":           "str",
             "recipeOverride": True,
             "userOverride":   True,

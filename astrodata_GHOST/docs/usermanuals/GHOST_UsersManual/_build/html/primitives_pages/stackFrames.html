@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>7. stackFrames &mdash; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/todo-styles.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.9.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="GHOST Users&#39; Manual 0.9.0 documentation" href="../index.html" />
+    <link rel="up" title="Primitives for GHOST" href="../primitives.html" />
+    <link rel="next" title="8. standardizeHeaders" href="standardizeHeaders.html" />
+    <link rel="prev" title="6. rejectCosmicRays" href="rejectCosmicRays.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="standardizeHeaders.html" title="8. standardizeHeaders"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="rejectCosmicRays.html" title="6. rejectCosmicRays"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">Primitives for GHOST</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="stackframes">
+<h1>7. stackFrames<a class="headerlink" href="#stackframes" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="purpose">
+<h2>7.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<p>This primitive is simply a wrapper around the standard
+<code class="docutils literal"><span class="pre">StackPrimitives.stackFrames</span></code> primitive which exposes extra parameters to the
+underlying <code class="docutils literal"><span class="pre">gemcombine.cl</span></code> IRAF script, and allows increasing the IRAF
+verbosity.</p>
+</div>
+<div class="section" id="inputs-and-outputs">
+<h2>7.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal"><span class="pre">hsigma</span></code>: float or None (default: None) - expose the hsigma parameter of the
+underlying IRAF gemcombine script, allowing it to be set within a recipe</p>
+<p><code class="docutils literal"><span class="pre">hthresh</span></code>: float or None (default: None) - expose the hthreshold parameter of
+the underlying IRAF gemcombine script, allowing it to be set within a recipe</p>
+<p><code class="docutils literal"><span class="pre">lsigma</span></code>: float or None (default: None) - expose the lsigma parameter of the
+underlying IRAF gemcombine script, allowing it to be set within a recipe</p>
+<p><code class="docutils literal"><span class="pre">lthresh</span></code>: float or None (default: None) - expose the lthreshold parameter of
+the underlying IRAF gemcombine script, allowing it to be set within a recipe</p>
+<p><code class="docutils literal"><span class="pre">pclip</span></code>: float or None (default: None) - expose the pclip parameter of the
+underlying IRAF gemcombine script, allowing it to be set within a recipe</p>
+<p><code class="docutils literal"><span class="pre">sigscale</span></code>: float or None (default: None) - expose the sigscale parameter of
+the underlying IRAF gemcombine script, allowing it to be set within a recipe</p>
+<p><code class="docutils literal"><span class="pre">verbose</span></code>: &lt;any&gt; or None (default: None) - set the level of iraf verbosity</p>
+</div>
+<div class="section" id="issues-and-limitations">
+<h2>7.3. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<p>The default value for <code class="docutils literal"><span class="pre">reject_method</span></code> (a parameter exposed by the underlying
+<code class="docutils literal"><span class="pre">StackPrimitives.stackFrames</span></code> primitive) is &#8216;avsigclip&#8217; (inherited from
+Gemini) which is probably not what we want in most cases.  If necessary (or more
+convenient), we could override the default in this wrapper, or in the
+<code class="docutils literal"><span class="pre">parameters_GHOST.py</span></code> file.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">7. stackFrames</a><ul>
+<li><a class="reference internal" href="#purpose">7.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">7.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">7.3. Issues and Limitations</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="rejectCosmicRays.html"
+                        title="previous chapter">6. rejectCosmicRays</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="standardizeHeaders.html"
+                        title="next chapter">8. standardizeHeaders</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/primitives_pages/stackFrames.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="standardizeHeaders.html" title="8. standardizeHeaders"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="rejectCosmicRays.html" title="6. rejectCosmicRays"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >Primitives for GHOST</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.5.
+    </div>
+  </body>
+</html>
