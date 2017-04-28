@@ -17,8 +17,10 @@ import scipy
 import functools
 import datetime
 
-from primitives_GMOS import GMOSPrimitives
-from primitives_stack import StackPrimitives
+from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import \
+    GMOSPrimitives
+from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import \
+    StackPrimitives
 from primitives_GHOST_calibration import GHOST_CalibrationPrimitives
 
 from astrodata_GHOST.polyfit import GhostArm
