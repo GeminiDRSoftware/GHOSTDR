@@ -568,7 +568,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                                              arcwaves,
                                              inspect=False)
 
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,
                                                                     lines_out)
 

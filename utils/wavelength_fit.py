@@ -46,12 +46,12 @@ elif user=='Joao':
     #arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
     test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-    arc_file  = fitsdir+"arcs_full/arc95_std_blue_arc.fits"
-    flat_file = fitsdir+"flat95_std_1_blue_flat.fits"
+    arc_file  = fitsdir+"arc95_std_red_arc.fits"
+    flat_file = fitsdir+"flat95_std_2_red_flat.fits"
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_blue_std_xmodPolyfit.fits'
+    xmodel_file=fitsdir+'GHOST_1_1_red_std_xmodPolyfit.fits'
 
     # All the other models... which are currently in the "test" directory.
     #wmodel_file=test_files_dir+'wparams_red_std.fits'
@@ -61,7 +61,7 @@ elif user=='Joao':
     rotmod_file=test_files_dir+'rotmod2.fits'
 
     #Input the slit arrays.
-    arc_image_array = pyfits.getdata(fitsdir + '../../arcs/arc95_std_SLIT.fits').astype(float)
+    arc_image_array = pyfits.getdata(fitsdir + 'arc95_std_SLIT_arc.fits').astype(float)
     arc_image_array -= np.median(arc_image_array)
 
 
@@ -71,7 +71,7 @@ arc_data = pyfits.getdata(arc_file)
 arcwaves, arcfluxes= np.loadtxt(arclinefile,usecols=[1,2]).T
 
 #instantiate the ghostsim arm
-arm = polyfit.GhostArm('blue',mode='std')
+arm = polyfit.GhostArm('red',mode='std')
 
 
 #Get the initial default model from the lookup location
@@ -145,9 +145,9 @@ ref_wave=4300.649946
 #pyfits.writeto('calibrations/xmod.fits',fitted_params)
 
 
-
+#pdb.set_trace()
 #Now find the other lines, after first re-loading into the extractor.
-lines_out=extractor.find_lines(arc_flux, arcwaves, hw=10, flat_data=flat_data.T,arcfile=arc_data.T,inspect=True)
+lines_out=extractor.find_lines(arc_flux, arcwaves, hw=10,arcfile=arc_data.T,inspect=True)
 #pdb.set_trace()
 #cp arclines.txt data/subaru/
 #shutil.copyfile('data/subaru/arclines.txt','data/subaru/arclines.backup')

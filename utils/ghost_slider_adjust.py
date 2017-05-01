@@ -58,7 +58,7 @@ if (model!='W') and (model!='X'):
     sys.exit()
 # Regardless, need to initialise a few things.
 
-mode = 'std'
+mode = 'high'
 cam = 'blue'
 user='Joao'
 #instantiate the ghostsim arm
@@ -71,7 +71,7 @@ if user=='Joao':
         arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
         #arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
         #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-        arc_file  = fitsdir+"arcs_full/arc95_"+mode+"_"+cam+"_arc.fits"
+        arc_file  = fitsdir+"arc95_"+mode+"_"+cam+"_arc.fits"
         arc_data = pyfits.getdata(arc_file)
         thar = thar_spectrum(arclinefile)
 
@@ -82,8 +82,8 @@ if user=='Joao':
     xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_xmodPolyfit.fits'
     #xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'  
     # All the other models... which are currently in the "test" directory.
-    wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
-    #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
+    #wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
+    wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/wmod.txt'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/fitted_wmod.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'    
