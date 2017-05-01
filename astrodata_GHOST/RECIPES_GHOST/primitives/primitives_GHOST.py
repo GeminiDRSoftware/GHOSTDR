@@ -569,7 +569,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                                              inspect=False)
 
             #import pdb; pdb.set_trace()
-            fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,
+            fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars[0].data,
                                                                     lines_out)
 
             # Much like the solution for findApertures, create a minimum-spec

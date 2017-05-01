@@ -23,15 +23,15 @@ if user=='Mike':
     test_files_dir='/Users/mireland/data/ghost/cal_frames/testmodels/'
 
     #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-    arc_file  = fitsdir+"arc95_std_blue.fits"
-    flat_file = fitsdir+"flat95_std_2_blue_flat.fits"
+    arc_file  = fitsdir+"arc95_std_red.fits"
+    flat_file = fitsdir+"flat95_std_2_red_flat.fits"
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_blue_std_xmodPolyfit.fits'
+    xmodel_file=fitsdir+'GHOST_1_1_red_std_xmodPolyfit.fits'
 
     # All the other models... which are currently in the "test" directory.
-    wmodel_file=test_files_dir+'wparams_blue_std.fits'
+    wmodel_file=test_files_dir+'wparams_red_std.fits'
     spatmod_file=test_files_dir+'spatmod.fits'
     specmod_file=test_files_dir+'specmod.fits'
     rotmod_file=test_files_dir+'rotmod2.fits'

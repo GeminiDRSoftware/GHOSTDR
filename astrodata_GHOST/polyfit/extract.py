@@ -9,6 +9,7 @@ import astropy.io.fits as pyfits
 import pdb
 from astropy.modeling import models, fitting
 import matplotlib.cm as cm
+import warnings
 
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance, 
@@ -475,7 +476,6 @@ class Extractor():
         # Let's try the median absolute deviation as a measure of background
         # noise.
         noise_level = np.median(np.abs(flux-np.median(flux)))
-        print(noise_level)
         
         if inspect and len(arcfile) == 0:
             print('Must provide an arc image for the inpection')
@@ -498,22 +498,21 @@ class Extractor():
                 # This ensures that lines too close together are not used in the
                 # fit, whilst avoiding looking at indeces that don't exist.
                 if (np.abs(ix-w_ix[i-1])<1.3*hw):
-                    print('Ignoring line for proximity')
                     continue
                 elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.3*hw):
-                    print('Ignoring line for proximity')
                     continue
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
                 #pdb.set_trace()
                 # Any line with peak S/N under a value is not considered.
-                if np.max(y) < 20 * noise_level:
-                    print('Too faint')
+                if np.max(y) < 6 * noise_level:
                     continue
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
-                fit_g = fitting.LevMarLSQFitter()
-                g = fit_g(g_init, x, y)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    fit_g = fitting.LevMarLSQFitter()
+                    g = fit_g(g_init, x, y)
                 #Wave, ypos, xpos, m, amplitude, fwhm
                 xpos = nx // 2 + \
                     np.interp(g.mean.value, np.arange(ny), self.arm.x_map[m_ix])

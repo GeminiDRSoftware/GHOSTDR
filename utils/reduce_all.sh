@@ -65,7 +65,7 @@ reduce @arc.list --override_cal processed_bias:`ls calibrations/storedcals/bias*
 typewalk --types GHOST_ARC GHOST_RED GHOST_HIGH --dir arcs/ -o arc.list
 reduce @arc.list --override_cal processed_bias:`ls calibrations/storedcals/bias*red_*.fits` processed_dark:`ls calibrations/storedcals/dark*red*.fits` processed_slitflat:`ls calibrations/storedcals/flat*high*SLIT*.fits` processed_slit:`ls calibrations/storedcals/arc*high*SLIT*.fits` processed_polyfit:`ls calibrations/storedcals/*red*high*xmod*.fits`
 typewalk --types GHOST_ARC GHOST_RED GHOST_STD --dir arcs/ -o arc.list
-reduce @arc.list --override_cal processed_bias:`ls calibrations/storedcals/bias*red_*.fits` processed_dark:`ls calibrations/storedcals/dark*red*.fits` processed_slitflat:`ls calibrations/storedcals/flat*high*SLIT*.fits` processed_slit:`ls calibrations/storedcals/arc*std*SLIT*.fits`  processed_polyfit:`ls calibrations/storedcals/*red*std*xmod*.fits`
+reduce @arc.list --override_cal processed_bias:`ls calibrations/storedcals/bias*red_*.fits` processed_dark:`ls calibrations/storedcals/dark*red*.fits` processed_slitflat:`ls calibrations/storedcals/flat*std*SLIT*.fits` processed_slit:`ls calibrations/storedcals/arc*std*SLIT*.fits`  processed_polyfit:`ls calibrations/storedcals/*red*std*xmod*.fits`
 
 
 
