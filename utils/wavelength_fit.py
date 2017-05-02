@@ -46,22 +46,22 @@ elif user=='Joao':
     #arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
     test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-    arc_file  = fitsdir+"arc95_std_red_arc.fits"
-    flat_file = fitsdir+"flat95_std_2_red_flat.fits"
+    arc_file  = fitsdir+"arc95_high_blue_arc.fits"
+    flat_file = fitsdir+"flat95_high_1_blue_flat.fits"
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_red_std_xmodPolyfit.fits'
+    xmodel_file=fitsdir+'GHOST_1_1_blue_high_xmodPolyfit.fits'
 
     # All the other models... which are currently in the "test" directory.
-    #wmodel_file=test_files_dir+'wparams_red_std.fits'
+    #wmodel_file=test_files_dir+'wparams_blue_high.fits'
     wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
     spatmod_file=test_files_dir+'spatmod.fits'
     specmod_file=test_files_dir+'specmod.fits'
     rotmod_file=test_files_dir+'rotmod2.fits'
 
     #Input the slit arrays.
-    arc_image_array = pyfits.getdata(fitsdir + 'arc95_std_SLIT_arc.fits').astype(float)
+    arc_image_array = pyfits.getdata(fitsdir + 'arc95_high_SLIT_arc.fits').astype(float)
     arc_image_array -= np.median(arc_image_array)
 
 
@@ -71,7 +71,7 @@ arc_data = pyfits.getdata(arc_file)
 arcwaves, arcfluxes= np.loadtxt(arclinefile,usecols=[1,2]).T
 
 #instantiate the ghostsim arm
-arm = polyfit.GhostArm('red',mode='std')
+arm = polyfit.GhostArm('blue',mode='high')
 
 
 #Get the initial default model from the lookup location
@@ -92,7 +92,7 @@ if refit_x_pars:
     conv_flat = arm.slit_flat_convolve(flat_data)
     xpars = arm.fit_x_to_image(conv_flat, xpars)
 
-slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='std')
+slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='high')
 arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
 #!!! These lines below actually go after the wmodel_file tweaking !!!
@@ -100,7 +100,7 @@ arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 # The extractor is given the polyfit "arm" object, and a slitview object which has
 # been instantiated with the slit viewer data.
 extractor = polyfit.Extractor(arm, slitview)
-#flat_flux, flat_var = extractor.one_d_extract(flat_data, correct_for_sky=False)
+flat_flux, flat_var = extractor.one_d_extract(flat_data, correct_for_sky=False)
 arc_flux, arc_var = extractor.one_d_extract(arc_data, correct_for_sky=False)
 
 #flat_flux, flat_var = pickle.load( open( "flat", "rb" ) )

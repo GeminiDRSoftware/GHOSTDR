@@ -107,7 +107,7 @@ class Extractor():
         ny = self.arm.x_map.shape[1]
         nm = self.arm.x_map.shape[0]
         nx = self.arm.szx
-        
+
         #Our profiles... TODO: extract x-centroids as well for PRV.
         profiles = self.slitview.object_slit_profiles(arm=self.arm.arm, correct_for_sky=correct_for_sky)
         
@@ -180,7 +180,7 @@ class Extractor():
                 else:
                     col_data = data[x_ix, j]
                     col_inv_var = pixel_inv_var[x_ix, j]
-
+                
                 # Fill in the "c" matrix and "b" vector from Sharp and Birchall
                 # equation 9 Simplify things by writing the sum in the
                 # computation of "b" as a matrix multiplication.
@@ -197,10 +197,6 @@ class Extractor():
                 extracted_var[i, j, :] = np.dot(
                     1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights**2)
                 
-                    
-#                if j==ny//2:
-                    #import pdb; pdb.set_trace()
-
         return extracted_flux, extracted_var
 
     def two_d_extract(self, file='', data=[], lenslet_profile='sim', rnoise=3.0,
