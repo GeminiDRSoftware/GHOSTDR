@@ -100,7 +100,7 @@ arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 # The extractor is given the polyfit "arm" object, and a slitview object which has
 # been instantiated with the slit viewer data.
 extractor = polyfit.Extractor(arm, slitview)
-flat_flux, flat_var = extractor.one_d_extract(flat_data, correct_for_sky=False)
+#flat_flux, flat_var = extractor.one_d_extract(flat_data, correct_for_sky=False)
 arc_flux, arc_var = extractor.one_d_extract(arc_data, correct_for_sky=False)
 
 #flat_flux, flat_var = pickle.load( open( "flat", "rb" ) )

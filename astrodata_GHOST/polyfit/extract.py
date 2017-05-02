@@ -107,7 +107,7 @@ class Extractor():
         ny = self.arm.x_map.shape[1]
         nm = self.arm.x_map.shape[0]
         nx = self.arm.szx
-
+        
         #Our profiles... TODO: extract x-centroids as well for PRV.
         profiles = self.slitview.object_slit_profiles(arm=self.arm.arm, correct_for_sky=correct_for_sky)
         
@@ -149,7 +149,7 @@ class Extractor():
                 #Although this is 2D, we only worry ourselves about the 
                 slitim_offsets = np.dot(self.arm.matrices[i,j], centroids)
                 profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
-            
+                #pdb.set_trace()
                 # Check for NaNs
                 if self.arm.x_map[i, j] != self.arm.x_map[i, j]:
                     extracted_var[i, j, :] = np.nan
@@ -468,7 +468,7 @@ class Extractor():
 
         # Only use the middle object.
         # In High res mode this will be the object, in std mode it's the sky
-        flux = flux[:, :, 0]
+        flux = flux[:, :, 2]
         ny = flux.shape[1]
         nm = flux.shape[0]
         nx = self.arm.szx
