@@ -1,21 +1,21 @@
 .. primitive1:
 
-.. mosaicADdetectors:
+.. tileAmplifiers:
 
-mosaicADdetectors
+tileAmplifiers
 ============================
 
 Purpose
 -------
 
-This primitive mosaics the SCI frames of the input images, along with the VAR
-and DQ frames if they exist.
+This primitive tiles (or optionally mosaics) the SCI frames of the input images,
+along with the VAR and DQ frames if they exist.
 
 Inputs and Outputs
 ------------------
 
-``tile``: bool (default: False), tile images instead of mosaic (mosaic includes
-transformations)
+``mosaic``: bool (default: False), tile the images by default; mosaic them
+(including transformations) if True
 
 ``dq_planes``: bool (default: False), transform the DQ image, bit plane by bit
 plane
@@ -23,9 +23,8 @@ plane
 Algorithm
 ---------
 
-This primitive overrides the one of the same name inherited from
-``GEMINIPrimitives``.  The override logic is identical to the original except
-for two hacks introduced just prior to calling the mosaicing routine,
+This primitive is a copy of ``GEMINIPrimitives.mosaicADdetectors`` with a couple
+of additional hacks introduced just prior to calling the mosaicing routine,
 ``gemini_mosaic_function``, and undone immediately after.  These are necessary
 in order to trick the underlying mosaicing machinery into working for GHOST
 data, and are as follows:

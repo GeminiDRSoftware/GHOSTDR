@@ -103,21 +103,6 @@
             "userOverride":   True,
             "uiLevel":        "UIBASIC",
             },
-        "attach_mdf": {
-            "default":        False,
-            "type":           "bool",
-            "recipeOverride": True,
-            "userOverride":   True,
-            "uiLevel":        "UIBASIC",
-            },
-        "mdf": {
-            "default":        None,
-            # No default type defined, since the mdf parameter could be a string
-            # or an AstroData object
-            "recipeOverride": True,
-            "userOverride":   True,
-            "uiLevel":        "UIBASIC",
-            },
         },
     "storeProcessedPolyfit": {
         "suffix": {
@@ -173,17 +158,19 @@
             "uiLevel":        "UIBASIC",
             },
         },
-    "validateData": {
+    "tileAmplifiers": {
         "suffix": {
-            "default":        "_dataValidated",
+            "default":        "_tileAmplifiers",
             "type":           "str",
             "recipeOverride": True,
             "userOverride":   True,
             "uiLevel":        "UIBASIC",
             },
-        "repair": {
-            "default":        False,
-            "type":           "bool",
+        },
+    "validateData": {
+        "suffix": {
+            "default":        "_dataValidated",
+            "type":           "str",
             "recipeOverride": True,
             "userOverride":   True,
             "uiLevel":        "UIBASIC",

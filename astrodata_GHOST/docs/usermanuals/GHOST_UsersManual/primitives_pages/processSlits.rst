@@ -8,11 +8,10 @@ processSlits
 Purpose
 -------
 
-This primitive replaces CR-affected pixels in each individual slit viewer image
-(taken from the current stream) with their equivalents from the median frame of
-those images, and extracts slit object profiles to flux-weight the images'
-offsets (relative to the coincident science frame) from which it computes the
-mean exposure epoch.
+For each CR-corrected slit viewer frame taken from the current stream, this
+primitive extracts the object profiles within and uses them to flux-weight the
+image's offset (relative to the coincident science frame) and then uses that to
+compute the mean exposure epoch for the entire series of inputs.
 
 Inputs and Outputs
 ------------------
@@ -21,29 +20,12 @@ Inputs and Outputs
 flat field image.  If not provided, or if set to None, the flat will be taken
 from the ``processed_slitflat`` override_cal command line argument.
 
-``slit``: string or None (default: None) - The name of the bias-/dark-corrected
-median slit viewer frame.  If not provided, or if set to None, the frame will be
-taken from the ``slitStream`` argument.
-
-``slitStream``: string or None (default: None) - The name of the stream from
-which to access the bias-/dark-corrected median slit viewer frame (only the
-first AstroData instance will be used).  If not provided, or if set to None, the
-frame will be taken from the ``processed_slit`` override_cal command line
-argument.
-
 Algorithm
 ---------
 
-The incoming stream of AstroData objects, representing
-bias-/dark-corrected slit viewer frames, is first used to produce a per-pixel
-median absolute deviation (MAD) frame for clipping cosmic ray (CR) outliers.
-The median frame is subtracted from each individual frame in turn, and where the
-residual exceeds 20x the MAD, a CR is detected.  Each CR-affected pixel is
-replaced with its equivalent from the median slit viewer frame.
-
-Then, for each CR-corrected individual frame, a ``SlitViewer`` object
-is instantiated for each spectrograph arm using the frame and the passed-in flat
-field image.  The ``SlitViewer`` objects then each provide, via the
+For each individual CR-corrected frame taken from the input, a ``SlitViewer``
+object is instantiated for each spectrograph arm using the frame and the passed-
+in flat field image.  The ``SlitViewer`` objects then each provide, via the
 ``object_slit_profiles()`` method, a 2 element array where each element is a
 1-dimensional array representing a single object profile, un-normalised,
 sky-corrected, and summed across (not along) the slit.
@@ -66,5 +48,8 @@ in turn is written into the header of each CR-corrected output frame, in the
 Issues and Limitations
 ----------------------
 
-For short duration science exposures there may be too few coincident slit frames
-to produce a meaningful MAD frame for CR detection.
+The UTC start/stop times of the coincident science frame are currently obtained
+from the UTSTART/UTEND PHU keywords, having been written there by our splitter
+primitive (or the simulator with the -split option used).  In the context of a
+standalone slit viewer frame, this may be considered improper usage of these
+keywords.

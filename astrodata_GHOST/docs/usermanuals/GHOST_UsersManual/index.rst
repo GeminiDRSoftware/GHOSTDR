@@ -17,7 +17,7 @@ GHOST Users Manual
    tipstricks
    issueslimitations
    primitives
-   
+
 
 
 Indices and tables

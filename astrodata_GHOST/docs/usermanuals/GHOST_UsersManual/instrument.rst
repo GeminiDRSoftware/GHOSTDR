@@ -78,8 +78,8 @@ The following table is an overview of the instrument observing modes available
 to users, which are selecting via the Gemini Observing Tool (OT).
 
 +----------------------------+------------------+--------------------+-------------------+-------------------+--------------------+
-| Configuration              | Focal Plane      | Resolution         | Detector          | Guiding [2]_      | Approx. B mag.     |
-|                            |                  |                    | binning [1]_      |                   |                    |
+| Configuration              | Focal Plane      | Resolution         | Detector          | Guiding [3]_      | Approx. B mag.     |
+|                            |                  |                    | binning [2]_      |                   |                    |
 +============================+==================+====================+===================+===================+====================+
 | Two-target                 | IFU1 & IFU2      | 50k                | 1x2               | P2 & guide fibres | :math:`< 18`       |
 +----------------------------+------------------+--------------------+-------------------+-------------------+--------------------+
@@ -100,9 +100,9 @@ to users, which are selecting via the Gemini Observing Tool (OT).
 | High-resolution (PRV)      | IFU1 & ThXe      | 75k                | 1x1               | P2 & guide fibres | :math:`<16`        |
 +----------------------------+------------------+--------------------+-------------------+-------------------+--------------------+
 
-.. [1] Reported as (binning in the spectral direction) x (binning in the slit
+.. [2] Reported as (binning in the spectral direction) x (binning in the slit
        direction)
-.. [2] P2 corresponds to peripheral wave-front sensor (PWFS) guiding.
+.. [3] P2 corresponds to peripheral wave-front sensor (PWFS) guiding.
 
 **Two-target modes**
 
@@ -185,7 +185,7 @@ BPM Flag Encoding
 The bad pixel mask (BPM) flag encoding used for GHOST is derived from that
 used for GHOS, and is summarized below:
 
-+----+-------+-----------------------------------------------------------------+ 
++----+-------+-----------------------------------------------------------------+
 |Bit | Pixel | Meaning                                                         |
 |    | value |                                                                 |
 +====+=======+=================================================================+

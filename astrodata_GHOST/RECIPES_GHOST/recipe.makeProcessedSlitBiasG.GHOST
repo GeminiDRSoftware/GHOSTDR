@@ -1,4 +1,3 @@
-promote  # bypass the extn check in GMOS validateData
 prepare  # Gemini superprimitive
 addDQ
 addVAR

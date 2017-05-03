@@ -9,15 +9,19 @@ Primitives
 
     **Primitives**
 
+    .. automethod:: correctSlitCosmics
+    .. automethod:: extractProfile
     .. automethod:: findApertures
+    .. automethod:: fitWavelength
     .. automethod:: fork
-    .. automethod:: mosaicADdetectors
     .. automethod:: processSlits
-    .. automethod:: promote
     .. automethod:: rejectCosmicRays
     .. automethod:: stackFrames
     .. automethod:: standardizeHeaders
+    .. automethod:: standardizeStructure
     .. automethod:: switchTo
+    .. automethod:: tileAmplifiers
+    .. automethod:: validateData
 
 .. **********
 .. Primitives

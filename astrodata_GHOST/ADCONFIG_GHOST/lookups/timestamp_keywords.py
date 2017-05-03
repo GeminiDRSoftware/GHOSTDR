@@ -9,5 +9,5 @@ timestamp_keys = {
     "findApertures": "FINDAPER",
     "fitWavelength": "FITWAVLN",
     "processSlits": "PROCSLIT",
-    "standardizeHeaders": "SDZHDRS",
+    "tileAmplifiers": "TILEAMPS",
     }

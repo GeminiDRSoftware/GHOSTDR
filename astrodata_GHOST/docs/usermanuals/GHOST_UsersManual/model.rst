@@ -73,6 +73,7 @@ This means that the simplest wavelength scale spectrograph model should have:
  * :math:`q_{01}` : central wavelength of order m_ref
  * :math:`q_{10}` : central_wavelength/R_pix, with R_pix the resolving power / pixel.
  * :math:`q_{11}` : central_wavelength/R_pix, with R_pix the resolving power / pixel.
+
 ... with everything else approximately zero.
 
 Please note that the order of polynomials is left undefined. The code that handles these
@@ -110,4 +111,3 @@ In the case of x position, the coefficients represent:
  * :math:`q_{22}` : quadratic term coefficient for order curvature
 
 ... with everything else approximately zero.
-
