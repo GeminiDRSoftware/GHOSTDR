@@ -267,8 +267,8 @@ class GHOSTPrimitives(GMOSPrimitives,
             arm = GhostArm(arm=ad.arm().as_str(), mode=ad.res_mode().as_str())
             # The 'xmod' file we need is the one that was spat out to
             # the calibrations system at the end of the flat processing
-            rc.run('getProcessedPolyfit')
-            xpars = rc.get_cal(ad, 'processed_polyfit')
+            rc.run('getProcessedXmod')
+            xpars = rc.get_cal(ad, 'processed_xmod')
             xpars = AstroData(xpars)
             # Need to read in all other parameters from the lookups system
             key = self._get_polyfit_key(ad)
@@ -396,12 +396,12 @@ class GHOSTPrimitives(GMOSPrimitives,
                             'therefore, %s will not be used' % ad.filename)
                 continue
 
-            all_polyfit_dict = PolyfitDict.polyfit_dict
+            all_xmod_dict = PolyfitDict.xmod_dict
             # Work out the directory to get the Polyfit initial files from
             key = self._get_polyfit_key(ad)
 
-            if key in all_polyfit_dict:
-                poly_xmod = lookup_path(all_polyfit_dict[key])
+            if key in all_xmod_dict:
+                poly_xmod = lookup_path(all_xmod_dict[key])
             else:
                 # Don't know how to fit this file, so probably not necessary
                 # Return this ad to the stream and move to the next
@@ -495,8 +495,8 @@ class GHOSTPrimitives(GMOSPrimitives,
             # Read in all relevant polyfit files (x5)
             # The 'xmod' file we need is the one that was spat out to
             # the calibrations system at the end of the flat processing
-            rc.run('getProcessedPolyfit')
-            xpars = rc.get_cal(ad, 'processed_polyfit')
+            rc.run('getProcessedXmod')
+            xpars = rc.get_cal(ad, 'processed_xmod')
             xpars = AstroData(xpars)
             # Need to read in all other parameters from the lookups system
             key = self._get_polyfit_key(ad)

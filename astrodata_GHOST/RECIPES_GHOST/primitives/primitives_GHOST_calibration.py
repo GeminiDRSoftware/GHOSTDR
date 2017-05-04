@@ -35,7 +35,7 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         self._getProcessed(rc)
         yield rc
 
-    def getProcessedPolyfit(self, rc):
+    def getProcessedXmod(self, rc):
         self._getProcessed(rc)
         yield rc
 
@@ -110,7 +110,7 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
         self._storeProcessed(rc, 'PRSLITFL')
         yield rc
 
-    def storeProcessedPolyfit(self, rc):
+    def storeProcessedXmod(self, rc):
         self._storeProcessed(rc, 'PRPOLYFT')
         yield rc
 

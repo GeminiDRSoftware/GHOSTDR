@@ -124,7 +124,7 @@ instead, e.g.::
 (Note this is the first place where we have to explicitly specify the
 resolution mode/type of the object file we ultimately intend to reduce.)
 Then, when you call ``reduce`` on the ``flat.list``, you must provide both
-the bias and flat file path explicitly::
+the bias and dark file path explicitly::
 
     reduce @<path_to>/flat.list --override_cal processed_bias:calibrations/storedcals/bias_1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_red_dark.fits
 
@@ -187,7 +187,7 @@ Additional calibrators required are reduced slit viewer flats and slit viewer
 images, as well as the aperture fit made during the generation of the
 flat calibration image::
 
-    reduce @<path_to>/arc.list --override_cal processed_bias:calibrations/storedcals/bias_1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_red_dark.fits processed_slit:calibrations/storedcals/obj95_1.0_high_SLIT_stack_slit.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits processed_polyfit:calibrations/storedcals/GHOST_1_1_red_high_xmodPolyfit.fits
+    reduce @<path_to>/arc.list --override_cal processed_bias:calibrations/storedcals/bias_1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_red_dark.fits processed_slit:calibrations/storedcals/obj95_1.0_high_SLIT_stack_slit.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits processed_xmod:calibrations/storedcals/GHOST_1_1_red_high_xmodPolyfit.fits
 
 Arc reduction not only generates a reduced arc image and places it in the
 calibrations directory, but also uses the ``polyfit`` module to extract the

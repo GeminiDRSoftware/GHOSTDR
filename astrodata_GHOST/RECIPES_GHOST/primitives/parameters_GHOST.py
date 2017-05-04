@@ -104,7 +104,7 @@
             "uiLevel":        "UIBASIC",
             },
         },
-    "storeProcessedPolyfit": {
+    "storeProcessedXmod": {
         "suffix": {
             "default":        "_xmodPolyfit",
             "type":           "str",

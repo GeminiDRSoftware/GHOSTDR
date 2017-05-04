@@ -17,4 +17,4 @@ getList(purpose="forStack")
 stackFrames(operation="median")
 storeProcessedFlat
 findApertures
-storeProcessedPolyfit
+storeProcessedXmod
