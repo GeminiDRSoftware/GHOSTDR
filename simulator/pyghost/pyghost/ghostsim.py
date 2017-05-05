@@ -655,7 +655,7 @@ class Arm(object):
         self.theta = 65.0               # Blaze angle
         self.assym = 1.0/0.41           # Magnification
         self.gamma = 0.56      # Echelle gamma
-        self.nwave = 1e2       # Wavelengths per order for interpolation.
+        self.nwave = int(1e2)       # Wavelengths per order for interpolation.
         self.f_col = 1750.6    # Collimator focal length.
         self.lenslet_high_size = 118.0  # Lenslet flat-to-flat in microns
         self.lenslet_std_size = 197.0   # Lenslet flat-to-flat in microns

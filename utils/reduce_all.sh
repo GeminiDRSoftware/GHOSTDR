@@ -8,11 +8,12 @@ COREDIR=`pwd`
 
 CALDIR=$COREDIR'/calibrations/storedcals'
 
-BIASDIR=$COREDIR'/biases'
-DARKDIR=$COREDIR'/darks'
-#Assumes the high and std flats are inside high/ and std/ dirs in FLATDIR
-FLATDIR=$COREDIR'/flats'
-ARCDIR=$COREDIR'/arcs'
+#Now you have the option of pointing to different directories for each file type.
+#All in the same place is the way forward.
+BIASDIR=$COREDIR
+DARKDIR=$COREDIR
+FLATDIR=$COREDIR
+ARCDIR=$COREDIR
 
 
 echo 'Doing slits now'
@@ -21,18 +22,14 @@ reduce @bias.list
 typewalk --types GHOST_SLITV_DARK --dir $DARKDIR/ -o dark.list
 reduce @dark.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits`
 
-#FLATS
-typewalk --types GHOST_SLITV_FLAT GHOST_HIGH --dir $FLATDIR/ -o flat.list
-reduce @flat.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits`
-typewalk --types GHOST_SLITV_FLAT GHOST_STD --dir $FLATDIR/ -o flat.list
-reduce @flat.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits`
-
-#ARCS
-typewalk --types GHOST_SLITV_ARC GHOST_HIGH --dir $ARCDIR/ -o arc.list
-reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*high*SLIT*.fits` 
-typewalk --types GHOST_SLITV_ARC GHOST_STD --dir $ARCDIR/ -o arc.list
-reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*std*SLIT*.fits`
-
+for j in high std
+do
+    CAPMODE=`echo $j | tr '[:lower:]' '[:upper:]'`
+    typewalk --types GHOST_SLITV_FLAT GHOST_$CAPMODE --dir $FLATDIR/ -o flat.list
+    reduce @flat.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits`
+    typewalk --types GHOST_SLITV_ARC GHOST_$CAPMODE --dir $ARCDIR/ -o arc.list
+reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits` 
+done
 
 echo 'Now the spectrograph data'
 for i in blue red 
