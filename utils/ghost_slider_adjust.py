@@ -69,7 +69,6 @@ if user=='Joao':
     test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     if model == 'W':
         arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
-        #arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
         #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
         arc_file  = fitsdir+"arc95_"+mode+"_"+cam+"_arc.fits"
         arc_data = pyfits.getdata(arc_file)

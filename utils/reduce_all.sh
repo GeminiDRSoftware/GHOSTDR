@@ -21,18 +21,14 @@ reduce @bias.list
 typewalk --types GHOST_SLITV_DARK --dir $DARKDIR/ -o dark.list
 reduce @dark.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits`
 
-#FLATS
-typewalk --types GHOST_SLITV_FLAT GHOST_HIGH --dir $FLATDIR/ -o flat.list
-reduce @flat.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits`
-typewalk --types GHOST_SLITV_FLAT GHOST_STD --dir $FLATDIR/ -o flat.list
-reduce @flat.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits`
-
-#ARCS
-typewalk --types GHOST_SLITV_ARC GHOST_HIGH --dir $ARCDIR/ -o arc.list
-reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*high*SLIT*.fits` 
-typewalk --types GHOST_SLITV_ARC GHOST_STD --dir $ARCDIR/ -o arc.list
-reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*std*SLIT*.fits`
-
+for j in high std
+do
+    CAPMODE=`echo $j | tr '[:lower:]' '[:upper:]'`
+    typewalk --types GHOST_SLITV_FLAT GHOST_SLITV_$CAPMODE --dir $FLATDIR/$j/ -o flat.list
+    reduce @flat.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits`
+    typewalk --types GHOST_SLITV_ARC GHOST_SLITV_$CAPMODE --dir $ARCDIR/ -o arc.list
+reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits` 
+done
 
 echo 'Now the spectrograph data'
 for i in blue red 
