@@ -7,6 +7,9 @@
 # Exit if any command returns an error
 set -e
 
+# Set up for Ureka
+eval `${HOME}/.ureka/ur_setup -sh $*`
+
 # Create the message
 GITMSG="GHOST data reduction software release ${RELEASE_VERSION}"
 
@@ -16,9 +19,9 @@ PROGMAN=${WORKSPACE}/hg/astrodata_GHOST/docs/progmanuals/GHOST_ProgManual
 USERMAN=${WORKSPACE}/hg/astrodata_GHOST/docs/usermanuals/GHOST_UsersManual
 DEST=/priv/www/mssso/ghostdr
 
-make -C ${RTD} SPHINXBUILD=/usr/local/python-2.7.1/bin/sphinx-build html
-make -C ${PROGMAN} SPHINXBUILD=/usr/local/python-2.7.1/bin/sphinx-build html
-make -C ${USERMAN} SPHINXBUILD=/usr/local/python-2.7.1/bin/sphinx-build html
+make -C ${RTD} html
+make -C ${PROGMAN} html
+make -C ${USERMAN} html
 
 # remove old software release web pages and install new ones
 rm -rf ${DEST}/*
