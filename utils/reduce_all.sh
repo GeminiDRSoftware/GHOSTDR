@@ -4,7 +4,7 @@
 #This must be ran from within where the GHOST data are kept, with default variables indicating where the various types of files are
 
 # Start by setting up all the locations for the files. Change this for each case. 
-COREDIR=`pwd`
+COREDIR=$PWD
 
 CALDIR=$COREDIR'/calibrations/storedcals'
 
@@ -15,7 +15,10 @@ DARKDIR=$COREDIR
 FLATDIR=$COREDIR
 ARCDIR=$COREDIR
 
+#This line is for cleaning up your directory of all the stuff the reduction creates. 
+#rm *stack* *forStack* adc* *.log *.list tmp* *_dark.fits *_bias.fits GHOST* *_arc.fits *_flat.fits
 
+   
 echo 'Doing slits now'
 typewalk --types GHOST_SLITV_BIAS --dir $BIASDIR/ -o bias.list
 reduce @bias.list
