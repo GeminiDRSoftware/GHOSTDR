@@ -12,11 +12,20 @@ GHOST Users Manual
    :maxdepth: 2
 
    instrument
+   model
    recipes
    tipstricks
    issueslimitations
    primitives
+   
 
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
 .. todolist::
 
