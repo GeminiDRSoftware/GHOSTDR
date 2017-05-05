@@ -8,11 +8,12 @@ COREDIR=`pwd`
 
 CALDIR=$COREDIR'/calibrations/storedcals'
 
-BIASDIR=$COREDIR'/biases'
-DARKDIR=$COREDIR'/darks'
-#Assumes the high and std flats are inside high/ and std/ dirs in FLATDIR
-FLATDIR=$COREDIR'/flats'
-ARCDIR=$COREDIR'/arcs'
+#Now you have the option of pointing to different directories for each file type.
+#All in the same place is the way forward.
+BIASDIR=$COREDIR
+DARKDIR=$COREDIR
+FLATDIR=$COREDIR
+ARCDIR=$COREDIR
 
 
 echo 'Doing slits now'
@@ -24,9 +25,9 @@ reduce @dark.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits`
 for j in high std
 do
     CAPMODE=`echo $j | tr '[:lower:]' '[:upper:]'`
-    typewalk --types GHOST_SLITV_FLAT GHOST_SLITV_$CAPMODE --dir $FLATDIR/$j/ -o flat.list
+    typewalk --types GHOST_SLITV_FLAT GHOST_$CAPMODE --dir $FLATDIR/ -o flat.list
     reduce @flat.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits`
-    typewalk --types GHOST_SLITV_ARC GHOST_SLITV_$CAPMODE --dir $ARCDIR/ -o arc.list
+    typewalk --types GHOST_SLITV_ARC GHOST_$CAPMODE --dir $ARCDIR/ -o arc.list
 reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits` 
 done
 
