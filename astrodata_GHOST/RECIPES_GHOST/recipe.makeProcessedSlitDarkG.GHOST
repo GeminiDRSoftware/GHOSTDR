@@ -1,5 +1,4 @@
-promote  # bypass the extn check in GMOS validateData
-prepare(attach_mdf=False)
+prepare
 addDQ(illum_mask=False)
 addVAR(read_noise=True)
 biasCorrect  # note: this is a subrecipe

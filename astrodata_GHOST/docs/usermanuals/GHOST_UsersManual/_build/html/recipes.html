@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3. Recipes for GHOST &mdash; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    <title>3. Recipes for GHOST &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -18,13 +18,15 @@
         VERSION:     '0.9.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="GHOST Users&#39; Manual 0.9.0 documentation" href="index.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="4. Tips and Tricks for Processing GHOST" href="tipstricks.html" />
     <link rel="prev" title="2. Polynomial Model Method" href="model.html" /> 
   </head>
@@ -41,7 +43,7 @@
         <li class="right" >
           <a href="model.html" title="2. Polynomial Model Method"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -99,7 +101,7 @@ calibration in <code class="docutils literal"><span class="pre">calibrations/sto
 this command should be <code class="docutils literal"><span class="pre">reduce</span> <span class="pre">&#64;data/bias.list</span></code>. The &#64; parameter is a legacy
 from IRAF, and tells <code class="docutils literal"><span class="pre">reduce</span></code> that you&#8217;re passing a list of filenames instead
 of a data file.
-This code call will place a file named <code class="docutils literal"><span class="pre">bias_0_red_bias.fits</span></code> in the
+This code call will place a file named <code class="docutils literal"><span class="pre">bias_1_red_bias.fits</span></code> in the
 <code class="docutils literal"><span class="pre">calibrations/storedcals</span></code> directory of your present working directory.</p>
 <p>The whole process behind Gemini&#8217;s <code class="docutils literal"><span class="pre">makeProcessedBias</span></code> recipe is documented in
 the following flowchart (thanks Kathleen Labrie):</p>
@@ -123,12 +125,12 @@ attempting to run:</p>
 stored on disk (it uses a much more complicated lookup scheme).  The workaround
 for the time being is to force it to look on disk in a particular area using the
 <code class="docutils literal"><span class="pre">--override_cal</span></code> option:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">dark</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_0_red_bias</span><span class="o">.</span><span class="n">fits</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">dark</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_red_bias</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
 <p>(Depending on your specific bias.list contents, your bias calibration under
 your calibrations/storedcals directory may have a different name, so double-
-check.) This command will place a file <code class="docutils literal"><span class="pre">dark95_0_red_dark.fits</span></code> into the
+check.) This command will place a file <code class="docutils literal"><span class="pre">dark95_1_red_dark.fits</span></code> into the
 <code class="docutils literal"><span class="pre">calibrations/storedcals</span></code> directory.</p>
 <p>The whole process behind Gemini&#8217;s <code class="docutils literal"><span class="pre">makeProcessedDark</span></code> recipe is documented in
 the following flowchart (thanks Kathleen Labrie):</p>
@@ -145,8 +147,8 @@ instead, e.g.:</p>
 <p>(Note this is the first place where we have to explicitly specify the
 resolution mode/type of the object file we ultimately intend to reduce.)
 Then, when you call <code class="docutils literal"><span class="pre">reduce</span></code> on the <code class="docutils literal"><span class="pre">flat.list</span></code>, you must provide both
-the bias and flat file path explicitly:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">flat</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_0_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark_0_red_dark</span><span class="o">.</span><span class="n">fits</span>
+the bias and dark file path explicitly:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">flat</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_red_dark</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
 <p>(or whatever the filename of the processed dark turns out to be).</p>
@@ -199,7 +201,7 @@ The correct type to <code class="docutils literal"><span class="pre">typewalk</s
 <p>Additional calibrators required are reduced slit viewer flats and slit viewer
 images, as well as the aperture fit made during the generation of the
 flat calibration image:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">arc</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_0_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark_0_red_dark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slit</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">obj95_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_SLIT_stack_slit</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slitflat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_SLIT_stack_slitFlat</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_polyfit</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">GHOST_1_1_red_high_xmodPolyfit</span><span class="o">.</span><span class="n">fits</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">arc</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_red_dark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slit</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">obj95_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_SLIT_stack_slit</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slitflat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_SLIT_stack_slitFlat</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_xmod</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">GHOST_1_1_red_high_xmodPolyfit</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
 <p>Arc reduction not only generates a reduced arc image and places it in the
@@ -229,7 +231,7 @@ successfully):</p>
 </div>
 <p>The above command will fail due to the faulty calibrations lookup. Again, we
 need to use the <code class="docutils literal"><span class="pre">--override_cal</span></code> option:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span><span class="o">/</span><span class="n">obj95_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_red</span><span class="o">.</span><span class="n">fits</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_0_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_0_red_dark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_flat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_std_0_red_flat</span><span class="o">.</span><span class="n">fits</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span><span class="o">/</span><span class="n">obj95_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_red</span><span class="o">.</span><span class="n">fits</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_red_dark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_flat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_red_flat</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
 <p>This produces a <code class="docutils literal"><span class="pre">obj95_1.0_high_red_flatCorrected.fits</span></code> (or similar) file, a
@@ -267,8 +269,8 @@ one:</p>
 additional type to <code class="docutils literal"><span class="pre">typewalk</span></code> that identifies the resolution of the data that
 you wish to process (as mixing resolutions would be nonsensical).  Follow these
 steps as an example:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_SLITV_FLAT</span> <span class="n">GHOST_SLITV_HIGH</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span> <span class="n">slit_flat_high</span><span class="o">.</span><span class="n">list</span>
-<span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">slit_flat_std</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_SLIT_stack_slitBias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_SLIT_stack_slitDark</span><span class="o">.</span><span class="n">fits</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_SLITV_FLAT</span> <span class="n">GHOST_HIGH</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span> <span class="n">slit_flat_high</span><span class="o">.</span><span class="n">list</span>
+<span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">slit_flat_high</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_SLIT_stack_slitBias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_SLIT_stack_slitDark</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
 <p>The final step is to use all of the above calibrators in a call to <code class="docutils literal"><span class="pre">reduce</span></code> a
@@ -323,7 +325,7 @@ and not simply <code class="docutils literal"><span class="pre">processed_flat</
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/recipes.txt"
+      <li><a href="_sources/recipes.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -353,12 +355,12 @@ and not simply <code class="docutils literal"><span class="pre">processed_flat</
         <li class="right" >
           <a href="model.html" title="2. Polynomial Model Method"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.5.
+        &#169; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.5.
     </div>
   </body>
 </html>

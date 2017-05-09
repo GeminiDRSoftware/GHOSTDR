@@ -1,6 +1,10 @@
 GHOST DR Release Notes
 ======================
 
+MILESTONE-5A
+  Re-release of Milestone 5, to fix minor issues
+
+
 MILESTONE-5
   Milestone 5 release, including a wavelength solution
 

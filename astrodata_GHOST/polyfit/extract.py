@@ -9,6 +9,7 @@ import astropy.io.fits as pyfits
 import pdb
 from astropy.modeling import models, fitting
 import matplotlib.cm as cm
+import warnings
 
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance, 
@@ -148,7 +149,7 @@ class Extractor():
                 #Although this is 2D, we only worry ourselves about the 
                 slitim_offsets = np.dot(self.arm.matrices[i,j], centroids)
                 profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
-            
+                #pdb.set_trace()
                 # Check for NaNs
                 if self.arm.x_map[i, j] != self.arm.x_map[i, j]:
                     extracted_var[i, j, :] = np.nan
@@ -179,7 +180,7 @@ class Extractor():
                 else:
                     col_data = data[x_ix, j]
                     col_inv_var = pixel_inv_var[x_ix, j]
-
+                
                 # Fill in the "c" matrix and "b" vector from Sharp and Birchall
                 # equation 9 Simplify things by writing the sum in the
                 # computation of "b" as a matrix multiplication.
@@ -195,10 +196,7 @@ class Extractor():
                 extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
                 extracted_var[i, j, :] = np.dot(
                     1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights**2)
-                    
-#                if j==ny//2:
-                    #import pdb; pdb.set_trace()
-
+                
         return extracted_flux, extracted_var
 
     def two_d_extract(self, file='', data=[], lenslet_profile='sim', rnoise=3.0,
@@ -466,7 +464,7 @@ class Extractor():
 
         # Only use the middle object.
         # In High res mode this will be the object, in std mode it's the sky
-        flux = flux[:, :, 1]
+        flux = flux[:, :, 2]
         ny = flux.shape[1]
         nm = flux.shape[0]
         nx = self.arm.szx
@@ -495,19 +493,22 @@ class Extractor():
             for i, ix in enumerate(w_ix):
                 # This ensures that lines too close together are not used in the
                 # fit, whilst avoiding looking at indeces that don't exist.
-                if (np.abs(ix-w_ix[i-1])<1.5*hw):
+                if (np.abs(ix-w_ix[i-1])<1.3*hw):
                     continue
-                elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.5*hw):
+                elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.3*hw):
                     continue
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
+                #pdb.set_trace()
                 # Any line with peak S/N under a value is not considered.
-                if np.max(y) < 100 * noise_level:
+                if np.max(y) < 6 * noise_level:
                     continue
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
-                fit_g = fitting.LevMarLSQFitter()
-                g = fit_g(g_init, x, y)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    fit_g = fitting.LevMarLSQFitter()
+                    g = fit_g(g_init, x, y)
                 #Wave, ypos, xpos, m, amplitude, fwhm
                 xpos = nx // 2 + \
                     np.interp(g.mean.value, np.arange(ny), self.arm.x_map[m_ix])

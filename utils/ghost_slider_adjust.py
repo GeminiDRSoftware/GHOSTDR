@@ -59,7 +59,7 @@ if (model!='W') and (model!='X'):
 # Regardless, need to initialise a few things.
 
 mode = 'std'
-cam = 'blue'
+cam = 'red'
 user='Joao'
 #instantiate the ghostsim arm
 ghost = polyfit.ghost.GhostArm(cam,mode=mode)
@@ -69,20 +69,20 @@ if user=='Joao':
     test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     if model == 'W':
         arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
-        #arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
         #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-        arc_file  = fitsdir+"arcs_full/arc95_"+mode+"_"+cam+"_arc.fits"
+        arc_file  = fitsdir+"arc95_"+mode+"_"+cam+"_arc.fits"
         arc_data = pyfits.getdata(arc_file)
         thar = thar_spectrum(arclinefile)
 
-    flat_file = fitsdir+"flat95_"+mode+"_1_"+cam+"_flat.fits"
+    flat_file = fitsdir+"flat95_"+mode+"_2_"+cam+"_flat.fits"
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
     xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_xmodPolyfit.fits'
+    wmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_wmodPolyfit.fits'
     #xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'  
     # All the other models... which are currently in the "test" directory.
-    wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
+    #wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/wmod.txt'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/fitted_wmod.fits'

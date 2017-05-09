@@ -8,7 +8,7 @@ addDQ(illum_mask=False)
 addVAR(read_noise=True)
 #nonlinearityCorrect
 overscanCorrect
-mosaicADdetectors(tile=True)
+tileAmplifiers
 biasCorrect
 ADUToElectrons
 addVAR(poisson_noise=True)
