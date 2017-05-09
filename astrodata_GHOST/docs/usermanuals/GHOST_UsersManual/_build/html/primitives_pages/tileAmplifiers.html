@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>6.12. tileAmplifiers &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/todo-styles.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.9.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="6.13. validateData" href="validateData.html" />
+    <link rel="prev" title="6.11. switchTo" href="switchTo.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="validateData.html" title="6.13. validateData"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="switchTo.html" title="6.11. switchTo"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">6. Primitives for GHOST</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="tileamplifiers">
+<h1>6.12. tileAmplifiers<a class="headerlink" href="#tileamplifiers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="purpose">
+<h2>6.12.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<p>This primitive tiles (or optionally mosaics) the SCI frames of the input images,
+along with the VAR and DQ frames if they exist.</p>
+</div>
+<div class="section" id="inputs-and-outputs">
+<h2>6.12.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal"><span class="pre">mosaic</span></code>: bool (default: False), tile the images by default; mosaic them
+(including transformations) if True</p>
+<p><code class="docutils literal"><span class="pre">dq_planes</span></code>: bool (default: False), transform the DQ image, bit plane by bit
+plane</p>
+</div>
+<div class="section" id="algorithm">
+<h2>6.12.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
+<p>This primitive is a copy of <code class="docutils literal"><span class="pre">GEMINIPrimitives.mosaicADdetectors</span></code> with a couple
+of additional hacks introduced just prior to calling the mosaicing routine,
+<code class="docutils literal"><span class="pre">gemini_mosaic_function</span></code>, and undone immediately after.  These are necessary
+in order to trick the underlying mosaicing machinery into working for GHOST
+data, and are as follows:</p>
+<ul class="simple">
+<li>First, we add &#8216;GSAOI&#8217; to the internal array of types for our input AstroData
+object (which contains the extensions we want to mosaic).  This bypasses the
+GSAOI-/GMOS-only check built into <code class="docutils literal"><span class="pre">gemini_mosaic_function</span></code>.  Afterwards we
+reset the type list back to normal by invoking <code class="docutils literal"><span class="pre">AstroData.refresh_types</span></code> on
+the resulting, mosaiced, AstroData object.</li>
+<li>Secondly, we set the <code class="docutils literal"><span class="pre">INSTRUME</span></code> PHU keyword to
+<code class="docutils literal"><span class="pre">../../../astrodata_GHOST/ADCONFIG_GHOST/lookups</span></code>.  This tricks
+<code class="docutils literal"><span class="pre">set_geo_values</span></code> (called by <code class="docutils literal"><span class="pre">gemini_mosaic_function</span></code>) into referencing the
+<code class="docutils literal"><span class="pre">geometry_conf.py</span></code> file under our own <code class="docutils literal"><span class="pre">astrodata_GHOST/lookups</span></code> folder. As
+soon as the mosaicing routine returns we reset <code class="docutils literal"><span class="pre">INSTRUME</span></code> back to &#8216;GHOST&#8217;
+(and in fact this must be done before the call to <code class="docutils literal"><span class="pre">refresh_types</span></code> mentioned
+above).</li>
+</ul>
+<p>Until such time as <code class="docutils literal"><span class="pre">astrodata_GHOST</span></code> has been merged into <code class="docutils literal"><span class="pre">astrodata_Gemini</span></code>
+(like GMOS and GSAOI have been), or <code class="docutils literal"><span class="pre">astrodata_Gemini</span></code> is refactored, the
+above two hacks will be necessary in order for GHOST to make use of Gemini&#8217;s
+mosaicing mechanism.</p>
+</div>
+<div class="section" id="issues-and-limitations">
+<h2>6.12.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<p>Requires ugly hacks until integration with, or refactoring of,
+<code class="docutils literal"><span class="pre">astrodata_Gemini</span></code> is completed.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">6.12. tileAmplifiers</a><ul>
+<li><a class="reference internal" href="#purpose">6.12.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">6.12.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#algorithm">6.12.3. Algorithm</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">6.12.4. Issues and Limitations</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="switchTo.html"
+                        title="previous chapter">6.11. switchTo</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="validateData.html"
+                        title="next chapter">6.13. validateData</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/primitives_pages/tileAmplifiers.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="validateData.html" title="6.13. validateData"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="switchTo.html" title="6.11. switchTo"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >6. Primitives for GHOST</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.5.
+    </div>
+  </body>
+</html>

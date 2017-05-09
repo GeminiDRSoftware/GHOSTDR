@@ -12,7 +12,6 @@ import matplotlib.cm as cm
 from matplotlib.widgets import Slider, Button
 import scipy.optimize as op
 from scipy.interpolate import interp1d
-
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
 
@@ -285,7 +284,7 @@ class Polyspect(object):
         # wavelength grid we began with.
         norders = self.m_max - self.m_min + 1
         x_int = np.zeros((norders, self.szy))
-        wave_int = np.zeros((norders, self.szy))
+        wave_int = np.ones((norders, self.szy))
         blaze_int = np.zeros((norders, self.szy))
 
         if (xparams is None) and (wparams is None):
@@ -294,7 +293,7 @@ class Polyspect(object):
         if (xparams is not None) and (not isinstance(xparams, np.ndarray)):
             raise UserWarning('xparams provided with invalid format')
         if (wparams is not None) and (not isinstance(wparams, np.ndarray)):
-            raise UserWarning('xparams provided with invalid format')
+            raise UserWarning('wparams provided with invalid format')
         y_values = np.arange(self.szy)
         # Loop through order
         for order in np.arange(self.m_min, self.m_max + 1):
@@ -314,9 +313,14 @@ class Polyspect(object):
                                                                   y_values)
 
             # Finally, the blaze
+            # Most of this is only to avoid the runtimewarning
             wcen = wave_int[int(order - self.m_min), int(self.szy / 2)]
-            disp = wave_int[int(order - self.m_min),
+            if wcen != 1.0:
+                disp = wave_int[int(order - self.m_min),
                             int(self.szy / 2 + 1)] - wcen
+            else:
+                disp = 1.0
+            #print(wcen, order, disp)
             order_width = (wcen / order) / disp
             blaze_int[order - self.m_min, :] = np.sinc((y_values - self.szy / 2)
                                                        / order_width)**2

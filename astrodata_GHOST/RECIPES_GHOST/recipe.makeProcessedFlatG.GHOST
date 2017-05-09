@@ -7,7 +7,7 @@ prepare(attach_mdf=False)
 addDQ(illum_mask=False)
 addVAR(read_noise=True)
 overscanCorrect
-mosaicADdetectors(tile=True)
+tileAmplifiers
 biasCorrect
 ADUToElectrons
 addVAR(poisson_noise=True)
@@ -17,4 +17,4 @@ getList(purpose="forStack")
 stackFrames(operation="median")
 storeProcessedFlat
 findApertures
-storeProcessedPolyfit
+storeProcessedXmod

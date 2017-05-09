@@ -6,7 +6,7 @@ prepare
 addDQ
 addVAR(read_noise=True)
 overscanCorrect
-mosaicADdetectors(tile=True)
+tileAmplifiers
 biasCorrect
 darkCorrect
 #rejectCosmicRays

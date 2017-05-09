@@ -17,8 +17,10 @@ import scipy
 import functools
 import datetime
 
-from primitives_GMOS import GMOSPrimitives
-from primitives_stack import StackPrimitives
+from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import \
+    GMOSPrimitives
+from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import \
+    StackPrimitives
 from primitives_GHOST_calibration import GHOST_CalibrationPrimitives
 
 from astrodata_GHOST.polyfit import GhostArm
@@ -79,11 +81,6 @@ class GHOSTPrimitives(GMOSPrimitives,
             The ReductionContext dictionary that holds the data stream
             processing information.
 
-        rc['flat'] : string or None (default: None)
-            name of the slitflat (if not provided / set to None, the slit-
-            flat will be taken from the 'processed_slitflat' override_cal
-            command line argument)
-
         rc['suffix'] : string or None (default: '_slitCosmicsCorrected')
             suffix to append to the end of the output filename(s) (before any
             filename extension)
@@ -108,31 +105,6 @@ class GHOSTPrimitives(GMOSPrimitives,
         adoutput_list = []
         adinput = rc.get_inputs_as_astrodata()
 
-        # Check for a user-supplied slitflat
-        flat = None
-        if rc['flat'] is not None:
-            flat = AstroData(rc['flat'])
-        else:
-            # following line could be called from the recipe (directly before
-            # the call to this primitive) instead of here; it scans the command
-            # line for a '--override_cal processed_slitflat:...' argument and,
-            # if found, reads the specified file into an in-memory cache
-            rc.run("getProcessedSlitFlat")
-            # the following line accesses the slitflat from the in-memory cache
-            flat = rc.get_cal(adinput[0], 'processed_slitflat')
-            flat = AstroData(flat)
-
-        if flat is None:
-            if "qa" in rc.context:
-                adoutput_list = adinput  # pass along data with no processing
-                adinput = []  # causes the for loop below to be skipped
-                log.warning("No changes will be made since no appropriate "
-                            "slitflat could be retrieved")
-            else:
-                raise Errors.PrimitiveError("No processed slitflat found")
-        else:
-            sv_flat = flat[0].hdulist[1].data  # the slit flat frame data
-
         # the median slit frame data
         sv_med = np.array([ad['SCI', 1].hdulist[1].data for ad in adinput])
         sv_med = np.median(sv_med, axis=0)
@@ -144,24 +116,24 @@ class GHOSTPrimitives(GMOSPrimitives,
         # Loop over each input AstroData object in the input list
         for ad in adinput:
 
-            # Check whether this primitive has been run previously
-            if ad.phu_get_key_value(timestamp_key):
+            if ad.phu_get_key_value(timestamp_key):  # skip if prim ran before
                 log.warning("No changes will be made to %s, since it has "
                             "already been processed by %s"
                             % (ad.filename, self.myself()))
-                # Append the input AstroData object to the list of output
-                # AstroData objects without further processing
-                adoutput_list.append(ad)
+                adoutput_list.append(ad)  # pass on without further processing
                 continue
 
-            # Check the inputs have matching binning and SCI shapes.
-            gt.check_inputs_match(ad1=ad, ad2=flat, check_filter=False)
+            if 'GHOST_SLITV' not in ad.types:  # skip if not a slit viewer frame
+                log.warning("No changes will be made to %s, since it is not "
+                            "a slit viewer frame" % (ad.filename))
+                adoutput_list.append(ad)  # pass on without further processing
+                continue
 
             addata = ad['SCI', 1].hdulist[1].data
             res = 'high' if ad.phu.header['SMPNAME'] == 'HI_ONLY' else 'std'
 
             # pre-CR-corrected flux computation
-            flux_before = self._total_obj_flux(res, addata, sv_flat)
+            flux_before = self._total_obj_flux(res, addata, None)
 
             # replace CR-affected pixels with those from the median slit
             # viewer image (subtract the median slit frame and threshold
@@ -172,7 +144,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             addata[indices] = sv_med[indices]
 
             # post-CR-corrected flux computation
-            flux_after = self._total_obj_flux(res, addata, sv_flat)
+            flux_after = self._total_obj_flux(res, addata, None)
 
             # output the CR-corrected slit view frame
             ad['SCI', 1].hdulist[1].data = addata
@@ -190,7 +162,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             # myindex.write()
 
             # log results
-            log.stdinfo("   %s: nPixReplaced = %s, flux = %s -> %s" % (
+            log.stdinfo("   %s: nPixReplaced = %s, flux = %.1f -> %.1f" % (
                 ad.filename, (indices).sum(), flux_before, flux_after))
 
             # record how many CR-affected pixels were replaced
@@ -203,7 +175,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Change the filename
             ad.filename = gt.filename_updater(
-                adinput=ad, suffix=rc["suffix"], strip=True)
+                adinput=ad, suffix=rc['suffix'], strip=True)
 
             # Append the output AstroData object to the list
             # of output AstroData objects
@@ -218,6 +190,7 @@ class GHOSTPrimitives(GMOSPrimitives,
     def extractProfile(self, rc):
         """
         Extract the object profile from a slit or flat image.
+
         Parameters
         ----------
         rc : dict
@@ -294,8 +267,8 @@ class GHOSTPrimitives(GMOSPrimitives,
             arm = GhostArm(arm=ad.arm().as_str(), mode=ad.res_mode().as_str())
             # The 'xmod' file we need is the one that was spat out to
             # the calibrations system at the end of the flat processing
-            rc.run('getProcessedPolyfit')
-            xpars = rc.get_cal(ad, 'processed_polyfit')
+            rc.run('getProcessedXmod')
+            xpars = rc.get_cal(ad, 'processed_xmod')
             xpars = AstroData(xpars)
             # Need to read in all other parameters from the lookups system
             key = self._get_polyfit_key(ad)
@@ -408,8 +381,8 @@ class GHOSTPrimitives(GMOSPrimitives,
         for ad in rc.get_inputs_as_astrodata():
             # if ad.phu_get_key_value(timestamp_key):
             #     log.warning("No changes will be made to %s, since it has "
-            #                 "already been processed by findApertures"
-            #                 % (ad.filename))
+            #                 "already been processed by %s"
+            #                 % (ad.filename, self.myself()))
             #     # Append the input AstroData object to the list of output
             #     # AstroData objects without further processing
             #     adoutput_list.append(ad)
@@ -423,12 +396,12 @@ class GHOSTPrimitives(GMOSPrimitives,
                             'therefore, %s will not be used' % ad.filename)
                 continue
 
-            all_polyfit_dict = PolyfitDict.polyfit_dict
+            all_xmod_dict = PolyfitDict.xmod_dict
             # Work out the directory to get the Polyfit initial files from
             key = self._get_polyfit_key(ad)
 
-            if key in all_polyfit_dict:
-                poly_xmod = lookup_path(all_polyfit_dict[key])
+            if key in all_xmod_dict:
+                poly_xmod = lookup_path(all_xmod_dict[key])
             else:
                 # Don't know how to fit this file, so probably not necessary
                 # Return this ad to the stream and move to the next
@@ -522,8 +495,8 @@ class GHOSTPrimitives(GMOSPrimitives,
             # Read in all relevant polyfit files (x5)
             # The 'xmod' file we need is the one that was spat out to
             # the calibrations system at the end of the flat processing
-            rc.run('getProcessedPolyfit')
-            xpars = rc.get_cal(ad, 'processed_polyfit')
+            rc.run('getProcessedXmod')
+            xpars = rc.get_cal(ad, 'processed_xmod')
             xpars = AstroData(xpars)
             # Need to read in all other parameters from the lookups system
             key = self._get_polyfit_key(ad)
@@ -566,14 +539,14 @@ class GHOSTPrimitives(GMOSPrimitives,
                                              arcwaves,
                                              inspect=False)
 
-            # FIXME Currently broken - JB to fix - write lines_out to test rest
-            # fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,
-            #                                                        lines_out)
+            #import pdb; pdb.set_trace()
+            fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars[0].data,
+                                                                    lines_out)
 
             # Much like the solution for findApertures, create a minimum-spec
             # AstroData object to prepare the result for storage in the
             # calibrations system
-            ad_xmod = AstroData(data=lines_out)
+            ad_xmod = AstroData(data=fitted_params)
             # Add an INSTRUME keyword so RecipeSystem recognizes these as
             # GHOST files
             ad_xmod.phu.header['INSTRUME'] = 'GHOST'
@@ -621,108 +594,6 @@ class GHOSTPrimitives(GMOSPrimitives,
         rc.report_output(adoutput_list)
         if rc['newStream'] is not None:
             rc.populate_stream(adoutput_list, stream=rc['newStream'])
-        yield rc
-
-    # -------------------------------------------------------------------------
-    def mosaicADdetectors(self, rc):
-        """
-        This primitive will mosaic the SCI frames of the input images, along
-        with the VAR and DQ frames if they exist.
-
-        Parameters
-        ----------
-        rc : dict
-            The ReductionContext dictionary that holds the data stream
-            processing information.
-
-        rc['tile'] : bool (default: False)
-            tile images instead of mosaic (mosaic includes transformations)
-
-        rc['dq_planes'] : bool (default: False)
-            transform the DQ image, bit plane by bit plane
-
-        Yields
-        -------
-        rc : dict
-            The same ReductionContext dictionary, with any necessary
-            alterations.
-        """
-
-        log = logutils.get_logger(__name__)
-
-        # Log the standard "starting primitive" debug message
-        log.debug(gt.log_message("primitive", self.myself(), "starting"))
-
-        # Define the keyword to be used for the time stamp for this primitive
-        timestamp_key = self.timestamp_keys[self.myself()]
-
-        # Initialize the list of output AstroData objects
-        adoutput_list = []
-
-        # Loop over each input AstroData object in the input list
-        for ad in rc.get_inputs_as_astrodata():
-            # Validate Data
-            # if (ad.phu_get_key_value('GPREPARE')==None) and \
-            #     (ad.phu_get_key_value('PREPARE')==None):
-            #     raise Errors.InputError("%s must be prepared" % ad.filename)
-
-            # Check whether the mosaicADdetectors primitive has been run
-            # previously
-            if ad.phu_get_key_value(timestamp_key):
-                log.warning("No changes will be made to %s, since it has "
-                            "already been processed by mosaicADdetectors"
-                            % (ad.filename))
-                # Append the input AstroData object to the list of output
-                # AstroData objects without further processing
-                adoutput_list.append(ad)
-                continue
-
-            # If the input AstroData object only has one extension, there is no
-            # need to mosaic the detectors
-            if ad.count_exts("SCI") == 1:
-                log.stdinfo("No changes will be made to %s, since it " \
-                            "contains only one extension" % (ad.filename))
-                # Append the input AstroData object to the list of output
-                # AstroData objects without further processing
-                adoutput_list.append(ad)
-                continue
-
-            # Get the necessary parameters from the RC
-            tile = rc["tile"]
-
-            log.stdinfo("Mosaicking %s ..." % ad.filename)
-            log.stdinfo("MosaicAD: Using tile: %s ..." % tile)
-
-            # trick mosaicing software into working for GHOST data
-            ad.types.append('GSAOI')  # bypass the GSAOI-/GMOS-only check
-            ad.phu_set_key_value(  # force use of geometry file under our tree
-                'INSTRUME', '../../../astrodata_GHOST/ADCONFIG_GHOST/lookups')
-
-            mo = MosaicAD(
-                ad, mosaic_ad_function=gemini_mosaic_function,
-                dq_planes=rc['dq_planes'])  # shift, rotate, and scale DQ plane
-            adout = mo.as_astrodata(tile=tile)
-
-            # undo hacks to trick mosaicing software
-            adout.phu_set_key_value('INSTRUME', 'GHOST')
-            adout.refresh_types()
-
-            # Add the appropriate time stamps to the PHU
-            gt.mark_history(
-                adinput=adout, primname=self.myself(), keyword=timestamp_key)
-
-            # Change the filename
-            adout.filename = gt.filename_updater(
-                adinput=ad, suffix=rc["suffix"], strip=True)
-
-            # Append the output AstroData object to the list
-            # of output AstroData objects
-            adoutput_list.append(adout)
-
-        # Report the list of output AstroData objects to the reduction
-        # context
-        rc.report_output(adoutput_list)
-
         yield rc
 
     # -------------------------------------------------------------------------
@@ -876,48 +747,6 @@ class GHOSTPrimitives(GMOSPrimitives,
         yield rc
 
     # -------------------------------------------------------------------------
-    def promote(self, rc):
-        """
-        Promote extensions to full AstroData instances and homogenise their
-        extension names/number so validateData will allow them to pass; also
-        give each a unique ORIGNAME so stackFrames will operate properly (be-
-        cause it is iraf-based, stackFrames must first write its inputs to disk,
-        and it uses a variation of ORIGNAME to do so).
-
-        This primitive is only used for preparing slit viewing images and
-        is usually the first thing called in recipes that process these
-        images.
-
-        Parameters
-        ----------
-        rc : dict
-            The ReductionContext dictionary that holds the data stream
-            processing information.
-
-        Yields
-        -------
-        rc : dict
-            The same ReductionContext dictionary, with any necessary
-            alterations.
-        """
-
-        # use AstroData slicing (aka "sub-data") to promote all extensions
-        adoutput_list = [ad[i]  # noqa
-            for ad in rc.get_inputs_as_astrodata()
-            for i in range(ad.count_exts())]
-
-        # contortions to make stacking (eti.gemcombineeti.GemcombineETI) work
-        for i, sub in enumerate(adoutput_list[1:]):
-            sub.phu = sub.phu.copy()  # AstroData slices share a common PHU
-            sub.rename_ext('SCI', 1)  # can't just set EXTVER to 1
-            sub.phu.header['ORIGNAME'] = \
-                gt.filename_updater(adinput=sub, suffix=str(i))
-
-        rc.report_output(adoutput_list)
-
-        yield rc
-
-    # -------------------------------------------------------------------------
     def rejectCosmicRays(self, rc):
         """
         Reject cosmic rays from GHOST data.
@@ -974,8 +803,8 @@ class GHOSTPrimitives(GMOSPrimitives,
             # Check if the rejectCosmicRays primitive has been run previously
             if ad.phu_get_key_value(timestamp_key):
                 log.warning("No changes will be made to %s, since it has "
-                            "already been processed by rejectCosmicRays"
-                            % ad.filename)
+                            "already been processed by %s"
+                            % ad.filename, self.myself())
 
                 # Append the input AstroData object to the list of output
                 # AstroData objects without further processing
@@ -1254,8 +1083,8 @@ class GHOSTPrimitives(GMOSPrimitives,
         """
         Standardize the headers of GHOST data to Gemini standards.
 
-        .. note:: This function currently just called the equivalent
-                  GMOS function (from GMOSPrimitives).
+        .. note:: This function currently just calls the equivalent
+                  Gemini function (from GEMINIPrimitives).
 
         Parameters
         ----------
@@ -1275,6 +1104,68 @@ class GHOSTPrimitives(GMOSPrimitives,
         """
 
         rc.run('standardizeGeminiHeaders')
+        yield rc
+
+    # -------------------------------------------------------------------------
+    def standardizeStructure(self, rc):
+        """
+        This primitive is responsible for massaging the structure of passed in
+        data to be compatible with all downstream GHOST primitives.
+
+        In the event a list of slit viewer frames is passed, it promotes all
+        extensions therein to full AstroData instances, homogenises their ext-
+        ension names/number, and also gives each a unique ORIGNAME so stack-
+        Frames will operate properly (because it is iraf-based, stackFrames must
+        first write its inputs to disk, and it uses a variation of ORIGNAME to
+        do so).
+
+        If anything other than slit viewer frames are passed, nothing is done
+        other than the obligatory adding of a timestamp keyword to indicate that
+        the file has been processed by this primitive.
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Yields
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+        """
+
+        log = logutils.get_logger(__name__)
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+        _all = rc.get_inputs_as_astrodata()
+
+        todo = [  # those that haven't already been done (by this primitive)
+            ad for ad in _all if ad.phu_get_key_value(timestamp_key) is None]
+
+        # todo possibly reset to list of new objects below so do this first
+        done = [ad for ad in _all if ad not in todo]  # those already done
+
+        if todo and 'GHOST_SLITV' in todo[0].types:
+            todo = [  # AstroData slicing (aka "sub-data") to promote all extns
+                ad[i] for ad in todo for i in range(ad.count_exts())]
+
+            # contortion to make stacking (eti.gemcombineeti.GemcombineETI) work
+            for i, sub in enumerate(todo[1:]):
+                sub.phu = sub.phu.copy()  # AstroData slices share a common PHU
+                sub.rename_ext('SCI', 1)  # can't just set EXTVER to 1
+                sub.hdulist.update_extend()  # EXTEND=T lost during copy() above
+                sub.phu.header['ORIGNAME'] = \
+                    gt.filename_updater(adinput=sub, suffix=str(i))
+
+        for ad in todo:
+            gt.mark_history(
+                adinput=ad, primname=self.myself(), keyword=timestamp_key)
+            ad.filename = gt.filename_updater(
+                adinput=ad, suffix=rc['suffix'], strip=True)
+
+        rc.report_output(todo + done)
         yield rc
 
     # -------------------------------------------------------------------------
@@ -1337,6 +1228,142 @@ class GHOSTPrimitives(GMOSPrimitives,
         yield rc
 
     # -------------------------------------------------------------------------
+    def tileAmplifiers(self, rc):
+        """
+        This primitive will tile the SCI frames of the input images, along
+        with the VAR and DQ frames if they exist.
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        rc['mosaic'] : bool (default: False)
+            tile the images by default, or mosaic them (including
+            transformations) if True
+
+        rc['dq_planes'] : bool (default: False)
+            transform the DQ image, bit plane by bit plane
+
+        Yields
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+        """
+
+        log = logutils.get_logger(__name__)
+
+        # Log the standard "starting primitive" debug message
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        # Define the keyword to be used for the time stamp for this primitive
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        # Initialize the list of output AstroData objects
+        adoutput_list = []
+
+        # Loop over each input AstroData object in the input list
+        for ad in rc.get_inputs_as_astrodata():
+            # Validate Data
+            # if (ad.phu_get_key_value('GPREPARE')==None) and \
+            #     (ad.phu_get_key_value('PREPARE')==None):
+            #     raise Errors.InputError("%s must be prepared" % ad.filename)
+
+            # Check whether this primitive has already been run previously
+            if ad.phu_get_key_value(timestamp_key):
+                log.warning("No changes will be made to %s, since it has "
+                            "already been processed by %s"
+                            % (ad.filename, self.myself()))
+                # Append the input AstroData object to the list of output
+                # AstroData objects without further processing
+                adoutput_list.append(ad)
+                continue
+
+            # If the input AstroData object only has one extension, there is no
+            # need to mosaic the detectors
+            if ad.count_exts("SCI") == 1:
+                log.stdinfo("No changes will be made to %s, since it " \
+                            "contains only one extension" % (ad.filename))
+                # Append the input AstroData object to the list of output
+                # AstroData objects without further processing
+                adoutput_list.append(ad)
+                continue
+
+            # Get the necessary parameters from the RC
+            tile = not rc['mosaic']
+
+            log.stdinfo("Mosaicking %s ..." % ad.filename)
+            log.stdinfo("MosaicAD: Using tile: %s ..." % tile)
+
+            # trick mosaicing software into working for GHOST data
+            ad.types.append('GSAOI')  # bypass the GSAOI-/GMOS-only check
+            ad.phu_set_key_value(  # force use of geometry file under our tree
+                'INSTRUME', '../../../astrodata_GHOST/ADCONFIG_GHOST/lookups')
+
+            mo = MosaicAD(
+                ad, mosaic_ad_function=gemini_mosaic_function,
+                dq_planes=rc['dq_planes'])  # shift, rotate, and scale DQ plane
+            adout = mo.as_astrodata(tile=tile)
+
+            # undo hacks to trick mosaicing software
+            adout.phu_set_key_value('INSTRUME', 'GHOST')
+            adout.refresh_types()
+
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=adout, primname=self.myself(), keyword=timestamp_key)
+
+            # Change the filename
+            adout.filename = gt.filename_updater(
+                adinput=ad, suffix=rc["suffix"], strip=True)
+
+            # Append the output AstroData object to the list
+            # of output AstroData objects
+            adoutput_list.append(adout)
+
+        # Report the list of output AstroData objects to the reduction
+        # context
+        rc.report_output(adoutput_list)
+
+        yield rc
+
+    # -------------------------------------------------------------------------
+    def validateData(self, rc):
+        """
+        This primitive is responsible for ensuring the data passed is GHOST
+        data and has correctly formatted keywords (the "prepare" superprimitive
+        provided by Gemini invokes this before standardize{Headers,Structure}
+        [which seems the wrong order to me])
+
+        At the moment, our version of the prim does nothing other than write
+        a timestamp into the headers.  In future we may want to (like GMOS)
+        check that the right number of extensions is present (but only for
+        normal science detector frames as slit viewer frames can have any
+        number), and/or asserting that only square binning is used.
+        """
+
+        log = logutils.get_logger(__name__)
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+        _all = rc.get_inputs_as_astrodata()
+
+        todo = [  # those that haven't already been done (by this primitive)
+            ad for ad in _all if ad.phu_get_key_value(timestamp_key) is None]
+
+        for ad in todo:
+            gt.mark_history(
+                adinput=ad, primname=self.myself(), keyword=timestamp_key)
+            # don't append suffix: generally unecessary & makes slit names ugly
+            # ad.filename = gt.filename_updater(
+            #     adinput=ad, suffix=rc['suffix'], strip=True)
+
+        done = [ad for ad in _all if ad not in todo]  # the ones already done
+        rc.report_output(todo + done)
+        yield rc
+
+    # -------------------------------------------------------------------------
     def _get_polyfit_key(self, adinput=None):
         """
         Helper function - returns the path for finding initial polyfit models
@@ -1391,9 +1418,9 @@ class GHOSTPrimitives(GMOSPrimitives,
     def _total_obj_flux(self, res, data, flat_data):
         """
         combined red/blue object flux calculation. uses the slitview object to
-        determine sky-subtracted object profiles. in high res mode, the arc
-        profile is returned as an "object" profile, so we discard it explicitly
-        from this calculation
+        determine (potentially sky-subtracted) object profiles. in high res
+        mode, the arc profile is returned as an "object" profile, so we discard
+        it explicitly from this calculation
 
         Parameters
         ----------
@@ -1405,18 +1432,22 @@ class GHOSTPrimitives(GMOSPrimitives,
 
         flat_data : np.ndarray
             the bias-/dark-corrected slit view flat field image used to de-
-            termine sky background levels
+            termine sky background levels (may be None if sky subtraction not
+            needed)
 
         Returns
         -------
         flux : float
-            the sky-subtracted object flux, summed
+            the object flux, summed, and potentially sky-subtracted
         """
-        svobj = SlitView(data, flat_data, mode=res)
-        reds = svobj.object_slit_profiles(  # removes sky by default
-            'red', append_sky=False, normalise_profiles=False)
-        blues = svobj.object_slit_profiles(  # removes sky by default
-            'blue', append_sky=False, normalise_profiles=False)
+        sky_correction = flat_data is not None
+        svobj = SlitView(data, flat_data, mode=res)  # ok to pass None for flat
+        reds = svobj.object_slit_profiles('red',  # noqa
+            correct_for_sky=sky_correction, append_sky=False,
+            normalise_profiles=False)
+        blues = svobj.object_slit_profiles('blue',  # noqa
+            correct_for_sky=sky_correction, append_sky=False,
+            normalise_profiles=False)
         # discard the arc profiles if high res
         if res == 'high':
             blues = blues[:1]

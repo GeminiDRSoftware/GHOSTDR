@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>4. processSlits &mdash; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    <title>6.6. processSlits &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -18,16 +18,17 @@
         VERSION:     '0.9.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="GHOST Users&#39; Manual 0.9.0 documentation" href="../index.html" />
-    <link rel="up" title="Primitives for GHOST" href="../primitives.html" />
-    <link rel="next" title="5. promote" href="promote.html" />
-    <link rel="prev" title="3. mosaicADdetectors" href="mosaicADdetectors.html" /> 
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="6.7. rejectCosmicRays" href="rejectCosmicRays.html" />
+    <link rel="prev" title="6.5. fork" href="fork.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,13 +38,13 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="promote.html" title="5. promote"
+          <a href="rejectCosmicRays.html" title="6.7. rejectCosmicRays"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="mosaicADdetectors.html" title="3. mosaicADdetectors"
+          <a href="fork.html" title="6.5. fork"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">Primitives for GHOST</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">6. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -53,40 +54,25 @@
           <div class="body" role="main">
             
   <div class="section" id="processslits">
-<h1>4. processSlits<a class="headerlink" href="#processslits" title="Permalink to this headline">¶</a></h1>
+<h1>6.6. processSlits<a class="headerlink" href="#processslits" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="purpose">
-<h2>4.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
-<p>This primitive replaces CR-affected pixels in each individual slit viewer image
-(taken from the current stream) with their equivalents from the median frame of
-those images, and extracts slit object profiles to flux-weight the images&#8217;
-offsets (relative to the coincident science frame) from which it computes the
-mean exposure epoch.</p>
+<h2>6.6.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<p>For each CR-corrected slit viewer frame taken from the current stream, this
+primitive extracts the object profiles within and uses them to flux-weight the
+image&#8217;s offset (relative to the coincident science frame) and then uses that to
+compute the mean exposure epoch for the entire series of inputs.</p>
 </div>
 <div class="section" id="inputs-and-outputs">
-<h2>4.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<h2>6.6.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal"><span class="pre">flat</span></code>: string or None (default: None) - The name of the processed slit viewer
 flat field image.  If not provided, or if set to None, the flat will be taken
 from the <code class="docutils literal"><span class="pre">processed_slitflat</span></code> override_cal command line argument.</p>
-<p><code class="docutils literal"><span class="pre">slit</span></code>: string or None (default: None) - The name of the bias-/dark-corrected
-median slit viewer frame.  If not provided, or if set to None, the frame will be
-taken from the <code class="docutils literal"><span class="pre">slitStream</span></code> argument.</p>
-<p><code class="docutils literal"><span class="pre">slitStream</span></code>: string or None (default: None) - The name of the stream from
-which to access the bias-/dark-corrected median slit viewer frame (only the
-first AstroData instance will be used).  If not provided, or if set to None, the
-frame will be taken from the <code class="docutils literal"><span class="pre">processed_slit</span></code> override_cal command line
-argument.</p>
 </div>
 <div class="section" id="algorithm">
-<h2>4.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
-<p>The incoming stream of AstroData objects, representing
-bias-/dark-corrected slit viewer frames, is first used to produce a per-pixel
-median absolute deviation (MAD) frame for clipping cosmic ray (CR) outliers.
-The median frame is subtracted from each individual frame in turn, and where the
-residual exceeds 20x the MAD, a CR is detected.  Each CR-affected pixel is
-replaced with its equivalent from the median slit viewer frame.</p>
-<p>Then, for each CR-corrected individual frame, a <code class="docutils literal"><span class="pre">SlitViewer</span></code> object
-is instantiated for each spectrograph arm using the frame and the passed-in flat
-field image.  The <code class="docutils literal"><span class="pre">SlitViewer</span></code> objects then each provide, via the
+<h2>6.6.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
+<p>For each individual CR-corrected frame taken from the input, a <code class="docutils literal"><span class="pre">SlitViewer</span></code>
+object is instantiated for each spectrograph arm using the frame and the passed-
+in flat field image.  The <code class="docutils literal"><span class="pre">SlitViewer</span></code> objects then each provide, via the
 <code class="docutils literal"><span class="pre">object_slit_profiles()</span></code> method, a 2 element array where each element is a
 1-dimensional array representing a single object profile, un-normalised,
 sky-corrected, and summed across (not along) the slit.</p>
@@ -105,9 +91,12 @@ in turn is written into the header of each CR-corrected output frame, in the
 <code class="docutils literal"><span class="pre">AVGEPOCH</span></code> keyword.</p>
 </div>
 <div class="section" id="issues-and-limitations">
-<h2>4.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
-<p>For short duration science exposures there may be too few coincident slit frames
-to produce a meaningful MAD frame for CR detection.</p>
+<h2>6.6.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<p>The UTC start/stop times of the coincident science frame are currently obtained
+from the UTSTART/UTEND PHU keywords, having been written there by our splitter
+primitive (or the simulator with the -split option used).  In the context of a
+standalone slit viewer frame, this may be considered improper usage of these
+keywords.</p>
 </div>
 </div>
 
@@ -119,25 +108,25 @@ to produce a meaningful MAD frame for CR detection.</p>
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">4. processSlits</a><ul>
-<li><a class="reference internal" href="#purpose">4.1. Purpose</a></li>
-<li><a class="reference internal" href="#inputs-and-outputs">4.2. Inputs and Outputs</a></li>
-<li><a class="reference internal" href="#algorithm">4.3. Algorithm</a></li>
-<li><a class="reference internal" href="#issues-and-limitations">4.4. Issues and Limitations</a></li>
+<li><a class="reference internal" href="#">6.6. processSlits</a><ul>
+<li><a class="reference internal" href="#purpose">6.6.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">6.6.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#algorithm">6.6.3. Algorithm</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">6.6.4. Issues and Limitations</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="mosaicADdetectors.html"
-                        title="previous chapter">3. mosaicADdetectors</a></p>
+  <p class="topless"><a href="fork.html"
+                        title="previous chapter">6.5. fork</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="promote.html"
-                        title="next chapter">5. promote</a></p>
+  <p class="topless"><a href="rejectCosmicRays.html"
+                        title="next chapter">6.7. rejectCosmicRays</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../_sources/primitives_pages/processSlits.txt"
+      <li><a href="../_sources/primitives_pages/processSlits.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -162,18 +151,18 @@ to produce a meaningful MAD frame for CR detection.</p>
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="promote.html" title="5. promote"
+          <a href="rejectCosmicRays.html" title="6.7. rejectCosmicRays"
              >next</a> |</li>
         <li class="right" >
-          <a href="mosaicADdetectors.html" title="3. mosaicADdetectors"
+          <a href="fork.html" title="6.5. fork"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" >Primitives for GHOST</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >6. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.5.
+        &#169; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.5.
     </div>
   </body>
 </html>

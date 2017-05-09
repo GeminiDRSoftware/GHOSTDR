@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>6.10. standardizeStructure &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/todo-styles.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.9.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="6.11. switchTo" href="switchTo.html" />
+    <link rel="prev" title="6.9. standardizeHeaders" href="standardizeHeaders.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="switchTo.html" title="6.11. switchTo"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="standardizeHeaders.html" title="6.9. standardizeHeaders"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">6. Primitives for GHOST</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="standardizestructure">
+<h1>6.10. standardizeStructure<a class="headerlink" href="#standardizestructure" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="purpose">
+<h2>6.10.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<p>This primitive is responsible for massaging input data frames into a format
+compatible with the remainder of the downstream primitives.</p>
+<p>When passed a series of slit viewer MEFs (such as results from the observation
+bundle splitter primitive, or from the simulator with the -split option sup-
+plied), it &#8220;promotes&#8221; all the slit viewer extensions therein to full AstroData
+objects with various manipulations so that they will pass various checks and
+otherwise work nicely with the rest of the recipe.</p>
+<p>When passed other input (such as normal science detector frames) nothing is done
+except the addition of the obligatory timestamp keyword.</p>
+</div>
+<div class="section" id="inputs-and-outputs">
+<h2>6.10.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal"><span class="pre">standardizeStructure</span></code> takes no particular configuration inputs.</p>
+</div>
+<div class="section" id="algorithm">
+<h2>6.10.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
+<p>For slit viewer data, the <code class="docutils literal"><span class="pre">standardizeStructure</span></code> primitive performs these man-
+ipulations:</p>
+<ul class="simple">
+<li>It uses AstroData slicing (also known as &#8220;sub-data&#8221;) to initially produce a
+separate AstroData object for each extension, then also makes a copy of the
+PHU for each resultant AstroData object (since sub-data references a single
+copy of the original PHU by default).  In this manner, fully independent
+AstroData objects are created representing each extension.</li>
+<li>The above manipulation causes the resulting AstroData objects to all have the
+same ORIGNAME in their PHUs.  This becomes an issue when we leverage the
+existing <code class="docutils literal"><span class="pre">StackPrimitives.stackFrames</span></code> primitive, as it must first (being
+IRAF-based) write its inputs to disk.  As it uses ORIGNAME to do so, clashes
+would result, so we make ORIGNAME unique by simply appending an incrementing
+number.</li>
+<li>Finally, we also reset the EXTVER of all extensions in the AstroData objects
+resulting from the first manipulation back to 1 (since now there is only a
+single extension in each AstroData object).</li>
+</ul>
+</div>
+<div class="section" id="issues-and-limitations">
+<h2>6.10.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<p>None.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">6.10. standardizeStructure</a><ul>
+<li><a class="reference internal" href="#purpose">6.10.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">6.10.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#algorithm">6.10.3. Algorithm</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">6.10.4. Issues and Limitations</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="standardizeHeaders.html"
+                        title="previous chapter">6.9. standardizeHeaders</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="switchTo.html"
+                        title="next chapter">6.11. switchTo</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/primitives_pages/standardizeStructure.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="switchTo.html" title="6.11. switchTo"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="standardizeHeaders.html" title="6.9. standardizeHeaders"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >6. Primitives for GHOST</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.5.
+    </div>
+  </body>
+</html>

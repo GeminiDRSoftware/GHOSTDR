@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>GHOST Users Manual &mdash; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    <title>GHOST Users Manual &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -18,13 +18,15 @@
         VERSION:     '0.9.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="GHOST Users&#39; Manual 0.9.0 documentation" href="index.html" /> 
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -33,7 +35,7 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
-        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -51,6 +53,12 @@
 <li class="toctree-l2"><a class="reference internal" href="instrument.html#description-of-the-data">1.2. Description of the Data</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">2. Polynomial Model Method</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="model.html#description-of-the-spectrograph-model-principle">2.1. Description of the Spectrograph Model principle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model.html#mathematical-principle">2.2. Mathematical principle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model.html#description-of-model-file-contents">2.3. Description of model file contents</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="recipes.html">3. Recipes for GHOST</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="recipes.html#typical-processing-flows">3.1. Typical Processing Flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="recipes.html#other-processing-flows">3.2. Other Processing Flows</a></li>
@@ -62,20 +70,32 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="issueslimitations.html">5. Issues and Limitations</a></li>
-<li class="toctree-l1"><a class="reference internal" href="primitives.html">Primitives for GHOST</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="primitives_pages/findApertures.html">1. findApertures</a></li>
-<li class="toctree-l2"><a class="reference internal" href="primitives_pages/fork.html">2. fork</a></li>
-<li class="toctree-l2"><a class="reference internal" href="primitives_pages/mosaicADdetectors.html">3. mosaicADdetectors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="primitives_pages/processSlits.html">4. processSlits</a></li>
-<li class="toctree-l2"><a class="reference internal" href="primitives_pages/promote.html">5. promote</a></li>
-<li class="toctree-l2"><a class="reference internal" href="primitives_pages/rejectCosmicRays.html">6. rejectCosmicRays</a></li>
-<li class="toctree-l2"><a class="reference internal" href="primitives_pages/stackFrames.html">7. stackFrames</a></li>
-<li class="toctree-l2"><a class="reference internal" href="primitives_pages/standardizeHeaders.html">8. standardizeHeaders</a></li>
-<li class="toctree-l2"><a class="reference internal" href="primitives_pages/switchTo.html">9. switchTo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="primitives.html">6. Primitives for GHOST</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/correctSlitCosmics.html">6.1. correctSlitCosmics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/extractProfile.html">6.2. extractProfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/findApertures.html">6.3. findApertures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/fitWavelength.html">6.4. fitWavelength</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/fork.html">6.5. fork</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/processSlits.html">6.6. processSlits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/rejectCosmicRays.html">6.7. rejectCosmicRays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/stackFrames.html">6.8. stackFrames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/standardizeHeaders.html">6.9. standardizeHeaders</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/standardizeStructure.html">6.10. standardizeStructure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/switchTo.html">6.11. switchTo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/tileAmplifiers.html">6.12. tileAmplifiers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="primitives_pages/validateData.html">6.13. validateData</a></li>
 </ul>
 </li>
 </ul>
 </div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
 </div>
 
 
@@ -84,10 +104,16 @@
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">GHOST Users Manual</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/index-latex.txt"
+      <li><a href="_sources/index-latex.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -111,12 +137,12 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
-        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.5.
+        &#169; Copyright 2016-17, The GHOST DRS Team &amp; Kathleen Labrie.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.5.
     </div>
   </body>
 </html>
