@@ -313,10 +313,14 @@ class Polyspect(object):
                                                                   y_values)
 
             # Finally, the blaze
+            # Most of this is only to avoid the runtimewarning
             wcen = wave_int[int(order - self.m_min), int(self.szy / 2)]
-            disp = wave_int[int(order - self.m_min),
+            if wcen != 1.0:
+                disp = wave_int[int(order - self.m_min),
                             int(self.szy / 2 + 1)] - wcen
-            print(wcen, order, disp)
+            else:
+                disp = 1.0
+            #print(wcen, order, disp)
             order_width = (wcen / order) / disp
             blaze_int[order - self.m_min, :] = np.sinc((y_values - self.szy / 2)
                                                        / order_width)**2

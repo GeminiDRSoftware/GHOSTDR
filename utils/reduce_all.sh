@@ -35,7 +35,7 @@ reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` proc
 done
 
 echo 'Now the spectrograph data'
-for i in blue red 
+for i in red blue
 do
     echo "Doing $i images now"
     CAPCAM=`echo $i | tr '[:lower:]' '[:upper:]'`
