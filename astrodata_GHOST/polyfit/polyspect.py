@@ -280,15 +280,11 @@ class Polyspect(object):
             wparams = np.ones((3,3))
         wave_int = self.evaluate_poly(wparams)
         x_int = self.evaluate_poly(xparams)
-        
+
         # Finally, the blaze
-            # Most of this is only to avoid the runtimewarning
+        wcen = wave_int[:, int(self.szy / 2)]
         disp = wave_int[:, int(self.szy / 2 + 1)] - wcen
-            if wcen != 1.0:
-                disp = wave_int[int(order - self.m_min),
-            else:
-                disp = 1.0
-            #print(wcen, order, disp)
+
         order_width = (wcen / order) / disp
         order_width = np.meshgrid(np.arange(self.szy),order_width)[1]
         blaze_int = np.sinc((y_values - self.szy / 2)
