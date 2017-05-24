@@ -210,11 +210,15 @@ class Polyspect(object):
         y_values = lines[:, 1]
         ydeg=init_mod.shape[0]-1
         xdeg=init_mod.shape[1]-1
+        #For weighted fitting purposes, use the maximum of the gaussian fit.
+        #This comes for free with the arclines but is not used yet. 
+        sigma=1./lines[:,4]
         
         #init_resid = self.fit_resid(init_mod, orders, waves,
         #                                 y_values, ydeg=ydeg, xdeg=xdeg)
         bestp = op.leastsq(self.fit_resid, init_mod, args=(orders, y_values,
-                                                           waves, ydeg, xdeg))
+                                                           waves, ydeg, xdeg,
+                                                           sigma))
         final_resid = self.fit_resid(bestp[0], orders, y_values, waves,
                                           ydeg=ydeg, xdeg=xdeg)
         # Output the fit residuals.
@@ -438,6 +442,7 @@ class Polyspect(object):
                                     search_pix:self.szx // 2 +
                                     xind + search_pix + 1]
                 x_values[i, j] += np.argmax(peakpix) - search_pix
+                #Put a sigma for weighted fit purposes
                 sigma[i,j] = 1./np.max(peakpix)
         if inspect:
             plt.clf()

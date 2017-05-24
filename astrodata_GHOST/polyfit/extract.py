@@ -501,7 +501,8 @@ class Extractor():
                 y = flux[m_ix, x]
                 #pdb.set_trace()
                 # Any line with peak S/N under a value is not considered.
-                if np.max(y) < 6 * noise_level:
+                # And reject any saturated lines.
+                if (np.max(y) < 6 * noise_level) or (np.max(y) > 6E4):
                     continue
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
