@@ -14,7 +14,7 @@ import matplotlib.cm as cm
 import astropy.io.fits as pyfits
 #plt.ion()
 
-refit_x_pars=False
+refit_x_pars=True
 user = 'Joao'
 
 if user=='Mike':
@@ -85,14 +85,15 @@ flat_image_array = arc_image_array.copy()
 
 # Create an initial model of the spectrograph.
 # xx, wave, blaze= ghost.spectral_format(xparams=xpars,wparams=wpars)
+slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='high')
 
 #(self, xmod, wavemod, spatmod=None,specmod=None, rotmod=None)
 if refit_x_pars:
     print("Re-fitting to the xpars")
-    conv_flat = arm.slit_flat_convolve(flat_data)
+    conv_flat = arm.slit_flat_convolve(flat_data,slit_profile=slitview.slit_profile(arm='blue'),spatpars=spatpars,microns_pix=slitview.microns_pix,xpars=xpars)
     xpars = arm.fit_x_to_image(conv_flat, xpars)
 
-slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='high')
+
 arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
 #!!! These lines below actually go after the wmodel_file tweaking !!!

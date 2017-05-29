@@ -77,9 +77,9 @@ class GhostArm(Polyspect):
             A flat field image from the spectrograph
             
         slit_profile: numpy float array
-            A slit profile as a 1D array with the slit profile fiber amplitudes. If 
-            none is supplied this function will assume identical fibers and create
-            one to be used in the convolution based on default parameters
+            A slit profile as a 1D array with the slit profile fiber amplitudes.
+            If none is supplied this function will assume identical fibers and
+            create one to be used in the convolution based on default parameters
             specified in the ghost class.
             
         spatpars: numpy float array
@@ -94,8 +94,9 @@ class GhostArm(Polyspect):
             The 2D polynomial parameters for the x (along-slit) coordinate.
             Required if slit_profile is not None.
             
-        split_conv: int (optional)
-            The number of different convolution functions to use for different orders.
+        num_conv: int (optional)
+            The number of different convolution functions to use for different
+            orders.
             The final convolved profile is an interpolation between these.
 
         Returns
@@ -140,7 +141,7 @@ class GhostArm(Polyspect):
         xbase = flat.shape[0]
         profilex = np.arange(xbase) - xbase // 2
 
-        if not slit_profile:
+        if slit_profile is None:
             flat_conv = np.zeros_like(im_fft)
             
             # At this point create a slit profile
@@ -168,8 +169,8 @@ class GhostArm(Polyspect):
             
         else:
             flat_conv = np.zeros_like(flat)
-            flat_conv_fts = np.zeros( (num_conv, im_fft.shape[0], im_fft.shape[1]), \
-                dtype=np.complex)
+            flat_conv_fts = np.zeros( (num_conv, im_fft.shape[0],
+                                       im_fft.shape[1]), dtype=np.complex)
             
             #Our orders that we'll evaluate the spatial scale at:
             orders = np.linspace(self.m_min, self.m_max, num_conv).astype(int)
@@ -177,19 +178,23 @@ class GhostArm(Polyspect):
             y_values = np.arange(self.szy)
             
             #The slit coordinate in microns
-            slit_coord = (np.arange(len(slit_profile)) - len(slit_profile)//2)*microns_pix
+            slit_coord = (np.arange(len(slit_profile)) -
+                          len(slit_profile)//2) * microns_pix
             
             x_map = np.empty( (len(mprimes), self.szy) )
             
             # Now convolved in 2D
             for j, mprime in enumerate(mprimes):
                 #The spatial scales
-                spat_scale = self.evaluate_poly(spatpars, mprime, y_values)
+                spat_scale = self.evaluate_poly(spatpars)[orders[j]-self.m_min]
+                import pdb; pdb.set_trace()
                 
-                #The x pixel values
-                x_map[j] = self.evaluate_poly(xpars, mprime, y_values)
+                #The x pixel values, just for this order
+                x_map[j] = self.evaluate_poly(xpars)[orders[j]-self.m_min]
+                
                 for i in range(im_fft.shape[1]):
                     #Create the slit model.
+                    #THIS WILL FAIL. slit_microns is missing...
                     mod_slit = np.interp(profilex*spat_scale[i], slit_microns, slit_profile)
                     
                     # Normalise the slit model and Fourier transform for convolution
@@ -210,6 +215,5 @@ class GhostArm(Polyspect):
                 for j in range(len(mprimes)):
                     weight = (m_ix_lo==j) * (1-m_ix_frac) + (m_ix_hi==j) * m_ix_frac
                     flat_conv[:,i] += weight * np.fft.irfft(flat_conv_fts[j, :, i])
-            import pdb; pdb.set_trace() #!!! Definitely needs to be bug-shot !!!
         
         return flat_conv

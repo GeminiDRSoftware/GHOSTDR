@@ -4,7 +4,7 @@
 #This must be ran from within where the GHOST data are kept, with default variables indicating where the various types of files are
 
 # Start by setting up all the locations for the files. Change this for each case. 
-COREDIR=$PWD
+COREDIR=$PWD'/original'
 
 CALDIR=$COREDIR'/calibrations/storedcals'
 

@@ -1,5 +1,4 @@
 """Given (x,wave,matrices, slit_profile), extract the flux from each order.
-
 """
 
 from __future__ import division, print_function
@@ -12,17 +11,17 @@ import matplotlib.cm as cm
 import warnings
 
 class Extractor():
-    def __init__(self, polyspect_instance, slitview_instance, 
+    def __init__(self, polyspect_instance, slitview_instance,
                  gain = 1.0, rnoise = 3.0,
                  badpixmask=[], transpose=False):
-        """A class to extract data for each arm of the spectrograph. 
-        
+        """A class to extract data for each arm of the spectrograph.
+
         The extraction is defined by 3 key parameters: an "x_map", which is
         equivalent to 2dFDR's tramlines and contains a physical x-coordinate for
-        every y (dispersion direction) coordinate and order, and a "w_map", 
+        every y (dispersion direction) coordinate and order, and a "w_map",
         which is the wavelength corresponding to every y (dispersion direction)
         coordinate and order.
-        
+
         The slit parameters is defined by the slitview_instance. If a different
         slit profile is to be assumed, then another (e.g. simplified or fake)
         slitview instance should be made, rather than modifying this class.
@@ -31,21 +30,21 @@ class Extractor():
         ----------
         polyspect_instance: Polyspect object
             This defines e.g. whether the camera is "red" or "blue"
-        
+
         slitview_instance: SlitView object
             This defines whether the mode is "std" or "high"
-        
+
         gain: float
             gain in electrons per ADU. From fits header.
-        
+
         rnoise: float
             Expected readout noise in electrons. From fits header.
-        
+
         badpixmask: numpy array
             A list of [y,x] bad pixel co-ordinates
-            
+
         transpose: bool (optional)
-            Do we transpose the data before extraction? 
+            Do we transpose the data before extraction?
         """
         self.arm = polyspect_instance
         self.slitview = slitview_instance
@@ -53,12 +52,12 @@ class Extractor():
         self.gain = gain
         self.rnoise = rnoise
         self.badpixmask = badpixmask
-        
+
         # TODO: This warning could probably be neater.
         if not isinstance(self.arm.x_map,np.ndarray):
             raise UserWarning('Input polyspect_instance requires \
             spectral_format_with matrix to be run.')
-        
+
         # To aid in 2D extraction, let's explicitly compute the y offsets
         # corresponding to these x offsets...
         # The "matrices" map pixels back to slit co-ordinates.
@@ -93,7 +92,7 @@ class Extractor():
             data to be extracted.
 
         correct_for_sky: bool
-            Do we correct the object slit profiles for sky? Should be yes for 
+            Do we correct the object slit profiles for sky? Should be yes for
             objects and no for flats/arcs.
 
         WARNING: Binning not implemented yet"""
@@ -110,13 +109,13 @@ class Extractor():
 
         #Our profiles... TODO: extract x-centroids as well for PRV.
         profiles = self.slitview.object_slit_profiles(arm=self.arm.arm, correct_for_sky=correct_for_sky)
-        
+
         # Number of "objects" and "slit pixels"
         no = profiles.shape[0]
         n_slitpix = profiles.shape[1]
         profile_y_microns = (np.arange(n_slitpix) -
                              n_slitpix//2)*self.slitview.microns_pix
-        
+
         # To consider slit tilt for a 1D extraction, we need to know the profile
         # centroids in the "y" direction.
         y_ix = np.arange(n_slitpix) - n_slitpix//2
@@ -125,7 +124,7 @@ class Extractor():
         for y_centroid, profile in zip(y_centroids, profiles):
             y_centroid = np.sum(profile * y_ix)/np.sum(profile)
         centroids = np.array([x_centroids, y_centroids])
-              
+
         #Our extracted arrays.
         extracted_flux = np.zeros((nm, ny, no))
         extracted_var = np.zeros((nm, ny, no))
@@ -137,8 +136,8 @@ class Extractor():
 
         # Loop through all orders then through all y pixels.
         for i in range(nm):
-            print("Extracting order: {0:d}".format(i))      
-            
+            print("Extracting order: {0:d}".format(i))
+
             #Create an empty weight array. Base the size on the largest slit magnification
             #for this order.
             nx_cutout = int(np.ceil(self.slitview.slit_length/np.min(self.arm.matrices[i,:,0,0])))
@@ -146,7 +145,7 @@ class Extractor():
 
             for j in range(ny):
                 #Compute offsets in microns directly from the y_centroid and the matrix.
-                #Although this is 2D, we only worry ourselves about the 
+                #Although this is 2D, we only worry ourselves about the
                 slitim_offsets = np.dot(self.arm.matrices[i,j], centroids)
                 profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
                 #pdb.set_trace()
@@ -154,7 +153,7 @@ class Extractor():
                 if self.arm.x_map[i, j] != self.arm.x_map[i, j]:
                     extracted_var[i, j, :] = np.nan
                     continue
-                    
+
                 # Create our column cutout for the data and the PSF. !!! Is
                 # "round" correct on the next line???
                 x_ix = int(np.round(
@@ -180,7 +179,7 @@ class Extractor():
                 else:
                     col_data = data[x_ix, j]
                     col_inv_var = pixel_inv_var[x_ix, j]
-                
+
                 # Fill in the "c" matrix and "b" vector from Sharp and Birchall
                 # equation 9 Simplify things by writing the sum in the
                 # computation of "b" as a matrix multiplication.
@@ -196,7 +195,7 @@ class Extractor():
                 extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
                 extracted_var[i, j, :] = np.dot(
                     1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights**2)
-                
+
         return extracted_flux, extracted_var
 
     def two_d_extract(self, file='', data=[], lenslet_profile='sim', rnoise=3.0,
@@ -436,7 +435,7 @@ class Extractor():
         Parameters
         ----------
         flux: numpy array
-            Flux data extracted with the 1D extractor. Just the flux, not the 
+            Flux data extracted with the 1D extractor. Just the flux, not the
             variance.
 
         arclines: float array
@@ -457,7 +456,7 @@ class Extractor():
 
         Returns
         -------
-        
+
         lines_out: float array
             Whatever used to be placed in a file.
         """
@@ -472,7 +471,7 @@ class Extractor():
         # Let's try the median absolute deviation as a measure of background
         # noise.
         noise_level = np.median(np.abs(flux-np.median(flux)))
-        
+
         if inspect and len(arcfile) == 0:
             print('Must provide an arc image for the inpection')
             raise UserWarning
@@ -526,4 +525,3 @@ class Extractor():
             plt.axis([0, nx, ny, 0])
             plt.show()
         return np.array(lines_out)
-
