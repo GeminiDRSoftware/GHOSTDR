@@ -187,7 +187,6 @@ class GhostArm(Polyspect):
             for j, mprime in enumerate(mprimes):
                 #The spatial scales
                 spat_scale = self.evaluate_poly(spatpars)[orders[j]-self.m_min]
-                import pdb; pdb.set_trace()
                 
                 #The x pixel values, just for this order
                 x_map[j] = self.evaluate_poly(xpars)[orders[j]-self.m_min]
@@ -195,7 +194,7 @@ class GhostArm(Polyspect):
                 for i in range(im_fft.shape[1]):
                     #Create the slit model.
                     #THIS WILL FAIL. slit_microns is missing...
-                    mod_slit = np.interp(profilex*spat_scale[i], slit_microns, slit_profile)
+                    mod_slit = np.interp(profilex*spat_scale[i], slit_coord, slit_profile)
                     
                     # Normalise the slit model and Fourier transform for convolution
                     mod_slit /= np.sum(mod_slit)
@@ -209,7 +208,7 @@ class GhostArm(Polyspect):
                 m_ix_for_interp = np.interp(x_ix, x_map[:,i], np.arange(len(mprimes)))
                 m_ix_for_interp = np.minimum(m_ix_for_interp, len(mprimes)-1-1e-6)
                 m_ix_for_interp = np.maximum(m_ix_for_interp, 0)
-                m_ix_lo = np.int(m_ix_for_interp)
+                m_ix_lo = np.int16(m_ix_for_interp)
                 m_ix_hi = m_ix_lo+1
                 m_ix_frac = m_ix_for_interp - m_ix_lo
                 for j in range(len(mprimes)):
