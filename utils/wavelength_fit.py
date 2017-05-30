@@ -56,7 +56,7 @@ elif user=='Joao':
     # All the other models... which are currently in the "test" directory.
     #wmodel_file=test_files_dir+'wparams_blue_high.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
-    spatmod_file=test_files_dir+'spatmod.fits'
+    spatmod_file=test_files_dir+'spatmod_highvar.fits'
     specmod_file=test_files_dir+'specmod.fits'
     rotmod_file=test_files_dir+'rotmod2.fits'
 

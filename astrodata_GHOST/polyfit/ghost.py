@@ -169,8 +169,7 @@ class GhostArm(Polyspect):
             
         else:
             flat_conv = np.zeros_like(flat)
-            flat_conv_fts = np.zeros( (num_conv, im_fft.shape[0],
-                                       im_fft.shape[1]), dtype=np.complex)
+            flat_conv_cube = np.zeros( (num_conv, flat.shape[0], flat.shape[1]) )
             
             #Our orders that we'll evaluate the spatial scale at:
             orders = np.linspace(self.m_min, self.m_max, num_conv).astype(int)
@@ -199,13 +198,22 @@ class GhostArm(Polyspect):
                     # Normalise the slit model and Fourier transform for convolution
                     mod_slit /= np.sum(mod_slit)
                     mod_slit_ft = np.fft.rfft(np.fft.fftshift(mod_slit))
-                    flat_conv_fts[j, :, i] = (im_fft[:, i] * mod_slit_ft)/num_conv
+                    #FIXME: Remove num_conv on next line and see if it makes a difference!
+                    flat_conv_cube[j, :, i] = np.fft.irfft((im_fft[:, i] * mod_slit_ft)/num_conv)
             
             #Work through every y coordinate and interpolate between the convolutions
             #with the different slit profiles.
-            x_ix = np.arange(flat.shape[0])
+            x_ix = np.arange(flat.shape[0])- flat.shape[0]//2
+
+            #Create an m index, and reverse x_map if needed.
+            #FIXME: This assumes a minimum size of x_map which should be checked above,
+            #i.e. mprimes has 2 or more elements.
+            m_map_ix = np.arange(len(mprimes))
+            if x_map[1,0] < x_map[0,0]:
+                m_map_ix = m_map_ix[::-1]
+                x_map = x_map[::-1]
             for i in range(im_fft.shape[1]):
-                m_ix_for_interp = np.interp(x_ix, x_map[:,i], np.arange(len(mprimes)))
+                m_ix_for_interp = np.interp(x_ix, x_map[:,i], m_map_ix)
                 m_ix_for_interp = np.minimum(m_ix_for_interp, len(mprimes)-1-1e-6)
                 m_ix_for_interp = np.maximum(m_ix_for_interp, 0)
                 m_ix_lo = np.int16(m_ix_for_interp)
@@ -213,6 +221,7 @@ class GhostArm(Polyspect):
                 m_ix_frac = m_ix_for_interp - m_ix_lo
                 for j in range(len(mprimes)):
                     weight = (m_ix_lo==j) * (1-m_ix_frac) + (m_ix_hi==j) * m_ix_frac
-                    flat_conv[:,i] += weight * np.fft.irfft(flat_conv_fts[j, :, i])
-        
+                    flat_conv[:,i] += weight * flat_conv_cube[j, :, i]
+            import pdb; pdb.set_trace() 
+                    
         return flat_conv
