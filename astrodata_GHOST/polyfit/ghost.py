@@ -222,6 +222,5 @@ class GhostArm(Polyspect):
                 for j in range(len(mprimes)):
                     weight = (m_ix_lo==j) * (1-m_ix_frac) + (m_ix_hi==j) * m_ix_frac
                     flat_conv[:,i] += weight * flat_conv_cube[j, :, i]
-            import pdb; pdb.set_trace() 
-                    
+            
         return flat_conv
