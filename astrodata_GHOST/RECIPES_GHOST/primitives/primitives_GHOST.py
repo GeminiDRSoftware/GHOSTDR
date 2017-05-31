@@ -840,7 +840,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
                 # Start with a fresh copy of the data
                 # Use numpy NaN to cover up any data detected bad so far
-                # (i.e. BPM < 8)
+                # (i.e. 0 < BPM < 8)
                 clean_data = np.copy(ad["SCI", amp].data)
                 clean_data[ad['DQ', amp].data > 0] = np.nan
 
