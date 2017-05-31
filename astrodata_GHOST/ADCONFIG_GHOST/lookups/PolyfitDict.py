@@ -9,7 +9,7 @@ xmod_dict = {
     'GHOST_1_1_red_std': 'GHOST/GHOST/Polyfit/red/std/161120/xmod.fits',
     'GHOST_1_1_red_high': 'GHOST/GHOST/Polyfit/red/high/161120/xmod.fits',
     'GHOST_1_1_blue_std': 'GHOST/GHOST/Polyfit/blue/std/161120/xmod.fits',
-    'GHOST_1_1_blue_high': 'GHOST/GHOST/Polyfit/blue/161120/high/xmod.fits',
+    'GHOST_1_1_blue_high': 'GHOST/GHOST/Polyfit/blue/high/161120/xmod.fits',
 }
 
 wavemod_dict = {
