@@ -198,7 +198,7 @@ class Extractor():
 
         return extracted_flux, extracted_var
 
-    def two_d_extract(self, file='', data=[], lenslet_profile='sim', rnoise=3.0,
+    def two_d_extract(self, data, lenslet_profile='sim', rnoise=3.0,
                       deconvolve=True):
         """ Extract using 2D information. The lenslet model used is a collapsed
         profile, in 1D but where we take into account the slit shear/rotation by
@@ -220,14 +220,10 @@ class Extractor():
 
         Parameters
         ----------
-        data: numpy array (optional)
+        data: numpy array
             Image data, transposed so that dispersion is in the "y" direction.
             Note that this is the transpose of a conventional echellogram.
             Either data or file must be given
-
-        file: string (optional)
-            A fits file with conventional row/column directions containing the
-            data to be extracted.
 
         lenslet_profile: 'square' or 'sim'
             Shape of the profile of each fiber as used in the extraction.
@@ -244,12 +240,9 @@ class Extractor():
             (a linear function of 5 neighboring pixels) so is reasonably robust.
         """
 
-        if len(data) == 0:
-            if len(file) == 0:
-                print("ERROR: Must input data or file")
-            else:
-                # Transpose the data from the start.
-                data = pyfits.getdata(file).T
+        data = pyfits.getdata(file)
+        if self.arm.transpose:
+            data = data.T
 
         ny = self.x_map.shape[1]
         nm = self.x_map.shape[0]
