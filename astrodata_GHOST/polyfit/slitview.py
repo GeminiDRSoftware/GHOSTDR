@@ -64,6 +64,38 @@ class SlitView(object):
         else:
             raise UserWarning("Invalid Mode")
 
+    def cutout(self, arm='red', use_flat=False):
+        """Extract the 2-dimensional slit profile cutout.
+
+        Parameters
+        ----------
+        arm: string
+            Either 'red' or 'blue' for GHOST.
+
+        use_flat: bool
+            Cutout from the flat (True) or the slit frame (False).
+
+        Returns
+        -------
+        profile: numpy array (npix)
+            The 2-dimensional slit profile cutout.
+        """
+        try:
+            central_pix = self.central_pix[arm]
+        except:
+            raise UserWarning("Invalid arm: '%s'" % arm)
+
+        if use_flat:
+            this_slit_image = self.flat_image
+        else:
+            this_slit_image = self.slit_image
+
+        y_halfwidth = int(self.slit_length/self.microns_pix/2)
+        return this_slit_image[
+            central_pix[0]-y_halfwidth:central_pix[0]+y_halfwidth+1,
+            central_pix[1]-self.extract_half_width:central_pix[1] +
+            self.extract_half_width+1]
+
     def slit_profile(self, arm='red', return_centroid=False, use_flat=False):
         """Extract the 1-dimensional slit profile.
 
@@ -80,21 +112,8 @@ class SlitView(object):
         profile: numpy array (npix)
             The summed 1-dimensional slit profile.
         """
-        try:
-            central_pix = self.central_pix[arm]
-        except:
-            raise UserWarning("Invalid arm: '%s'" % arm)
-
-        if use_flat:
-            this_slit_image = self.flat_image
-        else:
-            this_slit_image = self.slit_image
-
         y_halfwidth = int(self.slit_length/self.microns_pix/2)
-        cutout = this_slit_image[
-            central_pix[0]-y_halfwidth:central_pix[0]+y_halfwidth+1,
-            central_pix[1]-self.extract_half_width:central_pix[1] +
-            self.extract_half_width+1]
+        cutout = self.cutout(arm, use_flat)
 
         # Sum over the 2nd axis, i.e. the x-coordinate.
         profile = np.sum(cutout, axis=1)
@@ -119,7 +138,7 @@ class SlitView(object):
         if correct_for_sky or append_sky:
             # Get the flat profile from the flat image.
             flat_profile = self.slit_profile(arm=arm, use_flat=True)
-            
+
         # WARNING: This is done in the extracted profile space. Is there any
         # benefit to doing this in pixel space? Maybe yes for the centroid.
         if correct_for_sky:
@@ -133,7 +152,6 @@ class SlitView(object):
             full_profile -= flat_scaling*flat_profile
 
         # Extract the objects.
-        # WARNING: Dodgy code for now.
         profiles = []
         for boundary in self.object_boundaries[arm]:
             profiles.append(np.copy(full_profile))
