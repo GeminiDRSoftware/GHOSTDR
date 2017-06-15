@@ -71,7 +71,7 @@ class Extractor():
                 x_dir_map = np.dot(invmat, [1, 0])
                 self.slit_tilt[i, j] = x_dir_map[1] / x_dir_map[0]
 
-    def one_d_extract(self, data=[], file='', lenslet_profile='slitview',
+    def one_d_extract(self, data=None, file=None, lenslet_profile='slitview',
                       correct_for_sky=True):
         """ Extract flux by integrating down columns (the "y" direction),
         using an optimal extraction method.
@@ -97,8 +97,8 @@ class Extractor():
 
         WARNING: Binning not implemented yet"""
 
-        if len(data) == 0:
-            if len(file) == 0:
+        if data is None:
+            if file is None:
                 print("ERROR: Must input data or file")
             else:
                 data = pyfits.getdata(file)
@@ -125,12 +125,14 @@ class Extractor():
             y_centroid = np.sum(profile * y_ix)/np.sum(profile)
         centroids = np.array([x_centroids, y_centroids])
 
-        #Our extracted arrays.
+        #Our extracted arrays, and the weights array
         extracted_flux = np.zeros((nm, ny, no))
         extracted_var = np.zeros((nm, ny, no))
+        extraction_weights = np.zeros((no, nx, ny))
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
+        # FIXME: This should come from the 
         pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + self.rnoise**2)
         pixel_inv_var[self.badpixmask] = 0.0
 
@@ -184,23 +186,150 @@ class Extractor():
                 # equation 9 Simplify things by writing the sum in the
                 # computation of "b" as a matrix multiplication.
                 # We can do this because we're content to invert the
-                # (small) matrix "c" here. Equation 17 from Sharp and Birchall
-                # doesn't make a lot of sense... so lets just calculate the
-                # variance in the simple explicit way.
+                # (small) matrix "c" here. R
+                # FIXME: Transpose matrices appropriately so that multiplication
+                # order is the same as documentation.
                 col_inv_var_mat = np.reshape(
                     col_inv_var.repeat(no), (nx_cutout, no))
                 b_mat = phi * col_inv_var_mat
                 c_mat = np.dot(phi.T, phi * col_inv_var_mat)
                 pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
+                
+                #FIXME: Search here for weights that are non-zero for overlapping
+                #orders
+                extraction_weights[:, x_ix, j] += pixel_weights
+
+                #Actual extraction is simple: Just matrix-multiply the data by the
+                #weights. 
                 extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
+
+                # Rather than trying to understand and
+                # document Equation 17 from Sharp and Birchall, we 
+                # doesn't make a lot of sense... so lets just calculate the
+                # variance in the simple explicit way for a linear combination of
+                # independent pixels.
                 extracted_var[i, j, :] = np.dot(
                     1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights**2)
 
-        return extracted_flux, extracted_var
+        return extracted_flux, extracted_var, extraction_weights
 
-    def two_d_extract(self, data, lenslet_profile='sim', rnoise=3.0,
-                      deconvolve=True):
+    def two_d_extract(self, data=None, file=None, extraction_weights=None, 
+            correct_for_sky=True):
         """ Extract using 2D information. The lenslet model used is a collapsed
+        profile, in 1D but where we take into account the slit shear/rotation by
+        interpolating this 1D slit profile to the nearest two pixels along each
+        row (y-axis in code).
+
+        One key difference to Sharp and Birchall is that c_kj (between equations
+        8 and 9) is the correct normalisation for a (fictitious) 1-pixel wide
+        PSF centered exactly on a pixel, but not for a continuum. We normalise
+        correctly for a continuum by having one of the \phi functions being
+        one-pixel wide along the slit, and the other being unbounded in the
+        dispersion direction.
+
+        Parameters
+        ----------
+        data: numpy array
+            Image data, transposed so that dispersion is in the "y" direction.
+            Note that this is the transpose of a conventional echellogram.
+            Either data or file must be given
+
+        file: string (optional)
+            A fits file with conventional row/column directions containing the
+            data to be extracted.
+            
+        extraction_weights: numpy array
+            Extraction weights created from a call to one_d_extract. Separating
+            this makes the code more readable, but is not speed optimised.
+            
+        correct_for_sky: bool
+            Do we correct the object slit profiles for sky? Should be yes for
+            objects and no for flats/arcs."""
+            
+        #FIXME: Much of this code is doubled-up with one_d_extract. Re-factoring
+        #is needed!
+        if data is None:
+            if file is None:
+                print("ERROR: Must input data or file")
+            else:
+                data = pyfits.getdata(file)
+
+        #Set up convenience local variables
+        ny = self.x_map.shape[1]
+        nm = self.x_map.shape[0]
+        nx = self.szx
+
+        #Our profiles... we re-extract these in order to include the centroids.
+        profiles, centroids = self.slitview.object_slit_profiles(arm=self.arm.arm, \
+            correct_for_sky=correct_for_sky, return_centroid=True)
+
+        # Number of "objects"
+        no = extraction_weights.shape[0]
+        extracted_flux = np.zeros((nm, ny, no))
+        extracted_var = np.zeros((nm, ny, no))
+        extracted_covar = np.zeros((nm, ny - 1, no))
+
+        # Assuming that the data are in photo-electrons, construct a simple
+        # model for the pixel inverse variance.
+        pixel_inv_var = 1.0 / (np.maximum(data, 0) + rnoise**2)
+        pixel_inv_var[self.badpixmask] = 0.0
+        
+        # Loop through all orders then through all y pixels.
+        for i in range(nm):
+            print("Extracting order: {0:d}".format(i))
+
+            #Create an empty weight array. Base the size on the largest slit magnification
+            #for this order.
+            nx_cutout = int(np.ceil(self.slitview.slit_length/np.min(self.arm.matrices[i,:,0,0])))
+            ny_cutout = 2 * \
+                int(np.floor(nx_cutout * np.nanmax(np.abs(self.slit_tilt)) / 2)) + 1
+
+            for j in range(ny):
+                #Compute offsets in microns directly from the y_centroid and the matrix.
+                #Although this is 2D, we only worry ourselves about the
+                slitim_offsets = np.dot(self.arm.matrices[i,j], centroids)
+                profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
+                #pdb.set_trace()
+                # Check for NaNs
+                if self.arm.x_map[i, j] != self.arm.x_map[i, j]:
+                    extracted_var[i, j, :] = np.nan
+                    continue
+
+                # Create our cutout of columns for the data. 
+                x_ix = int(np.round(
+                    self.arm.x_map[i, j])) - nx_cutout // 2 +\
+                    np.arange(nx_cutout, dtype=int) + nx // 2
+                y_ix = j + np.arange(ny_cutout, dtype=int) - ny_cutout // 2
+
+                # Deal with edge effects...
+                ww = np.where((x_ix >= nx) | (x_ix < 0))[0]
+                x_ix[ww] = 0
+                phi[:, ww, :] = 0.0
+                phi1d[:, ww, :] = 0.0
+                ww = np.where((y_ix >= ny) | (y_ix < 0))[0]
+                y_ix[ww] = 0
+                phi[ww, :, :] = 0.0
+                xy = np.meshgrid(y_ix, x_ix, indexing='ij')
+                
+                # Cut out our data and inverse variance.
+                col_data = data[xy]
+                col_inv_var = pixel_inv_var[xy]
+                col_weights = extraction_weights[xy]
+                
+                #Extract
+                #FIXME: Still 1D, but we do have self.slit_tilt, matrices and
+                #centroids ready.
+                extracted_flux[i, j, :] = np.dot(col_data[:,ny_cutout//2], col_weights[:,ny_cutout//2])
+                extracted_var[i, j, :] = np.dot(
+                    1.0 / np.maximum(col_inv_var[:,ny_cutout//2], 1e-12), pixel_weights[:,ny_cutout//2]**2)
+        return extracted_flux, extracted_var     
+
+    def two_d_extract_ref_only(self, file, lenslet_profile='sim', rnoise=3.0,
+                      deconvolve=True):
+        """ 
+        The original 2D extraction code: Worked but difficult to understand. 
+        
+        Extract using 2D information. The lenslet model used is a collapsed
         profile, in 1D but where we take into account the slit shear/rotation by
         interpolating this 1D slit profile to the nearest two pixels along each
         row (y-axis in code).
