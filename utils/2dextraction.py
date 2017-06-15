@@ -14,6 +14,8 @@ write_to_file = False
 # Firstly, let's find all the needed files
 fitsdir='/priv/mulga1/jbento/ghost/calibrations/storedcals/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
+fitsdir='/Users/mireland/data/ghost/storedcals/'
+fitsdir='/Users/mireland/data/ghost/parameter_files_for_testing/'
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 # For this example just use arcs. Proper science frame reduction is still not
 # available. 
