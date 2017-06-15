@@ -104,7 +104,9 @@ class GhostArm(Polyspect):
         flat_conv: float array
             Returns the convolved 2D array.
         """
-        #!!! WARNING: Error checking of inputs is needed here !!!
+        #FIXME: Error checking of inputs is needed here
+        #TODO: Based on test of speed, the convolution code with an input slit_profile
+        #      could go order-by-order.
 
         if self.arm == 'red':
             # Now put in the default fiber profile parameters for each mode.
@@ -141,6 +143,10 @@ class GhostArm(Polyspect):
         xbase = flat.shape[0]
         profilex = np.arange(xbase) - xbase // 2
 
+        #This is the original code which is based on the fixed fiber_separation
+        #defined above. 
+        #FIXME: Remove hard-coded fiber separations etc once slit_profile based
+        #convolution is throughly tested.
         if slit_profile is None:
             flat_conv = np.zeros_like(im_fft)
             
