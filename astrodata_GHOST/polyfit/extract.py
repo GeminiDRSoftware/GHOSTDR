@@ -146,8 +146,11 @@ class Extractor():
             phi = np.empty((nx_cutout, no))
 
             for j in range(ny):
-                #Compute offsets in microns directly from the y_centroid and the matrix.
-                #Although this is 2D, we only worry ourselves about the
+                # Compute offsets in slit-plane microns directly from the y_centroid and 
+                # the matrix.
+                # FIXME: It is unclear what to DO with this for a 1D extraction, unless
+                # we were going to output a new wavelength scale associated with a
+                # 1D extraction.
                 slitim_offsets = np.dot(self.arm.matrices[i,j], centroids)
                 profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
                 #pdb.set_trace()
@@ -156,8 +159,10 @@ class Extractor():
                     extracted_var[i, j, :] = np.nan
                     continue
 
-                # Create our column cutout for the data and the PSF. !!! Is
-                # "round" correct on the next line???
+                # Create our column cutout for the data and the PSF. 
+                # FIXME: Is "round" most correct on the next line???
+                # FIXME: Profiles should be convolved by a detector pixel,
+                # but binning has to be taken into account properly!
                 x_ix = int(np.round(
                     self.arm.x_map[i, j])) - nx_cutout // 2 +\
                     np.arange(nx_cutout, dtype=int) + nx // 2
@@ -170,7 +175,6 @@ class Extractor():
                 ww = np.where((x_ix >= nx) | (x_ix < 0))[0]
                 x_ix[ww] = 0
                 phi[ww, :] = 0.0
-
 
                 # Cut out our data and inverse variance. This is where we worry about whether
                 #the data come with orders horizontal (default) or transposed (i.e. like the
@@ -213,8 +217,7 @@ class Extractor():
 
         return extracted_flux, extracted_var, extraction_weights
 
-    def two_d_extract(self, data=None, file=None, extraction_weights=None, 
-            correct_for_sky=True):
+    def two_d_extract(self, data=None, file=None, extraction_weights=None):
         """ Extract using 2D information. The lenslet model used is a collapsed
         profile, in 1D but where we take into account the slit shear/rotation by
         interpolating this 1D slit profile to the nearest two pixels along each
@@ -241,10 +244,7 @@ class Extractor():
         extraction_weights: numpy array
             Extraction weights created from a call to one_d_extract. Separating
             this makes the code more readable, but is not speed optimised.
-            
-        correct_for_sky: bool
-            Do we correct the object slit profiles for sky? Should be yes for
-            objects and no for flats/arcs."""
+        """
             
         #FIXME: Much of this code is doubled-up with one_d_extract. Re-factoring
         #is needed!
@@ -259,9 +259,21 @@ class Extractor():
         nm = self.x_map.shape[0]
         nx = self.szx
 
-        #Our profiles... we re-extract these in order to include the centroids.
-        profiles, centroids = self.slitview.object_slit_profiles(arm=self.arm.arm, \
-            correct_for_sky=correct_for_sky, return_centroid=True)
+        # Our profiles... we re-extract these in order to include the centroids.
+        profile, centroids = self.slitview.slit_profile(arm=self.arm.arm, \
+            return_centroid=True)
+
+        # Convolve centroids in order to average over sub-pixel effects.
+        # also convert the centroids to units of slit plane microns.
+        slit_microns_per_det_pix_x = np.mean(self.arm.matrices[:, :, 0, 0])
+        slit_pix_per_det_pix = slit_microns_per_det_pix_x/self.slitview.microns_pix
+        #Create the profile of a mean detector pixel in slit pixel units.
+        det_pix = np.ones(int(slit_pix_per_det_pix) + 2)
+        det_pix[0] = 0.5*(slit_pix_per_det_pix - int(slit_pix_per_det_pix))
+        det_pix[-1] = det_pix[0]
+        det_pix /= np.sum(det_pix)
+        for c in centroids:
+            c = np.convolve(c, det_pix, mode='same')*self.slitview.microns_pix
 
         # Number of "objects"
         no = extraction_weights.shape[0]
@@ -282,14 +294,9 @@ class Extractor():
             #for this order.
             nx_cutout = int(np.ceil(self.slitview.slit_length/np.min(self.arm.matrices[i,:,0,0])))
             ny_cutout = 2 * \
-                int(np.floor(nx_cutout * np.nanmax(np.abs(self.slit_tilt)) / 2)) + 1
+                int(nx_cutout * np.nanmax(np.abs(self.slit_tilt)) / 2) + 3
 
             for j in range(ny):
-                #Compute offsets in microns directly from the y_centroid and the matrix.
-                #Although this is 2D, we only worry ourselves about the
-                slitim_offsets = np.dot(self.arm.matrices[i,j], centroids)
-                profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
-                #pdb.set_trace()
                 # Check for NaNs
                 if self.arm.x_map[i, j] != self.arm.x_map[i, j]:
                     extracted_var[i, j, :] = np.nan
@@ -316,17 +323,49 @@ class Extractor():
                 col_inv_var = pixel_inv_var[xy]
                 col_weights = extraction_weights[xy]
                 
-                #Extract
-                #FIXME: Still 1D, but we do have self.slit_tilt, matrices and
-                #centroids ready.
-                extracted_flux[i, j, :] = np.dot(col_data[:,ny_cutout//2], col_weights[:,ny_cutout//2])
+                # Find the pixel (including fractional pixels) within our cutout that 
+                # we'll use for extraction. First - find the pixel coordinates 
+                # according to slit tilt:
+                ysub_pix = (x_ix - self.x_map[i, j] - nx // 2) * \
+                        self.slit_tilt[i, j] + ny_cutout // 2
+
+                # Next, add the contribution of the centroid in the slit viewing camera.
+                # The [1,1] component of the matrix is slit_microns_per_det_pix_y 
+                # Above, slit_ix was called profile_y_pix.
+                slit_ix = np.arange(centroids.shape[1]) - centroids.shape[1]//2
+                col_ix = np.arange(nx_cutout) - nx_cutout//2
+                # Interpolate onto the slit coordinates
+                # FIXME: See 1d code for how this was done for profiles...
+                y_sub_pix += np.interp(x_ix - self.arm.x_map[i, j] - nx // 2, \
+                    slit_ix/self.arm.matrices[i, j, 0, 0], \
+                    centroids/self.arm.matrices[i, j, 1, 1])
+
+                #Create the arrays needed for interpolation.
+                ysub_ix_lo = np.int(ysub_pix)
+                ysub_ix_hi = ysub_ix_lo + 1
+                ysub_ix_frac = ysub_pix - ysub_ix_lo 
+                xsub_ix = np.arange(nx_cutout).astype(int)
+
+                #FIXME: probably won't work yet! Needs testing and verification.
+                extracted_flux[i, j, :] = \
+                    np.dot(col_data[x_ix, y_ix_lo], col_weights[x_ix, y_ix_lo]*(1 - y_ix_frac))
+                extracted_flux[i, j, :] += \
+                    np.dot(col_data[x_ix, y_ix_hi], col_weights[x_ix, y_ix_hi] * y_ix_frac)
                 extracted_var[i, j, :] = np.dot(
-                    1.0 / np.maximum(col_inv_var[:,ny_cutout//2], 1e-12), pixel_weights[:,ny_cutout//2]**2)
+                    (1 - y_ix_frac) / np.maximum(col_inv_var[x_ix, y_ix_lo], 1e-12), \
+                    col_weights[x_ix, y_ix_lo]**2)
+                extracted_var[i, j, :] += np.dot(
+                    y_ix_frac / np.maximum(col_inv_var[x_ix, y_ix_hi], 1e-12), \
+                    col_weights[x_ix, y_ix_hi]**2)
+                
         return extracted_flux, extracted_var     
 
     def two_d_extract_ref_only(self, file, lenslet_profile='sim', rnoise=3.0,
                       deconvolve=True):
         """ 
+        FIXME: Delete this routine once the new one is thoroughly tested, and a decision 
+        on whether "covar" is to be used is made. 
+        
         The original 2D extraction code: Worked but difficult to understand. 
         
         Extract using 2D information. The lenslet model used is a collapsed
