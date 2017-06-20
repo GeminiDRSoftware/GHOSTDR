@@ -6,16 +6,18 @@ import astropy.io.fits as pyfits
 import numpy as pn
 import fnmatch, os
 import pdb
+import pickle
 
 arm='blue'
 mode='std'
 write_to_file = False
+extract_1d_first = False #Set this to false to test multiple times.
 
 # Firstly, let's find all the needed files
 fitsdir='/priv/mulga1/jbento/ghost/calibrations/storedcals/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
 fitsdir='/Users/mireland/data/ghost/storedcals/'
-fitsdir='/Users/mireland/data/ghost/parameter_files_for_testing/'
+test_files_dir='/Users/mireland/data/ghost/parameter_files_for_testing/'
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 # For this example just use arcs. Proper science frame reduction is still not
 # available. 
@@ -67,8 +69,16 @@ arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 # been instantiated with the slit viewer data.
 extractor = polyfit.Extractor(arm, slitview)
 # Now extract. The option to correct for sky depends on the type of file. 
+
+if extract_1d_first:
+    extracted_flux, extracted_var, extraction_weights = \
+        extractor.one_d_extract(science_data)
+    with open('extraction_weights.pkl','w') as f:
+       pickle.dump(extraction_weights, f)
+
+extraction_weights = pickle.load(open('extraction_weights.pkl','r'))
 extracted_flux, extracted_var = extractor.two_d_extract(science_data,
-                                                        lenslet_profile = slitview.slit_profile() )
+    extraction_weights = extraction_weights)
 
 if write_to_file:
     #Now write the output to a file, in whatever format suits the recipe system best.

@@ -96,7 +96,7 @@ class SlitView(object):
             central_pix[1]-self.extract_half_width:central_pix[1] +
             self.extract_half_width+1]
 
-    def slit_profile(self, arm='red', return_centroid=False, use_flat=False):
+    def slit_profile(self, arm='red', return_centroid=False, use_flat=False, denom_clamp=10):
         """Extract the 1-dimensional slit profile.
 
         Parameters
@@ -106,6 +106,13 @@ class SlitView(object):
 
         return_centroid: bool
             Do we also return the pixel centroid of the slit?
+            
+        use_flat: bool
+            Do we use the flat image? False for the object image.
+            
+        denom_clamp: float
+            Denominator clamp - fluxes below this value are not used when computing
+            the centroid.
 
         Returns
         -------
@@ -122,7 +129,7 @@ class SlitView(object):
                 -self.extract_half_width, self.extract_half_width+1)
             xcoord = np.tile(xcoord, 2*y_halfwidth+1).reshape(
                 (2*y_halfwidth+1, 2*self.extract_half_width+1))
-            centroid = np.sum(xcoord*cutout, 1)
+            centroid = np.sum(xcoord*cutout, 1)/np.maximum(profile, denom_clamp)
             return profile, centroid
         else:
             return profile

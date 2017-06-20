@@ -71,8 +71,7 @@ class Extractor():
                 x_dir_map = np.dot(invmat, [1, 0])
                 self.slit_tilt[i, j] = x_dir_map[1] / x_dir_map[0]
 
-    def one_d_extract(self, data=None, file=None, lenslet_profile='slitview',
-                      correct_for_sky=True):
+    def one_d_extract(self, data=None, file=None, correct_for_sky=True):
         """ Extract flux by integrating down columns (the "y" direction),
         using an optimal extraction method.
 
@@ -201,7 +200,8 @@ class Extractor():
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
                 #orders
-                extraction_weights[:, x_ix, j] += pixel_weights
+                for ii, ew_one  in enumerate(extraction_weights):
+                    ew_one[x_ix, j] += pixel_weights[:,ii]
 
                 #Actual extraction is simple: Just matrix-multiply the data by the
                 #weights. 
@@ -255,9 +255,9 @@ class Extractor():
                 data = pyfits.getdata(file)
 
         #Set up convenience local variables
-        ny = self.x_map.shape[1]
-        nm = self.x_map.shape[0]
-        nx = self.szx
+        ny = self.arm.x_map.shape[1]
+        nm = self.arm.x_map.shape[0]
+        nx = self.arm.szx
 
         # Our profiles... we re-extract these in order to include the centroids.
         profile, centroids = self.slitview.slit_profile(arm=self.arm.arm, \
@@ -283,7 +283,7 @@ class Extractor():
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
-        pixel_inv_var = 1.0 / (np.maximum(data, 0) + rnoise**2)
+        pixel_inv_var = 1.0 / (np.maximum(data, 0) + self.rnoise**2)
         pixel_inv_var[self.badpixmask] = 0.0
         
         # Loop through all orders then through all y pixels.
@@ -311,52 +311,58 @@ class Extractor():
                 # Deal with edge effects...
                 ww = np.where((x_ix >= nx) | (x_ix < 0))[0]
                 x_ix[ww] = 0
-                phi[:, ww, :] = 0.0
-                phi1d[:, ww, :] = 0.0
+                #phi[:, ww, :] = 0.0
+                #phi1d[:, ww, :] = 0.0
                 ww = np.where((y_ix >= ny) | (y_ix < 0))[0]
                 y_ix[ww] = 0
-                phi[ww, :, :] = 0.0
-                xy = np.meshgrid(y_ix, x_ix, indexing='ij')
+                #phi[ww, :, :] = 0.0
+                xy = np.meshgrid(x_ix, y_ix, indexing='ij')
                 
                 # Cut out our data and inverse variance.
                 col_data = data[xy]
                 col_inv_var = pixel_inv_var[xy]
-                col_weights = extraction_weights[xy]
+                col_weights = np.array([ew[xy] for ew in extraction_weights])
                 
                 # Find the pixel (including fractional pixels) within our cutout that 
                 # we'll use for extraction. First - find the pixel coordinates 
                 # according to slit tilt:
-                ysub_pix = (x_ix - self.x_map[i, j] - nx // 2) * \
+                ysub_pix = (x_ix - self.arm.x_map[i, j] - nx // 2) * \
                         self.slit_tilt[i, j] + ny_cutout // 2
 
                 # Next, add the contribution of the centroid in the slit viewing camera.
                 # The [1,1] component of the matrix is slit_microns_per_det_pix_y 
                 # Above, slit_ix was called profile_y_pix.
-                slit_ix = np.arange(centroids.shape[1]) - centroids.shape[1]//2
+                slit_ix = np.arange(len(centroids)) - len(centroids)//2
                 col_ix = np.arange(nx_cutout) - nx_cutout//2
+                
                 # Interpolate onto the slit coordinates
                 # FIXME: See 1d code for how this was done for profiles...
-                y_sub_pix += np.interp(x_ix - self.arm.x_map[i, j] - nx // 2, \
+                ysub_pix += np.interp(x_ix - self.arm.x_map[i, j] - nx // 2, \
                     slit_ix/self.arm.matrices[i, j, 0, 0], \
                     centroids/self.arm.matrices[i, j, 1, 1])
+                
+                #Make sure this is within the limits of our subarray.
+                ysub_pix = np.maximum(ysub_pix, 0)
+                ysub_pix = np.minimum(ysub_pix, ny_cutout - 1e-6)
 
                 #Create the arrays needed for interpolation.
-                ysub_ix_lo = np.int(ysub_pix)
+                ysub_ix_lo = ysub_pix.astype(int)
                 ysub_ix_hi = ysub_ix_lo + 1
                 ysub_ix_frac = ysub_pix - ysub_ix_lo 
                 xsub_ix = np.arange(nx_cutout).astype(int)
 
                 #FIXME: probably won't work yet! Needs testing and verification.
-                extracted_flux[i, j, :] = \
-                    np.dot(col_data[x_ix, y_ix_lo], col_weights[x_ix, y_ix_lo]*(1 - y_ix_frac))
-                extracted_flux[i, j, :] += \
-                    np.dot(col_data[x_ix, y_ix_hi], col_weights[x_ix, y_ix_hi] * y_ix_frac)
-                extracted_var[i, j, :] = np.dot(
-                    (1 - y_ix_frac) / np.maximum(col_inv_var[x_ix, y_ix_lo], 1e-12), \
-                    col_weights[x_ix, y_ix_lo]**2)
-                extracted_var[i, j, :] += np.dot(
-                    y_ix_frac / np.maximum(col_inv_var[x_ix, y_ix_hi], 1e-12), \
-                    col_weights[x_ix, y_ix_hi]**2)
+                for k in range(no):
+                    extracted_flux[i, j, k] = \
+                        np.dot(col_data[xsub_ix, ysub_ix_lo], col_weights[k, xsub_ix, ysub_ix_lo]*(1 - ysub_ix_frac))
+                    extracted_flux[i, j, k] += \
+                        np.dot(col_data[xsub_ix, ysub_ix_hi], col_weights[k, xsub_ix, ysub_ix_hi] * ysub_ix_frac)
+                    extracted_var[i, j, k] = np.dot(
+                        (1 - ysub_ix_frac) / np.maximum(col_inv_var[xsub_ix, ysub_ix_lo], 1e-12), \
+                        col_weights[k, xsub_ix, ysub_ix_lo]**2)
+                    extracted_var[i, j, k] += np.dot(
+                        ysub_ix_frac / np.maximum(col_inv_var[xsub_ix, ysub_ix_hi], 1e-12), \
+                        col_weights[k, xsub_ix, ysub_ix_hi]**2)
                 
         return extracted_flux, extracted_var     
 
