@@ -11,7 +11,7 @@ import pickle
 arm='blue'
 mode='std'
 write_to_file = False
-extract_1d_first = False #Set this to false to test multiple times.
+extract_1d_first = True #Set this to false to test multiple times.
 
 # Firstly, let's find all the needed files
 fitsdir='/priv/mulga1/jbento/ghost/calibrations/storedcals/'
