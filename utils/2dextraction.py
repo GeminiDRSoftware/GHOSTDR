@@ -72,7 +72,7 @@ extractor = polyfit.Extractor(arm, slitview)
 
 if extract_1d_first:
     extracted_flux, extracted_var, extraction_weights = \
-        extractor.one_d_extract(science_data)
+        extractor.one_d_extract(science_data, correct_for_sky=False)
     with open('extraction_weights.pkl','w') as f:
        pickle.dump(extraction_weights, f)
 
