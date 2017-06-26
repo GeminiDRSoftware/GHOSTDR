@@ -32,6 +32,7 @@ from astropy import wcs
 import astropy.units as u
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+import scipy.sparse
 
 from pyghost import optics
 from pyghost import cosmic
@@ -668,6 +669,7 @@ class Arm(object):
         self.split = split
         # Do we need to re-compute the spectral format?
         self.stale_spectral_format = True
+        self.hot_pix = None
         # self.set_mode(mode)
         if self.arm == 'red':
             # Additional slit rotation across an order needed to match Zemax.
@@ -1292,7 +1294,11 @@ class Arm(object):
 
     def simulate_flatfield(self, mean, std):
         """ Simulate a flatfield. """
-        return np.random.normal(loc=mean, scale=std, size=(self.szx, self.szy))
+        shape = (self.szx, self.szy)
+        flat = np.random.normal(loc=mean, scale=std, size=shape)
+        idx = tuple([np.random.choice(dm, 25) for dm in shape])
+        flat[idx] = 0.0  # simulate dead pixels
+        return flat
 
     def blank_frame(self, namps=[1, 1]):
         """ Return an entirely blank frame, of the correct size """
@@ -1561,9 +1567,22 @@ class Arm(object):
         else:
             cosmic_img = np.zeros(image.shape)
 
-        # Add dark current (3 e/pix/hour)
-        image += np.random.poisson(np.ones_like(image) * 3.0 *
-                                   duration/3600.0)
+        # Compute dark current (3 e/pix/hour)
+        dcurrent = np.random.poisson(
+            np.ones_like(image) * 3.0 * duration/3600.0)
+
+        # Define hot pixels
+        if self.hot_pix is None:
+            idx = tuple([np.random.choice(dm, 25) for dm in image.shape])
+            vals = np.random.randint(2, 6, 25) * 100 * np.std(dcurrent)
+            self.hot_pix = scipy.sparse.coo_matrix(
+                (vals, idx), shape=image.shape)
+
+        # Add hot pixels to the dark current image
+        dcurrent += self.hot_pix.toarray()
+
+        # Add dark current and hot pixels to frame
+        image += dcurrent
         # Or, have a ludicrously high dark current (1500 e/pix/hr)
         # image += np.random.poisson(
         #     np.ones_like(image) * 1500.0 * duration / 3600.0)
