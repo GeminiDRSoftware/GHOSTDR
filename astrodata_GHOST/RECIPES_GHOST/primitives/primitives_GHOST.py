@@ -272,7 +272,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             xpars = AstroData(xpars)
             # Need to read in all other parameters from the lookups system
             key = self._get_polyfit_key(ad)
-            print('Polyfit key selected: %s' % key)
+            log.stdinfo('Polyfit key selected: %s' % key)
             if np.all([key in _ for _ in [
                 PolyfitDict.wavemod_dict,
                 PolyfitDict.spatmod_dict,
@@ -841,7 +841,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                 # otherwise the algorithm will start searching for cosmic rays
                 # around pixels that have been flagged bad for another reason.
                 cosmic_bpm = np.zeros_like(ad["SCI", amp].data,
-                                           dtype=bool)
+                                           dtype=np.int16)
 
                 # Start with a fresh copy of the data
                 # Use numpy NaN to cover up any data detected bad so far
@@ -995,7 +995,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                     new_cr_pix = np.logical_and(sig_detrend > sigma_lim,
                                                 (conv_data/fine_struct) >
                                                 f_lim)
-                    cosmic_bpm[new_cr_pix] = 1
+                    cosmic_bpm[new_cr_pix] = np.int16(8) # Correct BPM flag value for CR
                     new_crs = np.count_nonzero(cosmic_bpm) - curr_crs
                     log.stdinfo('Pass %d: Found %d CR pixels' %
                                 (no_passes, new_crs, ))
@@ -1003,10 +1003,18 @@ class GHOSTPrimitives(GMOSPrimitives,
                 # For the moment, go with Mike Ireland's suggestion to require
                 # a BPM update
                 curr_bpm = ad["DQ", amp].data
-                curr_bpm[cosmic_bpm] = 8
-                ad['DQ', amp].data = curr_bpm
+                new_bpm = np.bitwise_or(curr_bpm, cosmic_bpm)
+                log.debug('New bpm shape: %s' % str(new_bpm.shape))
+                log.debug('Max flag value in bpm: %s' % str(np.max(new_bpm)))
+                # curr_bpm[cosmic_bpm] = 8
+                ad['DQ', amp].data = new_bpm
+                log.debug('DQ plane data type: %s' %
+                          str(ad['DQ', amp].data.dtype))
 
             # Append the ad to the output list
+            log.debug('Flagged pix in %s BPM: %d' % (ad.filename,
+                                                     np.count_nonzero(
+                                                         ad['DQ', 1].data)))
             adoutput_list.append(ad)
 
         # Finish
