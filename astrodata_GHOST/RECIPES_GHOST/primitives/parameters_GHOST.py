@@ -79,7 +79,7 @@
             "uiLevel":        "UIBASIC",
             },
         "n_steps": {
-            "default":        5,
+            "default":        1,
             "type":           "int",
             "recipeOverride": True,
             "userOverride":   True,

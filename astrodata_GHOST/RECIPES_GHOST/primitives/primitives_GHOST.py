@@ -272,6 +272,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             xpars = AstroData(xpars)
             # Need to read in all other parameters from the lookups system
             key = self._get_polyfit_key(ad)
+            log.stdinfo('Polyfit key selected: %s' % key)
             if np.all([key in _ for _ in [
                 PolyfitDict.wavemod_dict,
                 PolyfitDict.spatmod_dict,
@@ -299,11 +300,15 @@ class GHOSTPrimitives(GMOSPrimitives,
                                             spatpars[0].data,
                                             specpars[0].data,
                                             rotpars[0].data)
-
             sview = SlitView(slit[0].data, flat[0].data, mode=ad.res_mode())
+
             extractor = Extractor(arm, sview)
-            extracted_flux, extracted_var = extractor.one_d_extract(
-                ad['SCI'].data)
+            extracted_flux, extracted_var, extracted_weights = \
+                extractor.one_d_extract(ad['SCI'].data)
+            extracted_flux, extracted_var = extractor.two_d_extract(
+                ad['SCI'].data,
+                extraction_weights=extracted_weights
+            )
 
             # Add the appropriate time stamps to the PHU
             gt.mark_history(
@@ -836,7 +841,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                 # otherwise the algorithm will start searching for cosmic rays
                 # around pixels that have been flagged bad for another reason.
                 cosmic_bpm = np.zeros_like(ad["SCI", amp].data,
-                                           dtype=bool)
+                                           dtype=np.int16)
 
                 # Start with a fresh copy of the data
                 # Use numpy NaN to cover up any data detected bad so far
@@ -990,7 +995,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                     new_cr_pix = np.logical_and(sig_detrend > sigma_lim,
                                                 (conv_data/fine_struct) >
                                                 f_lim)
-                    cosmic_bpm[new_cr_pix] = 1
+                    cosmic_bpm[new_cr_pix] = np.int16(8) # Correct BPM flag value for CR
                     new_crs = np.count_nonzero(cosmic_bpm) - curr_crs
                     log.stdinfo('Pass %d: Found %d CR pixels' %
                                 (no_passes, new_crs, ))
@@ -998,10 +1003,18 @@ class GHOSTPrimitives(GMOSPrimitives,
                 # For the moment, go with Mike Ireland's suggestion to require
                 # a BPM update
                 curr_bpm = ad["DQ", amp].data
-                curr_bpm[cosmic_bpm] = 8
-                ad['DQ', amp].data = curr_bpm
+                new_bpm = np.bitwise_or(curr_bpm, cosmic_bpm)
+                log.debug('New bpm shape: %s' % str(new_bpm.shape))
+                log.debug('Max flag value in bpm: %s' % str(np.max(new_bpm)))
+                # curr_bpm[cosmic_bpm] = 8
+                ad['DQ', amp].data = new_bpm
+                log.debug('DQ plane data type: %s' %
+                          str(ad['DQ', amp].data.dtype))
 
             # Append the ad to the output list
+            log.debug('Flagged pix in %s BPM: %d' % (ad.filename,
+                                                     np.count_nonzero(
+                                                         ad['DQ', 1].data)))
             adoutput_list.append(ad)
 
         # Finish
@@ -1376,11 +1389,13 @@ class GHOSTPrimitives(GMOSPrimitives,
         Returns
         -------
         path:
-            The file path to the relevant polyfit models. There will be two
-            files under each path, wavemod.fits and xmod.fits. The primitives
+            The file path to the relevant polyfit models. There will be several
+            FITS files under each directory. The primitives
             calling _get_polyfit_key will need to open these files as
             required.
         """
+
+        log = logutils.get_logger(__name__)
 
         # The polyfit models are keyed by the instrument, and in the case of
         # GHOST, the arm, resolution mode, and date valid from.
@@ -1402,6 +1417,27 @@ class GHOSTPrimitives(GMOSPrimitives,
             arm = ad.arm()
             res_mode = ad.res_mode()
             key = '%s_%s_%s' % (key, arm, res_mode)
+
+        # Models are separated by the date on which they are valid from
+        # Need to analyze the available dates currently in the xmod
+        # lookups dictionary, and figure out which one we want
+        # Note that this assumes/requires all files under PolyfitDict be updated
+        # simultaneously - KeyErrors will eventually result if this is not
+        # done
+        dates_avail = set([_.split('_')[-1] for _ in
+                           PolyfitDict.xmod_dict.keys()])
+        # Safe to assume instrument won't be used after 2099...
+        dates_avail = [datetime.datetime.strptime('%s%s' % ('20', _, ),
+                                         '%Y%m%d').date() for _ in
+                       dates_avail]
+        dates_avail.sort()
+        # Determine the latest date which is <= the observing date
+        date_obs = ad.ut_date().as_pytype()
+        try:
+            date_req = [_ for _ in dates_avail if _ <= date_obs][-1]
+        except IndexError:
+            raise Errors.Error("No polyfit for these dates available")
+        key = '%s_%s' % (key, date_req.strftime('%y%m%d'))
 
         return key
 

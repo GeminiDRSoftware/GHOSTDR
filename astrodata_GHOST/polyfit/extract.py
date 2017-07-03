@@ -117,8 +117,10 @@ class Extractor():
         profile_y_microns = (np.arange(n_slitpix) -
                              n_slitpix//2)*self.slitview.microns_pix
 
+        
         # To consider slit tilt for a 1D extraction, we need to know the profile
         # centroids in the "y" direction.
+        # FIXME: This part doesn't actually do anything. But it's also not used.
         y_ix = np.arange(n_slitpix) - n_slitpix//2
         y_centroids = np.empty( (no) )
         x_centroids = np.zeros( (no) )
@@ -133,10 +135,9 @@ class Extractor():
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
-        # FIXME: This should come from the 
+        # FIXME: This should come from the (Joao's question: what???)
         pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + self.rnoise**2)
         pixel_inv_var[self.badpixmask] = 0.0
-
         # Loop through all orders then through all y pixels.
         for i in range(nm):
             print("Extracting order: {0:d}".format(i))
@@ -152,6 +153,7 @@ class Extractor():
                 # FIXME: It is unclear what to DO with this for a 1D extraction, unless
                 # we were going to output a new wavelength scale associated with a
                 # 1D extraction.
+                # This is currently not used.
                 slitim_offsets = np.dot(self.arm.matrices[i,j], centroids)
                 profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
                 #pdb.set_trace()
@@ -216,7 +218,7 @@ class Extractor():
                 extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
 
                 # Rather than trying to understand and
-                # document Equation 17 from Sharp and Birchall, we 
+                # document Equation 17 from Sharp and Birchall, which 
                 # doesn't make a lot of sense... so lets just calculate the
                 # variance in the simple explicit way for a linear combination of
                 # independent pixels.
