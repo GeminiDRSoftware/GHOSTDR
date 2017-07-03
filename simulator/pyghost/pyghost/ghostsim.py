@@ -692,7 +692,9 @@ class Arm(object):
             self.slitview_offset = [15.0, -1500.0]  # (x,y) plane offset, micron
         elif self.arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
-            self.extra_rot = 2.0
+            #self.extra_rot = 2.0
+            # Trying this to test Mike's 2d extraction code
+            self.extra_rot = 4.0
             self.szx = 4096
             self.szy = 4112
             self.f_cam = 264.0

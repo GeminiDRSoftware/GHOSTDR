@@ -11,18 +11,21 @@ import pickle
 arm='blue'
 mode='std'
 write_to_file = False
-extract_1d_first = True #Set this to false to test multiple times.
+extract_1d_first = False #Set this to false to test multiple times.
 
 # Firstly, let's find all the needed files
 fitsdir='/priv/mulga1/jbento/ghost/calibrations/storedcals/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
-fitsdir='/Users/mireland/data/ghost/storedcals/'
-test_files_dir='/Users/mireland/data/ghost/parameter_files_for_testing/'
+#fitsdir='/Users/mireland/data/ghost/storedcals/'
+#test_files_dir='/Users/mireland/data/ghost/parameter_files_for_testing/'
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 # For this example just use arcs. Proper science frame reduction is still not
 # available. 
 science_file  = fitsdir+'arc95_'+mode+'_'+arm+'_arc.fits'
 slit_image = fitsdir + 'arc95_'+mode+'_SLIT_arc.fits'
+#If the 'science' data is an arc or a flat, no sky correction needed.
+#Otherwise we need to.
+correct_for_sky=False
 
 # Searching the correct flat slit is harder because the default names have
 # different numbers on them. Need to use a wildcard.
@@ -39,7 +42,7 @@ wmodel_file=fitsdir+'GHOST_1_1_'+arm+'_'+mode+'_wmodPolyfit.fits'
 # All the other models... which are currently in the "test" directory.
 spatmod_file=test_files_dir+'spatmod.fits'
 specmod_file=test_files_dir+'specmod.fits'
-rotmod_file=test_files_dir+'rotmod2.fits'
+rotmod_file=test_files_dir+'rotmod.fits'
 
 #Input the slit arrays.
 slit_array = pyfits.getdata(slit_image).astype(float)
@@ -69,10 +72,9 @@ arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 # been instantiated with the slit viewer data.
 extractor = polyfit.Extractor(arm, slitview)
 # Now extract. The option to correct for sky depends on the type of file. 
-
 if extract_1d_first:
     extracted_flux, extracted_var, extraction_weights = \
-        extractor.one_d_extract(science_data)
+        extractor.one_d_extract(science_data,correct_for_sky=correct_for_sky)
     with open('extraction_weights.pkl','w') as f:
        pickle.dump(extraction_weights, f)
 
