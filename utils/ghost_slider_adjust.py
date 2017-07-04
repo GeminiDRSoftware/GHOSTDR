@@ -50,16 +50,16 @@ def thar_spectrum(linefile):
     return np.array([thar_wave, thar_flux])
 
 # Ask user what they want to adjust.
-model = raw_input('What would you like to adjust? The (X) position model or the (W)avelength scale? : ')
+model = raw_input('What would you like to adjust? The (X) position model, the (W)avelength scale or the (S)lit magnification and rotation? : ')
 model = model.upper()
 
-if (model!='W') and (model!='X'):
+if (model!='W') and (model!='X') and (model!='S'):
     print('Invalid selection')
     sys.exit()
 # Regardless, need to initialise a few things.
 
 mode = 'std'
-cam = 'red'
+cam = 'blue'
 user='Joao'
 #instantiate the ghostsim arm
 ghost = polyfit.ghost.GhostArm(cam,mode=mode)
@@ -89,7 +89,7 @@ if user=='Joao':
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'    
     spatmod_file=test_files_dir+'spatmod.fits'
     specmod_file=test_files_dir+'specmod.fits'
-    rotmod_file=test_files_dir+'rotmod2.fits'
+    rotmod_file=test_files_dir+'rotmod.fits'
 
 
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
@@ -136,7 +136,15 @@ elif model=='W':
                                               thar_spectrum=thar,
                                               percentage_variation=5)
 
-
+elif model=='S':
+    adjusted_params=ghost.manual_model_adjust(arc_data,model='slit',
+                                              wparams=wparams,
+                                              xparams=xparams,
+                                              spatpars=spatparams,
+                                              rotpars=rotparams,
+                                              thar_spectrum=thar,
+                                              percentage_variation=5)
+    
 
 q=raw_input('Would you like to write the adjusted parameters to disk? Y or N: ')
 if q.upper()=='Y':
