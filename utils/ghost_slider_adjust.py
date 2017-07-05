@@ -129,7 +129,6 @@ if model=='X':
                                              decrease_dim=8,search_pix=30,inspect=True)
 
 elif model=='W':
-    #
     adjusted_params=ghost.manual_model_adjust(arc_data,model='wavelength',
                                               wparams=wparams,
                                               xparams=xparams, 
@@ -137,13 +136,16 @@ elif model=='W':
                                               percentage_variation=5)
 
 elif model=='S':
+    slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
     adjusted_params=ghost.manual_model_adjust(arc_data,model='slit',
                                               wparams=wparams,
                                               xparams=xparams,
                                               spatpars=spatparams,
                                               rotpars=rotparams,
                                               thar_spectrum=thar,
+                                              slitclass=slitview
                                               percentage_variation=5)
+    
     
 
 q=raw_input('Would you like to write the adjusted parameters to disk? Y or N: ')
