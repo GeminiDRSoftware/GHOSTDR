@@ -8,9 +8,9 @@ addVAR(read_noise=True)
 overscanCorrect
 tileAmplifiers
 biasCorrect
+ADUToElectrons
 darkCorrect
 #rejectCosmicRays
-ADUToElectrons
 addVAR(poisson_noise=True)
 flatCorrect
 #makeFringe
