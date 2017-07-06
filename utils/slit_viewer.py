@@ -65,8 +65,9 @@ for r, b in zip(red2d[1:], blu2d[1:]):
 
 # generate the graphs/plots
 for arm, im, lines in zip(['red', 'blue'], [reds, blues], [red1d, blu1d]):
+    nlines = len(lines)
     fig = plt.figure(res+'/'+arm, figsize=(12, 6))
-    gs = gridspec.GridSpec(1, 1+len(lines), width_ratios=[3.5]+[1]*len(lines))
+    gs = gridspec.GridSpec(1, 1+nlines, width_ratios=[3.5]+[1]*nlines)
 
     # image goes to the left
     axp = plt.subplot(gs[0])
@@ -77,14 +78,14 @@ for arm, im, lines in zip(['red', 'blue'], [reds, blues], [red1d, blu1d]):
     # line profiles go to the right
     ax1 = plt.subplot(gs[1])
     ax1.xaxis.set_major_locator(plt.MaxNLocator(4))
-    axs = [plt.subplot(gs[i+2], sharex=ax1) for i in np.arange(len(lines)-1)]
+    axs = [plt.subplot(gs[i+2], sharex=ax1) for i in np.arange(nlines-1)]
     axs.insert(0, ax1)
     for ax in axs:
         labels = [item.get_text() for item in ax.get_yticklabels()]
         ax.set_yticklabels(['']*len(labels))
         ax.set(ylim=[0, im.shape[0]])
     [axs[i].plot(d, range(len(d)))  # pylint: disable=W0106
-        for i, d in zip(np.arange(len(lines)), lines)]
+        for i, d in zip(np.arange(nlines), lines)]
 
     plt.subplots_adjust(wspace=0.3)
     fig.autofmt_xdate(rotation=75)
