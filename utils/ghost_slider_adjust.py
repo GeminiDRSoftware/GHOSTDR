@@ -1,4 +1,4 @@
-"""A script to fit tramlines etc for Ghost data.
+"""A script to manually adjust tramlines and wavelength scale for Ghost data.
 
 """
 
@@ -50,10 +50,10 @@ def thar_spectrum(linefile):
     return np.array([thar_wave, thar_flux])
 
 # Ask user what they want to adjust.
-model = raw_input('What would you like to adjust? The (X) position model, the (W)avelength scale or the (S)lit magnification and rotation? : ')
+model = raw_input('What would you like to adjust? The (X) position model, the (W)avelength scale?')
 model = model.upper()
 
-if (model!='W') and (model!='X') and (model!='S'):
+if (model!='W') and (model!='X'):
     print('Invalid selection')
     sys.exit()
 # Regardless, need to initialise a few things.
@@ -135,18 +135,6 @@ elif model=='W':
                                               thar_spectrum=thar,
                                               percentage_variation=5)
 
-elif model=='S':
-    slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
-    adjusted_params=ghost.manual_model_adjust(arc_data,model='slit',
-                                              wparams=wparams,
-                                              xparams=xparams,
-                                              spatpars=spatparams,
-                                              rotpars=rotparams,
-                                              thar_spectrum=thar,
-                                              slitclass=slitview
-                                              percentage_variation=5)
-    
-    
 
 q=raw_input('Would you like to write the adjusted parameters to disk? Y or N: ')
 if q.upper()=='Y':

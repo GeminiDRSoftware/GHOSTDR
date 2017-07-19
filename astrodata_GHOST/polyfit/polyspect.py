@@ -648,7 +648,6 @@ class Polyspect(object):
             2x2 slit rotation matrices, mapping output co-ordinates back
             to the slit.
         """
-        pdb.set_trace()
         if (xmod is None) and (wavemod is None):
             return 'Must provide at least one of xparams or wparams'
 
@@ -873,7 +872,6 @@ class Polyspect(object):
         elif model=='slit':
             params=[spatparams,rotpars]
 
-        pdb.set_trace()
         
         polyorder = params.shape[1]
         npolys = params.shape[0]
