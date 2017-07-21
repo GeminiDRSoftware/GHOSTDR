@@ -100,24 +100,27 @@ else:
 profiles=slitview.object_slit_profiles(arm=arm.arm, correct_for_sky=correct_for_sky)
 n_slitpix = profiles.shape[1]
 profile_y_pix = (np.arange(n_slitpix) - n_slitpix//2)*slitview.microns_pix/arm.matrices[0,0,0,0]
+#This distance is the number of pixel separation in the vertical direction between
+# the centre of each object profile that will be cross correlated
 distance = np.abs(  np.sum(profiles[0] * profile_y_pix)/np.sum(profiles[0]) - np.sum(profiles[1] * profile_y_pix)/np.sum(profiles[1]) )
 
-angles=np.zeros(extracted_flux.shape[0])
+#This is the number of separate sections of each order that will be correlated.
+#This is necessary because the angle changes as a function of pixel along order
+#But enough pixels must be present for cross correlation
+sections=8
+
+#Initialise common things.
+angles=np.zeros((arm.x_map.shape[0],sections))
 fit_g = fitting.LevMarLSQFitter()
+collapsed_x = np.zeros(angles.shape)
 
-#now calculate the angles for each order
-for order, flux in enumerate(extracted_flux[:,800:1600,:]):
-    cor=signal.correlate(flux[:,0],flux[:,1])
-    x=range(np.argmax(cor)-20,np.argmax(cor)+20)
-    y=cor[x]
-    g_init = models.Gaussian1D(amplitude=cor.max(), mean=np.argmax(cor), stddev=1.)
-    g = fit_g(g_init, x, y)
-    shift = g.mean.value - len(flux)
-    angles[order] = np.degrees( np.arctan( shift / distance ) )
 
-plt.plot(angles,label='no interp')
-
-angles=np.zeros(extracted_flux.shape[0])
+#Now look over orders then sections
+for order,x_values in arm.xmap:
+    
+    for sec in range(sections):
+        
+###CONTINUE ON MONDAY
 
 #now calculate the angles for each order
 for order, flux in enumerate(extracted_flux[:,800:1600,:]):
@@ -133,9 +136,7 @@ for order, flux in enumerate(extracted_flux[:,800:1600,:]):
     shift = (g.mean.value - len(f_1(newx)))/100.
     angles[order] = np.degrees( np.arctan( shift / distance ) )
 
-plt.plot(angles,label='interp')
-plt.legend()
-plt.show()
+
 
 if write_to_file:
     #Now write the output to a file, in whatever format suits the recipe system best.
