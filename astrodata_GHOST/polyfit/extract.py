@@ -119,7 +119,10 @@ class Extractor():
 
         
         # To consider slit tilt for a 1D extraction, we need to know the profile
-        # centroids in the "y" direction.
+        # centroids in the "y" direction. i.e. In principle, we could modify the wavelength
+        # scale for each object based on this. If 2D extraction works well, such an
+        # approach is not needed, but lets keep the idea of this code here for now.
+        
         # FIXME: This part doesn't actually do anything. But it's also not used.
         y_ix = np.arange(n_slitpix) - n_slitpix//2
         y_centroids = np.empty( (no) )
@@ -135,7 +138,8 @@ class Extractor():
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
-        # FIXME: This should come from the (Joao's question: what???)
+        # FIXME: This should come from the pre-computed variance plane in the data
+        # itself!
         pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + self.rnoise**2)
         pixel_inv_var[self.badpixmask] = 0.0
         # Loop through all orders then through all y pixels.
@@ -205,8 +209,8 @@ class Extractor():
                 #FIXME Bugshooting: Some tilted, bright arc lines cause strange
                 #weightings here... Probably OK - only strane weightings in 2D
                 #really matter.
-                #if np.max(pixel_weights) > 20:
-                #    import pdb; pdb.set_trace()
+                if (np.max(pixel_weights) > 2) and (j > 0.8*ny):
+                    import pdb; pdb.set_trace()
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
                 #orders
@@ -350,6 +354,8 @@ class Extractor():
                 
                 # Interpolate onto the slit coordinates
                 # FIXME: See 1d code for how this was done for profiles...
+                # PRV: This is only absolutely needed for PRV mode, with 
+                # matrices[i,j,1,1] coming from "specmod.fits".
                 ysub_pix += np.interp(x_ix - self.arm.x_map[i, j] - nx // 2, \
                     slit_ix/self.arm.matrices[i, j, 0, 0], \
                     centroids/self.arm.matrices[i, j, 1, 1])
@@ -364,7 +370,7 @@ class Extractor():
                 ysub_ix_frac = ysub_pix - ysub_ix_lo 
                 xsub_ix = np.arange(nx_cutout).astype(int)
 
-                #FIXME: Weighting here relies on col_weights being approximately correct,
+                #FIXME: SERIOUS Weighting here relies on col_weights being approximately correct,
                 #which it isn't for bright arc lines and a tilted slit.
                 for k in range(no):
                     extracted_flux[i, j, k] = \

@@ -11,13 +11,13 @@ import pickle
 arm='blue'
 mode='std'
 write_to_file = False
-extract_1d_first = False #Set this to false to test multiple times.
+extract_1d_first = True #Set this to false to test multiple times.
 
 # Firstly, let's find all the needed files
 fitsdir='/priv/mulga1/jbento/ghost/calibrations/storedcals/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
-#fitsdir='/Users/mireland/data/ghost/storedcals/'
-#test_files_dir='/Users/mireland/data/ghost/parameter_files_for_testing/'
+fitsdir='/Users/mireland/data/ghost/storedcals/'
+test_files_dir='/Users/mireland/data/ghost/parameter_files_for_testing/'
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 # For this example just use arcs. Proper science frame reduction is still not
 # available. 
