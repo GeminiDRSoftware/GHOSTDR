@@ -67,8 +67,8 @@ xpars=pyfits.getdata(xmodel_file)
 wpars=pyfits.getdata(wmodel_file)
 spatpars=pyfits.getdata(spatmod_file)
 specpars=pyfits.getdata(specmod_file)
-rotpars=pyfits.getdata(rotmod_file)
-
+#rotpars=pyfits.getdata(rotmod_file)
+rotpars=np.zeros((3,3))
 
 slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
 arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
@@ -106,38 +106,80 @@ distance = np.abs(  np.sum(profiles[0] * profile_y_pix)/np.sum(profiles[0]) - np
 
 #This is the number of separate sections of each order that will be correlated.
 #This is necessary because the angle changes as a function of pixel along order
-#But enough pixels must be present for cross correlation
+#But enough pixels must be present for cross correlation. This should be a multiple of 8
 sections=8
+
+
+# Created an array with values along order, then collapse to find the centre of
+# each section
+y_values = np.arange(extracted_flux.shape[1])
+collapsed_y_values = np.int16(np.average(y_values.reshape(sections,int(extracted_flux.shape[1]/sections)),axis=1))
+
+#Now reshape the extracted_flux to identify the fluxes within each section
+# The new shape should be (order,section,flux of section,object)
+fluxes=extracted_flux.reshape(extracted_flux.shape[0],sections,int(extracted_flux.shape[1]/sections),extracted_flux.shape[2])
+
+#Set parameters for cross correlation ahead of the loop
+interp_factor=100   #What factor to interpolate the flux over
+ccf_range=20        #What multiple of the interp_factor to fit ccf function on either side.
+#This previous parameter is equivalent to what range in detector pixels to trim the CCF for gaussian fitting.
 
 #Initialise common things.
 angles=np.zeros((arm.x_map.shape[0],sections))
+sigma = np.empty_like(angles)
 fit_g = fitting.LevMarLSQFitter()
-collapsed_x = np.zeros(angles.shape)
 
-
-#Now look over orders then sections
-for order,x_values in arm.xmap:
-    
+#Now loop over orders then sections and cross correlate objects 0 and 1
+#to create the angle of sections vs order map for fitting.
+for order,flux in enumerate(fluxes):
     for sec in range(sections):
-        
-###CONTINUE ON MONDAY
+        print('Starting order %s and section %s' % (order,sec))
+        #TODO: some of these lines could be placed outside loop.
+        #Start by getting a baseline x for interpolation
+        x_range = np.arange(flux[sec].shape[0])
+        newx = np.linspace(x_range.min(),x_range.max(),num=len(x_range)*interp_factor,endpoint=True)
+        f_1=interp1d(x_range,flux[sec,:,0],kind='cubic')
+        f_2=interp1d(x_range,flux[sec,:,1],kind='cubic')
+        cor=signal.correlate(f_1(newx),f_2(newx))
+        xfit=range(np.argmax(cor)-ccf_range*interp_factor,np.argmax(cor)+ccf_range*interp_factor)
+        yfit=cor[xfit]
+        g_init = models.Gaussian1D(amplitude=cor.max(), mean=np.argmax(cor), stddev=1.)
+        g = fit_g(g_init, xfit, yfit)
+        shift = (g.mean.value - len(f_1(newx)))/interp_factor
+        angles[order,sec] = np.degrees( np.arctan( shift / distance ) )
+        #Sum all the flux above 100 to work out flux in arc lines
+        # THis is done to avoid sections with no arc lines having any impact on the fit
+        #TODO: interpolate over bad sections instead of down weighting (maybe)
+        flux_threshold = np.where(flux[sec] > 100.)
+        if len(flux[sec][flux_threshold]) == 0:
+            sigma[order,sec] = 1E30
+        else:
+            sigma[order,sec] = 1. / np.sum(flux[sec][flux_threshold])
+        print('angle %s and total flux %s' % (angles[order,sec], np.sum(flux[sec]) ) )
 
-#now calculate the angles for each order
-for order, flux in enumerate(extracted_flux[:,800:1600,:]):
-    r=np.arange(len(flux))
-    newx=np.linspace(r.min(),r.max(),num=len(r)*100,endpoint=True)
-    f_1=interp1d(r,flux[:,0],kind='cubic')
-    f_2=interp1d(r,flux[:,1],kind='cubic')
-    cor=signal.correlate(f_1(newx),f_2(newx))
-    x=range(np.argmax(cor)-2000,np.argmax(cor)+2000)
-    y=cor[x]
-    g_init = models.Gaussian1D(amplitude=cor.max(), mean=np.argmax(cor), stddev=1.)
-    g = fit_g(g_init, x, y)
-    shift = (g.mean.value - len(f_1(newx)))/100.
-    angles[order] = np.degrees( np.arctan( shift / distance ) )
+#Now we must fit.
+#prepare the arrays for fitting
 
+# Flatten arrays
+NEEDS ORDERS! 
+angles = angles.flatten()
+collapsed_y_values = np.meshgrid(collapsed_y_values,np.arange(angles.shape[0]))[0].flatten()
+sigma = sigma.flatten()
 
+ydeg=rotpars.shape[0]-1
+xdeg=rotpars.shape[1]-1
+# Do the fit!
+print("Fitting (this can sometimes take a while...)")
+init_resid = arm.fit_resid(rotpars, orders, collapsed_y_values, angles,
+                            ydeg=ydeg, xdeg=xdeg, sigma=sigma)
+bestp = op.leastsq(arm.fit_resid, rotpars,
+                   args=(orders, collapsed_y_values, angles, ydeg, xdeg, sigma))
+final_resid = arm.fit_resid(bestp[0], orders, collapsed_y_values, angles,
+                             ydeg=ydeg, xdeg=xdeg,sigma=sigma)
+params = bestp[0].reshape((ydeg + 1, xdeg + 1))
+print(init_resid, final_resid)
 
+print(params)
 if write_to_file:
     #Now write the output to a file, in whatever format suits the recipe system best.
     pyfits.writeto('outputs.fits',[extracted_flux,extracted_var])

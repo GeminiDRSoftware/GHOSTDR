@@ -211,7 +211,6 @@ class Polyspect(object):
         ydeg=init_mod.shape[0]-1
         xdeg=init_mod.shape[1]-1
         #For weighted fitting purposes, use the maximum of the gaussian fit.
-        #This comes for free with the arclines but is not used yet. 
         sigma=1./lines[:,4]
         
         #init_resid = self.fit_resid(init_mod, orders, waves,
