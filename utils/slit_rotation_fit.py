@@ -13,8 +13,9 @@ import scipy.signal as signal
 from scipy.interpolate import interp1d
 from astropy.modeling import models,fitting
 import pylab as plt
+import scipy.optimize as op
 
-arm='blue'
+arm='red'
 mode='std'
 write_to_file = False
 extract=False
@@ -87,7 +88,7 @@ if extract:
 
 else:
    extracted_flux, extracted_var, extraction_weights = pickle.load(open('extraction_products.pkl','r'))
-   
+
 # The whole point of this previous 1D extraction is just to compute weights for extraction
 # Once it's onde once, no need to do it again.
 # Now we move on to a 2D extraction
@@ -151,7 +152,7 @@ for order,flux in enumerate(fluxes):
         # THis is done to avoid sections with no arc lines having any impact on the fit
         #TODO: interpolate over bad sections instead of down weighting (maybe)
         flux_threshold = np.where(flux[sec] > 100.)
-        if len(flux[sec][flux_threshold]) == 0:
+        if len(flux[sec][flux_threshold]) == 0 or np.abs(angles[order,sec])>10:
             sigma[order,sec] = 1E30
         else:
             sigma[order,sec] = 1. / np.sum(flux[sec][flux_threshold])
@@ -161,9 +162,9 @@ for order,flux in enumerate(fluxes):
 #prepare the arrays for fitting
 
 # Flatten arrays
-NEEDS ORDERS! 
-angles = angles.flatten()
+orders = np.meshgrid(np.arange(sections),np.arange(arm.m_max-arm.m_min+1)+arm.m_min)[1].flatten()
 collapsed_y_values = np.meshgrid(collapsed_y_values,np.arange(angles.shape[0]))[0].flatten()
+angles = angles.flatten()
 sigma = sigma.flatten()
 
 ydeg=rotpars.shape[0]-1

@@ -59,14 +59,16 @@ if (model!='W') and (model!='X'):
 # Regardless, need to initialise a few things.
 
 mode = 'std'
-cam = 'blue'
+cam = 'red'
 user='Joao'
 #instantiate the ghostsim arm
 ghost = polyfit.ghost.GhostArm(cam,mode=mode)
 
 if user=='Joao':
-    fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
-    test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
+    #fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
+    fitsdir='/priv/mulga1/jbento/ghost/tilted/'
+    #test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
+    test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
     if model == 'W':
         arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
         #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
@@ -78,8 +80,8 @@ if user=='Joao':
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_xmodPolyfit.fits'
-    wmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_wmodPolyfit.fits'
+    xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_161120_xmodPolyfit.fits'
+    wmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_161120_wmodPolyfit.fits'
     #xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'  
     # All the other models... which are currently in the "test" directory.
     #wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
