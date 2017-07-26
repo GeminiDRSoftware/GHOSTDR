@@ -6,7 +6,7 @@
 # Start by setting up all the locations for the files. Change this for each case. 
 COREDIR=$PWD'/original'
 
-CALDIR=$COREDIR'/calibrations/storedcals'
+CALDIR=$PWD'/calibrations/storedcals'
 
 #Now you have the option of pointing to different directories for each file type.
 #All in the same place is the way forward.

@@ -211,7 +211,6 @@ class Polyspect(object):
         ydeg=init_mod.shape[0]-1
         xdeg=init_mod.shape[1]-1
         #For weighted fitting purposes, use the maximum of the gaussian fit.
-        #This comes for free with the arclines but is not used yet. 
         sigma=1./lines[:,4]
         
         #init_resid = self.fit_resid(init_mod, orders, waves,
@@ -648,7 +647,6 @@ class Polyspect(object):
             2x2 slit rotation matrices, mapping output co-ordinates back
             to the slit.
         """
-
         if (xmod is None) and (wavemod is None):
             return 'Must provide at least one of xparams or wparams'
 
@@ -705,8 +703,9 @@ class Polyspect(object):
         return flat
 
     def manual_model_adjust(self, data, model='position', wparams=None,
-                            xparams=None, thar_spectrum=None,
-                            percentage_variation=10, vary_wrt_max=True):
+                            xparams=None, spatparams=None, rotparams=None,
+                            thar_spectrum=None, percentage_variation=10,
+                            vary_wrt_max=True):
         """Function that uses matplotlib slider widgets to adjust a polynomial
         model overlaid on top of a flat field image. In practice this will be
         overlaid on top of the result of convolving the flat with a slit
@@ -734,9 +733,17 @@ class Polyspect(object):
             model parameters.
         xparams: float array 
             2D array containing the initial order location model parameters.
+        spatparams: float array (optional)
+            2D array containing the initial spatial direction magnification
+            model parameters.
+        rotparams: float array (optional)
+            2D array containing the initial rotation model parameters.
         thar_spectrum: floar array (optional)
             2D array containing the thar spectrum (from the simulator code) as a
             function of wavelenght.
+        slitclass: class (optional)
+            This is the polyfit.SlitView class. Optional input required for
+            spatmod and rotmod adjustments
         percentage_variation: int (optional)
             How much should the percentage adjustment in each bin as a function
             of the parameter. Default is 10%
@@ -808,11 +815,18 @@ class Polyspect(object):
                 ygrid_filtered = ygrid[np.where(flux>thar_threshold)]
                 xbase_filtered = xbase[np.where(flux>thar_threshold)]
                 return ygrid_filtered.flatten(), xbase_filtered.flatten() + (nxbase //2)
+            elif model=='slit':
+                xbase, wave, blaze, matrices = \
+                    self.spectral_format_with_matrix(xparams, wparams,
+                                                     spatparams, specparams,
+                                                     rotparams,
+                                                     return_arrays=True)
+                
             else:
                 raise UserWarning('invalid model type for plot_data')
 
 
-            
+        
         nxbase = data.shape[0]
         # Start by setting up the graphical part
         fig, axx = plt.subplots()
@@ -854,7 +868,10 @@ class Polyspect(object):
             params=xparams
         elif model=='wavelength':
             params=wparams
+        elif model=='slit':
+            params=[spatparams,rotpars]
 
+        
         polyorder = params.shape[1]
         npolys = params.shape[0]
         # Now we start putting sliders in depending on number of parameters

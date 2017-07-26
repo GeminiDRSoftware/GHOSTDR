@@ -1,4 +1,4 @@
-"""A script to fit tramlines etc for Ghost data.
+"""A script to manually adjust tramlines and wavelength scale for Ghost data.
 
 """
 
@@ -50,7 +50,7 @@ def thar_spectrum(linefile):
     return np.array([thar_wave, thar_flux])
 
 # Ask user what they want to adjust.
-model = raw_input('What would you like to adjust? The (X) position model or the (W)avelength scale? : ')
+model = raw_input('What would you like to adjust? The (X) position model, the (W)avelength scale?')
 model = model.upper()
 
 if (model!='W') and (model!='X'):
@@ -65,8 +65,10 @@ user='Joao'
 ghost = polyfit.ghost.GhostArm(cam,mode=mode)
 
 if user=='Joao':
-    fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
-    test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
+    #fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
+    fitsdir='/priv/mulga1/jbento/ghost/tilted/'
+    #test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
+    test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
     if model == 'W':
         arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
         #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
@@ -78,8 +80,8 @@ if user=='Joao':
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_xmodPolyfit.fits'
-    wmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_wmodPolyfit.fits'
+    xmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_161120_xmodPolyfit.fits'
+    wmodel_file=fitsdir+'GHOST_1_1_'+cam+'_'+mode+'_161120_wmodPolyfit.fits'
     #xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'  
     # All the other models... which are currently in the "test" directory.
     #wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
@@ -89,7 +91,7 @@ if user=='Joao':
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'    
     spatmod_file=test_files_dir+'spatmod.fits'
     specmod_file=test_files_dir+'specmod.fits'
-    rotmod_file=test_files_dir+'rotmod2.fits'
+    rotmod_file=test_files_dir+'rotmod.fits'
 
 
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
@@ -129,13 +131,11 @@ if model=='X':
                                              decrease_dim=8,search_pix=30,inspect=True)
 
 elif model=='W':
-    #
     adjusted_params=ghost.manual_model_adjust(arc_data,model='wavelength',
                                               wparams=wparams,
                                               xparams=xparams, 
                                               thar_spectrum=thar,
                                               percentage_variation=5)
-
 
 
 q=raw_input('Would you like to write the adjusted parameters to disk? Y or N: ')

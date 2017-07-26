@@ -6,12 +6,15 @@ import pyghost
 import pylab as plt
 
 
-def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, split=False):
+def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
+        split=False):
     """ The function that runs the test. """
 
     # Create the two arms
-    blue = pyghost.Arm('blue', cosmics=cosmics, crplane=crplane, split=split)
-    red = pyghost.Arm('red', cosmics=cosmics, crplane=crplane, split=split)
+    blue = pyghost.Arm('blue', cosmics=cosmics, crplane=crplane,
+                       hpplane=hpplane, split=split)
+    red = pyghost.Arm('red', cosmics=cosmics, crplane=crplane,
+                      hpplane=hpplane, split=split)
     blue.extra_rot=10
     red.extra_rot=10
 
@@ -62,9 +65,9 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, split=False):
 
     # This object captures the details of the detectors
     ghost = pyghost.Ghost(
-        rnoise=3.0, gain=1.0, namps=namps, overscan=overscan, split=split,
+        rnoise=3.0, gain=1.0, namps=namps, overscan=overscan,
         bias_level=bias_level, additive_noise=noise, scaling=scaling,
-        cosmics=cosmics, crplane=crplane)
+        cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split)
 
     # This produces a bias with the above noise
     for i in range(1, nbias+1):

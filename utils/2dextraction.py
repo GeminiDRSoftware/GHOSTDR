@@ -78,6 +78,10 @@ if extract_1d_first:
     with open('extraction_weights.pkl','w') as f:
        pickle.dump(extraction_weights, f)
 
+# The whole point of this previous 1D extraction is just to compute weights for extraction
+# Once it's onde once, no need to do it again.
+# Now we move on to a 2D extraction
+
 extraction_weights = pickle.load(open('extraction_weights.pkl','r'))
 extracted_flux, extracted_var = extractor.two_d_extract(science_data,
     extraction_weights = extraction_weights)
