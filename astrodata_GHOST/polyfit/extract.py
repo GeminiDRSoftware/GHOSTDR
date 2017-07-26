@@ -141,7 +141,7 @@ class Extractor():
         # FIXME: This should come from the pre-computed variance plane in the data
         # itself!
         pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + self.rnoise**2)
-        pixel_inv_var[self.badpixmask] = 0.0
+        pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
         # Loop through all orders then through all y pixels.
         for i in range(nm):
             print("Extracting order: {0:d}".format(i))
@@ -298,7 +298,7 @@ class Extractor():
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
         pixel_inv_var = 1.0 / (np.maximum(data, 0) + self.rnoise**2)
-        pixel_inv_var[self.badpixmask] = 0.0
+        pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
         
         # Loop through all orders then through all y pixels.
         for i in range(nm):
