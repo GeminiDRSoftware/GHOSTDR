@@ -141,7 +141,8 @@ class Extractor():
         # FIXME: This should come from the pre-computed variance plane in the data
         # itself!
         pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + self.rnoise**2)
-        pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
+        if len(self.badpixmask)>0:
+            pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
         # Loop through all orders then through all y pixels.
         for i in range(nm):
             print("Extracting order: {0:d}".format(i))
@@ -209,8 +210,8 @@ class Extractor():
                 #FIXME Bugshooting: Some tilted, bright arc lines cause strange
                 #weightings here... Probably OK - only strane weightings in 2D
                 #really matter.
-                if (np.max(pixel_weights) > 2) and (j > 0.8*ny):
-                    import pdb; pdb.set_trace()
+                #if (np.max(pixel_weights) > 2) and (j > 0.8*ny):
+                    #import pdb; pdb.set_trace()
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
                 #orders

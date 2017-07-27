@@ -16,10 +16,16 @@ import pylab as plt
 import scipy.optimize as op
 
 arm='red'
-mode='std'
+mode='high'
 write_to_file = False
 extract=False
-
+if mode=='std':
+    prof=[0,1] #For std res
+elif mode=='high':
+    prof=[0,2] #For high res
+else:
+    print('Invalid mode')
+    exit()
 # Firstly, let's find all the needed files
 fitsdir='/priv/mulga1/jbento/ghost/tilted/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
@@ -103,7 +109,7 @@ n_slitpix = profiles.shape[1]
 profile_y_pix = (np.arange(n_slitpix) - n_slitpix//2)*slitview.microns_pix/arm.matrices[0,0,0,0]
 #This distance is the number of pixel separation in the vertical direction between
 # the centre of each object profile that will be cross correlated
-distance = np.abs(  np.sum(profiles[0] * profile_y_pix)/np.sum(profiles[0]) - np.sum(profiles[1] * profile_y_pix)/np.sum(profiles[1]) )
+distance = np.abs(  np.sum(profiles[prof[0]] * profile_y_pix)/np.sum(profiles[prof[0]]) - np.sum(profiles[prof[1]] * profile_y_pix)/np.sum(profiles[prof[1]]) )
 
 #This is the number of separate sections of each order that will be correlated.
 #This is necessary because the angle changes as a function of pixel along order
@@ -139,8 +145,8 @@ for order,flux in enumerate(fluxes):
         #Start by getting a baseline x for interpolation
         x_range = np.arange(flux[sec].shape[0])
         newx = np.linspace(x_range.min(),x_range.max(),num=len(x_range)*interp_factor,endpoint=True)
-        f_1=interp1d(x_range,flux[sec,:,0],kind='cubic')
-        f_2=interp1d(x_range,flux[sec,:,1],kind='cubic')
+        f_1=interp1d(x_range,flux[sec,:,prof[0]],kind='cubic')
+        f_2=interp1d(x_range,flux[sec,:,prof[1]],kind='cubic')
         cor=signal.correlate(f_1(newx),f_2(newx))
         xfit=range(np.argmax(cor)-ccf_range*interp_factor,np.argmax(cor)+ccf_range*interp_factor)
         yfit=cor[xfit]
@@ -149,7 +155,7 @@ for order,flux in enumerate(fluxes):
         shift = (g.mean.value - len(f_1(newx)))/interp_factor
         angles[order,sec] = np.degrees( np.arctan( shift / distance ) )
         #Sum all the flux above 100 to work out flux in arc lines
-        # THis is done to avoid sections with no arc lines having any impact on the fit
+        #This is done to avoid sections with no arc lines having any impact on the fit
         #TODO: interpolate over bad sections instead of down weighting (maybe)
         flux_threshold = np.where(flux[sec] > 100.)
         if len(flux[sec][flux_threshold]) == 0 or np.abs(angles[order,sec])>10:
