@@ -13,7 +13,7 @@ import warnings
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance,
                  gain = 1.0, rnoise = 3.0,
-                 badpixmask=[], transpose=False):
+                 badpixmask=np.asarray([]), transpose=False):
         """A class to extract data for each arm of the spectrograph.
 
         The extraction is defined by 3 key parameters: an "x_map", which is
