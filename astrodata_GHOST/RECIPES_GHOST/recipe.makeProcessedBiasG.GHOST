@@ -5,7 +5,7 @@
 
 prepare  # Gemini superprimitive
 addDQ
-addVAR
+addVAR(read_noise=True)
 overscanCorrect  # Gemini subrecipe
 tileAmplifiers
 addToList(purpose="forStack")
