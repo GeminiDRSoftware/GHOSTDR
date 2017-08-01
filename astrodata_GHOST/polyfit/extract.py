@@ -299,7 +299,8 @@ class Extractor():
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
         pixel_inv_var = 1.0 / (np.maximum(data, 0) + self.rnoise**2)
-        pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
+        if len(self.badpixmask)>0:
+            pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
         
         # Loop through all orders then through all y pixels.
         for i in range(nm):

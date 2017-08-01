@@ -195,10 +195,9 @@ class GhostArm(Polyspect):
                 
                 #The x pixel values, just for this order
                 x_map[j] = self.evaluate_poly(xpars)[orders[j]-self.m_min]
-                
+                import pdb;pdb.set_trace()
                 for i in range(im_fft.shape[1]):
                     #Create the slit model.
-                    #THIS WILL FAIL. slit_microns is missing...
                     mod_slit = np.interp(profilex*spat_scale[i], slit_coord, slit_profile)
                     
                     # Normalise the slit model and Fourier transform for convolution
