@@ -68,16 +68,34 @@ arm = polyfit.GhostArm(arm,mode=mode)
 #Get the initial default model from the lookup location
 xpars=pyfits.getdata(xmodel_file)
 wpars=pyfits.getdata(wmodel_file)
+#Grab the default values for spatial scale
+#Thsi is the number of microns per pixel to be
+#used in the middle of the test range.
+microns_pix_spatial=46.9
+microns_step=0.1
+num_steps=16
+test_microns=np.linspace(microns_pix_spatial-(microns_step*(num_steps/2.)),microns_pix_spatial+(microns_step*(num_steps/2.)),num_steps)
 spatpars=pyfits.getdata(spatmod_file)
 specpars=pyfits.getdata(specmod_file)
 rotpars=pyfits.getdata(rotmod_file)
 
+
+
 slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
 arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
+mid_order=(arm.m_max-arm.m_min)
+conv_max=np.zeros_like(test_microns)
+x_mid_order=arm.x_map[mid_order]+arm.szy//2
 
-####THIS IS WHERE I AM AT THE MOMENT. CAN MAYBE USE THE SLIT FLAT CONVOLVE CODE
-####TO DO THE CONVOLUTION WITH NUM_CONV=1 for each order.
+for j,microns in enumerate(test_microns):
+    print('Testing iteration %s' % j)
+    flat_conv=arm.slit_flat_convolve(flat_data,slit_profile=slitview.slit_profile(),spatpars=np.array([0,0,microns]),microns_pix=slitview.microns_pix,xpars=xpars,num_conv=2)
+    #Now cut the convolution result into a small section in the middle for median and maximum determination
+    data_cut=flat_conv[np.int64(x_mid_order[arm.szy//2])-40:np.int64(x_mid_order[arm.szy//2])+40,arm.szx//2-20:arm.szx//2+20]
+    conv_max[j]=np.median(data_cut,axis=1).max()
+
+
 
 pdb.set_trace()
 #This is the number of separate sections of each order that will be looked at.
