@@ -16,17 +16,10 @@ import pylab as plt
 import scipy.optimize as op
 
 arm='red'
-mode='high'
+mode='std'
 write_to_file = False
 extract=False
-#This is to make sure that profiles with good flux always get used
-if mode=='std':
-    prof=[0,1] #For std res
-elif mode=='high':
-    prof=[0,2] #For high res
-else:
-    print('Invalid mode')
-    exit()
+
 # Firstly, let's find all the needed files
 fitsdir='/priv/mulga1/jbento/ghost/tilted/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
@@ -62,7 +55,7 @@ flat_slit_array = pyfits.getdata(flat_slit_image).astype(float)
 
 
 #instantiate the ghostsim arm
-arm = polyfit.GhostArm(arm,mode=mode)
+ghost = polyfit.GhostArm(arm,mode=mode)
 
 
 #Get the initial default model from the lookup location
@@ -78,96 +71,65 @@ test_microns=np.linspace(microns_pix_spatial-(microns_step*(num_steps/2.)),micro
 spatpars=pyfits.getdata(spatmod_file)
 specpars=pyfits.getdata(specmod_file)
 rotpars=pyfits.getdata(rotmod_file)
-
-
+#Creating a 3x3 parameter for fitting. Assume quadractic variation in both order index and along order
+spatpars=np.vstack((np.zeros(3),np.zeros(3),spatpars))
 
 slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
-arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
-
-mid_order=(arm.m_max-arm.m_min)
-conv_max=np.zeros_like(test_microns)
-x_mid_order=arm.x_map[mid_order]+arm.szy//2
-
-for j,microns in enumerate(test_microns):
-    print('Testing iteration %s' % j)
-    flat_conv=arm.slit_flat_convolve(flat_data,slit_profile=slitview.slit_profile(),spatpars=np.array([0,0,microns]),microns_pix=slitview.microns_pix,xpars=xpars,num_conv=2)
-    #Now cut the convolution result into a small section in the middle for median and maximum determination
-    data_cut=flat_conv[np.int64(x_mid_order[arm.szy//2])-40:np.int64(x_mid_order[arm.szy//2])+40,arm.szx//2-20:arm.szx//2+20]
-    conv_max[j]=np.median(data_cut,axis=1).max()
+ghost.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
 
-
-pdb.set_trace()
 #This is the number of separate sections of each order that will be looked at.
 #This should be a multiple of 8
 sections=8
 
-
+orders=np.arange(ghost.m_min,ghost.m_max+1)
 # Created an array with values along order, then collapse to find the centre of
 # each section
-y_values = np.arange(extracted_flux.shape[1])
-collapsed_y_values = np.int16(np.average(y_values.reshape(sections,int(extracted_flux.shape[1]/sections)),axis=1))
+y_values = np.arange(ghost.szy)
+collapsed_y_values = np.int16(np.average(y_values.reshape(sections,int(ghost.szy/sections)),axis=1))
+conv_maxes=np.zeros((num_steps,len(orders),sections))
 
-#Now reshape the extracted_flux to identify the fluxes within each section
-# The new shape should be (order,section,flux of section,object)
-fluxes=extracted_flux.reshape(extracted_flux.shape[0],sections,int(extracted_flux.shape[1]/sections),extracted_flux.shape[2])
-
-#Set parameters for cross correlation ahead of the loop
-interp_factor=100   #What factor to interpolate the flux over
-ccf_range=20        #What multiple of the interp_factor to fit ccf function on either side.
-#This previous parameter is equivalent to what range in detector pixels to trim the CCF for gaussian fitting.
 
 #Initialise common things.
-angles=np.zeros((arm.x_map.shape[0],sections))
-sigma = np.empty_like(angles)
+scales=np.zeros((ghost.x_map.shape[0],sections))
+sigma=np.ones(scales.shape)
 fit_g = fitting.LevMarLSQFitter()
 
-#Now loop over orders then sections and cross correlate objects 0 and 1
-#to create the angle of sections vs order map for fitting.
-for order,flux in enumerate(fluxes):
-    for sec in range(sections):
-        print('Starting order %s and section %s' % (order,sec))
-        #TODO: some of these lines could be placed outside loop.
-        #Start by getting a baseline x for interpolation
-        x_range = np.arange(flux[sec].shape[0])
-        newx = np.linspace(x_range.min(),x_range.max(),num=len(x_range)*interp_factor,endpoint=True)
-        f_1=interp1d(x_range,flux[sec,:,prof[0]],kind='cubic')
-        f_2=interp1d(x_range,flux[sec,:,prof[1]],kind='cubic')
-        cor=signal.correlate(f_1(newx),f_2(newx))
-        xfit=range(np.argmax(cor)-ccf_range*interp_factor,np.argmax(cor)+ccf_range*interp_factor)
-        yfit=cor[xfit]
-        g_init = models.Gaussian1D(amplitude=cor.max(), mean=np.argmax(cor), stddev=1.)
-        g = fit_g(g_init, xfit, yfit)
-        shift = (g.mean.value - len(f_1(newx)))/interp_factor
-        angles[order,sec] = np.degrees( np.arctan( shift / distance ) )
-        #Sum all the flux above 100 to work out flux in arc lines
-        #This is done to avoid sections with no arc lines having any impact on the fit
-        #TODO: interpolate over bad sections instead of down weighting (maybe)
-        flux_threshold = np.where(flux[sec] > 100.)
-        if len(flux[sec][flux_threshold]) == 0 or np.abs(angles[order,sec])>10:
-            sigma[order,sec] = 1E30
-        else:
-            sigma[order,sec] = 1. / np.sum(flux[sec][flux_threshold])
-        print('angle %s and total flux %s' % (angles[order,sec], np.sum(flux[sec]) ) )
+
+for mic,microns in enumerate(test_microns):
+    print('Scale iteration %s' % mic)
+    flat_conv=ghost.slit_flat_convolve(flat_data,slit_profile=slitview.slit_profile(),spatpars=np.array([0,0,microns]),microns_pix=slitview.microns_pix,xpars=xpars,num_conv=2)
+    #Now cut the convolution result into a small section in the middle for median and maximum determination
+    for order_index,order in enumerate(orders):
+        print('Working on order %s' %order)
+        for sec in range(sections):
+            x_mid_order=ghost.x_map[order_index]+ghost.szx//2
+            data_cut=flat_conv[np.int64(x_mid_order[collapsed_y_values[sec]])-10:np.int64(x_mid_order[collapsed_y_values[sec]])+10,collapsed_y_values[sec]-10:collapsed_y_values[sec]+10]
+            max_conv=np.median(data_cut,axis=1).max()
+            conv_maxes[mic,order_index,sec]=max_conv
+
+
 
 #Now we must fit.
 #prepare the arrays for fitting
+scales=test_microns[np.argmax(conv_maxes,axis=0)]
+sigma[scales<0]=1E30
 
 # Flatten arrays
-orders = np.meshgrid(np.arange(sections),np.arange(arm.m_max-arm.m_min+1)+arm.m_min)[1].flatten()
-collapsed_y_values = np.meshgrid(collapsed_y_values,np.arange(angles.shape[0]))[0].flatten()
-angles = angles.flatten()
+orders = np.meshgrid(np.arange(sections),np.arange(ghost.m_max-ghost.m_min+1)+ghost.m_min)[1].flatten()
+collapsed_y_values = np.meshgrid(collapsed_y_values,np.arange(scales.shape[0]))[0].flatten()
+scales = scales.flatten()
 sigma = sigma.flatten()
 
-ydeg=rotpars.shape[0]-1
-xdeg=rotpars.shape[1]-1
+ydeg=spatpars.shape[0]-1
+xdeg=spatpars.shape[1]-1
 # Do the fit!
 print("Fitting (this can sometimes take a while...)")
-init_resid = arm.fit_resid(rotpars, orders, collapsed_y_values, angles,
+init_resid = ghost.fit_resid(spatpars, orders, collapsed_y_values, scales,
                             ydeg=ydeg, xdeg=xdeg, sigma=sigma)
-bestp = op.leastsq(arm.fit_resid, rotpars,
-                   args=(orders, collapsed_y_values, angles, ydeg, xdeg, sigma))
-final_resid = arm.fit_resid(bestp[0], orders, collapsed_y_values, angles,
+bestp = op.leastsq(ghost.fit_resid, spatpars,
+                   args=(orders, collapsed_y_values, scales, ydeg, xdeg, sigma))
+final_resid = ghost.fit_resid(bestp[0], orders, collapsed_y_values, scales,
                              ydeg=ydeg, xdeg=xdeg,sigma=sigma)
 params = bestp[0].reshape((ydeg + 1, xdeg + 1))
 print(init_resid, final_resid)

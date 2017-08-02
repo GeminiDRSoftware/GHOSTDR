@@ -116,7 +116,7 @@ if model=='X':
     #Convolve the flat field with the slit profile
     #If no slit profile is given, assume a standard one.
     flat_conv=ghost.slit_flat_convolve(flat_data)
-
+    flat_conv=flat_data
     #Have a look at the default model and make small adjustments if needed.
     # This step should not be part of the primitive !!!!!
     # It is for engineering purposes only!
