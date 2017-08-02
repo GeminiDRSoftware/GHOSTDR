@@ -9,10 +9,34 @@ import pdb
 from astropy.modeling import models, fitting
 import matplotlib.cm as cm
 import warnings
+import scipy.ndimage as ndimage
+
+def find_additional_crs(phi, col_data, col_inv_var, multiplicative_std=0.05):
+    """Utility function to search for additional cosmic rays.
+    
+    Parameters
+    ----------
+    phi: numpy array
+        A (npix x nobj) model PSF array.
+    col_data: numpy array
+        A (npix) data array
+    col_inv_var: numpy array
+        A (npix) data variance array
+    multiplicative_std: float
+        An additional error variance, due to model uncertainties, which 
+        are added to the data
+        
+    Returns
+    -------
+    List of bad pixels.
+    """
+    var_use = 1/col_inv_var + (multiplicative_std * col_data)**2
+    
+    return []
 
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance,
-                 gain = 1.0, rnoise = 3.0,
+                 gain = 1.0, rnoise = 3.0, cr_flag = 1,
                  badpixmask=np.asarray([]), transpose=False):
         """A class to extract data for each arm of the spectrograph.
 
@@ -45,6 +69,10 @@ class Extractor():
 
         transpose: bool (optional)
             Do we transpose the data before extraction?
+        
+        cr_flag: integer
+            When we flag additional cosmic rays in the badpixmask, what value should
+            we use?
         """
         self.arm = polyspect_instance
         self.slitview = slitview_instance
@@ -141,6 +169,25 @@ class Extractor():
         # FIXME: This should come from the pre-computed variance plane in the data
         # itself!
         pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + self.rnoise**2)
+        
+        # Now, smooth filter this variance plane for the purposes of not allowing tilted
+        # slits or line profiles to affect the extraction. Simply convolve the inverse
+        # variance by a profile 7 wide in the spectral direction and preserve bad pixels. 
+        # This ensures that line profile as extracted will not be SNR-dependent
+        # (optimal extraction is only independent of line profiles for Gaussian 2D 
+        # PSFs)
+        spec_conv_weights = np.ones(7)/7.0
+        # Also convolve in the spatial direction, to 
+        # FIXME: this should probably be [.25,.5,.25] for real data, and the need for
+        # this convolution might be that the simulated data is just too good.
+        spat_conv_weights = np.ones(3)/3.0
+        if self.transpose:
+            pixel_inv_var = ndimage.convolve1d(pixel_inv_var, spec_conv_weights, axis=0)
+            pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var, spat_conv_weights, axis=1)
+        else:
+            pixel_inv_var = ndimage.convolve1d(pixel_inv_var, spec_conv_weights, axis=1)
+            pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var, spat_conv_weights, axis=0)
+        
         if len(self.badpixmask)>0:
             pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
         # Loop through all orders then through all y pixels.
@@ -185,14 +232,24 @@ class Extractor():
                 phi[ww, :] = 0.0
 
                 # Cut out our data and inverse variance. This is where we worry about whether
-                #the data come with orders horizontal (default) or transposed (i.e. like the
-                #physical detector)
+                # the data come with orders horizontal (default) or transposed (i.e. like the
+                # physical detector)
                 if self.transpose:
                     col_data = data[j, x_ix]
                     col_inv_var = pixel_inv_var[j, x_ix]
                 else:
                     col_data = data[x_ix, j]
                     col_inv_var = pixel_inv_var[x_ix, j]
+
+                # Search for additional cosmic rays here, by seeing if the data
+                # look different to the model.
+                additional_crs = find_additional_crs(phi, col_data, col_inv_var)
+                if (additional_crs):
+                    col_inv_var[additional_crs] = 0
+                    if self.transpose:
+                        self.badpixmask[j, x_ix[additional_crs]] = self.cr_flag
+                    else:
+                        self.badpixmask[x_ix[additional_crs], j] = self.cr_flag
 
                 # Fill in the "c" matrix and "b" vector from Sharp and Birchall
                 # equation 9 Simplify things by writing the sum in the
@@ -208,10 +265,11 @@ class Extractor():
                 pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
 
                 #FIXME Bugshooting: Some tilted, bright arc lines cause strange
-                #weightings here... Probably OK - only strane weightings in 2D
-                #really matter.
-                #if (np.max(pixel_weights) > 2) and (j > 0.8*ny):
-                    #import pdb; pdb.set_trace()
+                #weightings here... Probably OK - only strange weightings in 2D
+                #really matter, and has to be re-tested once the fitted 
+                #spatial scale and tilt is more robust.
+                #if (np.max(pixel_weights) > 2) and (j > 0.1*ny):
+                #    import pdb; pdb.set_trace()
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
                 #orders
