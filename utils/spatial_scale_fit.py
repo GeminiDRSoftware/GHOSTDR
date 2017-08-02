@@ -15,7 +15,7 @@ from astropy.modeling import models,fitting
 import pylab as plt
 import scipy.optimize as op
 
-arm='red'
+arm='blue'
 mode='std'
 write_to_file = False
 extract=False
@@ -101,7 +101,6 @@ for mic,microns in enumerate(test_microns):
     flat_conv=ghost.slit_flat_convolve(flat_data,slit_profile=slitview.slit_profile(),spatpars=np.array([0,0,microns]),microns_pix=slitview.microns_pix,xpars=xpars,num_conv=2)
     #Now cut the convolution result into a small section in the middle for median and maximum determination
     for order_index,order in enumerate(orders):
-        print('Working on order %s' %order)
         for sec in range(sections):
             x_mid_order=ghost.x_map[order_index]+ghost.szx//2
             data_cut=flat_conv[np.int64(x_mid_order[collapsed_y_values[sec]])-10:np.int64(x_mid_order[collapsed_y_values[sec]])+10,collapsed_y_values[sec]-10:collapsed_y_values[sec]+10]
@@ -124,7 +123,7 @@ sigma = sigma.flatten()
 ydeg=spatpars.shape[0]-1
 xdeg=spatpars.shape[1]-1
 # Do the fit!
-print("Fitting (this can sometimes take a while...)")
+print("Fitting")
 init_resid = ghost.fit_resid(spatpars, orders, collapsed_y_values, scales,
                             ydeg=ydeg, xdeg=xdeg, sigma=sigma)
 bestp = op.leastsq(ghost.fit_resid, spatpars,
