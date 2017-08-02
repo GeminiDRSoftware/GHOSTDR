@@ -6,6 +6,14 @@ from __future__ import division, print_function
 from astrodata_GHOST import polyfit
 import astropy.io.fits as pyfits
 import numpy as np
+"""
+This is an engineering (i.e. commissioning) script to solve for the varying magnification
+in the spatial direction between the slit as seen in the slit viewing camera and the
+slit as seen as a function of order and y pixel on the detector. This is stored in 
+spatmod.fits.
+
+As an input, we require a reduced flat field, and requires initial model files. 
+"""
 import fnmatch, os
 import pdb
 import pickle
