@@ -37,7 +37,8 @@ def find_additional_crs(phi, col_data, col_inv_var, multiplicative_std=0.05):
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance,
                  gain = 1.0, rnoise = 3.0, cr_flag = 1,
-                 badpixmask=np.asarray([]), transpose=False):
+                 badpixmask=np.asarray([]), transpose=False,
+                 vararray=None):
         """A class to extract data for each arm of the spectrograph.
 
         The extraction is defined by 3 key parameters: an "x_map", which is
@@ -80,6 +81,7 @@ class Extractor():
         self.gain = gain
         self.rnoise = rnoise
         self.badpixmask = badpixmask
+        self.vararray = vararray
 
         # FIXME: This warning could probably be neater.
         if not isinstance(self.arm.x_map,np.ndarray):
@@ -166,9 +168,12 @@ class Extractor():
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
-        # FIXME: This should come from the pre-computed variance plane in the data
         # itself!
-        pixel_inv_var = 1.0 / (np.maximum(data, 0) / self.gain + self.rnoise**2)
+        if self.vararray is None:
+            pixel_inv_var = 1.0 / (np.maximum(data, 0) /
+                                   self.gain + self.rnoise**2)
+        else:
+            pixel_inv_var = 1.0 / self.vararray
         
         # Now, smooth filter this variance plane for the purposes of not allowing tilted
         # slits or line profiles to affect the extraction. Simply convolve the inverse
