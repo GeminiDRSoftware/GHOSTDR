@@ -20,9 +20,9 @@ from astropy.modeling import models,fitting
 import pylab as plt
 import scipy.optimize as op
 
-arm='blue'
+arm='red'
 mode='std'
-write_to_file = False
+write_to_file = True
 extract=False
 
 # Firstly, let's find all the needed files
@@ -69,7 +69,7 @@ wpars=pyfits.getdata(wmodel_file)
 #Grab the default values for spatial scale
 #Thsi is the number of microns per pixel to be
 #used in the middle of the test range.
-microns_pix_spatial=46.9
+microns_pix_spatial=47.2
 microns_step=0.1
 num_steps=16
 test_microns=np.linspace(microns_pix_spatial-(microns_step*(num_steps/2.)),microns_pix_spatial+(microns_step*(num_steps/2.)),num_steps)
@@ -144,4 +144,4 @@ print(init_resid, final_resid)
 print(params)
 if write_to_file:
     #Now write the output to a file, in whatever format suits the recipe system best.
-    pyfits.writeto('outputs.fits',[extracted_flux,extracted_var])
+    pyfits.writeto('spatmod_output.fits',params,overwrite=True)
