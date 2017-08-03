@@ -266,7 +266,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                     mean_data = np.average(ad['SCI', extver].data)
                     mask_map = np.logical_or(
                         ad['SCI', extver].data < mean_data - (rc['sigma'] * sigma_data),
-                        ad['SCI', extver].data > mean_data - (rc['sigma'] * sigma_data),
+                        ad['SCI', extver].data > mean_data + (rc['sigma'] * sigma_data),
                     )
                     ad['DQ', extver].data[mask_map] = np.bitwise_or(
                         ad['DQ', extver].data[mask_map], rc['bpm_value']
