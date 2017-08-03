@@ -14,5 +14,5 @@ ADUToElectrons
 addVAR(poisson_noise=True)
 addToList(purpose="forStack")
 getList(purpose="forStack")
-stackFrames
+stackFrames(reject_method=ccdclip, mclip=True, snoise=0.02, lsigma=7., hsigma=7.) #, nrejfile=reject7, verbose=True)
 storeProcessedDark

@@ -1486,10 +1486,17 @@ class GHOSTPrimitives(GMOSPrimitives,
             extra_gemcombine_params['lsigma'] = float(rc['lsigma'])
         if rc['lthresh'] is not None:
             extra_gemcombine_params['lthreshold'] = float(rc['lthresh'])
+        if rc['mclip'] is not None:
+            test = rc['mclip'].lower() in ['yes', 'true', 'on', '1']
+            extra_gemcombine_params['mclip'] = [iraf.no, iraf.yes][test]
         if rc['pclip'] is not None:
             extra_gemcombine_params['pclip'] = float(rc['pclip'])
         if rc['sigscale'] is not None:
             extra_gemcombine_params['sigscale'] = float(rc['sigscale'])
+        if rc['snoise'] is not None:
+            extra_gemcombine_params['snoise'] = rc['snoise']
+        if rc['nrejfile'] is not None:
+            extra_gemcombine_params['nrejfile'] = rc['nrejfile']
         if rc['verbose'] is not None:
             iraf.setVerbose(value=2)
 
