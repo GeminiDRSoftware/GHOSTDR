@@ -531,7 +531,8 @@ class GHOSTPrimitives(GMOSPrimitives,
             sview = SlitView(slit[0].data, flat[0].data, mode=ad.res_mode())
 
             extractor = Extractor(arm, sview, badpixmask=ad['DQ'].data,
-                                  vararray=ad['VAR'].data)
+                                  vararray=ad['VAR'].data if ad['VAR'] else
+                                  None)
             extracted_flux, extracted_var, extracted_weights = \
                 extractor.one_d_extract(ad['SCI'].data)
             # log.stdinfo('Extracted weights:')
