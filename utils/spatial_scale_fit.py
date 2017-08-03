@@ -1,6 +1,3 @@
-"""A script to manually adjust tramlines and wavelength scale for Ghost data.
-
-"""
 
 from __future__ import division, print_function
 from astrodata_GHOST import polyfit
@@ -76,10 +73,11 @@ microns_pix_spatial=46.9
 microns_step=0.1
 num_steps=16
 test_microns=np.linspace(microns_pix_spatial-(microns_step*(num_steps/2.)),microns_pix_spatial+(microns_step*(num_steps/2.)),num_steps)
+#Perhaps this last bit may need some work. Using a default is probably not great.
 spatpars=pyfits.getdata(spatmod_file)
 specpars=pyfits.getdata(specmod_file)
 rotpars=pyfits.getdata(rotmod_file)
-#Creating a 3x3 parameter for fitting. Assume quadractic variation in both order index and along order
+#Creating a 3x3 parameter for fitting. Assume quadractic variation in both order index and along order. If 1D model remains, this will fail.
 spatpars=np.vstack((np.zeros(3),np.zeros(3),spatpars))
 
 slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
@@ -106,7 +104,7 @@ fit_g = fitting.LevMarLSQFitter()
 
 for mic,microns in enumerate(test_microns):
     print('Scale iteration %s' % mic)
-    flat_conv=ghost.slit_flat_convolve(flat_data,slit_profile=slitview.slit_profile(),spatpars=np.array([0,0,microns]),microns_pix=slitview.microns_pix,xpars=xpars,num_conv=2)
+    flat_conv=ghost.slit_flat_convolve(flat_data,slit_profile=slitview.slit_profile(),spatpars=np.array([0,0,microns]),microns_pix=slitview.microns_pix,xpars=xpars)
     #Now cut the convolution result into a small section in the middle for median and maximum determination
     for order_index,order in enumerate(orders):
         for sec in range(sections):
@@ -119,8 +117,10 @@ for mic,microns in enumerate(test_microns):
 
 #Now we must fit.
 #prepare the arrays for fitting
+max_values=np.max(conv_maxes,axis=0)
 scales=test_microns[np.argmax(conv_maxes,axis=0)]
-sigma[scales<0]=1E30
+sigma=1/(max_values)**2
+sigma[max_values<0]=1E30
 
 # Flatten arrays
 orders = np.meshgrid(np.arange(sections),np.arange(ghost.m_max-ghost.m_min+1)+ghost.m_min)[1].flatten()
