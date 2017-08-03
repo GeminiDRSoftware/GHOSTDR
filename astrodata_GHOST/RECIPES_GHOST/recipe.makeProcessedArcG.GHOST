@@ -9,9 +9,9 @@ addVAR(read_noise=True)
 overscanCorrect  # Gemini subrecipe
 tileAmplifiers
 biasCorrect
+addVAR(poisson_noise=True)
 darkCorrect
 #rejectCosmicRays
-addVAR(poisson_noise=True)
 storeProcessedArc
 extractProfile
 fitWavelength
