@@ -874,6 +874,7 @@ class GHOSTPrimitives(GMOSPrimitives,
         adoutput_list = []
 
         for ad in rc.get_inputs_as_astrodata():
+            ad.refresh_types()
             log.stdinfo(ad.info())
             # log.stdinfo(ad.phu.header)
 
@@ -940,11 +941,16 @@ class GHOSTPrimitives(GMOSPrimitives,
                                             rotpars[0].data)
             sview = SlitView(slit[0].data, flat[0].data, mode=ad.res_mode())
 
-            extractor = Extractor(arm, sview, badpixmask=obj_flat['DQ'].data)
+            extractor = Extractor(arm, sview)
             extracted_flux, extracted_var = extractor.two_d_extract(
                 obj_flat['SCI'].data,
                 extraction_weights=ad['WGT'].data,
             )
+
+            # Normalised extracted flat profile
+            med = np.median(extracted_flux)
+            extracted_flux %= med
+            extracted_var %= med**2
 
             # For ease of use, we need to insert this flux and var into
             # an AstroData object
@@ -953,7 +959,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             flatprof_ad = deepcopy(ad)
             flatprof_ad.filename += '.flatprof'
             flatprof_ad['SCI'].data = extracted_flux
-            flatprod_ad['VAR'].data = extracted_var
+            flatprof_ad['VAR'].data = extracted_var
 
             # Divide the flat field through the science data
             # The arith module should automatically handle combining the
@@ -963,6 +969,8 @@ class GHOSTPrimitives(GMOSPrimitives,
             # Add the appropriate time stamps to the PHU
             gt.mark_history(
                 adinput=ad, primname=self.myself(), keyword=timestamp_key)
+            ad.filename = gt.filename_updater(
+                adinput=ad, suffix=rc['suffix'], strip=True)
 
             adoutput_list.append(ad)
 
