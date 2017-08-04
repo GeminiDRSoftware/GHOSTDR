@@ -14,6 +14,7 @@ BIASDIR=$COREDIR
 DARKDIR=$COREDIR
 FLATDIR=$COREDIR
 ARCDIR=$COREDIR
+OBJDIR=$COREDIR
 
 #This line is for cleaning up your directory of all the stuff the reduction creates. 
 #rm *stack* *forStack* adc* *.log *.list tmp* *_dark.fits *_bias.fits GHOST* *_arc.fits *_flat.fits
@@ -31,7 +32,9 @@ do
     typewalk --types GHOST_SLITV_FLAT GHOST_$CAPMODE --dir $FLATDIR/ -o flat.list
     reduce @flat.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits`
     typewalk --types GHOST_SLITV_ARC GHOST_$CAPMODE --dir $ARCDIR/ -o arc.list
-reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits` 
+    reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits`
+    typewalk --types GHOST_SLITV_IMAGE GHOST_$CAPMODE --dir $OBJDIR/ -o object.list
+    reduce @object.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits` processed_dark:`ls $CALDIR/dark*SLIT*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits`
 done
 
 echo 'Now the spectrograph data'
@@ -50,6 +53,8 @@ do
 	reduce @flat.list --override_cal processed_bias:`ls $CALDIR/bias*$i*.fits` processed_dark:`ls $CALDIR/dark*$i*.fits`
 	typewalk --types GHOST_ARC GHOST_$CAPCAM GHOST_$CAPMODE --dir $ARCDIR/ -o arc.list
 	reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*$i*.fits` processed_dark:`ls $CALDIR/dark*$i*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits` processed_slit:`ls $CALDIR/arc*$j*SLIT*.fits` processed_xmod:`ls $CALDIR/*$i*$j*xmod*.fits`
+	typewalk --types GHOST_OBJECT GHOST_$CAPCAM GHOST_$CAPMODE --dir $OBJDIR/ -o object.list
+	reduce @object.list --override_cal processed_bias:`ls $CALDIR/bias*$i*.fits` processed_dark:`ls $CALDIR/dark*$i*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits` processed_slit:`ls $CALDIR/obj*$j*SLIT*.fits` processed_xmod:`ls $CALDIR/*$i*$j*xmod*.fits` processed_flat:`ls $CALDIR/flat*$j*$i*.fits`
     done
 done
 
