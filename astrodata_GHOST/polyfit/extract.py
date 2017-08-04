@@ -11,7 +11,8 @@ import matplotlib.cm as cm
 import warnings
 import scipy.ndimage as ndimage
 
-def find_additional_crs(phi, col_data, col_inv_var, multiplicative_std=0.05):
+def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var, \
+    snoise=0.1, nsigma=6, debug=False):
     """Utility function to search for additional cosmic rays.
     
     Parameters
@@ -30,14 +31,46 @@ def find_additional_crs(phi, col_data, col_inv_var, multiplicative_std=0.05):
     -------
     List of bad pixels.
     """
-    var_use = 1/col_inv_var + (multiplicative_std * col_data)**2
+    n_o = phi.shape[1] #Number of objects.
+    n_x = len(col_data)
     
-    return []
+    var_use = 1/col_inv_var + (snoise * col_data)**2
+
+    #Create a model matrix for linear regression.
+    obj_centers = slitim_offsets[1] + n_x//2
+    x_ix = np.arange(n_x)
+    x_mat = np.empty( (2*n_o, n_x) )
+    for o_ix in range(n_o):
+        x_mat[o_ix] = phi[:, o_ix]
+        x_mat[o_ix + n_o] = phi[:, o_ix] * (x_ix - obj_centers[o_ix])
+        
+    # Now we fit a model to the col_data with var_use, using standard
+    # linear regression. FIXME: Surely there is a reasonably scipy helper
+    # function???
+    x_mat = x_mat.T
+    #FIXME: Do we use weights? If so, faster computation is possible as W is sparse.
+    # performance is improved with no weights.
+    # w_mat = np.diag(1./var_use)
+    # xtw = np.dot(x_mat.T, w_mat) 
+    #beta = np.dot(np.dot(np.linalg.inv(np.dot(xtw, x_mat)), xtw), col_data)
+    beta = np.dot(np.dot(np.linalg.inv(np.dot(x_mat.T, x_mat)), x_mat.T), col_data)
+    y_hat = np.maximum(np.dot(x_mat, beta),0)
+    
+    new_bad = np.where(col_data > y_hat + nsigma * np.sqrt(var_use))[0]
+    if debug and len(new_bad)>0:
+        plt.clf()
+        plt.plot(y_hat, label='exp')
+        plt.plot(col_data, label='data')
+        plt.plot(y_hat + nsigma*np.sqrt(var_use), label='limit')
+        plt.pause(.001)
+        import pdb; pdb.set_trace()
+    
+    return new_bad
 
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance,
-                 gain = 1.0, rnoise = 3.0, cr_flag = 1,
-                 badpixmask=np.asarray([]), transpose=False,
+                 gain = 1.0, rnoise = 3.0, cr_flag = 8,
+                 badpixmask=None, transpose=False,
                  vararray=None):
         """A class to extract data for each arm of the spectrograph.
 
@@ -66,7 +99,8 @@ class Extractor():
             Expected readout noise in electrons. From fits header.
 
         badpixmask: numpy array
-            A list of [y,x] bad pixel co-ordinates
+            A data quality plane, which evaluates to False (i.e. 0) for good
+            pixels.
 
         transpose: bool (optional)
             Do we transpose the data before extraction?
@@ -80,9 +114,9 @@ class Extractor():
         self.transpose = transpose
         self.gain = gain
         self.rnoise = rnoise
-        self.badpixmask = badpixmask
         self.vararray = vararray
-
+        self.badpixmask = badpixmask
+        
         # FIXME: This warning could probably be neater.
         if not isinstance(self.arm.x_map,np.ndarray):
             raise UserWarning('Input polyspect_instance requires \
@@ -154,11 +188,12 @@ class Extractor():
         # approach is not needed, but lets keep the idea of this code here for now.
         
         # FIXME: This part doesn't actually do anything. But it's also not used.
-        y_ix = np.arange(n_slitpix) - n_slitpix//2
+        
+        #y_ix = np.arange(n_slitpix) - n_slitpix//2
         y_centroids = np.empty( (no) )
         x_centroids = np.zeros( (no) )
-        for y_centroid, profile in zip(y_centroids, profiles):
-            y_centroid = np.sum(profile * y_ix)/np.sum(profile)
+        for object_ix, profile in enumerate(profiles):
+            y_centroids[object_ix] = np.sum(profile * profile_y_microns)/np.sum(profile)
         centroids = np.array([x_centroids, y_centroids])
 
         #Our extracted arrays, and the weights array
@@ -168,7 +203,9 @@ class Extractor():
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
-        # itself!
+        # This really should come from an input "vararray" because of differing
+        # gain and readout noise parameters for different amplifiers, and known bad
+        # pixels.
         if self.vararray is None:
             pixel_inv_var = 1.0 / (np.maximum(data, 0) /
                                    self.gain + self.rnoise**2)
@@ -193,8 +230,9 @@ class Extractor():
             pixel_inv_var = ndimage.convolve1d(pixel_inv_var, spec_conv_weights, axis=1)
             pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var, spat_conv_weights, axis=0)
         
-        if len(self.badpixmask)>0:
+        if self.badpixmask is not None:
             pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
+            
         # Loop through all orders then through all y pixels.
         for i in range(nm):
             print("Extracting order: {0:d}".format(i))
@@ -209,11 +247,12 @@ class Extractor():
                 # the matrix.
                 # FIXME: It is unclear what to DO with this for a 1D extraction, unless
                 # we were going to output a new wavelength scale associated with a
-                # 1D extraction.
-                # This is currently not used.
-                slitim_offsets = np.dot(self.arm.matrices[i,j], centroids)
+                # 1D extraction. This is currently only used to make the fitting as 
+                # part of the CR rejection neat.
+                slitim_offsets = np.dot(np.linalg.inv(self.arm.matrices[i,j]), centroids)
+                
                 profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
-                #pdb.set_trace()
+                
                 # Check for NaNs
                 if self.arm.x_map[i, j] != self.arm.x_map[i, j]:
                     extracted_var[i, j, :] = np.nan
@@ -248,13 +287,14 @@ class Extractor():
 
                 # Search for additional cosmic rays here, by seeing if the data
                 # look different to the model.
-                additional_crs = find_additional_crs(phi, col_data, col_inv_var)
-                if (additional_crs):
+                additional_crs = find_additional_crs(phi, slitim_offsets, col_data, col_inv_var)
+                if (len(additional_crs) > 0):
                     col_inv_var[additional_crs] = 0
-                    if self.transpose:
-                        self.badpixmask[j, x_ix[additional_crs]] = self.cr_flag
-                    else:
-                        self.badpixmask[x_ix[additional_crs], j] = self.cr_flag
+                    if self.badpixmask is not None:
+                        if self.transpose:
+                            self.badpixmask[j, x_ix[additional_crs]] |= self.cr_flag
+                        else:
+                            self.badpixmask[x_ix[additional_crs], j] |= self.cr_flag
 
                 # Fill in the "c" matrix and "b" vector from Sharp and Birchall
                 # equation 9 Simplify things by writing the sum in the
@@ -362,7 +402,7 @@ class Extractor():
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
         pixel_inv_var = 1.0 / (np.maximum(data, 0) + self.rnoise**2)
-        if len(self.badpixmask)>0:
+        if self.badpixmask is not None:
             pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
         
         # Loop through all orders then through all y pixels.
@@ -410,6 +450,10 @@ class Extractor():
                 # tilt not 100% certain
                 ysub_pix = (x_ix - self.arm.x_map[i, j] - nx // 2) * \
                         self.slit_tilt[i, j] + ny_cutout // 2
+                        
+                #DEBUG
+                #if (np.max(col_data) > 1e3): 
+                #    import pdb; pdb.set_trace()
 
                 # Next, add the contribution of the centroid in the slit viewing camera.
                 # The [1,1] component of the matrix is slit_microns_per_det_pix_y 
@@ -435,8 +479,9 @@ class Extractor():
                 ysub_ix_frac = ysub_pix - ysub_ix_lo 
                 xsub_ix = np.arange(nx_cutout).astype(int)
 
-                #FIXME: SERIOUS Weighting here relies on col_weights being approximately correct,
-                #which it isn't for bright arc lines and a tilted slit.
+                # FIXME: SERIOUS Weighting here relies on col_weights being approximately 
+                # correct, which it isn't for bright arc lines and a tilted slit.
+                # We should consider if this is "good enough" carefully.
                 for k in range(no):
                     extracted_flux[i, j, k] = \
                         np.dot(col_data[xsub_ix, ysub_ix_lo], col_weights[k, xsub_ix, ysub_ix_lo]*(1 - ysub_ix_frac))
