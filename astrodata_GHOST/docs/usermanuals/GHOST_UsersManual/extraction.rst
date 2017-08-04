@@ -68,6 +68,17 @@ problem for 8x1 binning in the shortest-wavelength orders. For these orders, whe
 is an overlap, it is important that those pixels are marked as `bad` in the reduction 
 software.
 
+Slit Tilt and PSF Variation Issues
+==================================
+
+One problem with the algorithm above is that it assumes that the two-dimensional 
+point-spread-function is the product of spectral and spatial point spread functions.
+This was the case for single fiber profiles imaged with spectrographs with typical
+aberrations, producing a near-Gaussian profile. However, for GHOST, even individual
+fiber profiles are not quite Gaussian. We avoid the most significant problems with this
+while preserving the need to weight differently at high versus low signal-to-noise by
+convolving the variance array.
+
 Weighted Extraction Principle in 2D
 ===================================
 
