@@ -74,10 +74,13 @@ Slit Tilt and PSF Variation Issues
 One problem with the algorithm above is that it assumes that the two-dimensional 
 point-spread-function is the product of spectral and spatial point spread functions.
 This was the case for single fiber profiles imaged with spectrographs with typical
-aberrations, producing a near-Gaussian profile. However, for GHOST, even individual
+aberrations as used by Sharp and Birchall, producing a near-Gaussian profile. 
+However, for GHOST, even individual
 fiber profiles are not quite Gaussian. We avoid the most significant problems with this
 while preserving the need to weight differently at high versus low signal-to-noise by
-convolving the variance array.
+convolving the variance array both spatially and spectrally. In the current implementation,
+the spectral weights are convolved by a Hanning window of ~7 pixel FWHM, and the spatial 
+variance is convolved by a function of ~2 pixels FWHM.
 
 Weighted Extraction Principle in 2D
 ===================================

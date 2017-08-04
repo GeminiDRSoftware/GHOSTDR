@@ -67,6 +67,27 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var, \
     
     return new_bad
 
+def subtract_scattered_light(data, mask):
+    """Subtract a simple linear approximation to the scattered light
+    on the detector. This is a place-holder function, which can be upgraded to 
+    higher order scattered light subtraction, depending on the performance of the
+    spectrograph.
+    
+    Parameters
+    ----------
+    data: numpy array
+        The data to be corrected for scattered light.
+    
+    mask: numpy array
+        A mask which is True wherever there is only scattered light and no data.    
+    
+    Returns
+    -------
+    A scattered-light corrected image.
+    
+    """
+    return data
+    
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance,
                  gain = 1.0, rnoise = 3.0, cr_flag = 8,
@@ -219,11 +240,12 @@ class Extractor():
         # This ensures that line profile as extracted will not be SNR-dependent
         # (optimal extraction is only independent of line profiles for Gaussian 2D 
         # PSFs)
-        spec_conv_weights = np.ones(7)/7.0
+        spec_conv_weights = np.hanning(15)[1:-1]
+        spec_conv_weights /= np.sum(spec_conv_weights)
         # Also convolve in the spatial direction, to 
-        # FIXME: this should probably be [.25,.5,.25] for real data, and the need for
-        # this convolution might be that the simulated data is just too good.
-        spat_conv_weights = np.ones(3)/3.0
+        # FIXME: The need for this convolution might be that the simulated data is just 
+        # too good, and we need to add optical aberrations.
+        spat_conv_weights = np.array([0.25,.5,.25])
         if self.transpose:
             pixel_inv_var = ndimage.convolve1d(pixel_inv_var, spec_conv_weights, axis=0)
             pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var, spat_conv_weights, axis=1)
@@ -315,7 +337,10 @@ class Extractor():
                 #weightings here... Probably OK - only strange weightings in 2D
                 #really matter, and has to be re-tested once the fitted 
                 #spatial scale and tilt is more robust.
+                
+                #DEBUG
                 #if (np.max(pixel_weights) > 2) and (j > 0.1*ny):
+                #if (j==2000):
                 #    import pdb; pdb.set_trace()
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
@@ -373,6 +398,11 @@ class Extractor():
                 print("ERROR: Must input data or file")
             else:
                 data = pyfits.getdata(file)
+        
+        # Correct for scattered light - a place-holder, to show where it can 
+        # most easily fit.
+        mask = np.sum(extraction_weights,axis=0) == 0
+        data = subtract_scattered_light(data, mask)
 
         #Set up convenience local variables
         ny = self.arm.x_map.shape[1]

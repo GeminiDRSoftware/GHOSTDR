@@ -9,9 +9,10 @@ import pdb
 import pickle
 
 arm='blue'
-mode='high'
+mode='std'
 ftype='arc'
 write_to_file = False
+flat_correct = False
 extract_1d_first = True #Set this to false to test multiple times.
 
 # Firstly, let's find all the needed files
@@ -26,6 +27,9 @@ science_file  = fitsdir + ftype + '95_'+mode+'_'+arm+'_'+ftype+'.fits'
 slit_image = fitsdir + ftype+ '95_'+mode+'_SLIT_'+ftype+'.fits'
 flat_file  = fitsdir + 'flat95_'+mode+'_2_'+arm+'_flat.fits'
 
+# Use these files and flat_correct=False to test flat extraction.
+# science_file  = fitsdir + 'flat95_std_2_blue_flat.fits'
+# slit_image = fitsdir + 'flat95_std_2_SLIT_stack_slitFlat.fits'
 
 #If the 'science' data is an arc or a flat, no sky correction needed.
 #Otherwise we need to.
@@ -89,11 +93,13 @@ if extract_1d_first:
 extraction_weights = pickle.load(open('extraction_weights.pkl','r'))
 extracted_flux, extracted_var = extractor.two_d_extract(science_data,
     extraction_weights = extraction_weights)
-extracted_flat, extracted_flat_var = extractor.two_d_extract(flat_data,
-    extraction_weights = extraction_weights)
 
-# A simple correction...
-corrected_flux = extracted_flux/extracted_flat*np.median(extracted_flat)
+if flat_correct:
+    extracted_flat, extracted_flat_var = extractor.two_d_extract(flat_data,
+        extraction_weights = extraction_weights)
+
+    # A simple correction...
+    corrected_flux = extracted_flux/extracted_flat*np.median(extracted_flat)
 
 if write_to_file:
     #Now write the output to a file, in whatever format suits the recipe system best.
