@@ -7,6 +7,7 @@ from astrodata_GHOST import polyfit
 import astropy.io.fits as pyfits
 import numpy as np
 import matplotlib.pyplot as plt
+import fnmatch,os
 import pdb, sys
 import shutil
 import matplotlib.cm as cm
@@ -58,7 +59,7 @@ if (model!='W') and (model!='X'):
     sys.exit()
 # Regardless, need to initialise a few things.
 
-mode = 'std'
+mode = 'high'
 cam = 'red'
 user='Joao'
 #instantiate the ghostsim arm
@@ -66,7 +67,7 @@ ghost = polyfit.ghost.GhostArm(cam,mode=mode)
 
 if user=='Joao':
     #fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
-    fitsdir='/priv/mulga1/jbento/ghost/tilted/'
+    fitsdir='/priv/mulga1/jbento/ghost/standard/calibrations/storedcals/'
     #test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
     if model == 'W':
@@ -76,7 +77,9 @@ if user=='Joao':
         arc_data = pyfits.getdata(arc_file)
         thar = thar_spectrum(arclinefile)
 
-    flat_file = fitsdir+"flat95_"+mode+"_2_"+cam+"_flat.fits"
+    flat_file_name = 'flat95_'+mode+'*'+cam+'*.fits'
+    flat_file = fitsdir + fnmatch.filter( os.listdir(fitsdir),
+                                            flat_file_name)[0]
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
@@ -116,7 +119,7 @@ if model=='X':
     #Convolve the flat field with the slit profile
     #If no slit profile is given, assume a standard one.
     flat_conv=ghost.slit_flat_convolve(flat_data)
-    flat_conv=flat_data
+    
     #Have a look at the default model and make small adjustments if needed.
     # This step should not be part of the primitive !!!!!
     # It is for engineering purposes only!

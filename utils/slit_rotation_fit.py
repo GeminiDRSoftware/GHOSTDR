@@ -15,8 +15,8 @@ from astropy.modeling import models,fitting
 import pylab as plt
 import scipy.optimize as op
 
-arm='blue'
-mode='std'
+arm='red'
+mode='high'
 write_to_file = True
 extract=True
 #This is to make sure that profiles with good flux always get used
