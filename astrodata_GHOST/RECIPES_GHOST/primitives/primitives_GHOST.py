@@ -959,11 +959,12 @@ class GHOSTPrimitives(GMOSPrimitives,
                 obj_flat['SCI'].data,
                 extraction_weights=ad['WGT'].data,
             )
+            # import pdb; pdb.set_trace()
 
             # Normalised extracted flat profile
             med = np.median(extracted_flux)
-            extracted_flux %= med
-            extracted_var %= med**2
+            extracted_flux /= med
+            extracted_var /= med**2
 
             # For ease of use, we need to insert this flux and var into
             # an AstroData object
