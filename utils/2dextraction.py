@@ -10,19 +10,23 @@ import pickle
 
 arm='blue'
 mode='std'
+ftype='arc'
 write_to_file = False
 extract_1d_first = True #Set this to false to test multiple times.
 
 # Firstly, let's find all the needed files
 fitsdir='/priv/mulga1/jbento/ghost/calibrations/storedcals/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
-fitsdir='/Users/mireland/data/ghost/storedcals/'
-test_files_dir='/Users/mireland/data/ghost/parameter_files_for_testing/'
+fitsdir='/Users/mireland/data/ghost/tilted/'
+test_files_dir='/Users/mireland/python/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/blue/std/161120/'
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 # For this example just use arcs. Proper science frame reduction is still not
 # available. 
-science_file  = fitsdir+'arc95_'+mode+'_'+arm+'_arc.fits'
-slit_image = fitsdir + 'arc95_'+mode+'_SLIT_arc.fits'
+science_file  = fitsdir + ftype + '95_'+mode+'_'+arm+'_'+ftype+'.fits'
+slit_image = fitsdir + ftype+ '95_'+mode+'_SLIT_'+ftype+'.fits'
+flat_file  = fitsdir + 'flat95_'+mode+'_2_'+arm+'_flat.fits'
+
+
 #If the 'science' data is an arc or a flat, no sky correction needed.
 #Otherwise we need to.
 correct_for_sky=False
@@ -36,10 +40,10 @@ flat_slit_image = fitsdir + fnmatch.filter( os.listdir(fitsdir),
 # Where is the default location for the model? By default it is a parameter 
 # in the ghost class. If this needs to be overwritten, go ahead.
 # This is the xmod file. Wherever it is saved from the flat reduction.
-xmodel_file=fitsdir+'GHOST_1_1_'+arm+'_'+mode+'_xmodPolyfit.fits'
-wmodel_file=fitsdir+'GHOST_1_1_'+arm+'_'+mode+'_wmodPolyfit.fits'
+xmodel_file=fitsdir+'GHOST_1_1_'+arm+'_'+mode+'_161120_xmodPolyfit.fits'
+wmodel_file=fitsdir+'GHOST_1_1_'+arm+'_'+mode+'_161120_wmodPolyfit.fits'
 
-# All the other models... which are currently in the "test" directory.
+# All the other models... which were  in the "test" directory.
 spatmod_file=test_files_dir+'spatmod.fits'
 specmod_file=test_files_dir+'specmod.fits'
 rotmod_file=test_files_dir+'rotmod.fits'
@@ -50,7 +54,7 @@ flat_slit_array = pyfits.getdata(flat_slit_image).astype(float)
 
 #Get the data
 science_data = pyfits.getdata(science_file)
-
+flat_data = pyfits.getdata(flat_file)
 
 #instantiate the ghostsim arm
 arm = polyfit.GhostArm(arm,mode=mode)
@@ -85,6 +89,11 @@ if extract_1d_first:
 extraction_weights = pickle.load(open('extraction_weights.pkl','r'))
 extracted_flux, extracted_var = extractor.two_d_extract(science_data,
     extraction_weights = extraction_weights)
+extracted_flat, extracted_flat_var = extractor.two_d_extract(flat_data,
+    extraction_weights = extraction_weights)
+
+# A simple correction...
+corrected_flux = extracted_flux/extracted_flat*np.median(extracted_flat)
 
 if write_to_file:
     #Now write the output to a file, in whatever format suits the recipe system best.
