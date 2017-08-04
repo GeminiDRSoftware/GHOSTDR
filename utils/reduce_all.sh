@@ -54,7 +54,7 @@ do
 	typewalk --types GHOST_ARC GHOST_$CAPCAM GHOST_$CAPMODE --dir $ARCDIR/ -o arc.list
 	reduce @arc.list --override_cal processed_bias:`ls $CALDIR/bias*$i*.fits` processed_dark:`ls $CALDIR/dark*$i*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits` processed_slit:`ls $CALDIR/arc*$j*SLIT*.fits` processed_xmod:`ls $CALDIR/*$i*$j*xmod*.fits`
 	typewalk --types GHOST_OBJECT GHOST_$CAPCAM GHOST_$CAPMODE --dir $OBJDIR/ -o object.list
-	reduce @object.list --override_cal processed_bias:`ls $CALDIR/bias*$i*.fits` processed_dark:`ls $CALDIR/dark*$i*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits` processed_slit:`ls $CALDIR/arc*$j*SLIT*.fits` processed_xmod:`ls $CALDIR/*$i*$j*xmod*.fits` processed_flat:`ls $CALDIR/flat*$j*$i*.fits`
+	reduce @object.list --override_cal processed_bias:`ls $CALDIR/bias*$i*.fits` processed_dark:`ls $CALDIR/dark*$i*.fits` processed_slitflat:`ls $CALDIR/flat*$j*SLIT*.fits` processed_slit:`ls $CALDIR/obj*$j*SLIT*.fits` processed_xmod:`ls $CALDIR/*$i*$j*xmod*.fits` processed_flat:`ls $CALDIR/flat*$j*$i*.fits`
     done
 done
 

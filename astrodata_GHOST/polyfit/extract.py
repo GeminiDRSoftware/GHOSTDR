@@ -308,7 +308,8 @@ class Extractor():
                     col_inv_var.repeat(no), (nx_cutout, no))
                 b_mat = phi * col_inv_var_mat
                 c_mat = np.dot(phi.T, phi * col_inv_var_mat)
-                pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
+                try: pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
+                except: import pdb;pdb.set_trace()
 
                 #FIXME Bugshooting: Some tilted, bright arc lines cause strange
                 #weightings here... Probably OK - only strange weightings in 2D

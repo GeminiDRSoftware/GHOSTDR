@@ -28,7 +28,7 @@ else:
     print('Invalid mode')
     exit()
 # Firstly, let's find all the needed files
-fitsdir='/priv/mulga1/jbento/ghost/tilted/'
+fitsdir='/priv/mulga1/jbento/ghost/standard/calibrations/storedcals/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
 #fitsdir='/Users/mireland/data/ghost/storedcals/'
 #test_files_dir='/Users/mireland/data/ghost/parameter_files_for_testing/'
