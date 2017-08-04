@@ -9,10 +9,13 @@ Primitives
 
     **Primitives**
 
+    .. automethod:: applyFlatBPM
+    .. automethod:: clipSigmaBPM
     .. automethod:: correctSlitCosmics
     .. automethod:: extractProfile
     .. automethod:: findApertures
     .. automethod:: fitWavelength
+    .. automethod:: flatCorrect
     .. automethod:: fork
     .. automethod:: processSlits
     .. automethod:: rejectCosmicRays

@@ -451,6 +451,11 @@ class GHOSTPrimitives(GMOSPrimitives,
             system (or, if specified, the --override_cal processed_slitflat
             command-line option)
 
+        rc['writeResult'] : bool (default: True)
+            Denotes whether or not to write out the result of profile
+            extraction to disk. This is useful for both debugging, and data
+            quality assurance. Defaults to True.
+
         Returns
         -------
         rc : dict
@@ -581,6 +586,9 @@ class GHOSTPrimitives(GMOSPrimitives,
                 adinput=adoutput, suffix=rc["suffix"], strip=True)
 
             adoutput_list.append(adoutput)
+
+            if rc['writeResult']:
+                adoutput.write()
 
         # Report the list of output AstroData objects to the reduction context
         rc.report_output(adoutput_list)
@@ -853,6 +861,11 @@ class GHOSTPrimitives(GMOSPrimitives,
             if specified, the --override_cal processed_flat command-line
             option)
 
+        rc['writeResult'] : bool (default: True)
+            Denotes whether or not to write out the result of flat profile
+            extraction to disk. This is useful for both debugging, and data
+            quality assurance. Defaults to True.
+
         Returns
         -------
         rc : dict
@@ -957,9 +970,13 @@ class GHOSTPrimitives(GMOSPrimitives,
             # Easiest way is to just make a copy of the stream ad
             # Need to deepcopy to avoid overwriting actual data
             flatprof_ad = deepcopy(ad)
-            flatprof_ad.filename += '.flatprof'
+            flatprof_ad.filename  = gt.filename_updater(
+                adinput=flatprof_ad, suffix='_extractedFlatProfile', strip=True
+            )
             flatprof_ad['SCI'].data = extracted_flux
             flatprof_ad['VAR'].data = extracted_var
+            if rc['writeResult']:
+                flatprof_ad.write()
 
             # Divide the flat field through the science data
             # The arith module should automatically handle combining the

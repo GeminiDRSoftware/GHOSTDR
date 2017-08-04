@@ -67,6 +67,13 @@
             "userOverride":   True,
             "uiLevel":        "UIBASIC",
             },
+        "writeResult": {
+            "default":        True,
+            "type":           "bool",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
         },
     "findApertures": {
         "suffix": {
@@ -90,6 +97,13 @@
       "suffix": {
             "default":        "_flatCorrected",
             "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+    "writeResult": {
+            "default":        True,
+            "type":           "bool",
             "recipeOverride": True,
             "userOverride":   True,
             "uiLevel":        "UIBASIC",
