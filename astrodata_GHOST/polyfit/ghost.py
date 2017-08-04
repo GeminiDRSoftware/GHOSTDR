@@ -145,8 +145,6 @@ class GhostArm(Polyspect):
 
         #This is the original code which is based on the fixed fiber_separation
         #defined above. 
-        #FIXME: Remove hard-coded fiber separations etc once slit_profile based
-        #convolution is throughly tested.
         if slit_profile is None:
             flat_conv = np.zeros_like(im_fft)
             
@@ -185,12 +183,12 @@ class GhostArm(Polyspect):
             #The slit coordinate in microns
             slit_coord = (np.arange(len(slit_profile)) -
                           len(slit_profile)//2) * microns_pix
-            
+
             x_map = np.empty( (len(mprimes), self.szy) )
             
             # Now convolved in 2D
             for j, mprime in enumerate(mprimes):
-                #The spatial scales
+            #The spatial scales
                 spat_scale = self.evaluate_poly(spatpars)[orders[j]-self.m_min]
                 
                 #The x pixel values, just for this order

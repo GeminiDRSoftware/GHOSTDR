@@ -15,10 +15,10 @@ from astropy.modeling import models,fitting
 import pylab as plt
 import scipy.optimize as op
 
-arm='red'
+arm='blue'
 mode='high'
-write_to_file = False
-extract=False
+write_to_file = True
+extract=True
 #This is to make sure that profiles with good flux always get used
 if mode=='std':
     prof=[0,1] #For std res
@@ -67,7 +67,7 @@ arc_data = pyfits.getdata(arc_file)
 
 
 #instantiate the ghostsim arm
-arm = polyfit.GhostArm(arm,mode=mode)
+ghost = polyfit.GhostArm(arm,mode=mode)
 
 
 #Get the initial default model from the lookup location
@@ -79,12 +79,12 @@ specpars=pyfits.getdata(specmod_file)
 rotpars=np.zeros((3,3))
 
 slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
-arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
+ghost.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
 
-# The extractor is given the polyfit "arm" object, and a slitview object which has
+# The extractor is given the polyfit "ghost" object, and a slitview object which has
 # been instantiated with the slit viewer data.
-extractor = polyfit.Extractor(arm, slitview)
+extractor = polyfit.Extractor(ghost, slitview)
 # Now extract. The option to correct for sky depends on the type of file. 
 
 if extract:
@@ -105,9 +105,9 @@ else:
 #    extraction_weights = extraction_weights)
 
 #find the centroid of the extreme profiles and the distance between them.
-profiles=slitview.object_slit_profiles(arm=arm.arm, correct_for_sky=correct_for_sky)
+profiles=slitview.object_slit_profiles(arm=ghost.arm, correct_for_sky=correct_for_sky)
 n_slitpix = profiles.shape[1]
-profile_y_pix = (np.arange(n_slitpix) - n_slitpix//2)*slitview.microns_pix/arm.matrices[0,0,0,0]
+profile_y_pix = (np.arange(n_slitpix) - n_slitpix//2)*slitview.microns_pix/ghost.matrices[0,0,0,0]
 #This distance is the number of pixel separation in the vertical direction between
 # the centre of each object profile that will be cross correlated
 distance = np.abs(  np.sum(profiles[prof[0]] * profile_y_pix)/np.sum(profiles[prof[0]]) - np.sum(profiles[prof[1]] * profile_y_pix)/np.sum(profiles[prof[1]]) )
@@ -133,7 +133,7 @@ ccf_range=20        #What multiple of the interp_factor to fit ccf function on e
 #This previous parameter is equivalent to what range in detector pixels to trim the CCF for gaussian fitting.
 
 #Initialise common things.
-angles=np.zeros((arm.x_map.shape[0],sections))
+angles=np.zeros((ghost.x_map.shape[0],sections))
 sigma = np.empty_like(angles)
 fit_g = fitting.LevMarLSQFitter()
 
@@ -169,7 +169,7 @@ for order,flux in enumerate(fluxes):
 #prepare the arrays for fitting
 
 # Flatten arrays
-orders = np.meshgrid(np.arange(sections),np.arange(arm.m_max-arm.m_min+1)+arm.m_min)[1].flatten()
+orders = np.meshgrid(np.arange(sections),np.arange(ghost.m_max-ghost.m_min+1)+ghost.m_min)[1].flatten()
 collapsed_y_values = np.meshgrid(collapsed_y_values,np.arange(angles.shape[0]))[0].flatten()
 angles = angles.flatten()
 sigma = sigma.flatten()
@@ -178,11 +178,11 @@ ydeg=rotpars.shape[0]-1
 xdeg=rotpars.shape[1]-1
 # Do the fit!
 print("Fitting (this can sometimes take a while...)")
-init_resid = arm.fit_resid(rotpars, orders, collapsed_y_values, angles,
+init_resid = ghost.fit_resid(rotpars, orders, collapsed_y_values, angles,
                             ydeg=ydeg, xdeg=xdeg, sigma=sigma)
-bestp = op.leastsq(arm.fit_resid, rotpars,
+bestp = op.leastsq(ghost.fit_resid, rotpars,
                    args=(orders, collapsed_y_values, angles, ydeg, xdeg, sigma))
-final_resid = arm.fit_resid(bestp[0], orders, collapsed_y_values, angles,
+final_resid = ghost.fit_resid(bestp[0], orders, collapsed_y_values, angles,
                              ydeg=ydeg, xdeg=xdeg,sigma=sigma)
 params = bestp[0].reshape((ydeg + 1, xdeg + 1))
 print(init_resid, final_resid)
@@ -190,4 +190,4 @@ print(init_resid, final_resid)
 print(params)
 if write_to_file:
     #Now write the output to a file, in whatever format suits the recipe system best.
-    pyfits.writeto('outputs.fits',[extracted_flux,extracted_var])
+    pyfits.writeto('rotmod_output.fits',params,overwrite=True)
