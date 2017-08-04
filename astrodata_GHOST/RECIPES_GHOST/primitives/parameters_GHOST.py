@@ -26,6 +26,13 @@
             "userOverride":   True,
             "uiLevel":        "UIBASIC",
             },
+        "writeResult": {
+            "default":        True,
+            "type":           "bool",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
         },
     "clipSigmaBPM": {
         "suffix": {

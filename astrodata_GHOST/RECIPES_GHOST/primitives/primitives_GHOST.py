@@ -91,6 +91,10 @@ class GHOSTPrimitives(GMOSPrimitives,
             rc['flatStream'] are None, the standard getProcessedFlat primitive
             will be used instead. If both rc['flat'] and rc['flatStream'] are
             provided, rc['flat'] will take precedence.
+        rc['writeResult'] : bool (default: True)
+            Denotes whether or not to write out the result of profile
+            extraction to disk. This is useful for both debugging, and data
+            quality assurance. Defaults to True.
 
         Yields
         -------
@@ -210,6 +214,9 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Put the input file back into the output list
             adoutput_list.append(ad)
+
+            if rc['writeResult']:
+                ad.write()
 
         rc.report_output(adoutput_list)
         yield rc
@@ -971,7 +978,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             # Easiest way is to just make a copy of the stream ad
             # Need to deepcopy to avoid overwriting actual data
             flatprof_ad = deepcopy(ad)
-            flatprof_ad.filename  = gt.filename_updater(
+            flatprof_ad.filename = gt.filename_updater(
                 adinput=flatprof_ad, suffix='_extractedFlatProfile', strip=True
             )
             flatprof_ad['SCI'].data = extracted_flux
