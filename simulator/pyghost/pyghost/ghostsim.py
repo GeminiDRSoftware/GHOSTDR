@@ -1576,8 +1576,8 @@ class Arm(object):
             cosmic_img = np.zeros(image.shape)
 
         # Compute dark current (3 e/pix/hour)
-        dcurrent = np.random.poisson(
-            np.ones_like(image) * 3.0 * duration/3600.0)
+        dcurrent = np.float64(np.random.poisson(
+            np.ones_like(image) * 3.0 * duration/3600.0))
 
         if self.hpplane:
             hp_img = self.hot_pix.toarray().T

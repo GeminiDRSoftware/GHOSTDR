@@ -672,17 +672,16 @@ class Polyspect(object):
             rotation = self.evaluate_poly(rotmod)
         # Loop through orders
         r_rad = np.radians(rotation)
-        dy_frac = 1. / (xbase.shape[1] / 2.0)
         extra_rot_mat = np.zeros((xbase.shape[0], xbase.shape[1], 2, 2))
         # This needs to be done separately because of the
         # matrix structure
-        extra_rot_mat[:, :, 0, 0] = np.cos(r_rad * dy_frac) * \
+        extra_rot_mat[:, :, 0, 0] = np.cos(r_rad) * \
             slit_microns_per_det_pix_x
-        extra_rot_mat[:, :, 0, 1] = -np.sin(r_rad * dy_frac) *\
+        extra_rot_mat[:, :, 0, 1] = -np.sin(r_rad) *\
             slit_microns_per_det_pix_x
-        extra_rot_mat[:, :, 1, 0] = np.sin(r_rad * dy_frac) *\
+        extra_rot_mat[:, :, 1, 0] = np.sin(r_rad) *\
             slit_microns_per_det_pix_y
-        extra_rot_mat[:, :, 1, 1] = np.cos(r_rad * dy_frac) *\
+        extra_rot_mat[:, :, 1, 1] = np.cos(r_rad) *\
             slit_microns_per_det_pix_y
         matrices = extra_rot_mat
 
