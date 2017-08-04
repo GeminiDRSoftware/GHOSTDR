@@ -116,6 +116,7 @@ class Extractor():
         self.rnoise = rnoise
         self.vararray = vararray
         self.badpixmask = badpixmask
+        self.cr_flag = cr_flag
         
         # FIXME: This warning could probably be neater.
         if not isinstance(self.arm.x_map,np.ndarray):

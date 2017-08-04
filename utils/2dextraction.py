@@ -9,7 +9,7 @@ import pdb
 import pickle
 
 arm='blue'
-mode='std'
+mode='high'
 ftype='arc'
 write_to_file = False
 extract_1d_first = True #Set this to false to test multiple times.

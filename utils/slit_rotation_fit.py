@@ -16,7 +16,7 @@ import pylab as plt
 import scipy.optimize as op
 
 arm='blue'
-mode='high'
+mode='std'
 write_to_file = True
 extract=True
 #This is to make sure that profiles with good flux always get used
