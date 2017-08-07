@@ -236,7 +236,7 @@
         },
     "tileAmplifiers": {
         "suffix": {
-            "default":        "_tileAmplifiers",
+            "default":        "_ampsTiled",
             "type":           "str",
             "recipeOverride": True,
             "userOverride":   True,
