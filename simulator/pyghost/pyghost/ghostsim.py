@@ -1673,7 +1673,9 @@ class Arm(object):
             print('Writing ' + output_prefix + self.arm + '_CR.fits')
             crhdu.writeto(output_prefix + self.arm + '_CR.fits', clobber=True)
 
-        binmodes = [(1, 1), (1, 2), (1, 8), (2, 4), (2, 8)]
+        binmodes = [binmode]
+        if obstype in ['BIAS', 'OBJECT']:
+            binmodes = [(1, 1), (1, 2), (1, 8), (2, 4), (2, 8)]
         for binning in binmodes:
             if not self.split and binmode != binning:
                 continue
