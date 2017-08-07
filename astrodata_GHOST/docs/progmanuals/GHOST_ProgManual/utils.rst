@@ -18,6 +18,20 @@ file and displays them alongside 1d versions of the same.  The profiles are
 shown in separate windows for each arm.  The profiles are arranged vertically,
 with the 2d images amalgamated together and shown to the left of the 1d graphs:
 
+   .. only:: latex
+
+       .. image:: images/std-blue-with-cosmic.png
+         :scale: 70
+       .. image:: images/high-blue-with-arc-removed.png
+         :scale: 70
+
+   .. only:: html
+
+       .. image:: images/std-blue-with-cosmic.png
+         :scale: 65
+       .. image:: images/high-blue-with-arc-removed.png
+         :scale: 65
+
 The displayed images and graphs allow one to easily see where, if any, cosmic
 rays may have fallen on the fibres, and the relative levels of the background
 between slit viewer frames.
@@ -49,20 +63,6 @@ be required and thus command line inputs are not available.
 
 (EXAMPLE IMAGES TO FOLLOW)
 ..
-
-   .. only:: latex
-
-       .. image:: images/std-blue-with-cosmic.png
-	 :scale: 70
-       .. image:: images/high-blue-with-arc-removed.png
-	 :scale: 70
-
-   .. only:: html
-
-       .. image:: images/std-blue-with-cosmic.png
-	 :scale: 65
-       .. image:: images/high-blue-with-arc-removed.png
-	 :scale: 65
 
 The inner workings of this script will be described in a later release.
 
@@ -116,5 +116,3 @@ scale for each section, in order to determine what is the best scale for each ca
 The resulting measured for all sections are then fitted in a least squares approach
 to determine the best model for the spectrograph. This fit is weighted by the maximum convolution value
 to ensure the edges of the chip where the flat flux is low are down weighted.
-
-
