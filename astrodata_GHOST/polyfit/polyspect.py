@@ -442,12 +442,15 @@ class Polyspect(object):
                 x_values[i, j] += np.argmax(peakpix) - search_pix
                 #Put a sigma for weighted fit purposes
                 sigma[i,j] = 1./np.max(peakpix)
+        # Down weight any regions where the flux peak was less than 0.
+        sigma[sigma<0]=1E30
         if inspect:
             plt.clf()
             plt.imshow(data)
             plt.plot(y_values,x_values+self.szx//2,'.')
             plt.show()
-        
+
+        pdb.set_trace()
         fitted_params = self.fit_to_x(x_values, xparams, y_values=y_values,
                                       sigma=sigma)
         if inspect:
