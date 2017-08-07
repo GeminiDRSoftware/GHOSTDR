@@ -3,7 +3,6 @@
 import math
 import numpy as np
 import pyghost
-import pylab as plt
 
 
 def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
@@ -33,7 +32,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
     bias_level = 100
 
     # Our default overscan
-    overscan = 32
+    oscan = 32
 
     # Our default duration (pick something not a multiple of the default slit
     # viewer duration [10] so that partial science/slitviewer exposure overlaps
@@ -43,36 +42,38 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
     noise = {}
     scaling = {}
 
+    binmodes = [(1, 1), (1, 2), (1, 8), (2, 4), (2, 8)]
+
     for arm in (blue, red):
-        # Generate some noise with regular 50 and 60 Hz frequencies.
-        fnoise = pyghost.split_image(
-            arm.simulate_frequency_noise([50, 60], 0, 5), namps,
-            return_headers=False)
-
-        # Generate a gradient over the whole detector
-        gnoise = pyghost.split_image(
-            arm.simulate_gradient(math.pi/4, 0, 10), namps,
-            return_headers=False)
-
-        # The additive noise is the sum of these two
-        noise[arm.arm] = fnoise + gnoise
-
         # Generate the pixel-to-pixel variation image, with 1% rms error
-        scaling[arm.arm] = pyghost.split_image(
-            arm.simulate_flatfield(1.0, 0.01), namps, return_headers=False)
+        scale = arm.simulate_flatfield(1.0, 0.01, oscan)
+        scaling[arm.arm] = pyghost.split_image(scale, namps)
+
+        noise[arm.arm] = {}
+        for bmode in binmodes:
+            # Generate some noise with regular 50 and 60 Hz frequencies.
+            fnoise = arm.simulate_frequency_noise([50, 60], 0, 5, bmode, oscan)
+
+            # Generate a gradient over the whole detector
+            gnoise = arm.simulate_gradient(math.pi/4, 0, 10, bmode, oscan)
+
+            # The additive noise is the sum of these two
+            noise[arm.arm][bmode] = pyghost.split_image(fnoise+gnoise, namps)
 
     # This object captures the details of the detectors
     ghost = pyghost.Ghost(
-        rnoise=3.0, gain=1.0, namps=namps, overscan=overscan,
+        rnoise=3.0, gain=1.0, namps=namps, overscan=oscan,
         bias_level=bias_level, additive_noise=noise, scaling=scaling,
         cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split)
+
+    target_binmode = (1, 2)
 
     # This produces a bias with the above noise
     for i in range(1, nbias+1):
         ghost.simulate_observation(
-            duration=0.0, output_prefix='bias_{0:d}_'.format(i),
-            spectrum_in=blank, use_thar=False, add_sky=False, obstype='BIAS',
-            data_label=i)
+            duration=0.0, output_prefix='bias_'+str(i)+'_',
+            spectrum_in=blank, use_thar=False, add_sky=False,
+            obstype='BIAS', data_label=i, binmode=target_binmode)
 
     # This produces a dark frame
     for i in range(1, ndark+1):
@@ -112,9 +113,9 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         for seeing in (0.5, 1.0):  # in arcsecs
             ghost.simulate_observation(
                 duration=duration, output_prefix='obj'+str(duration)+'_' +
-                str(seeing)+'_'+res+'_', use_thar=True, add_sky=True,
-                res=res, obstype='OBJECT', seeing=seeing,
-                sv_flux_profile=sv_flux_profile)
+                str(seeing)+'_'+res+'_', use_thar=True, add_sky=True, res=res,
+                obstype='OBJECT', seeing=seeing,
+                sv_flux_profile=sv_flux_profile, binmode=target_binmode)
 
 if __name__ == "__main__":
     run()
