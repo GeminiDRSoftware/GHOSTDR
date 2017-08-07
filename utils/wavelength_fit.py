@@ -1,5 +1,8 @@
 """A script to fit tramlines and arcs for Ghost data.
 
+This script is used to make sure the wavelength scale is working properly. 
+It is an intermediate script and is not designed to be used for commissioning,
+but instead for debugging and development purposes. 
 
 """
 
@@ -96,8 +99,6 @@ if refit_x_pars:
 
 arm.spectral_format_with_matrix(xpars,wpars,spatpars,specpars,rotpars)
 
-#!!! These lines below actually go after the wmodel_file tweaking !!!
-
 # The extractor is given the polyfit "arm" object, and a slitview object which has
 # been instantiated with the slit viewer data.
 extractor = polyfit.Extractor(arm, slitview)
@@ -113,5 +114,6 @@ lines_out=extractor.find_lines(arc_flux, arcwaves, hw=16,arcfile=arc_data.T,insp
 
 #Now finally do the wavelength fit!
 fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars,lines_out,ydeg=3,xdeg=3)
+
 #shutil.copyfile('wavemod.txt', 'data/subaru/wavemod.txt')
 

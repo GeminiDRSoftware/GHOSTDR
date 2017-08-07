@@ -813,13 +813,6 @@ class Polyspect(object):
                 ygrid_filtered = ygrid[np.where(flux>thar_threshold)]
                 xbase_filtered = xbase[np.where(flux>thar_threshold)]
                 return ygrid_filtered.flatten(), xbase_filtered.flatten() + (nxbase //2)
-            elif model=='slit':
-                xbase, wave, blaze, matrices = \
-                    self.spectral_format_with_matrix(xparams, wparams,
-                                                     spatparams, specparams,
-                                                     rotparams,
-                                                     return_arrays=True)
-                
             else:
                 raise UserWarning('invalid model type for plot_data')
 
@@ -840,8 +833,8 @@ class Polyspect(object):
                           color='green', linestyle='None', marker='.')
 
         # Now over plot the image.
-        #axx.imshow((data - np.median(data)) / 1e2)
-        axx.imshow(data,vmax=100)
+        axx.imshow((data - np.median(data)) / 1e2)
+
         # Create a second window for sliders.
         slide_fig = plt.figure()
 
@@ -866,9 +859,6 @@ class Polyspect(object):
             params=xparams
         elif model=='wavelength':
             params=wparams
-        elif model=='slit':
-            params=[spatparams,rotpars]
-
         
         polyorder = params.shape[1]
         npolys = params.shape[0]
