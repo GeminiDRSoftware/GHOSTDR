@@ -66,7 +66,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         bias_level=bias_level, additive_noise=noise, scaling=scaling,
         cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split)
 
-    target_binmode = (1, 2)
+    target_binmode = (1, 1)  # (1, 2)
 
     # This produces a bias with the above noise
     for i in range(1, nbias+1):
@@ -80,7 +80,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         ghost.simulate_observation(
             duration=duration, output_prefix='dark'+str(duration)+'_{0:d}_'
             .format(i), use_thar=False, spectrum_in=blank, add_sky=False,
-            obstype='DARK', data_label=i)
+            obstype='DARK', data_label=i, binmode=target_binmode)
 
     for res in ('std', 'high'):
         # This (should) produce a GCAL flat frame
@@ -89,19 +89,19 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
                 duration=duration, output_prefix='flat'+str(duration)+'_'+res +
                 '_{0:d}_'.format(i), use_thar=False, spectrum_in=flat,
                 add_sky=False, res=res, flatlamp=True, obstype='FLAT',
-                data_label=i)
+                data_label=i, binmode=target_binmode)
 
         # This produces an arc frame
         ghost.simulate_observation(
             duration=duration, output_prefix='arc'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=thar, add_sky=False, res=res,
-            flatlamp=True, obstype='ARC')
+            flatlamp=True, obstype='ARC', binmode=target_binmode)
 
         # This produces a sky frame
         ghost.simulate_observation(
             duration=duration, output_prefix='sky'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=blank, add_sky=True, res=res,
-            obstype='SKY')
+            obstype='SKY', binmode=target_binmode)
 
         # Make the slit-viewing flux a bit random, to simulate clouds
         svfp = np.random.randn(100)
