@@ -18,10 +18,8 @@ import functools
 import datetime
 from copy import deepcopy
 
-from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import \
-    GMOSPrimitives
-from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import \
-    StackPrimitives
+from primitives_GMOS import GMOSPrimitives
+from primitives_stack import StackPrimitives
 from primitives_GHOST_calibration import GHOST_CalibrationPrimitives
 
 from astrodata_GHOST.polyfit import GhostArm
@@ -109,7 +107,7 @@ class GHOSTPrimitives(GMOSPrimitives,
         # Log the standard "starting primitive" debug message
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
-        timestamp_key = self.timestamp_keys["applyFlatBPM"]
+        timestamp_key = self.timestamp_keys[self.myself()]
 
         # Initialize the list of output AstroData objects
         adoutput_list = []
@@ -255,7 +253,7 @@ class GHOSTPrimitives(GMOSPrimitives,
         # Log the standard "starting primitive" debug message
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
-        timestamp_key = self.timestamp_keys["clipSigmaBPM"]
+        timestamp_key = self.timestamp_keys[self.myself()]
         # Unlike most of the other primitives, we do not check the timestamp
         # for this primitive, as it may be run multiple times on
         # a single file, each time by a different recipe
