@@ -17,7 +17,7 @@ import matplotlib.cm as cm
 import astropy.io.fits as pyfits
 #plt.ion()
 
-refit_x_pars=True
+refit_x_pars=False
 user = 'Joao'
 
 if user=='Mike':
@@ -44,27 +44,27 @@ if user=='Mike':
     arc_image_array -= np.median(arc_image_array)
 
 elif user=='Joao':
-    fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
+    fitsdir='/priv/mulga1/jbento/ghost/standard/calibrations/storedcals/'
     arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
     #arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
     test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-    arc_file  = fitsdir+"arc95_high_blue_arc.fits"
-    flat_file = fitsdir+"flat95_high_1_blue_flat.fits"
+    arc_file  = fitsdir+"arc95_std_red_arc.fits"
+    flat_file = fitsdir+"flat95_std_2_red_flat.fits"
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_blue_high_xmodPolyfit.fits'
-    wmodel_file=fitsdir+'GHOST_1_1_blue_high_wmodPolyfit.fits'
+    xmodel_file=fitsdir+'GHOST_1_1_red_std_161120_xmodPolyfit.fits'
+    wmodel_file=fitsdir+'GHOST_1_1_red_std_161120_wmodPolyfit.fits'
     # All the other models... which are currently in the "test" directory.
     #wmodel_file=test_files_dir+'wparams_blue_high.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
-    spatmod_file=test_files_dir+'spatmod_highvar.fits'
+    spatmod_file=test_files_dir+'spatmod.fits'
     specmod_file=test_files_dir+'specmod.fits'
     rotmod_file=test_files_dir+'rotmod2.fits'
 
     #Input the slit arrays.
-    arc_image_array = pyfits.getdata(fitsdir + 'arc95_high_SLIT_arc.fits').astype(float)
+    arc_image_array = pyfits.getdata(fitsdir + 'arc95_std_SLIT_arc.fits').astype(float)
     arc_image_array -= np.median(arc_image_array)
 
 
@@ -74,7 +74,7 @@ arc_data = pyfits.getdata(arc_file)
 arcwaves, arcfluxes= np.loadtxt(arclinefile,usecols=[1,2]).T
 
 #instantiate the ghostsim arm
-arm = polyfit.GhostArm('blue',mode='high')
+arm = polyfit.GhostArm('red',mode='std')
 
 
 #Get the initial default model from the lookup location
@@ -88,7 +88,7 @@ flat_image_array = arc_image_array.copy()
 
 # Create an initial model of the spectrograph.
 # xx, wave, blaze= ghost.spectral_format(xparams=xpars,wparams=wpars)
-slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='high')
+slitview = polyfit.SlitView(arc_image_array, flat_image_array, mode='std')
 
 #(self, xmod, wavemod, spatmod=None,specmod=None, rotmod=None)
 if refit_x_pars:

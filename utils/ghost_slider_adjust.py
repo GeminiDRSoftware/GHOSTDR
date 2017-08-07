@@ -102,7 +102,7 @@ if user == 'Joao':
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/wmod.txt'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/fitted_wmod.fits'
-    #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
+    wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
     spatmod_file = test_files_dir + 'spatmod.fits'
     specmod_file = test_files_dir + 'specmod.fits'
     rotmod_file = test_files_dir + 'rotmod.fits'
