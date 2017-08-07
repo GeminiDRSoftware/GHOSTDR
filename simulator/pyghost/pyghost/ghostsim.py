@@ -1349,7 +1349,7 @@ class Arm(object):
     def simulate_frame(self, duration=0.0, output_prefix='test_',
                        spectrum_in=None, xshift=0.0, yshift=0.0, radvel=0.0,
                        rv_thar=0.0, flux=1, rnoise=3.0, gain=[1.0],
-                       bias_level=10, oscan=0, namps=[1, 1], use_thar=True,
+                       bias_level=10, overscan=0, namps=[1, 1], use_thar=True,
                        res='high', add_sky=True, return_image=False,
                        thar_flatlamp=False, flatlamp=False, obstype=None,
                        additive_noise={}, scaling=None, seeing=0.8,
@@ -1407,7 +1407,7 @@ class Arm(object):
             Bias level in electrons, per amplifier (or a single scalar for
             all amps).
 
-        oscan: int (optional)
+        overscan: int (optional)
             number of columns of overscan
 
         namps: int[2] (optional)
@@ -1619,7 +1619,7 @@ class Arm(object):
             hp_img = to_ushort(hp_img)
             hphdu = pf.HDUList(pf.PrimaryHDU(data=hp_img, header=pf.Header()))
             hpims = split_image(hp_img, namps)
-            hpims = [add_overscan(i, oscan) for i in hpims]
+            hpims = [add_overscan(i, overscan) for i in hpims]
             hpims = [to_ushort(i) for i in hpims]
             for hpim in hpims:
                 hphdu.append(pf.ImageHDU(data=hpim, header=pf.Header()))
@@ -1651,8 +1651,8 @@ class Arm(object):
 
         cosmic_img = cosmic_img.T
         cosims = split_image(cosmic_img, namps)
-        cosims = [add_overscan(i, oscan) for i in cosims]
-        if self.split and self.crplane:
+        cosims = [add_overscan(i, overscan) for i in cosims]
+        if self.split and self.crplane and self.cosmics:
             cosims = [to_ushort(i) for i in cosims]
             crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
             for cosim in cosims:
@@ -1662,11 +1662,11 @@ class Arm(object):
                 detsec = "[%d:%d,%d:%d]" % (cxl[i]+1, cxh[i], cyl[i]+1, cyh[i])
                 crhdr['DETSEC'] = (detsec, 'Detector section(s)')
                 cosdsec = "[1:%d,1:%d]" % (
-                    cosim.shape[1]-oscan, cosim.shape[0])
+                    cosim.shape[1]-overscan, cosim.shape[0])
                 crhdr['DATASEC'] = (cosdsec, 'Data section(s)')
                 crhdr['TRIMSEC'] = (cosdsec, 'Trim section(s)')
-                if oscan > 0: crhdr['BIASSEC'] = ("[%d:%d,1:%d]" % (
-                    cosim.shape[1]-oscan+1, cosim.shape[1],
+                if overscan > 0: crhdr['BIASSEC'] = ("[%d:%d,1:%d]" % (
+                    cosim.shape[1]-overscan+1, cosim.shape[1],
                     cosim.shape[0]), 'Bias section(s)')
                 crhdu.append(pf.ImageHDU(data=cosim, header=crhdr, name='SCI'))
 
@@ -1683,7 +1683,7 @@ class Arm(object):
             opims = deepcopy(ampims)
 
             # slap on an overscan region
-            opims = [add_overscan(i, oscan) for i in opims]
+            opims = [add_overscan(i, overscan) for i in opims]
 
             # scale each amp by its scaling factor (the 0-valued overscan region
             # will remain 0)
@@ -1691,8 +1691,9 @@ class Arm(object):
 
             # apply binning
             opims = [apply_binning(i, binning) for i in opims]
+            oscan = overscan / binning[0]  # the new binned overscan width
 
-            # Add read noise (in electrons?) for each amplifier
+            # Add read noise (in electrons) for each amplifier
             opims = [i+r*np.random.normal(size=i.shape)
                 for i, r in zip(opims, rnoise)]  # noqa
 
@@ -1851,8 +1852,7 @@ class Arm(object):
                 # TODO: what's a realistic value for readout time?
                 hdr['DARKTIME'] = (duration + 5., 'Dark time (seconds)')
 
-                datasec = "[1:%d,1:%d]" % \
-                    (ampim.shape[1]-oscan, ampim.shape[0])
+                datasec = "[1:%d,1:%d]" % (ampim.shape[1]-oscan, ampim.shape[0])
                 hdr['DATASEC'] = (datasec, 'Data section(s)')
                 hdr['TRIMSEC'] = (datasec, 'Trim section(s)')
 
@@ -2034,7 +2034,7 @@ class Ghost(object):
             duration=duration, output_prefix=output_prefix, gain=self.gain,
             spectrum_in=spectrum_in, xshift=xshift, yshift=yshift,
             radvel=radvel, rv_thar=rv_thar, flux=flux, rnoise=self.rnoise,
-            bias_level=self.bias_level, oscan=self.overscan, add_sky=add_sky,
+            bias_level=self.bias_level, overscan=self.overscan, add_sky=add_sky,
             namps=self.namps, use_thar=use_thar, res=res, utstart=utstart,
             thar_flatlamp=thar_flatlamp, seeing=seeing, data_label=data_label,
             flatlamp=flatlamp, obstype=obstype, binmode=binmode)
