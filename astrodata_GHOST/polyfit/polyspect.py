@@ -434,8 +434,7 @@ class Polyspect(object):
         # order for search_pix on either side of the initial
         # model pixels in the spatial direction.
         for i in range(x_values.shape[0]):  # Go through each order...
-            for j in range(
-                    x_values.shape[1]):  # pylint: disable=maybe-no-member
+            for j in range(x_values.shape[1]):  # pylint: disable=maybe-no-member
                 xind = int(np.round(x_values[i, j]))
                 peakpix = image_med[j, self.szx // 2 + xind -
                                     search_pix:self.szx // 2 +
@@ -841,8 +840,8 @@ class Polyspect(object):
                           color='green', linestyle='None', marker='.')
 
         # Now over plot the image.
-        axx.imshow((data - np.median(data)) / 1e2)
-
+        #axx.imshow((data - np.median(data)) / 1e2)
+        axx.imshow(data,vmax=100)
         # Create a second window for sliders.
         slide_fig = plt.figure()
 

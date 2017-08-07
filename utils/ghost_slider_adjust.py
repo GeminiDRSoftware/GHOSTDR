@@ -59,7 +59,7 @@ if (model!='W') and (model!='X'):
     sys.exit()
 # Regardless, need to initialise a few things.
 
-mode = 'high'
+mode = 'std'
 cam = 'red'
 user='Joao'
 #instantiate the ghostsim arm
@@ -92,7 +92,9 @@ if user=='Joao':
     #wmodel_file = '/home/jbento/code/ghostdr/utils/wmod.txt'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/fitted_wmod.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'    
+    #xmodel_file='/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/red/high/161120/xmod.fits'
     spatmod_file=test_files_dir+'spatmod.fits'
+    #spatmod_file='/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/red/high/161120/spatmod.fits'
     specmod_file=test_files_dir+'specmod.fits'
     rotmod_file=test_files_dir+'rotmod.fits'
 
@@ -119,7 +121,7 @@ if model=='X':
     #Convolve the flat field with the slit profile
     #If no slit profile is given, assume a standard one.
     flat_conv=ghost.slit_flat_convolve(flat_data)
-    
+    #flat_conv=flat_data
     #Have a look at the default model and make small adjustments if needed.
     # This step should not be part of the primitive !!!!!
     # It is for engineering purposes only!
