@@ -60,7 +60,7 @@ for cam in red blue; do
     echo "Doing $cam images now"
     CAPCAM=`echo $cam | tr '[:lower:]' '[:upper:]'`
 
-    typewalk --types GHOST_BIAS GHOST_$CAPCAM --dir $BIASDIR/ --filemask '.*1x1.*\.(fits|FITS)' -o bias.list
+    typewalk --types GHOST_BIAS GHOST_$CAPCAM --dir $BIASDIR/ -o bias.list #--filemask '.*1x1.*\.(fits|FITS)' -o bias.list
     reduce @bias.list
 
     typewalk --types GHOST_DARK GHOST_$CAPCAM --dir $DARKDIR/ -o dark.list
@@ -73,8 +73,7 @@ for cam in red blue; do
         reduce @flat.list --override_cal \
             processed_bias:`ls $CALDIR/bias*$cam*.fits` \
             processed_dark:`ls $CALDIR/dark*$cam*.fits` \
-			processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits` \
-            processed_xmod:`ls $CALDIR/*$cam*$mode*xmod*.fits`
+	    processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits` \
 
         typewalk --types GHOST_ARC GHOST_$CAPCAM GHOST_$CAPMODE --dir $ARCDIR/ -o arc.list
         reduce @arc.list --override_cal \

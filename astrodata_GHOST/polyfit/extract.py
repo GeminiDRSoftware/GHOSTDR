@@ -329,6 +329,12 @@ class Extractor():
                     col_inv_var.repeat(no), (nx_cutout, no))
                 b_mat = phi * col_inv_var_mat
                 c_mat = np.dot(phi.T, phi * col_inv_var_mat)
+                # FIXME: Sometimes the determinant of c_mat is 0.0
+                # leading to the impossibility of inverting the matrix.
+                # currently the pixel weights are unmodified and those used are
+                # whatever the last iteration calculation was.
+                # Naturally, if this happens on iteration one, this will crash
+                # on the next loop.
                 try: pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
                 except: pass #import pdb;pdb.set_trace()
 
