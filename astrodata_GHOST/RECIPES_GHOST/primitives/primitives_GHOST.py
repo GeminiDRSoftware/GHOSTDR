@@ -651,18 +651,30 @@ class GHOSTPrimitives(GMOSPrimitives,
                             'therefore, %s will not be used' % ad.filename)
                 continue
 
-            all_xmod_dict = PolyfitDict.xmod_dict
             # Work out the directory to get the Polyfit initial files from
             key = self._get_polyfit_key(ad)
-
-            if key in all_xmod_dict:
-                poly_xmod = lookup_path(all_xmod_dict[key])
+            if np.all([key in _ for _ in [
+                PolyfitDict.xmod_dict,
+                PolyfitDict.wavemod_dict,
+                PolyfitDict.spatmod_dict,
+                PolyfitDict.specmod_dict,
+                PolyfitDict.rotmod_dict,
+            ]]):
+                # Get configs
+                poly_xmod = lookup_path(PolyfitDict.xmod_dict[key])
+                poly_wave = lookup_path(PolyfitDict.wavemod_dict[key])
+                wpars = AstroData(poly_wave)
+                poly_spat = lookup_path(PolyfitDict.spatmod_dict[key])
+                spatpars = AstroData(poly_spat)
+                poly_spec = lookup_path(PolyfitDict.specmod_dict[key])
+                specpars = AstroData(poly_spec)
+                poly_rot = lookup_path(PolyfitDict.rotmod_dict[key])
+                rotpars = AstroData(poly_rot)
             else:
                 # Don't know how to fit this file, so probably not necessary
-                # Return this ad to the stream and move to the next
+                # Move to the next
                 log.warning('Not sure which initial model to use for %s; '
                             'skipping' % ad.filename)
-                adoutput_list.append(ad)
                 continue
 
             # Run the fitting procedure
@@ -672,19 +684,22 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Read in the model file
             xparams = AstroData(poly_xmod)
-            ##### MARC: We need the spatmod file as well.
-            # spatpars = AstroData(poly_spatmod)??????
+            spatpars = AstroData(poly_spatmod)
             
             # Creat an initial model of the spectrograph
             xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams.data)
 
-            ##### MARC: Need the slit viewer class as well. Something like:
-            # slitview = polyfit.SlitView(flat_slit_image, flat_slit_image, mode=ad.res_mode().as_str())
+            slitview = polyfit.SlitView(flat_slit_image,
+                                        flat_slit_image,
+                                        mode=ad.res_mode().as_str())
             
             # Convolve the flat field with the slit profile
-            flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data)
-            ##### MARC: Need to replace the convolution line with something like:
-            # flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data, slit_profile = slitview.slit_profile(arm=ad.arm().as_str(), spatpars = spatpars.data, microns_pix = slitview.microns_pix, xpars = xpars.data)
+            # flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data)
+            flat_conv = ghost_arm.slit_flat_convolve(
+                ad['SCI'].data,
+                slit_profile=slitview.slit_profile(
+                    arm=ad.arm().as_str(), spatpars=spatpars.data,
+                    microns_pix=slitview.microns_pix, xpars=xpars.data))
 
             
             # Fit the initial model to the data being considered

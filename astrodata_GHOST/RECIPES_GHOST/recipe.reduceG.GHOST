@@ -9,9 +9,9 @@ overscanCorrect
 tileAmplifiers
 biasCorrect
 ADUToElectrons
+addVAR(poisson_noise=True)
 darkCorrect
 #rejectCosmicRays # maybe not needed?
-addVAR(poisson_noise=True)
 applyFlatBPM # Bitwise combine the flat BPM with the current BPM
              # for the data
 extractProfile
