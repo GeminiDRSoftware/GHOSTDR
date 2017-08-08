@@ -672,13 +672,21 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Read in the model file
             xparams = AstroData(poly_xmod)
-
+            ##### MARC: We need the spatmod file as well.
+            # spatpars = AstroData(poly_spatmod)??????
+            
             # Creat an initial model of the spectrograph
             xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams.data)
 
+            ##### MARC: Need the slit viewer class as well. Something like:
+            # slitview = polyfit.SlitView(flat_slit_image, flat_slit_image, mode=ad.res_mode().as_str())
+            
             # Convolve the flat field with the slit profile
             flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data)
+            ##### MARC: Need to replace the convolution line with something like:
+            # flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data, slit_profile = slitview.slit_profile(arm=ad.arm().as_str(), spatpars = spatpars.data, microns_pix = slitview.microns_pix, xpars = xpars.data)
 
+            
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
                                                      xparams=xparams.data,
