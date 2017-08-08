@@ -689,8 +689,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             # Creat an initial model of the spectrograph
             xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams.data)
 
-            slitview = polyfit.SlitView(flat_slit_image,
-                                        flat_slit_image,
+            slitview = SlitView(flat_slit_image, flat_slit_image,
                                         mode=ad.res_mode().as_str())
             
             # Convolve the flat field with the slit profile
