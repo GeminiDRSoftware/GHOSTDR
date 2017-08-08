@@ -77,7 +77,7 @@ for cam in red blue; do
         reduce @flat.list --override_cal \
             processed_bias:`ls $CALDIR/bias*$cam*.fits` \
             processed_dark:`ls $CALDIR/dark*$cam*.fits` \
-            processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits` \
+            processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits`
 
         typewalk --types GHOST_ARC GHOST_$CAPCAM GHOST_$CAPMODE --dir $ARCDIR/ -o arc.list
         reduce @arc.list --override_cal \
