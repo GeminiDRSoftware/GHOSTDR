@@ -226,7 +226,7 @@ def apply_binning(img, binmode):
         img = img[:, ::2] + img[:, 1::2]
     for _ in range(int(math.log(binmode[1], 2))):
         img = img[::2, :] + img[1::2, :]
-    img /= float(binmode[0] * binmode[1])
+    # img /= float(binmode[0] * binmode[1])
     return img
 
 
