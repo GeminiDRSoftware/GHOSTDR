@@ -688,7 +688,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             spatpars = AstroData(poly_spat)
 
             # Creat an initial model of the spectrograph
-            xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams.data)
+            xx, wave, blaze = ghost_arm.spectral_format(xparams=xpars.data)
 
             slitview = SlitView(slit_flat['SCI'].data, slit_flat['SCI'].data,
                                         mode=ad.res_mode().as_str())
@@ -704,7 +704,7 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
-                                                     xparams=xparams.data,
+                                                     xparams=xpars.data,
                                                      decrease_dim=8,
                                                      inspect=False)
 
