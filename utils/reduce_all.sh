@@ -60,7 +60,7 @@ for cam in red blue; do
     echo "Doing $cam images now"
     CAPCAM=`echo $cam | tr '[:lower:]' '[:upper:]'`
 
-    typewalk --types GHOST_BIAS GHOST_$CAPCAM --dir $BIASDIR/ -o bias.list #--filemask '.*1x1.*\.(fits|FITS)' -o bias.list
+    typewalk --types GHOST_BIAS GHOST_$CAPCAM --dir $BIASDIR/ --filemask '.*1x1.*\.(fits|FITS)' -o bias.list
     reduce @bias.list
 
     typewalk --types GHOST_DARK GHOST_$CAPCAM --dir $DARKDIR/ -o dark.list
