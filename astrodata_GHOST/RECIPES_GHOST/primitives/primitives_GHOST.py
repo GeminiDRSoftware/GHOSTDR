@@ -684,7 +684,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                 arm=ad.arm().as_str(), mode=ad.res_mode().as_str())
 
             # Read in the model file
-            xparams = AstroData(poly_xmod)
+            xpars = AstroData(poly_xmod)
             spatpars = AstroData(poly_spat)
 
             # Creat an initial model of the spectrograph
