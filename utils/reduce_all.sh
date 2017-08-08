@@ -84,18 +84,20 @@ for cam in red blue; do
             processed_slit:`ls $CALDIR/arc*$mode*SLIT*.fits` \
             processed_xmod:`ls $CALDIR/*$cam*$mode*xmod*.fits`
 
-        while read object <&3; do
-            reduce $object --override_cal \
-                processed_bias:`ls $CALDIR/bias*$cam*.fits` \
-                processed_dark:`ls $CALDIR/dark*$cam*.fits` \
-                processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits` \
-                processed_slit:`ls $CALDIR/obj*$mode*SLIT*.fits` \
-                processed_xmod:`ls $CALDIR/*$cam*$mode*xmod*.fits` \
-                processed_flat:`ls $CALDIR/flat*$mode*$cam*.fits`
-        done 3< <(
-            typewalk --types GHOST_OBJECT GHOST_$CAPCAM GHOST_$CAPMODE --dir $OBJDIR/ --filemask '.*1x1.*\.(fits|FITS)' \
-            | grep '^ ' \
-            | awk '{print $1}'
-        )
+        for seeing in 0.5 1.0; do
+            while read object <&3; do
+                reduce $object --override_cal \
+                    processed_bias:`ls $CALDIR/bias*$cam*.fits` \
+                    processed_dark:`ls $CALDIR/dark*$cam*.fits` \
+                    processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits` \
+                    processed_slit:`ls $CALDIR/obj*$seeing*$mode*SLIT*.fits` \
+                    processed_xmod:`ls $CALDIR/*$cam*$mode*xmod*.fits` \
+                    processed_flat:`ls $CALDIR/flat*$mode*$cam*.fits`
+            done 3< <(
+                typewalk --types GHOST_OBJECT GHOST_$CAPCAM GHOST_$CAPMODE --dir $OBJDIR/ --filemask ".*$seeing.*1x1.*\.(fits|FITS)" \
+                | grep '^ ' \
+                | awk '{print $1}'
+            )
+        done
     done
 done
