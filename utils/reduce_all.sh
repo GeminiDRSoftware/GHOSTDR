@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #Script to reduce all GHOST data using the recipe system.
 #This must be ran from within where the GHOST data are kept, with default variables indicating where the various types of files are
