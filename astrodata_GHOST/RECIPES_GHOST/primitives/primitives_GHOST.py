@@ -698,8 +698,8 @@ class GHOSTPrimitives(GMOSPrimitives,
             flat_conv = ghost_arm.slit_flat_convolve(
                 ad['SCI'].data,
                 slit_profile=slitview.slit_profile(
-                    arm=ad.arm().as_str(), spatpars=spatpars.data,
-                    microns_pix=slitview.microns_pix, xpars=xpars.data))
+                    arm=ad.arm().as_str()), spatpars=spatpars.data,
+                    microns_pix=slitview.microns_pix, xpars=xpars.data)
 
 
             # Fit the initial model to the data being considered
