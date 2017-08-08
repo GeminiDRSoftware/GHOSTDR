@@ -657,7 +657,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             else:
                 rc.run("getProcessedSlitFlat")
                 slit_flat = rc.get_cal(ad, 'processed_slitflat')  # from cache
-                slit_flat = AstroData(flat)
+                slit_flat = AstroData(slit_flat)
 
             # Work out the directory to get the Polyfit initial files from
             key = self._get_polyfit_key(ad)
@@ -686,13 +686,13 @@ class GHOSTPrimitives(GMOSPrimitives,
             # Read in the model file
             xparams = AstroData(poly_xmod)
             spatpars = AstroData(poly_spat)
-            
+
             # Creat an initial model of the spectrograph
             xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams.data)
 
             slitview = SlitView(slit_flat['SCI'].data, slit_flat['SCI'].data,
                                         mode=ad.res_mode().as_str())
-            
+
             # Convolve the flat field with the slit profile
             # flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data)
             flat_conv = ghost_arm.slit_flat_convolve(
@@ -701,7 +701,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                     arm=ad.arm().as_str(), spatpars=spatpars.data,
                     microns_pix=slitview.microns_pix, xpars=xpars.data))
 
-            
+
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
                                                      xparams=xparams.data,
