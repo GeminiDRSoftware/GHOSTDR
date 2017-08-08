@@ -43,7 +43,7 @@ for mode in high std; do
         processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits`
 
     while read object <&3; do
-        reduce $object --override_cal \
+        reduce $OBJDIR/$object --override_cal \
             processed_bias:`ls $CALDIR/bias*SLIT*.fits` \
             processed_dark:`ls $CALDIR/dark*SLIT*.fits` \
             processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits`
@@ -86,7 +86,7 @@ for cam in red blue; do
 
         for seeing in 0.5 1.0; do
             while read object <&3; do
-                reduce $object --override_cal \
+                reduce $OBJDIR/$object --override_cal \
                     processed_bias:`ls $CALDIR/bias*$cam*.fits` \
                     processed_dark:`ls $CALDIR/dark*$cam*.fits` \
                     processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits` \
