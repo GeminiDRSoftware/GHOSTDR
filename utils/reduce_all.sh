@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# make it so CTRL-C kills *all* subprocesses (doesn't require the user to press CTRL-C multiple times)
+trap 'kill -s KILL -- -$$ 2>/dev/null' EXIT
+trap 'exit' INT QUIT TERM
+
 #Script to reduce all GHOST data using the recipe system.
 #This must be ran from within where the GHOST data are kept, with default variables indicating where the various types of files are
 
@@ -73,7 +77,7 @@ for cam in red blue; do
         reduce @flat.list --override_cal \
             processed_bias:`ls $CALDIR/bias*$cam*.fits` \
             processed_dark:`ls $CALDIR/dark*$cam*.fits` \
-	    processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits` \
+            processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits` \
 
         typewalk --types GHOST_ARC GHOST_$CAPCAM GHOST_$CAPMODE --dir $ARCDIR/ -o arc.list
         reduce @arc.list --override_cal \
