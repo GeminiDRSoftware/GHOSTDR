@@ -651,6 +651,14 @@ class GHOSTPrimitives(GMOSPrimitives,
                             'therefore, %s will not be used' % ad.filename)
                 continue
 
+            log.stdinfo('Looking for slit flat...')
+            if rc['slitFlat'] is not None:
+                slit_flat = AstroData(rc['slitFlat'])
+            else:
+                rc.run("getProcessedSlitFlat")
+                slit_flat = rc.get_cal(ad, 'processed_slitflat')  # from cache
+                slit_flat = AstroData(flat)
+
             # Work out the directory to get the Polyfit initial files from
             key = self._get_polyfit_key(ad)
             if np.all([key in _ for _ in [
@@ -662,14 +670,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             ]]):
                 # Get configs
                 poly_xmod = lookup_path(PolyfitDict.xmod_dict[key])
-                poly_wave = lookup_path(PolyfitDict.wavemod_dict[key])
-                wpars = AstroData(poly_wave)
                 poly_spat = lookup_path(PolyfitDict.spatmod_dict[key])
-                spatpars = AstroData(poly_spat)
-                poly_spec = lookup_path(PolyfitDict.specmod_dict[key])
-                specpars = AstroData(poly_spec)
-                poly_rot = lookup_path(PolyfitDict.rotmod_dict[key])
-                rotpars = AstroData(poly_rot)
             else:
                 # Don't know how to fit this file, so probably not necessary
                 # Move to the next
@@ -684,12 +685,12 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Read in the model file
             xparams = AstroData(poly_xmod)
-            spatpars = AstroData(poly_spatmod)
+            spatpars = AstroData(poly_spat)
             
             # Creat an initial model of the spectrograph
             xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams.data)
 
-            slitview = SlitView(flat_slit_image, flat_slit_image,
+            slitview = SlitView(slit_flat['SCI'].data, slit_flat['SCI'].data,
                                         mode=ad.res_mode().as_str())
             
             # Convolve the flat field with the slit profile
