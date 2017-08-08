@@ -450,7 +450,6 @@ class Polyspect(object):
             plt.plot(y_values,x_values+self.szx//2,'.')
             plt.show()
 
-        pdb.set_trace()
         fitted_params = self.fit_to_x(x_values, xparams, y_values=y_values,
                                       sigma=sigma)
         if inspect:

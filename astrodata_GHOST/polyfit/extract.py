@@ -63,7 +63,6 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var, \
         plt.plot(col_data, label='data')
         plt.plot(y_hat + nsigma*np.sqrt(var_use), label='limit')
         plt.pause(.001)
-        import pdb; pdb.set_trace()
     
     return new_bad
 
@@ -331,7 +330,7 @@ class Extractor():
                 b_mat = phi * col_inv_var_mat
                 c_mat = np.dot(phi.T, phi * col_inv_var_mat)
                 try: pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
-                except: import pdb;pdb.set_trace()
+                except: pass #import pdb;pdb.set_trace()
 
                 #FIXME Bugshooting: Some tilted, bright arc lines cause strange
                 #weightings here... Probably OK - only strange weightings in 2D
