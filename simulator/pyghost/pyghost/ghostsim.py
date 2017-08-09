@@ -661,6 +661,10 @@ class Arm(object):
     split: bool
         Indicate whether to produce a single MEF containing the frames taken
         during the observation, or to generate individual files per frame
+
+    check: bool
+        Output a fits file containing input spectra interpolated onto
+        the pixel grid for each order?
     """
 
     ARM_OPTIONS = [
@@ -675,7 +679,7 @@ class Arm(object):
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, arm, slit_viewer=None, cosmics=True, crplane=False,
-                 hpplane=False, split=False):
+                 hpplane=False, split=False, check=False):
         if arm.lower() not in self.ARM_OPTIONS:
             raise ValueError('arm must be one of %s' % (
                 ','.join(self.ARM_OPTIONS),
@@ -697,6 +701,7 @@ class Arm(object):
         self.crplane = crplane
         self.hpplane = hpplane
         self.split = split
+        self.check = check
         self.slitv = slit_viewer
         # Do we need to re-compute the spectral format?
         self.stale_spectral_format = True
@@ -1173,7 +1178,7 @@ class Arm(object):
         return spectrum
 
     def simulate_image(self, x, wave, blaze, matrices, im_slit, spectrum=None,
-                       n_x=0, xshift=0.0, yshift=0.0, radvel=0.0):
+                       n_x=0, xshift=0.0, yshift=0.0, radvel=0.0, return_check=False):
         """Simulate a spectrum on the CCD.
 
         Parameters
@@ -1195,6 +1200,9 @@ class Arm(object):
             NOT IMPLEMENTED
         radvel: float
             Radial velocity in m/s.
+        return_check: bool
+            Also return the input spectra, interpolated onto the pixel
+            grid for each order.
         """
         # If no input spectrum, use the sun.
         if (spectrum is None) or len(spectrum) == 0:
@@ -1205,6 +1213,8 @@ class Arm(object):
         if n_x == 0:
             n_x = n_y
         image = np.zeros((n_y, n_x))
+        if return_check:
+            check_image = np.zeros((n_orders, n_y))
         # Simulate the slit image within a small cutout region.
         cutout_xy = np.meshgrid(np.arange(81)-40, np.arange(7)-3)
         # Loop over orders. Use a status line where the numbers change but new lines
@@ -1230,6 +1240,8 @@ class Arm(object):
                 flux = np.interp(wave[i, j]*(1 + radvel/299792458.0),
                                  spectrum[0], spectrum[1],
                                  left=0, right=0)
+                if return_check:
+                    check_image[i, j] = flux
                 # Rounded to the nearest microns_pix, find the co-ordinate
                 # in the simulated slit image corresponding to each pixel.
                 # The co-ordinate order in the matrix is (x,y).
@@ -1260,12 +1272,14 @@ class Arm(object):
         print('\n')
         #outline.write('\n')
         #Old code was: print('Done order: {0}'.format(i + self.order_min))
-        return image
+        if return_check:
+            return (image, check_image)
+        else:
+            return image
 
     def sky_background(self, mode):
         """Calculate a sky spectrum.
-
-        Parameters
+Parameters
         ----------
         mode: string
             Either 'std' or 'high' depending on the IFU mode in use.
@@ -1486,9 +1500,9 @@ class Arm(object):
             im_slit = self.make_lenslets(
                 fluxes=slit_fluxes, mode=res, seeing=seeing, llet_offset=2)
 
-            image = self.simulate_image(
+            image, check_image = self.simulate_image(
                 x, wave, blaze, matrices, im_slit, spectrum=spectrum,
-                n_x=self.szx, xshift=xshift, radvel=radvel)
+                n_x=self.szx, xshift=xshift, radvel=radvel, return_check=True)
 
             # Create the slit viewing camera image for the science flux.
             if self.slitv is not None:
@@ -1536,9 +1550,9 @@ class Arm(object):
                     N_SR_SKY, ifu=2)
                 im_slit = im_slit1 + im_slit2
 
-            image = self.simulate_image(
+            image, check_image = self.simulate_image(
                 x, wave, blaze, matrices, im_slit, spectrum=spectrum,
-                n_x=self.szx, xshift=xshift, radvel=radvel)
+                n_x=self.szx, xshift=xshift, radvel=radvel, return_check=True)
 
             # Create the slit viewing camera image for the science flux.
             if self.slitv is not None:
@@ -1672,6 +1686,11 @@ class Arm(object):
 
             print('Writing ' + output_prefix + self.arm + '_CR.fits')
             crhdu.writeto(output_prefix + self.arm + '_CR.fits', clobber=True)
+
+        # Write the check frame if required
+        if self.split and self.check and obstype != 'BIAS' and obstype != 'DARK':
+            chkhdu = pf.HDUList(pf.PrimaryHDU(data=check_image))
+            chkhdu.writeto(output_prefix + self.arm + '_chk.fits', clobber=True)
 
         binmodes = [binmode]
         if obstype in ['BIAS', 'OBJECT']:
@@ -1918,11 +1937,22 @@ class Ghost(object):
 
     crplane: bool
         Output a fits file containing locations where CRs were injected?
+
+    hpplane: bool
+        Output a fits file containing locations of hot pixels?
+
+    split: bool
+        Indicate whether to produce a single MEF containing the frames taken
+        during the observation, or to generate individual files per frame
+
+    check: bool
+        Output a fits file containing input spectra interpolated onto
+        the pixel grid for each order?
     """
 
     def __init__(self, rnoise, gain, namps, overscan, bias_level,
                  additive_noise, scaling, cosmics=True, crplane=False,
-                 hpplane=False, split=False):
+                 hpplane=False, split=False, check=False):
 
         self.rnoise = rnoise
         self.gain = gain
@@ -1935,11 +1965,12 @@ class Ghost(object):
         self.crplane = crplane
         self.hpplane = hpplane
         self.split = split
+        self.check = check
 
         self.slitv = SlitViewer(cosmics, crplane, split)
         common = dict(
             slit_viewer=self.slitv, cosmics=cosmics, crplane=crplane,
-            hpplane=hpplane, split=split)
+            hpplane=hpplane, split=split, check=check)
         # pylint: disable=star-args
         self.blue = Arm('blue', **common)
         self.red = Arm('red', **common)

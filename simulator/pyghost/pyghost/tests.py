@@ -6,14 +6,14 @@ import pyghost
 
 
 def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
-        split=False):
+        split=False, check=False):
     """ The function that runs the test. """
 
     # Create the two arms
     blue = pyghost.Arm('blue', cosmics=cosmics, crplane=crplane,
-                       hpplane=hpplane, split=split)
+                       hpplane=hpplane, split=split, check=check)
     red = pyghost.Arm('red', cosmics=cosmics, crplane=crplane,
-                      hpplane=hpplane, split=split)
+                      hpplane=hpplane, split=split, check=check)
 
     # Create a blank spectrum (used for the bias, dark, and sky)
     blank = np.array([[0.1, 1.0], [0.0, 0.0]])
@@ -64,7 +64,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
     ghost = pyghost.Ghost(
         rnoise=3.0, gain=1.0, namps=namps, overscan=oscan,
         bias_level=bias_level, additive_noise=noise, scaling=scaling,
-        cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split)
+        cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split, check=check)
 
     target_binmode = (1, 1)  # (1, 2)
 
