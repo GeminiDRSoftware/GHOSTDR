@@ -18,6 +18,7 @@ GHOST Programmer's Manual
    primitives
    tests
    config
+   utils
 
 
 Indices and tables
@@ -28,4 +29,3 @@ Indices and tables
 * :ref:`search`
 
 .. todolist::
-

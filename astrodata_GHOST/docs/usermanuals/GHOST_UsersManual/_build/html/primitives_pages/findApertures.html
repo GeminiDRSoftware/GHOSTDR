@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>6.3. findApertures &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    <title>7.3. findApertures &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -27,8 +27,8 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="6.4. fitWavelength" href="fitWavelength.html" />
-    <link rel="prev" title="6.2. extractProfile" href="extractProfile.html" /> 
+    <link rel="next" title="7.4. fitWavelength" href="fitWavelength.html" />
+    <link rel="prev" title="7.2. extractProfile" href="extractProfile.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -38,13 +38,13 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="fitWavelength.html" title="6.4. fitWavelength"
+          <a href="fitWavelength.html" title="7.4. fitWavelength"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="extractProfile.html" title="6.2. extractProfile"
+          <a href="extractProfile.html" title="7.2. extractProfile"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -54,9 +54,9 @@
           <div class="body" role="main">
             
   <div class="section" id="findapertures">
-<h1>6.3. findApertures<a class="headerlink" href="#findapertures" title="Permalink to this headline">¶</a></h1>
+<h1>7.3. findApertures<a class="headerlink" href="#findapertures" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="purpose">
-<h2>6.3.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<h2>7.3.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
 <p>This primitive will take an existing <code class="docutils literal"><span class="pre">polyfit</span></code> model for the aperture
 locations in a frame, and fit the model to the observed data.</p>
 <p>Note that this primitive is only run on prepared flat fields (i.e. images
@@ -64,11 +64,11 @@ that have been run through the <code class="docutils literal"><span class="pre">
 will abort if passed any other type of file.</p>
 </div>
 <div class="section" id="inputs-and-outputs">
-<h2>6.3.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<h2>7.3.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal"><span class="pre">findApertures</span></code> takes no particular configuration inputs.</p>
 </div>
 <div class="section" id="algorithm">
-<h2>6.3.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
+<h2>7.3.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
 <p>The RecipeSystem will automatically determine the appropriate initial polyfit
 model, based on the arm, resolution and date of the observation.</p>
 <div class="admonition note">
@@ -92,7 +92,7 @@ orders.</li>
 <p>A <code class="docutils literal"><span class="pre">polyfit</span></code> model FITS file is then written out to the calibration system.</p>
 </div>
 <div class="section" id="issues-and-limitations">
-<h2>6.3.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<h2>7.3.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
 <p>There is a placeholder retrieval function for getting back a fitted
 <code class="docutils literal"><span class="pre">polyfit</span></code> model, but there are no primitives yet for applying this model
 to data.</p>
@@ -113,21 +113,21 @@ results is slight overlap at those locations.</p>
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">6.3. findApertures</a><ul>
-<li><a class="reference internal" href="#purpose">6.3.1. Purpose</a></li>
-<li><a class="reference internal" href="#inputs-and-outputs">6.3.2. Inputs and Outputs</a></li>
-<li><a class="reference internal" href="#algorithm">6.3.3. Algorithm</a></li>
-<li><a class="reference internal" href="#issues-and-limitations">6.3.4. Issues and Limitations</a></li>
+<li><a class="reference internal" href="#">7.3. findApertures</a><ul>
+<li><a class="reference internal" href="#purpose">7.3.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">7.3.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#algorithm">7.3.3. Algorithm</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">7.3.4. Issues and Limitations</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="extractProfile.html"
-                        title="previous chapter">6.2. extractProfile</a></p>
+                        title="previous chapter">7.2. extractProfile</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="fitWavelength.html"
-                        title="next chapter">6.4. fitWavelength</a></p>
+                        title="next chapter">7.4. fitWavelength</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -156,13 +156,13 @@ results is slight overlap at those locations.</p>
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="fitWavelength.html" title="6.4. fitWavelength"
+          <a href="fitWavelength.html" title="7.4. fitWavelength"
              >next</a> |</li>
         <li class="right" >
-          <a href="extractProfile.html" title="6.2. extractProfile"
+          <a href="extractProfile.html" title="7.2. extractProfile"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" >6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

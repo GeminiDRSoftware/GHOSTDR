@@ -5,10 +5,11 @@
 
 prepare  # Gemini superprimitive
 addDQ
-addVAR
+addVAR(read_noise=True)
 overscanCorrect  # Gemini subrecipe
 tileAmplifiers
 biasCorrect
+addVAR(poisson_noise=True)
 darkCorrect
 #rejectCosmicRays
 storeProcessedArc

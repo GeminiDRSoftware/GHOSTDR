@@ -18,7 +18,7 @@ GHOST Programmer's Manual
    primitives
    tests
    config
+   utils
 
 
 .. todolist::
-

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3. Recipes for GHOST &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    <title>4. Recipes for GHOST &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -27,8 +27,8 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="4. Tips and Tricks for Processing GHOST" href="tipstricks.html" />
-    <link rel="prev" title="2. Polynomial Model Method" href="model.html" /> 
+    <link rel="next" title="5. Tips and Tricks for Processing GHOST" href="tipstricks.html" />
+    <link rel="prev" title="3. Extraction and Weights" href="extraction.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -38,10 +38,10 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="tipstricks.html" title="4. Tips and Tricks for Processing GHOST"
+          <a href="tipstricks.html" title="5. Tips and Tricks for Processing GHOST"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="model.html" title="2. Polynomial Model Method"
+          <a href="extraction.html" title="3. Extraction and Weights"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li> 
       </ul>
@@ -53,9 +53,9 @@
           <div class="body" role="main">
             
   <div class="section" id="recipes-for-ghost">
-<span id="ghost-recipes-and-flows"></span><h1>3. Recipes for GHOST<a class="headerlink" href="#recipes-for-ghost" title="Permalink to this headline">¶</a></h1>
+<span id="ghost-recipes-and-flows"></span><h1>4. Recipes for GHOST<a class="headerlink" href="#recipes-for-ghost" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="typical-processing-flows">
-<h2>3.1. Typical Processing Flows<a class="headerlink" href="#typical-processing-flows" title="Permalink to this headline">¶</a></h2>
+<h2>4.1. Typical Processing Flows<a class="headerlink" href="#typical-processing-flows" title="Permalink to this headline">¶</a></h2>
 <p>Here we review some of the typical processing workflows for GHOST data
 reduction. For this discussion, it is assumed you&#8217;ve already installed the
 latest Ureka package and made a local clone of the <code class="docutils literal"><span class="pre">ghostdr</span></code> Hg repository.
@@ -76,7 +76,7 @@ and</li>
 </ol>
 </div></blockquote>
 <div class="section" id="generating-a-bias-calibration-frame">
-<h3>3.1.1. Generating a Bias Calibration frame<a class="headerlink" href="#generating-a-bias-calibration-frame" title="Permalink to this headline">¶</a></h3>
+<h3>4.1.1. Generating a Bias Calibration frame<a class="headerlink" href="#generating-a-bias-calibration-frame" title="Permalink to this headline">¶</a></h3>
 <p>To generate a bias calibration frame you need 2 or more GHOST bias frames from
 the same arm.  Until the instrument is live, you can use the GHOST simulator to
 generate this data.  Its <code class="docutils literal"><span class="pre">testsim.py</span></code> script will create several types of
@@ -87,7 +87,7 @@ non-bias frame types to speed things up.</p>
 using the <code class="docutils literal"><span class="pre">typewalk</span></code> utility.  The following command assumes you have
 generated several red arm biases (if you don&#8217;t specify either <code class="docutils literal"><span class="pre">GHOST_RED</span></code> or
 <code class="docutils literal"><span class="pre">GHOST_BLUE</span></code>, you may get mixed red and blue frames which don&#8217;t stack well!):</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_BIAS</span> <span class="n">GHOST_RED</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span> <span class="n">bias</span><span class="o">.</span><span class="n">list</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_BIAS</span> <span class="n">GHOST_RED</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">--</span><span class="n">filemask</span> <span class="s1">&#39;.*1x1.*\.(fits|FITS)&#39;</span> <span class="o">-</span><span class="n">o</span> <span class="n">bias</span><span class="o">.</span><span class="n">list</span>
 </pre></div>
 </div>
 <p>Now you are ready to generate a bias calibration frame.  The following command
@@ -108,7 +108,7 @@ the following flowchart (thanks Kathleen Labrie):</p>
 <a class="reference internal image-reference" href="_images/biasCalibration.png"><img alt="_images/biasCalibration.png" src="_images/biasCalibration.png" style="width: 586.8px; height: 720.45px;" /></a>
 </div>
 <div class="section" id="generating-a-dark-calibration-frame">
-<h3>3.1.2. Generating a Dark Calibration Frame<a class="headerlink" href="#generating-a-dark-calibration-frame" title="Permalink to this headline">¶</a></h3>
+<h3>4.1.2. Generating a Dark Calibration Frame<a class="headerlink" href="#generating-a-dark-calibration-frame" title="Permalink to this headline">¶</a></h3>
 <p>The procedure for generating a dark calibration frame is broadly similar to
 making a bias calibration frame. However, the type to be passed to <code class="docutils literal"><span class="pre">typewalk</span></code>
 should be <code class="docutils literal"><span class="pre">GHOST_DARK</span></code> instead of <code class="docutils literal"><span class="pre">GHOST_BIAS</span></code> (in addition to the
@@ -125,7 +125,7 @@ attempting to run:</p>
 stored on disk (it uses a much more complicated lookup scheme).  The workaround
 for the time being is to force it to look on disk in a particular area using the
 <code class="docutils literal"><span class="pre">--override_cal</span></code> option:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">dark</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_red_bias</span><span class="o">.</span><span class="n">fits</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">dark</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_1x1_red_bias</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
 <p>(Depending on your specific bias.list contents, your bias calibration under
@@ -137,7 +137,13 @@ the following flowchart (thanks Kathleen Labrie):</p>
 <a class="reference internal image-reference" href="_images/darkCalibration.png"><img alt="_images/darkCalibration.png" src="_images/darkCalibration.png" style="width: 585.0px; height: 828.45px;" /></a>
 </div>
 <div class="section" id="generating-a-flat-calibration-frame">
-<h3>3.1.3. Generating a Flat Calibration Frame<a class="headerlink" href="#generating-a-flat-calibration-frame" title="Permalink to this headline">¶</a></h3>
+<h3>4.1.3. Generating a Flat Calibration Frame<a class="headerlink" href="#generating-a-flat-calibration-frame" title="Permalink to this headline">¶</a></h3>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">You <em>must</em> have performed a full slit viewer reduction before
+attempting to make a flatc calibrator. See
+<a class="reference internal" href="#reducing-slit-viewing-images"><span class="std std-ref">Reducing Slit Viewing Images</span></a> for details.</p>
+</div>
 <p>The procedure for generating a flat field calibration frame is similar to
 creating a dark or bias, although you have to <code class="docutils literal"><span class="pre">typewalk</span></code> over GHOST_FLAT files
 instead, e.g.:</p>
@@ -148,7 +154,7 @@ instead, e.g.:</p>
 resolution mode/type of the object file we ultimately intend to reduce.)
 Then, when you call <code class="docutils literal"><span class="pre">reduce</span></code> on the <code class="docutils literal"><span class="pre">flat.list</span></code>, you must provide both
 the bias and dark file path explicitly:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">flat</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_red_dark</span><span class="o">.</span><span class="n">fits</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">flat</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_1x1_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_1x1_red_dark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slitflat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_SLIT_stack_slitFlat</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
 <p>(or whatever the filename of the processed dark turns out to be).</p>
@@ -184,7 +190,7 @@ almost all cosmic rays.</p>
 </div>
 </div>
 <div class="section" id="generating-an-arc-calibration-frame">
-<h3>3.1.4. Generating an Arc Calibration Frame<a class="headerlink" href="#generating-an-arc-calibration-frame" title="Permalink to this headline">¶</a></h3>
+<h3>4.1.4. Generating an Arc Calibration Frame<a class="headerlink" href="#generating-an-arc-calibration-frame" title="Permalink to this headline">¶</a></h3>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">You <em>must</em> have performed a full slit viewer reduction before
@@ -201,7 +207,7 @@ The correct type to <code class="docutils literal"><span class="pre">typewalk</s
 <p>Additional calibrators required are reduced slit viewer flats and slit viewer
 images, as well as the aperture fit made during the generation of the
 flat calibration image:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">arc</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_red_dark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slit</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">obj95_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_SLIT_stack_slit</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slitflat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_SLIT_stack_slitFlat</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_xmod</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">GHOST_1_1_red_high_xmodPolyfit</span><span class="o">.</span><span class="n">fits</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">arc</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_1x1_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_1x1_red_dark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slit</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">obj95_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_SLIT_stack_slit</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slitflat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_SLIT_stack_slitFlat</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_xmod</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">GHOST_1_1_red_high_xmodPolyfit</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
 <p>Arc reduction not only generates a reduced arc image and places it in the
@@ -212,7 +218,7 @@ wavelength fit to the arc image. This fit is also stored in the calibrations
 directory/system.</p>
 </div>
 <div class="section" id="reducing-an-object-frame-spectra">
-<h3>3.1.5. Reducing an Object frame (Spectra)<a class="headerlink" href="#reducing-an-object-frame-spectra" title="Permalink to this headline">¶</a></h3>
+<h3>4.1.5. Reducing an Object frame (Spectra)<a class="headerlink" href="#reducing-an-object-frame-spectra" title="Permalink to this headline">¶</a></h3>
 <p>The GHOST simulator produces object spectra frames like
 <code class="docutils literal"><span class="pre">obj95_1.0_std_red.fits</span></code> whose names follow this convention:
 <code class="docutils literal"><span class="pre">obj{exptime}_{seeing}_{resolution}_{arm}.fits</span></code>. If you run <code class="docutils literal"><span class="pre">typewalk</span></code> on
@@ -231,10 +237,10 @@ successfully):</p>
 </div>
 <p>The above command will fail due to the faulty calibrations lookup. Again, we
 need to use the <code class="docutils literal"><span class="pre">--override_cal</span></code> option:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span><span class="o">/</span><span class="n">obj95_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_red</span><span class="o">.</span><span class="n">fits</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_red_dark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_flat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_red_flat</span><span class="o">.</span><span class="n">fits</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">reduce</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span><span class="o">/</span><span class="n">obj95_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_1x1_red</span><span class="o">.</span><span class="n">fits</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_1x1_red_bias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_1x1_red_dark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slitflat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_SLIT_stack_slitFlat</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slit</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">obj95_1</span><span class="o">.</span><span class="mi">0</span><span class="n">_high_SLIT_stack_slit</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_xmod</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">GHOST_1_1_red_high_xmodPolyfit</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_flat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_1x1_red_flat</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
-<p>This produces a <code class="docutils literal"><span class="pre">obj95_1.0_high_red_flatCorrected.fits</span></code> (or similar) file, a
+<p>This produces a <code class="docutils literal"><span class="pre">obj95_1.0_high_1x1_red_flatCorrected.fits</span></code> (or similar) file, a
 bias, dark and flat corrected GHOST spectrum frame.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
@@ -247,7 +253,7 @@ cosmic rays, and this has yet to be implemented.</p>
 </div>
 </div>
 <div class="section" id="reducing-slit-viewing-images">
-<span id="id1"></span><h3>3.1.6. Reducing Slit Viewing Images<a class="headerlink" href="#reducing-slit-viewing-images" title="Permalink to this headline">¶</a></h3>
+<span id="id1"></span><h3>4.1.6. Reducing Slit Viewing Images<a class="headerlink" href="#reducing-slit-viewing-images" title="Permalink to this headline">¶</a></h3>
 <p>Reducing slit viewer images is very similar to reducing standard images,
 including steps to generate bias, dark and flat calibration frames, plus a
 final step to process the slit viewer frames (which removes cosmic rays and
@@ -256,13 +262,13 @@ calibrator, may be skipped in favour of simply pointing to a slit bias frame
 (of type <code class="docutils literal"><span class="pre">GHOST_SLITV_BIAS</span></code>).  Or, follow these steps to produce one by
 stacking multiple frames together:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_SLITV_BIAS</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span> <span class="n">slit_bias</span><span class="o">.</span><span class="n">list</span>
-<span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">slit_bias</span><span class="o">.</span><span class="n">list</span>
+<span class="n">reduce</span> <span class="nd">@slit_bias</span><span class="o">.</span><span class="n">list</span>
 </pre></div>
 </div>
 <p>The next step is to generate the dark calibrator.  Follow these steps to produce
 one:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_SLITV_DARK</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span> <span class="n">slit_dark</span><span class="o">.</span><span class="n">list</span>
-<span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">slit_dark</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_SLIT_stack_slitBias</span><span class="o">.</span><span class="n">fits</span>
+<span class="n">reduce</span> <span class="nd">@slit_dark</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_SLIT_stack_slitBias</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
 <p>Now generate the flat calibrator.  For this you will now need to specify an
@@ -270,15 +276,21 @@ additional type to <code class="docutils literal"><span class="pre">typewalk</sp
 you wish to process (as mixing resolutions would be nonsensical).  Follow these
 steps as an example:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_SLITV_FLAT</span> <span class="n">GHOST_HIGH</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span> <span class="n">slit_flat_high</span><span class="o">.</span><span class="n">list</span>
-<span class="n">reduce</span> <span class="o">@&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">slit_flat_high</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_SLIT_stack_slitBias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_SLIT_stack_slitDark</span><span class="o">.</span><span class="n">fits</span>
+<span class="n">reduce</span> <span class="nd">@slit_flat_high</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_SLIT_stack_slitBias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_SLIT_stack_slitDark</span><span class="o">.</span><span class="n">fits</span>
 </pre></div>
 </div>
-<p>The final step is to use all of the above calibrators in a call to <code class="docutils literal"><span class="pre">reduce</span></code> a
-set of slit viewer images taken concurrently with a science frame, usually found
-in files named like <code class="docutils literal"><span class="pre">obj95_1.0_high_SLIT.fits</span></code> (following this convention:
-<code class="docutils literal"><span class="pre">obj{exptime}_{seeing}_{resolution}_SLIT.fits</span></code>).  If you run <code class="docutils literal"><span class="pre">typewalk</span></code> on
-the folder containing these, you&#8217;ll see that they are identified as
-<code class="docutils literal"><span class="pre">GHOST_SLITV_IMAGE</span></code>.  This informs the reduction framework to run the
+<p>Though not (yet) used in our final object reduction, you can also produce a
+master arc frame:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">typewalk</span> <span class="o">--</span><span class="n">types</span> <span class="n">GHOST_SLITV_ARC</span> <span class="n">GHOST_HIGH</span> <span class="o">--</span><span class="nb">dir</span> <span class="o">&lt;</span><span class="n">path_to</span><span class="o">&gt;/</span><span class="n">data_folder</span> <span class="o">-</span><span class="n">o</span> <span class="n">slit_arc_high</span><span class="o">.</span><span class="n">list</span>
+<span class="n">reduce</span> <span class="nd">@slit_arc_high</span><span class="o">.</span><span class="n">list</span> <span class="o">--</span><span class="n">override_cal</span> <span class="n">processed_bias</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">bias_1_SLIT_stack_slitBias</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_dark</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">dark95_1_SLIT_stack_slitDark</span><span class="o">.</span><span class="n">fits</span> <span class="n">processed_slitflat</span><span class="p">:</span><span class="n">calibrations</span><span class="o">/</span><span class="n">storedcals</span><span class="o">/</span><span class="n">flat95_high_1_SLIT_stack_slitFlat</span><span class="o">.</span><span class="n">fits</span>
+</pre></div>
+</div>
+<p>The final step is to use all of the above calibrators (except the arc) in a call
+to <code class="docutils literal"><span class="pre">reduce</span></code> a set of slit viewer images taken concurrently with a science
+frame, usually found in files named like <code class="docutils literal"><span class="pre">obj95_1.0_high_SLIT.fits</span></code> (following
+this convention: <code class="docutils literal"><span class="pre">obj{exptime}_{seeing}_{resolution}_SLIT.fits</span></code>).  If you run
+<code class="docutils literal"><span class="pre">typewalk</span></code> on the folder containing these, you&#8217;ll see that they are identified
+as <code class="docutils literal"><span class="pre">GHOST_SLITV_IMAGE</span></code>.  This informs the reduction framework to run the
 <code class="docutils literal"><span class="pre">makeProcessedSlitG</span></code> GHOST recipe on them.  Run the reduction as follows
 (note that the flat is provided to <code class="docutils literal"><span class="pre">--override_cal</span></code> as <code class="docutils literal"><span class="pre">process_slitflat</span></code>
 and not simply <code class="docutils literal"><span class="pre">processed_flat</span></code>):</p>
@@ -288,7 +300,7 @@ and not simply <code class="docutils literal"><span class="pre">processed_flat</
 </div>
 </div>
 <div class="section" id="other-processing-flows">
-<h2>3.2. Other Processing Flows<a class="headerlink" href="#other-processing-flows" title="Permalink to this headline">¶</a></h2>
+<h2>4.2. Other Processing Flows<a class="headerlink" href="#other-processing-flows" title="Permalink to this headline">¶</a></h2>
 <p>include scientific flow charts, include associated recipes</p>
 </div>
 </div>
@@ -301,27 +313,27 @@ and not simply <code class="docutils literal"><span class="pre">processed_flat</
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">3. Recipes for GHOST</a><ul>
-<li><a class="reference internal" href="#typical-processing-flows">3.1. Typical Processing Flows</a><ul>
-<li><a class="reference internal" href="#generating-a-bias-calibration-frame">3.1.1. Generating a Bias Calibration frame</a></li>
-<li><a class="reference internal" href="#generating-a-dark-calibration-frame">3.1.2. Generating a Dark Calibration Frame</a></li>
-<li><a class="reference internal" href="#generating-a-flat-calibration-frame">3.1.3. Generating a Flat Calibration Frame</a></li>
-<li><a class="reference internal" href="#generating-an-arc-calibration-frame">3.1.4. Generating an Arc Calibration Frame</a></li>
-<li><a class="reference internal" href="#reducing-an-object-frame-spectra">3.1.5. Reducing an Object frame (Spectra)</a></li>
-<li><a class="reference internal" href="#reducing-slit-viewing-images">3.1.6. Reducing Slit Viewing Images</a></li>
+<li><a class="reference internal" href="#">4. Recipes for GHOST</a><ul>
+<li><a class="reference internal" href="#typical-processing-flows">4.1. Typical Processing Flows</a><ul>
+<li><a class="reference internal" href="#generating-a-bias-calibration-frame">4.1.1. Generating a Bias Calibration frame</a></li>
+<li><a class="reference internal" href="#generating-a-dark-calibration-frame">4.1.2. Generating a Dark Calibration Frame</a></li>
+<li><a class="reference internal" href="#generating-a-flat-calibration-frame">4.1.3. Generating a Flat Calibration Frame</a></li>
+<li><a class="reference internal" href="#generating-an-arc-calibration-frame">4.1.4. Generating an Arc Calibration Frame</a></li>
+<li><a class="reference internal" href="#reducing-an-object-frame-spectra">4.1.5. Reducing an Object frame (Spectra)</a></li>
+<li><a class="reference internal" href="#reducing-slit-viewing-images">4.1.6. Reducing Slit Viewing Images</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#other-processing-flows">3.2. Other Processing Flows</a></li>
+<li><a class="reference internal" href="#other-processing-flows">4.2. Other Processing Flows</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="model.html"
-                        title="previous chapter">2. Polynomial Model Method</a></p>
+  <p class="topless"><a href="extraction.html"
+                        title="previous chapter">3. Extraction and Weights</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="tipstricks.html"
-                        title="next chapter">4. Tips and Tricks for Processing GHOST</a></p>
+                        title="next chapter">5. Tips and Tricks for Processing GHOST</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -350,10 +362,10 @@ and not simply <code class="docutils literal"><span class="pre">processed_flat</
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="tipstricks.html" title="4. Tips and Tricks for Processing GHOST"
+          <a href="tipstricks.html" title="5. Tips and Tricks for Processing GHOST"
              >next</a> |</li>
         <li class="right" >
-          <a href="model.html" title="2. Polynomial Model Method"
+          <a href="extraction.html" title="3. Extraction and Weights"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li> 
       </ul>

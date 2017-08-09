@@ -16,4 +16,5 @@ Contents:
    Github Repository <https://github.com/GeminiDRSoftware/GHOSTDR>
    Programmer's Manual <http://www.mso.anu.edu.au/ghostdr/progman/index.html>
    User's Manual <http://www.mso.anu.edu.au/ghostdr/userman/index.html>
+   Sample simulated data <http://www.mso.anu.edu.au/ghostdr-simdata/>
 

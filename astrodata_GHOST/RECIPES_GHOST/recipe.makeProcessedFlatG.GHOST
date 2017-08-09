@@ -12,6 +12,7 @@ biasCorrect
 ADUToElectrons
 addVAR(poisson_noise=True)
 darkCorrect
+#rejectCosmicRays  # test purposes only
 addToList(purpose="forStack")
 getList(purpose="forStack")
 stackFrames(operation="median")

@@ -1,6 +1,6 @@
 prepare  # Gemini superprimitive
 addDQ
-addVAR
+addVAR(read_noise=True)
 biasCorrect  # subrecipe
 ADUToElectrons
 addVAR(poisson_noise=True)

@@ -42,7 +42,7 @@ using the ``typewalk`` utility.  The following command assumes you have
 generated several red arm biases (if you don't specify either ``GHOST_RED`` or
 ``GHOST_BLUE``, you may get mixed red and blue frames which don't stack well!)::
 
-    typewalk --types GHOST_BIAS GHOST_RED --dir <path_to>/data_folder -o bias.list
+    typewalk --types GHOST_BIAS GHOST_RED --dir <path_to>/data_folder --filemask '.*1x1.*\.(fits|FITS)' -o bias.list
 
 Now you are ready to generate a bias calibration frame.  The following command
 (which runs the ``makeProcessedBiasG`` Gemini recipe behind the scenes) will
@@ -91,7 +91,7 @@ stored on disk (it uses a much more complicated lookup scheme).  The workaround
 for the time being is to force it to look on disk in a particular area using the
 ``--override_cal`` option::
 
-    reduce @<path_to>/dark.list --override_cal processed_bias:calibrations/storedcals/bias_1_red_bias.fits
+    reduce @<path_to>/dark.list --override_cal processed_bias:calibrations/storedcals/bias_1_1x1_red_bias.fits
 
 (Depending on your specific bias.list contents, your bias calibration under
 your calibrations/storedcals directory may have a different name, so double-
@@ -115,6 +115,10 @@ the following flowchart (thanks Kathleen Labrie):
 Generating a Flat Calibration Frame
 -----------------------------------
 
+.. warning:: You *must* have performed a full slit viewer reduction before
+             attempting to make a flatc calibrator. See
+             :ref:`reducing-slit-viewing-images` for details.
+
 The procedure for generating a flat field calibration frame is similar to
 creating a dark or bias, although you have to ``typewalk`` over GHOST_FLAT files
 instead, e.g.::
@@ -126,7 +130,7 @@ resolution mode/type of the object file we ultimately intend to reduce.)
 Then, when you call ``reduce`` on the ``flat.list``, you must provide both
 the bias and dark file path explicitly::
 
-    reduce @<path_to>/flat.list --override_cal processed_bias:calibrations/storedcals/bias_1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_red_dark.fits
+    reduce @<path_to>/flat.list --override_cal processed_bias:calibrations/storedcals/bias_1_1x1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_1x1_red_dark.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits
 
 (or whatever the filename of the processed dark turns out to be).
 
@@ -187,7 +191,7 @@ Additional calibrators required are reduced slit viewer flats and slit viewer
 images, as well as the aperture fit made during the generation of the
 flat calibration image::
 
-    reduce @<path_to>/arc.list --override_cal processed_bias:calibrations/storedcals/bias_1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_red_dark.fits processed_slit:calibrations/storedcals/obj95_1.0_high_SLIT_stack_slit.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits processed_xmod:calibrations/storedcals/GHOST_1_1_red_high_xmodPolyfit.fits
+    reduce @<path_to>/arc.list --override_cal processed_bias:calibrations/storedcals/bias_1_1x1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_1x1_red_dark.fits processed_slit:calibrations/storedcals/obj95_1.0_high_SLIT_stack_slit.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits processed_xmod:calibrations/storedcals/GHOST_1_1_red_high_xmodPolyfit.fits
 
 Arc reduction not only generates a reduced arc image and places it in the
 calibrations directory, but also uses the ``polyfit`` module to extract the
@@ -219,9 +223,9 @@ successfully)::
 The above command will fail due to the faulty calibrations lookup. Again, we
 need to use the ``--override_cal`` option::
 
-    reduce <path_to>/data_folder/obj95_1.0_high_red.fits --override_cal processed_bias:calibrations/storedcals/bias_1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_red_dark.fits processed_flat:calibrations/storedcals/flat95_high_1_red_flat.fits
+    reduce <path_to>/data_folder/obj95_1.0_high_1x1_red.fits --override_cal processed_bias:calibrations/storedcals/bias_1_1x1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_1x1_red_dark.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits processed_slit:calibrations/storedcals/obj95_1.0_high_SLIT_stack_slit.fits processed_xmod:calibrations/storedcals/GHOST_1_1_red_high_xmodPolyfit.fits processed_flat:calibrations/storedcals/flat95_high_1_1x1_red_flat.fits
 
-This produces a ``obj95_1.0_high_red_flatCorrected.fits`` (or similar) file, a
+This produces a ``obj95_1.0_high_1x1_red_flatCorrected.fits`` (or similar) file, a
 bias, dark and flat corrected GHOST spectrum frame.
 
 .. warning:: The primitive ``rejectCosmicRays`` would normally be called as
@@ -245,13 +249,13 @@ calibrator, may be skipped in favour of simply pointing to a slit bias frame
 stacking multiple frames together::
 
     typewalk --types GHOST_SLITV_BIAS --dir <path_to>/data_folder -o slit_bias.list
-    reduce @<path_to>/slit_bias.list
+    reduce @slit_bias.list
 
 The next step is to generate the dark calibrator.  Follow these steps to produce
 one::
 
     typewalk --types GHOST_SLITV_DARK --dir <path_to>/data_folder -o slit_dark.list
-    reduce @<path_to>/slit_dark.list --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits
+    reduce @slit_dark.list --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits
 
 Now generate the flat calibrator.  For this you will now need to specify an
 additional type to ``typewalk`` that identifies the resolution of the data that
@@ -259,14 +263,20 @@ you wish to process (as mixing resolutions would be nonsensical).  Follow these
 steps as an example::
 
     typewalk --types GHOST_SLITV_FLAT GHOST_HIGH --dir <path_to>/data_folder -o slit_flat_high.list
-    reduce @<path_to>/slit_flat_high.list --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits processed_dark:calibrations/storedcals/dark95_1_SLIT_stack_slitDark.fits
+    reduce @slit_flat_high.list --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits processed_dark:calibrations/storedcals/dark95_1_SLIT_stack_slitDark.fits
 
-The final step is to use all of the above calibrators in a call to ``reduce`` a
-set of slit viewer images taken concurrently with a science frame, usually found
-in files named like ``obj95_1.0_high_SLIT.fits`` (following this convention:
-``obj{exptime}_{seeing}_{resolution}_SLIT.fits``).  If you run ``typewalk`` on
-the folder containing these, you'll see that they are identified as
-``GHOST_SLITV_IMAGE``.  This informs the reduction framework to run the
+Though not (yet) used in our final object reduction, you can also produce a
+master arc frame::
+
+    typewalk --types GHOST_SLITV_ARC GHOST_HIGH --dir <path_to>/data_folder -o slit_arc_high.list
+    reduce @slit_arc_high.list --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits processed_dark:calibrations/storedcals/dark95_1_SLIT_stack_slitDark.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits
+
+The final step is to use all of the above calibrators (except the arc) in a call
+to ``reduce`` a set of slit viewer images taken concurrently with a science
+frame, usually found in files named like ``obj95_1.0_high_SLIT.fits`` (following
+this convention: ``obj{exptime}_{seeing}_{resolution}_SLIT.fits``).  If you run
+``typewalk`` on the folder containing these, you'll see that they are identified
+as ``GHOST_SLITV_IMAGE``.  This informs the reduction framework to run the
 ``makeProcessedSlitG`` GHOST recipe on them.  Run the reduction as follows
 (note that the flat is provided to ``--override_cal`` as ``process_slitflat``
 and not simply ``processed_flat``)::

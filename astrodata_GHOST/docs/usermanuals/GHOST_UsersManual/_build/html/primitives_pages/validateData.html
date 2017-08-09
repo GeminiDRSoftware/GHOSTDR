@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>6.13. validateData &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    <title>7.13. validateData &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -27,7 +27,7 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="6.12. tileAmplifiers" href="tileAmplifiers.html" /> 
+    <link rel="prev" title="7.12. tileAmplifiers" href="tileAmplifiers.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,10 +37,10 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="tileAmplifiers.html" title="6.12. tileAmplifiers"
+          <a href="tileAmplifiers.html" title="7.12. tileAmplifiers"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -50,9 +50,9 @@
           <div class="body" role="main">
             
   <div class="section" id="validatedata">
-<h1>6.13. validateData<a class="headerlink" href="#validatedata" title="Permalink to this headline">¶</a></h1>
+<h1>7.13. validateData<a class="headerlink" href="#validatedata" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="purpose">
-<h2>6.13.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<h2>7.13.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
 <p>This primitive is responsible for ensuring the data passed is GHOST data and has
 correctly formatted keywords.  (We use the &#8220;prepare&#8221; superprimitive provided by
 Gemini which invokes validateData before standardizeHeaders and
@@ -60,15 +60,15 @@ standardizeStructure, so validateData must not assert things set by either of
 those.)</p>
 </div>
 <div class="section" id="inputs-and-outputs">
-<h2>6.13.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<h2>7.13.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal"><span class="pre">validateData</span></code> takes no particular configuration inputs.</p>
 </div>
 <div class="section" id="algorithm">
-<h2>6.13.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
+<h2>7.13.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
 <p>None.</p>
 </div>
 <div class="section" id="issues-and-limitations">
-<h2>6.13.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<h2>7.13.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
 <p>At the moment, our version of this primitive does nothing other than write a
 timestamp into the headers.  In future we may want to check that the right
 number of extensions is present (but only for normal science detector frames as
@@ -86,18 +86,18 @@ have used validateData for.</p>
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">6.13. validateData</a><ul>
-<li><a class="reference internal" href="#purpose">6.13.1. Purpose</a></li>
-<li><a class="reference internal" href="#inputs-and-outputs">6.13.2. Inputs and Outputs</a></li>
-<li><a class="reference internal" href="#algorithm">6.13.3. Algorithm</a></li>
-<li><a class="reference internal" href="#issues-and-limitations">6.13.4. Issues and Limitations</a></li>
+<li><a class="reference internal" href="#">7.13. validateData</a><ul>
+<li><a class="reference internal" href="#purpose">7.13.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">7.13.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#algorithm">7.13.3. Algorithm</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">7.13.4. Issues and Limitations</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="tileAmplifiers.html"
-                        title="previous chapter">6.12. tileAmplifiers</a></p>
+                        title="previous chapter">7.12. tileAmplifiers</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -126,10 +126,10 @@ have used validateData for.</p>
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="tileAmplifiers.html" title="6.12. tileAmplifiers"
+          <a href="tileAmplifiers.html" title="7.12. tileAmplifiers"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" >6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

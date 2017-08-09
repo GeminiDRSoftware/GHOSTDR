@@ -5,10 +5,11 @@
 
 prepare  # Gemini superprimitive
 addDQ
-addVAR
+addVAR(read_noise=True)
 overscanCorrect  # Gemini subrecipe
 tileAmplifiers
 addToList(purpose="forStack")
 getList(purpose="forStack")
-stackFrames
+stackFrames(operation="median",mask=True)
+clipSigmaBPM(bpm_value=1,sigma=7)
 storeProcessedBias

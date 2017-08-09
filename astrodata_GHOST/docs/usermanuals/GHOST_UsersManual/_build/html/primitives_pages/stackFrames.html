@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>6.8. stackFrames &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    <title>7.8. stackFrames &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -27,8 +27,8 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="6.9. standardizeHeaders" href="standardizeHeaders.html" />
-    <link rel="prev" title="6.7. rejectCosmicRays" href="rejectCosmicRays.html" /> 
+    <link rel="next" title="7.9. standardizeHeaders" href="standardizeHeaders.html" />
+    <link rel="prev" title="7.7. rejectCosmicRays" href="rejectCosmicRays.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -38,13 +38,13 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="standardizeHeaders.html" title="6.9. standardizeHeaders"
+          <a href="standardizeHeaders.html" title="7.9. standardizeHeaders"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="rejectCosmicRays.html" title="6.7. rejectCosmicRays"
+          <a href="rejectCosmicRays.html" title="7.7. rejectCosmicRays"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -54,16 +54,16 @@
           <div class="body" role="main">
             
   <div class="section" id="stackframes">
-<h1>6.8. stackFrames<a class="headerlink" href="#stackframes" title="Permalink to this headline">¶</a></h1>
+<h1>7.8. stackFrames<a class="headerlink" href="#stackframes" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="purpose">
-<h2>6.8.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<h2>7.8.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
 <p>This primitive is simply a wrapper around the standard
 <code class="docutils literal"><span class="pre">StackPrimitives.stackFrames</span></code> primitive which exposes extra parameters to the
 underlying <code class="docutils literal"><span class="pre">gemcombine.cl</span></code> IRAF script, and allows increasing the IRAF
 verbosity.</p>
 </div>
 <div class="section" id="inputs-and-outputs">
-<h2>6.8.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<h2>7.8.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal"><span class="pre">hsigma</span></code>: float or None (default: None) - expose the hsigma parameter of the
 underlying IRAF gemcombine script, allowing it to be set within a recipe</p>
 <p><code class="docutils literal"><span class="pre">hthresh</span></code>: float or None (default: None) - expose the hthreshold parameter of
@@ -79,7 +79,7 @@ the underlying IRAF gemcombine script, allowing it to be set within a recipe</p>
 <p><code class="docutils literal"><span class="pre">verbose</span></code>: &lt;any&gt; or None (default: None) - set the level of iraf verbosity</p>
 </div>
 <div class="section" id="issues-and-limitations">
-<h2>6.8.3. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<h2>7.8.3. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
 <p>The default value for <code class="docutils literal"><span class="pre">reject_method</span></code> (a parameter exposed by the underlying
 <code class="docutils literal"><span class="pre">StackPrimitives.stackFrames</span></code> primitive) is &#8216;avsigclip&#8217; (inherited from
 Gemini) which is probably not what we want in most cases.  If necessary (or more
@@ -96,20 +96,20 @@ convenient), we could override the default in this wrapper, or in the
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">6.8. stackFrames</a><ul>
-<li><a class="reference internal" href="#purpose">6.8.1. Purpose</a></li>
-<li><a class="reference internal" href="#inputs-and-outputs">6.8.2. Inputs and Outputs</a></li>
-<li><a class="reference internal" href="#issues-and-limitations">6.8.3. Issues and Limitations</a></li>
+<li><a class="reference internal" href="#">7.8. stackFrames</a><ul>
+<li><a class="reference internal" href="#purpose">7.8.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">7.8.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">7.8.3. Issues and Limitations</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="rejectCosmicRays.html"
-                        title="previous chapter">6.7. rejectCosmicRays</a></p>
+                        title="previous chapter">7.7. rejectCosmicRays</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="standardizeHeaders.html"
-                        title="next chapter">6.9. standardizeHeaders</a></p>
+                        title="next chapter">7.9. standardizeHeaders</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -138,13 +138,13 @@ convenient), we could override the default in this wrapper, or in the
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="standardizeHeaders.html" title="6.9. standardizeHeaders"
+          <a href="standardizeHeaders.html" title="7.9. standardizeHeaders"
              >next</a> |</li>
         <li class="right" >
-          <a href="rejectCosmicRays.html" title="6.7. rejectCosmicRays"
+          <a href="rejectCosmicRays.html" title="7.7. rejectCosmicRays"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" >6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
