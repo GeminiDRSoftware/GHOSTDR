@@ -4,10 +4,13 @@ timestamp_keys = {
     # Dictionary value is the timestamp keyword that should be used when
     # writing a timestamp keyword to the header once the user level function
     # has completed
+    "applyFlatBPM": "APFLTBPM",
+    "clipSigmaBPM": "CLIPSIGB",
     "correctSlitCosmics": "FXSLITCR",
     "extractProfile": "EXTRPROF",
     "findApertures": "FINDAPER",
     "fitWavelength": "FITWAVLN",
+    "flatCorrect": "FLATCORR",
     "processSlits": "PROCSLIT",
     "tileAmplifiers": "TILEAMPS",
     }

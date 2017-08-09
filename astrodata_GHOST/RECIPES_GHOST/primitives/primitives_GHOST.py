@@ -16,11 +16,10 @@ import numpy as np
 import scipy
 import functools
 import datetime
+from copy import deepcopy
 
-from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import \
-    GMOSPrimitives
-from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import \
-    StackPrimitives
+from primitives_GMOS import GMOSPrimitives
+from primitives_stack import StackPrimitives
 from primitives_GHOST_calibration import GHOST_CalibrationPrimitives
 
 from astrodata_GHOST.polyfit import GhostArm
@@ -28,6 +27,8 @@ from astrodata_GHOST.polyfit import Extractor
 from astrodata_GHOST.polyfit import SlitView
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import PolyfitDict
 from astrodata_GHOST.ADCONFIG_GHOST.lookups import line_list
+
+from astrodata.utils import arith
 
 class GHOSTPrimitives(GMOSPrimitives,
                       GHOST_CalibrationPrimitives):
@@ -67,6 +68,235 @@ class GHOSTPrimitives(GMOSPrimitives,
         GMOSPrimitives.init(self, rc)
         self.timestamp_keys.update(ghost_stamps.timestamp_keys)
         return rc
+
+    # -------------------------------------------------------------------------
+    def applyFlatBPM(self, rc):
+        """
+        Find the flat relevant to the file(s) being processed, and merge the
+        flat's BPM into the target file's.
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary holding the data stream processing
+            information
+        rc['flat'] : str
+            The file path to the flat field to be used. Defaults to None, at
+            which point the system will check flatstream (below).
+        rc['flatStream'] : str, optional
+            The name of the stream that the system will find the necessary
+            flat field frame in. Defaults to None. If both rc['flat'] and
+            rc['flatStream'] are None, the standard getProcessedFlat primitive
+            will be used instead. If both rc['flat'] and rc['flatStream'] are
+            provided, rc['flat'] will take precedence.
+        rc['writeResult'] : bool (default: True)
+            Denotes whether or not to write out the result of profile
+            extraction to disk. This is useful for both debugging, and data
+            quality assurance. Defaults to True.
+
+        Yields
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+        """
+
+        # Instantiate the log
+        log = logutils.get_logger(__name__)
+
+        # Log the standard "starting primitive" debug message
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        # Initialize the list of output AstroData objects
+        adoutput_list = []
+        adinput = rc.get_inputs_as_astrodata()
+
+        for ad in adinput:
+            # Unlike some other primitives, we don't check if this
+            # primitive has already been applied; it's conceivable it may
+            # want to be applied multiple times
+            flat = None
+
+            # Find the relevant flat for this file
+            if rc['flat']:
+                flat = AstroData(rc['flat'])
+            elif rc['flatStream']:
+                flat = rc.get_stream(rc['flatStream'])[0].ad
+            else:
+                rc.run('getProcessedFlat')
+                flat = rc.get_cal(ad, 'processed_flat')
+                flat = AstroData(flat)
+
+            # If we haven't found a flat, warn and skip
+            if flat is None:
+                log.warning('No flat identified/provided for %s - skipping' %
+                            ad.filename)
+                continue
+            # Check that the flat has the same number of extensions as the
+            # file being processed; if not, warn and skip
+            if ad.count_exts() != flat.count_exts():
+                log.warning('%d and the identified flat %d have a different '
+                            'number of extensions - I do not know how to '
+                            'handle that - aborting')
+                continue
+
+            total_exts = 0
+            exts_mod = 0
+
+            for ext in ad['SCI']:
+                extver = ext.extver()
+                total_exts += 1
+
+                # Check that the shapes of the input and flat frames
+                # are the same - if not, warn and continue
+                # Test should be on the 'SCI' extension, not 'DQ' (in case
+                # DQ doesn't exist
+                if ad['SCI', extver].data.shape != flat['SCI', extver].data.shape:
+                    log.warning('Flat and input frame shapes do not match for '
+                                '%s ext %d - skipping' % (ad.filename,
+                                                          extver))
+                    continue
+
+                if ad['DQ', extver]:
+                    orig_flagged = np.count_nonzero(ad['DQ', extver].data)
+                    # Bitwise-combine the DQ planes
+                    ad['DQ', extver].data = np.bitwise_or(
+                        ad['DQ', extver].data,
+                        flat['DQ', extver].data,
+                    )
+                else:
+                    orig_flagged = 0
+                    # Just drop the flat BPM directly into the data
+                    # The pattern is stolen from the standard addDQ primitive
+                    dq = AstroData(data=flat['DQ', extver].data)
+                    dq.rename_ext('DQ', ver=extver)
+                    dq.filename = ad.filename
+
+                    # Call the _update_dq_header helper function to update the
+                    # header of the data quality extension with some useful
+                    # keywords
+                    dq = self._update_dq_header(sci=ext, dq=dq,
+                                                bpmname=flat.filename)
+
+                    # Append the DQ AstroData object to the input AstroData object
+                    log.fullinfo("Adding extension [%s,%d] to %s"
+                                 % ("DQ", extver, ad.filename))
+                    ad.append(moredata=dq)
+
+                # log.stdinfo('Combined BPMs with %d and %d flagged pix to one '
+                #             'with %d pix' %
+                #             (orig_flagged,
+                #              np.count_nonzero(flat['DQ', extver].data),
+                #              np.count_nonzero(ad['DQ', extver].data), ))
+
+                exts_mod += 1
+
+            # Use a test counter to determine if all of the DQ planes were
+            # updated - if not (e.g. some shapes were mismatched), provide a
+            # global warning
+            if total_exts != exts_mod:
+                log.warning('Only %d/%d extensions of %s were updated' % (
+                    exts_mod, total_exts, ad.filename,
+                ))
+
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=ad, primname=self.myself(), keyword=timestamp_key)
+
+            # Change the filename
+            # log.warning('Current RC suffix: %s' % rc["suffix"])
+            ad.filename = gt.filename_updater(
+                adinput=ad, suffix=rc["suffix"], strip=True)
+
+            # Put the input file back into the output list
+            adoutput_list.append(ad)
+
+            if rc['writeResult']:
+                ad.write()
+
+        rc.report_output(adoutput_list)
+        yield rc
+
+    # -------------------------------------------------------------------------
+    def clipSigmaBPM(self, rc):
+        """
+        Perform a sigma-clipping on the input data frame, such that any pixels
+        outside the sigma threshold have their BPM value updated
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        rc['sigma'] : float or None (default: 3.0)
+            Sigma value to clip the data at. Defaults to 3.0.
+
+        rc['bpm_value'] : int or None (default: 1)
+            The integer value to be applied to the data BPM where the sigma
+            threshold is exceeded. Defaults to 1 (which is the generic bad
+            pixel flag). Note that the final output BPM is made using a
+            bitwise_or operation.
+
+        Yields
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+        """
+
+        # Instantiate the log
+        log = logutils.get_logger(__name__)
+
+        # Log the standard "starting primitive" debug message
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        timestamp_key = self.timestamp_keys[self.myself()]
+        # Unlike most of the other primitives, we do not check the timestamp
+        # for this primitive, as it may be run multiple times on
+        # a single file, each time by a different recipe
+
+        # Initialize the list of output AstroData objects
+        adoutput_list = []
+        adinput = rc.get_inputs_as_astrodata()
+
+        for ad in adinput:
+            for ext in ad['SCI']:
+                extver = ext.extver()
+
+                if ad['DQ', extver]:
+                    sigma_data = np.std(ad['SCI', extver].data)
+                    mean_data = np.average(ad['SCI', extver].data)
+                    mask_map = np.logical_or(
+                        ad['SCI', extver].data < mean_data - (rc['sigma'] * sigma_data),
+                        ad['SCI', extver].data > mean_data + (rc['sigma'] * sigma_data),
+                    )
+                    ad['DQ', extver].data[mask_map] = np.bitwise_or(
+                        ad['DQ', extver].data[mask_map], rc['bpm_value']
+                    )
+
+                    # log results
+                    log.stdinfo("   %s: nPixMasked = %9d / %9d" % (
+                        ad.filename, np.count_nonzero(mask_map),
+                        ad['SCI', 1].data.size)
+                                )
+                else:
+                    log.warning('No DQ plane in ext %d of %s' % (
+                        extver, ad.filename
+                    ))
+
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=ad, primname=self.myself(), keyword=timestamp_key)
+
+            # Note we do *not* alter the file name of the file
+
+            adoutput_list.append(ad)
+
+        rc.report_output(adoutput_list)
+        yield rc
 
     # -------------------------------------------------------------------------
     def correctSlitCosmics(self, rc):
@@ -210,7 +440,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             of the profile. If not provided/set to None, the primitive will
             attempt to pull a processed slit image from rc['slitStream'].
 
-        rc['flat'] : string or None (default: None)
+        rc['slitFlat'] : string or None (default: None)
             Name of the (processed) slit flat image to use for extraction
             of the profile. If not provided, set to None, the RecipeSystem
             will attempt to pull a slit flat from the calibrations system (or,
@@ -225,6 +455,11 @@ class GHOSTPrimitives(GMOSPrimitives,
             processed slit image will attempt to be found in the calibrations
             system (or, if specified, the --override_cal processed_slitflat
             command-line option)
+
+        rc['writeResult'] : bool (default: True)
+            Denotes whether or not to write out the result of profile
+            extraction to disk. This is useful for both debugging, and data
+            quality assurance. Defaults to True.
 
         Returns
         -------
@@ -242,12 +477,15 @@ class GHOSTPrimitives(GMOSPrimitives,
         timestamp_key = self.timestamp_keys[self.myself()]
 
         # Initialize the list of output AstroData objects
-        # These will be object profile extractions of the ad input list
+        # These will be flat-corrected object profiles
         adoutput_list = []
 
         for ad in rc.get_inputs_as_astrodata():
             log.info(ad.info())
 
+            log.stdinfo('Slit parameters: ')
+            log.stdinfo('   rc[slit]: %s' % rc['slit'])
+            log.stdinfo('   rc[slitStream]: %s' % rc['slitStream'])
             if rc['slit'] is not None:
                 slit = AstroData(rc['slit'])
             elif rc['slitStream'] is not None:
@@ -257,8 +495,8 @@ class GHOSTPrimitives(GMOSPrimitives,
                 slit = rc.get_cal(ad, 'processed_slit')
                 slit = AstroData(slit)
 
-            if rc['flat'] is not None:
-                flat = AstroData(rc['flat'])
+            if rc['slitFlat'] is not None:
+                flat = AstroData(rc['slitFlat'])
             else:
                 rc.run("getProcessedSlitFlat")
                 flat = rc.get_cal(ad, 'processed_slitflat')  # from cache
@@ -272,6 +510,7 @@ class GHOSTPrimitives(GMOSPrimitives,
             xpars = AstroData(xpars)
             # Need to read in all other parameters from the lookups system
             key = self._get_polyfit_key(ad)
+            log.stdinfo('Polyfit key selected: %s' % key)
             if np.all([key in _ for _ in [
                 PolyfitDict.wavemod_dict,
                 PolyfitDict.spatmod_dict,
@@ -299,15 +538,19 @@ class GHOSTPrimitives(GMOSPrimitives,
                                             spatpars[0].data,
                                             specpars[0].data,
                                             rotpars[0].data)
-
             sview = SlitView(slit[0].data, flat[0].data, mode=ad.res_mode())
-            extractor = Extractor(arm, sview)
-            extracted_flux, extracted_var = extractor.one_d_extract(
-                ad['SCI'].data)
 
-            # Add the appropriate time stamps to the PHU
-            gt.mark_history(
-                adinput=ad, primname=self.myself(), keyword=timestamp_key)
+            extractor = Extractor(arm, sview, badpixmask=ad['DQ'].data,
+                                  vararray=ad['VAR'].data if ad['VAR'] else
+                                  None)
+            extracted_flux, extracted_var, extracted_weights = \
+                extractor.one_d_extract(ad['SCI'].data)
+            # log.stdinfo('Extracted weights:')
+            # log.stdinfo(extracted_weights)
+            extracted_flux, extracted_var = extractor.two_d_extract(
+                ad['SCI'].data,
+                extraction_weights=extracted_weights
+            )
 
             # For now, let's just dump the outputs into the SCI and VAR planes
             # of a new AstroData object, and worry about the bookkeeping later
@@ -320,6 +563,14 @@ class GHOSTPrimitives(GMOSPrimitives,
             adoutput.insert(1, data=extracted_var,
                             header=varhdr,
                             extname='VAR', extver=1)
+
+            weightshdr = adoutput['SCI'].header.copy()
+            weightshdr['EXTNAME'] = 'WGT'
+            weightshdr['EXTVER'] = 1
+            adoutput.insert(2, data=extracted_weights,
+                            header=weightshdr,
+                            extname='WGT', extver=1)
+
             adoutput.phu.header = ad.phu.header  # Copy across input PHU
             adoutput.filename = ad.filename
             # log.info(adoutput.info())
@@ -328,19 +579,23 @@ class GHOSTPrimitives(GMOSPrimitives,
 
             # Different idea - let's heavily alter the input AD instead. Maybe
             # this will fix our flow through/write out errors?
-            for i in range(len(ad))[::-1]:
-                ad.remove(i)
+            # for i in range(len(ad))[::-1]:
+            #     ad.remove(i)
 
             # Change the filename
             # log.warning('Current RC suffix: %s' % rc["suffix"])
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=adoutput, primname=self.myself(), keyword=timestamp_key)
             adoutput.filename = gt.filename_updater(
                 adinput=adoutput, suffix=rc["suffix"], strip=True)
 
             adoutput_list.append(adoutput)
 
+            if rc['writeResult']:
+                adoutput.write()
+
         # Report the list of output AstroData objects to the reduction context
-        # FIXME reduce reports successful, but unexplained error on file write
-        # log.warning('Attempting to write out files')
         rc.report_output(adoutput_list)
 
         yield rc
@@ -396,18 +651,31 @@ class GHOSTPrimitives(GMOSPrimitives,
                             'therefore, %s will not be used' % ad.filename)
                 continue
 
-            all_xmod_dict = PolyfitDict.xmod_dict
+            log.stdinfo('Looking for slit flat...')
+            if rc['slitFlat'] is not None:
+                slit_flat = AstroData(rc['slitFlat'])
+            else:
+                rc.run("getProcessedSlitFlat")
+                slit_flat = rc.get_cal(ad, 'processed_slitflat')  # from cache
+                slit_flat = AstroData(slit_flat)
+
             # Work out the directory to get the Polyfit initial files from
             key = self._get_polyfit_key(ad)
-
-            if key in all_xmod_dict:
-                poly_xmod = lookup_path(all_xmod_dict[key])
+            if np.all([key in _ for _ in [
+                PolyfitDict.xmod_dict,
+                PolyfitDict.wavemod_dict,
+                PolyfitDict.spatmod_dict,
+                PolyfitDict.specmod_dict,
+                PolyfitDict.rotmod_dict,
+            ]]):
+                # Get configs
+                poly_xmod = lookup_path(PolyfitDict.xmod_dict[key])
+                poly_spat = lookup_path(PolyfitDict.spatmod_dict[key])
             else:
                 # Don't know how to fit this file, so probably not necessary
-                # Return this ad to the stream and move to the next
+                # Move to the next
                 log.warning('Not sure which initial model to use for %s; '
                             'skipping' % ad.filename)
-                adoutput_list.append(ad)
                 continue
 
             # Run the fitting procedure
@@ -416,17 +684,27 @@ class GHOSTPrimitives(GMOSPrimitives,
                 arm=ad.arm().as_str(), mode=ad.res_mode().as_str())
 
             # Read in the model file
-            xparams = AstroData(poly_xmod)
+            xpars = AstroData(poly_xmod)
+            spatpars = AstroData(poly_spat)
 
             # Creat an initial model of the spectrograph
-            xx, wave, blaze = ghost_arm.spectral_format(xparams=xparams.data)
+            xx, wave, blaze = ghost_arm.spectral_format(xparams=xpars.data)
+
+            slitview = SlitView(slit_flat['SCI'].data, slit_flat['SCI'].data,
+                                        mode=ad.res_mode().as_str())
 
             # Convolve the flat field with the slit profile
-            flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data)
+            # flat_conv = ghost_arm.slit_flat_convolve(ad['SCI'].data)
+            flat_conv = ghost_arm.slit_flat_convolve(
+                ad['SCI'].data,
+                slit_profile=slitview.slit_profile(
+                    arm=ad.arm().as_str()), spatpars=spatpars.data,
+                    microns_pix=slitview.microns_pix, xpars=xpars.data)
+
 
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
-                                                     xparams=xparams.data,
+                                                     xparams=xpars.data,
                                                      decrease_dim=8,
                                                      inspect=False)
 
@@ -540,8 +818,8 @@ class GHOSTPrimitives(GMOSPrimitives,
                                              inspect=False)
 
             #import pdb; pdb.set_trace()
-            fitted_params, wave_and_resid = arm.read_lines_and_fit(wpars[0].data,
-                                                                    lines_out)
+            fitted_params, wave_and_resid = arm.read_lines_and_fit(
+                wpars[0].data, lines_out)
 
             # Much like the solution for findApertures, create a minimum-spec
             # AstroData object to prepare the result for storage in the
@@ -557,6 +835,190 @@ class GHOSTPrimitives(GMOSPrimitives,
                 adinput=ad_xmod, primname=self.myself(), keyword=timestamp_key)
 
             adoutput_list.append(ad_xmod)
+
+        rc.report_output(adoutput_list)
+
+        yield rc
+
+    # -------------------------------------------------------------------------
+    def flatCorrect(self, rc):
+        """
+        Flat-correct an extracted GHOST object profile by extracting the
+        profile from the relevant flat field using the object's extracted
+        weights, and then perform simple division.
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        rc['arm'] : string or None (default: None)
+            The current arm of the spectrograph. Defaults to None, which
+            ought to throw an error.
+
+        rc['mode'] : string or None (default: None)
+            The current mode of the spectrograph. Default to None, which
+            ought to throw an error.
+
+        rc['slit'] : string or None (default: None)
+            Name of the (processed & stacked) slit image to use for extraction
+            of the profile. If not provided/set to None, the primitive will
+            attempt to pull a processed slit image from rc['slitStream'].
+
+        rc['slitFlat'] : string or None (default: None)
+            Name of the (processed) slit flat image to use for extraction
+            of the profile. If not provided, set to None, the RecipeSystem
+            will attempt to pull a slit flat from the calibrations system (or,
+            if specified, the --override_cal processed_slitflat command-line
+            option)
+
+        rc['slitStream'] : string or None (default: None)
+            The RecipeSystem stream from which to access the (processed &
+            stacked) slit image ot use for extraction of the profile,
+            assuming rc['slit'] is undefined/None. Only the first AstroData
+            in the stream will be used. If not set/set to None, the
+            processed slit image will attempt to be found in the calibrations
+            system (or, if specified, the --override_cal processed_slitflat
+            command-line option)
+
+        rc['flat'] : string or None (default: None)
+            Name of the (processed) standard flat to use for flat profile
+            extraction. If None (default), the RecipeSystem will attempt to pull
+            a flar from the calibrations system (or,
+            if specified, the --override_cal processed_flat command-line
+            option)
+
+        rc['writeResult'] : bool (default: True)
+            Denotes whether or not to write out the result of flat profile
+            extraction to disk. This is useful for both debugging, and data
+            quality assurance. Defaults to True.
+
+        Returns
+        -------
+        rc : dict
+            The same ReductionContext dictionary, with any necessary
+            alterations.
+
+        """
+
+        log = logutils.get_logger(__name__)
+
+        # Log the standard "starting primitive" debug message
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        # Define the keyword to be used for the time stamp for this primitive
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        # Initialize the list of output AstroData objects
+        # These will be flat-corrected object profiles
+        adoutput_list = []
+
+        for ad in rc.get_inputs_as_astrodata():
+            ad.refresh_types()
+            log.stdinfo(ad.info())
+            # log.stdinfo(ad.phu.header)
+
+            if rc['slit'] is not None:
+                slit = AstroData(rc['slit'])
+            elif rc['slitStream'] is not None:
+                slit = rc.get_stream(rc['slitStream'])[0].ad
+            else:
+                rc.run('getProcessedSlit')
+                slit = rc.get_cal(ad, 'processed_slit')
+                slit = AstroData(slit)
+
+            log.stdinfo('Looking for slit flat...')
+            if rc['slitFlat'] is not None:
+                flat = AstroData(rc['slitFlat'])
+            else:
+                rc.run("getProcessedSlitFlat")
+                flat = rc.get_cal(ad, 'processed_slitflat')  # from cache
+                flat = AstroData(flat)
+
+            # Grab the processed flat for this frame
+            if rc['flat'] is not None:
+                obj_flat = AstroData(rc['flat'])
+            else:
+                rc.run("getProcessedFlat")
+                obj_flat = rc.get_cal(ad, 'processed_flat')  # from cache
+                obj_flat = AstroData(obj_flat)
+
+            arm = GhostArm(arm=ad.arm().as_str(), mode=ad.res_mode().as_str())
+            # The 'xmod' file we need is the one that was spat out to
+            # the calibrations system at the end of the flat processing
+            rc.run('getProcessedXmod')
+            xpars = rc.get_cal(ad, 'processed_xmod')
+            xpars = AstroData(xpars)
+            # Need to read in all other parameters from the lookups system
+            key = self._get_polyfit_key(ad)
+            log.stdinfo('Polyfit key selected: %s' % key)
+            if np.all([key in _ for _ in [
+                PolyfitDict.wavemod_dict,
+                PolyfitDict.spatmod_dict,
+                PolyfitDict.specmod_dict,
+                PolyfitDict.rotmod_dict,
+            ]]):
+                # Get configs
+                poly_wave = lookup_path(PolyfitDict.wavemod_dict[key])
+                wpars = AstroData(poly_wave)
+                poly_spat = lookup_path(PolyfitDict.spatmod_dict[key])
+                spatpars = AstroData(poly_spat)
+                poly_spec = lookup_path(PolyfitDict.specmod_dict[key])
+                specpars = AstroData(poly_spec)
+                poly_rot = lookup_path(PolyfitDict.rotmod_dict[key])
+                rotpars = AstroData(poly_rot)
+            else:
+                # Don't know how to fit this file, so probably not necessary
+                # Move to the next
+                log.warning('Not sure which initial model to use for %s; '
+                            'skipping' % ad.filename)
+                continue
+
+            arm.spectral_format_with_matrix(xpars[0].data,
+                                            wpars[0].data,
+                                            spatpars[0].data,
+                                            specpars[0].data,
+                                            rotpars[0].data)
+            sview = SlitView(slit[0].data, flat[0].data, mode=ad.res_mode())
+
+            extractor = Extractor(arm, sview)
+            extracted_flux, extracted_var = extractor.two_d_extract(
+                obj_flat['SCI'].data,
+                extraction_weights=ad['WGT'].data,
+            )
+            # import pdb; pdb.set_trace()
+
+            # Normalised extracted flat profile
+            med = np.median(extracted_flux)
+            extracted_flux /= med
+            extracted_var /= med**2
+
+            # For ease of use, we need to insert this flux and var into
+            # an AstroData object
+            # Easiest way is to just make a copy of the stream ad
+            # Need to deepcopy to avoid overwriting actual data
+            flatprof_ad = deepcopy(ad)
+            flatprof_ad.filename = gt.filename_updater(
+                adinput=flatprof_ad, suffix='_extractedFlatProfile', strip=True
+            )
+            flatprof_ad['SCI'].data = extracted_flux
+            flatprof_ad['VAR'].data = extracted_var
+            if rc['writeResult']:
+                flatprof_ad.write()
+
+            # Divide the flat field through the science data
+            # The arith module should automatically handle combining the
+            # variances - there is no DQ plane for extracted data
+            ad = arith.div(ad, flatprof_ad)
+
+            # Add the appropriate time stamps to the PHU
+            gt.mark_history(
+                adinput=ad, primname=self.myself(), keyword=timestamp_key)
+            ad.filename = gt.filename_updater(
+                adinput=ad, suffix=rc['suffix'], strip=True)
+
+            adoutput_list.append(ad)
 
         rc.report_output(adoutput_list)
 
@@ -836,11 +1298,11 @@ class GHOSTPrimitives(GMOSPrimitives,
                 # otherwise the algorithm will start searching for cosmic rays
                 # around pixels that have been flagged bad for another reason.
                 cosmic_bpm = np.zeros_like(ad["SCI", amp].data,
-                                           dtype=bool)
+                                           dtype=np.int16)
 
                 # Start with a fresh copy of the data
                 # Use numpy NaN to cover up any data detected bad so far
-                # (i.e. BPM < 8)
+                # (i.e. 0 < BPM < 8)
                 clean_data = np.copy(ad["SCI", amp].data)
                 clean_data[ad['DQ', amp].data > 0] = np.nan
 
@@ -990,7 +1452,7 @@ class GHOSTPrimitives(GMOSPrimitives,
                     new_cr_pix = np.logical_and(sig_detrend > sigma_lim,
                                                 (conv_data/fine_struct) >
                                                 f_lim)
-                    cosmic_bpm[new_cr_pix] = 1
+                    cosmic_bpm[new_cr_pix] = np.int16(8) # Correct BPM flag value for CR
                     new_crs = np.count_nonzero(cosmic_bpm) - curr_crs
                     log.stdinfo('Pass %d: Found %d CR pixels' %
                                 (no_passes, new_crs, ))
@@ -998,10 +1460,18 @@ class GHOSTPrimitives(GMOSPrimitives,
                 # For the moment, go with Mike Ireland's suggestion to require
                 # a BPM update
                 curr_bpm = ad["DQ", amp].data
-                curr_bpm[cosmic_bpm] = 8
-                ad['DQ', amp].data = curr_bpm
+                new_bpm = np.bitwise_or(curr_bpm, cosmic_bpm)
+                log.debug('New bpm shape: %s' % str(new_bpm.shape))
+                log.debug('Max flag value in bpm: %s' % str(np.max(new_bpm)))
+                # curr_bpm[cosmic_bpm] = 8
+                ad['DQ', amp].data = new_bpm
+                log.debug('DQ plane data type: %s' %
+                          str(ad['DQ', amp].data.dtype))
 
             # Append the ad to the output list
+            log.debug('Flagged pix in %s BPM: %d' % (ad.filename,
+                                                     np.count_nonzero(
+                                                         ad['DQ', 1].data)))
             adoutput_list.append(ad)
 
         # Finish
@@ -1060,6 +1530,9 @@ class GHOSTPrimitives(GMOSPrimitives,
         ----------
         This is a test of autodoc's abilities.
         """
+        # Instantiate the log
+        log = logutils.get_logger(__name__)
+        # logutils.change_level(new_level='fullinfo')
 
         if rc['hsigma'] is not None:
             extra_gemcombine_params['hsigma'] = float(rc['hsigma'])
@@ -1069,12 +1542,22 @@ class GHOSTPrimitives(GMOSPrimitives,
             extra_gemcombine_params['lsigma'] = float(rc['lsigma'])
         if rc['lthresh'] is not None:
             extra_gemcombine_params['lthreshold'] = float(rc['lthresh'])
+        if rc['mclip'] is not None:
+            test = rc['mclip'].lower() in ['yes', 'true', 'on', '1']
+            extra_gemcombine_params['mclip'] = [iraf.no, iraf.yes][test]
         if rc['pclip'] is not None:
             extra_gemcombine_params['pclip'] = float(rc['pclip'])
         if rc['sigscale'] is not None:
             extra_gemcombine_params['sigscale'] = float(rc['sigscale'])
+        if rc['snoise'] is not None:
+            extra_gemcombine_params['snoise'] = rc['snoise']
+        if rc['nrejfile'] is not None:
+            extra_gemcombine_params['nrejfile'] = rc['nrejfile']
         if rc['verbose'] is not None:
             iraf.setVerbose(value=2)
+
+        # if rc['mask']:
+        #     log.stdinfo('Stack frames called with mask=True')
 
         return StackPrimitives.stackFrames(self, rc)
 
@@ -1376,11 +1859,13 @@ class GHOSTPrimitives(GMOSPrimitives,
         Returns
         -------
         path:
-            The file path to the relevant polyfit models. There will be two
-            files under each path, wavemod.fits and xmod.fits. The primitives
+            The file path to the relevant polyfit models. There will be several
+            FITS files under each directory. The primitives
             calling _get_polyfit_key will need to open these files as
             required.
         """
+
+        log = logutils.get_logger(__name__)
 
         # The polyfit models are keyed by the instrument, and in the case of
         # GHOST, the arm, resolution mode, and date valid from.
@@ -1402,6 +1887,27 @@ class GHOSTPrimitives(GMOSPrimitives,
             arm = ad.arm()
             res_mode = ad.res_mode()
             key = '%s_%s_%s' % (key, arm, res_mode)
+
+        # Models are separated by the date on which they are valid from
+        # Need to analyze the available dates currently in the xmod
+        # lookups dictionary, and figure out which one we want
+        # Note that this assumes/requires all files under PolyfitDict be updated
+        # simultaneously - KeyErrors will eventually result if this is not
+        # done
+        dates_avail = set([_.split('_')[-1] for _ in
+                           PolyfitDict.xmod_dict.keys()])
+        # Safe to assume instrument won't be used after 2099...
+        dates_avail = [datetime.datetime.strptime('%s%s' % ('20', _, ),
+                                         '%Y%m%d').date() for _ in
+                       dates_avail]
+        dates_avail.sort()
+        # Determine the latest date which is <= the observing date
+        date_obs = ad.ut_date().as_pytype()
+        try:
+            date_req = [_ for _ in dates_avail if _ <= date_obs][-1]
+        except IndexError:
+            raise Errors.Error("No polyfit for these dates available")
+        key = '%s_%s' % (key, date_req.strftime('%y%m%d'))
 
         return key
 

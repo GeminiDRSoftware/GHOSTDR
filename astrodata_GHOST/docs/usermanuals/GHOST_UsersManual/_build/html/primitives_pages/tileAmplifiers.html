@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>6.12. tileAmplifiers &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    <title>7.12. tileAmplifiers &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -27,8 +27,8 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="6.13. validateData" href="validateData.html" />
-    <link rel="prev" title="6.11. switchTo" href="switchTo.html" /> 
+    <link rel="next" title="7.13. validateData" href="validateData.html" />
+    <link rel="prev" title="7.11. switchTo" href="switchTo.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -38,13 +38,13 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="validateData.html" title="6.13. validateData"
+          <a href="validateData.html" title="7.13. validateData"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="switchTo.html" title="6.11. switchTo"
+          <a href="switchTo.html" title="7.11. switchTo"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -54,21 +54,21 @@
           <div class="body" role="main">
             
   <div class="section" id="tileamplifiers">
-<h1>6.12. tileAmplifiers<a class="headerlink" href="#tileamplifiers" title="Permalink to this headline">¶</a></h1>
+<h1>7.12. tileAmplifiers<a class="headerlink" href="#tileamplifiers" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="purpose">
-<h2>6.12.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<h2>7.12.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
 <p>This primitive tiles (or optionally mosaics) the SCI frames of the input images,
 along with the VAR and DQ frames if they exist.</p>
 </div>
 <div class="section" id="inputs-and-outputs">
-<h2>6.12.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<h2>7.12.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal"><span class="pre">mosaic</span></code>: bool (default: False), tile the images by default; mosaic them
 (including transformations) if True</p>
 <p><code class="docutils literal"><span class="pre">dq_planes</span></code>: bool (default: False), transform the DQ image, bit plane by bit
 plane</p>
 </div>
 <div class="section" id="algorithm">
-<h2>6.12.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
+<h2>7.12.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
 <p>This primitive is a copy of <code class="docutils literal"><span class="pre">GEMINIPrimitives.mosaicADdetectors</span></code> with a couple
 of additional hacks introduced just prior to calling the mosaicing routine,
 <code class="docutils literal"><span class="pre">gemini_mosaic_function</span></code>, and undone immediately after.  These are necessary
@@ -94,7 +94,7 @@ above two hacks will be necessary in order for GHOST to make use of Gemini&#8217
 mosaicing mechanism.</p>
 </div>
 <div class="section" id="issues-and-limitations">
-<h2>6.12.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<h2>7.12.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
 <p>Requires ugly hacks until integration with, or refactoring of,
 <code class="docutils literal"><span class="pre">astrodata_Gemini</span></code> is completed.</p>
 </div>
@@ -108,21 +108,21 @@ mosaicing mechanism.</p>
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">6.12. tileAmplifiers</a><ul>
-<li><a class="reference internal" href="#purpose">6.12.1. Purpose</a></li>
-<li><a class="reference internal" href="#inputs-and-outputs">6.12.2. Inputs and Outputs</a></li>
-<li><a class="reference internal" href="#algorithm">6.12.3. Algorithm</a></li>
-<li><a class="reference internal" href="#issues-and-limitations">6.12.4. Issues and Limitations</a></li>
+<li><a class="reference internal" href="#">7.12. tileAmplifiers</a><ul>
+<li><a class="reference internal" href="#purpose">7.12.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">7.12.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#algorithm">7.12.3. Algorithm</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">7.12.4. Issues and Limitations</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="switchTo.html"
-                        title="previous chapter">6.11. switchTo</a></p>
+                        title="previous chapter">7.11. switchTo</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="validateData.html"
-                        title="next chapter">6.13. validateData</a></p>
+                        title="next chapter">7.13. validateData</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -151,13 +151,13 @@ mosaicing mechanism.</p>
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="validateData.html" title="6.13. validateData"
+          <a href="validateData.html" title="7.13. validateData"
              >next</a> |</li>
         <li class="right" >
-          <a href="switchTo.html" title="6.11. switchTo"
+          <a href="switchTo.html" title="7.11. switchTo"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" >6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

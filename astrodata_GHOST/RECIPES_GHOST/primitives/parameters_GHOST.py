@@ -4,6 +4,59 @@
 # This is a dictionary of dictionaries of dictionaries (... not that bad.)
 
 {
+    "applyFlatBPM": {
+        "suffix": {
+            "default":        "_flatBPMApplied",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        "flat": {
+            "default":        None,
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        "flatStream": {
+            "default":        None,
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        "writeResult": {
+            "default":        True,
+            "type":           "bool",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
+    "clipSigmaBPM": {
+        "suffix": {
+            "default":        "_clipSigmaBPMApplied",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        "sigma": {
+            "default":        3.0,
+            "type":           "float",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        "bpm_value": {
+            "default":        1,
+            "type":           "int",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
     "correctSlitCosmics": {
         "suffix": {
             "default":        "_slitCosmicsCorrected",
@@ -17,6 +70,13 @@
       "suffix": {
             "default":        "_extractedProfile",
             "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        "writeResult": {
+            "default":        True,
+            "type":           "bool",
             "recipeOverride": True,
             "userOverride":   True,
             "uiLevel":        "UIBASIC",
@@ -35,6 +95,22 @@
         "suffix": {
             "default":        "_fitWavl",
             "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+        },
+    "flatCorrect": {
+      "suffix": {
+            "default":        "_flatCorrected",
+            "type":           "str",
+            "recipeOverride": True,
+            "userOverride":   True,
+            "uiLevel":        "UIBASIC",
+            },
+    "writeResult": {
+            "default":        True,
+            "type":           "bool",
             "recipeOverride": True,
             "userOverride":   True,
             "uiLevel":        "UIBASIC",
@@ -79,7 +155,7 @@
             "uiLevel":        "UIBASIC",
             },
         "n_steps": {
-            "default":        5,
+            "default":        1,
             "type":           "int",
             "recipeOverride": True,
             "userOverride":   True,
@@ -160,7 +236,7 @@
         },
     "tileAmplifiers": {
         "suffix": {
-            "default":        "_tileAmplifiers",
+            "default":        "_ampsTiled",
             "type":           "str",
             "recipeOverride": True,
             "userOverride":   True,

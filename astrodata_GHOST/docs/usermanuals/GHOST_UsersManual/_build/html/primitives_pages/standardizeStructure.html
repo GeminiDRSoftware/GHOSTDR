@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>6.10. standardizeStructure &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
+    <title>7.10. standardizeStructure &#8212; GHOST Users&#39; Manual 0.9.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -27,8 +27,8 @@
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="6.11. switchTo" href="switchTo.html" />
-    <link rel="prev" title="6.9. standardizeHeaders" href="standardizeHeaders.html" /> 
+    <link rel="next" title="7.11. switchTo" href="switchTo.html" />
+    <link rel="prev" title="7.9. standardizeHeaders" href="standardizeHeaders.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -38,13 +38,13 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="switchTo.html" title="6.11. switchTo"
+          <a href="switchTo.html" title="7.11. switchTo"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="standardizeHeaders.html" title="6.9. standardizeHeaders"
+          <a href="standardizeHeaders.html" title="7.9. standardizeHeaders"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" accesskey="U">7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -54,9 +54,9 @@
           <div class="body" role="main">
             
   <div class="section" id="standardizestructure">
-<h1>6.10. standardizeStructure<a class="headerlink" href="#standardizestructure" title="Permalink to this headline">¶</a></h1>
+<h1>7.10. standardizeStructure<a class="headerlink" href="#standardizestructure" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="purpose">
-<h2>6.10.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
+<h2>7.10.1. Purpose<a class="headerlink" href="#purpose" title="Permalink to this headline">¶</a></h2>
 <p>This primitive is responsible for massaging input data frames into a format
 compatible with the remainder of the downstream primitives.</p>
 <p>When passed a series of slit viewer MEFs (such as results from the observation
@@ -68,11 +68,11 @@ otherwise work nicely with the rest of the recipe.</p>
 except the addition of the obligatory timestamp keyword.</p>
 </div>
 <div class="section" id="inputs-and-outputs">
-<h2>6.10.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
+<h2>7.10.2. Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal"><span class="pre">standardizeStructure</span></code> takes no particular configuration inputs.</p>
 </div>
 <div class="section" id="algorithm">
-<h2>6.10.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
+<h2>7.10.3. Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h2>
 <p>For slit viewer data, the <code class="docutils literal"><span class="pre">standardizeStructure</span></code> primitive performs these man-
 ipulations:</p>
 <ul class="simple">
@@ -93,7 +93,7 @@ single extension in each AstroData object).</li>
 </ul>
 </div>
 <div class="section" id="issues-and-limitations">
-<h2>6.10.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
+<h2>7.10.4. Issues and Limitations<a class="headerlink" href="#issues-and-limitations" title="Permalink to this headline">¶</a></h2>
 <p>None.</p>
 </div>
 </div>
@@ -106,21 +106,21 @@ single extension in each AstroData object).</li>
         <div class="sphinxsidebarwrapper">
   <h3><a href="../index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">6.10. standardizeStructure</a><ul>
-<li><a class="reference internal" href="#purpose">6.10.1. Purpose</a></li>
-<li><a class="reference internal" href="#inputs-and-outputs">6.10.2. Inputs and Outputs</a></li>
-<li><a class="reference internal" href="#algorithm">6.10.3. Algorithm</a></li>
-<li><a class="reference internal" href="#issues-and-limitations">6.10.4. Issues and Limitations</a></li>
+<li><a class="reference internal" href="#">7.10. standardizeStructure</a><ul>
+<li><a class="reference internal" href="#purpose">7.10.1. Purpose</a></li>
+<li><a class="reference internal" href="#inputs-and-outputs">7.10.2. Inputs and Outputs</a></li>
+<li><a class="reference internal" href="#algorithm">7.10.3. Algorithm</a></li>
+<li><a class="reference internal" href="#issues-and-limitations">7.10.4. Issues and Limitations</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="standardizeHeaders.html"
-                        title="previous chapter">6.9. standardizeHeaders</a></p>
+                        title="previous chapter">7.9. standardizeHeaders</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="switchTo.html"
-                        title="next chapter">6.11. switchTo</a></p>
+                        title="next chapter">7.11. switchTo</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -149,13 +149,13 @@ single extension in each AstroData object).</li>
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="switchTo.html" title="6.11. switchTo"
+          <a href="switchTo.html" title="7.11. switchTo"
              >next</a> |</li>
         <li class="right" >
-          <a href="standardizeHeaders.html" title="6.9. standardizeHeaders"
+          <a href="standardizeHeaders.html" title="7.9. standardizeHeaders"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">GHOST Users&#39; Manual 0.9.0 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../primitives.html" >6. Primitives for GHOST</a> &#187;</li> 
+          <li class="nav-item nav-item-1"><a href="../primitives.html" >7. Primitives for GHOST</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

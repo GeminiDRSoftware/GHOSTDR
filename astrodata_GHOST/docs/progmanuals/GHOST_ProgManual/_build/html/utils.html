@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>8. Utility Scripts &#8212; GHOST Programmer&#39;s Manual 0.9 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/todo-styles.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="7. Configuration" href="config.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="config.html" title="7. Configuration"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Programmer&#39;s Manual 0.9 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="utility-scripts">
+<h1>8. Utility Scripts<a class="headerlink" href="#utility-scripts" title="Permalink to this headline">¶</a></h1>
+<p>This chapter describes various utility scripts provided with the Ghost DRS.
+Some are for trouble-shooting while others are intended for use by Gemini
+Observatory staff and the development team during the commissioning process.</p>
+<div class="section" id="slit-viewer-py">
+<h2>8.1. <code class="docutils literal"><span class="pre">slit_viewer.py</span></code><a class="headerlink" href="#slit-viewer-py" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">slit_viewer.py</span></code> script takes a single file argument, an optional
+<code class="docutils literal"><span class="pre">-save</span></code> flag, and an optional <code class="docutils literal"><span class="pre">-no_simult</span></code> flag on the command line:</p>
+<blockquote>
+<div>usage: slit_viewer.py [-h] [-save] [-no_simult] path</div></blockquote>
+<p>The script clips the 2d profiles out of every slit viewer frame within the
+file and displays them alongside 1d versions of the same.  The profiles are
+shown in separate windows for each arm.  The profiles are arranged vertically,
+with the 2d images amalgamated together and shown to the left of the 1d graphs:</p>
+<blockquote>
+<div><a class="reference internal image-reference" href="_images/std-blue-with-cosmic.png"><img alt="_images/std-blue-with-cosmic.png" src="_images/std-blue-with-cosmic.png" style="width: 631.8px; height: 366.6px;" /></a>
+<a class="reference internal image-reference" href="_images/high-blue-with-arc-removed.png"><img alt="_images/high-blue-with-arc-removed.png" src="_images/high-blue-with-arc-removed.png" style="width: 631.8px; height: 366.6px;" /></a>
+</div></blockquote>
+<p>The displayed images and graphs allow one to easily see where, if any, cosmic
+rays may have fallen on the fibres, and the relative levels of the background
+between slit viewer frames.</p>
+<p>The <code class="docutils literal"><span class="pre">-save</span></code> option saves the composite/amalgamated images to FITS files
+adjacent to the source file (labelled <code class="docutils literal"><span class="pre">_red.FITS</span></code> and <code class="docutils literal"><span class="pre">_blue.FITS</span></code>
+respectively), while the <code class="docutils literal"><span class="pre">-no_simult</span></code> option zeros the simultaneous arc fibre
+pixels in the profiles (both 2d and 1d) before generating/displaying the plots.
+The <code class="docutils literal"><span class="pre">-no_simult</span></code> option is only valid for (only operates on) High resolution
+OBJECT frames; otherwise it is ignored.</p>
+</div>
+<div class="section" id="ghost-slider-adjust-py">
+<h2>8.2. <code class="docutils literal"><span class="pre">ghost_slider_adjust.py</span></code><a class="headerlink" href="#ghost-slider-adjust-py" title="Permalink to this headline">¶</a></h2>
+<p>This script is a handy tool designed to allow users to visualise the xmod and
+wavelength scale model superimposed with the data it is being fitted to.
+It also allows the users to manually change the model to fit any new data and save
+the result into a file.</p>
+<p>This script allows users to select either the X model or the W model depending on
+what they desire, and will superimpose a given initial model with either the
+convolution of the flat field with the slit profile (for the xmod) or an arc frame
+(for the Wavelength model).</p>
+<p>Users may define what files to use within the script itself. Too many inputs would
+be required and thus command line inputs are not available.</p>
+<p>(EXAMPLE IMAGES TO FOLLOW)
+..</p>
+<p>The inner workings of this script will be described in a later release.</p>
+</div>
+<div class="section" id="slit-rotation-fit-py">
+<h2>8.3. <code class="docutils literal"><span class="pre">slit_rotation_fit.py</span></code><a class="headerlink" href="#slit-rotation-fit-py" title="Permalink to this headline">¶</a></h2>
+<p>This script is designed to be used by the commissioning team to determine the
+slit rotation model for the spectrograph once the first arc frame is taken.</p>
+<p>All the file inputs are determined within the script, much like the ghost_slider_adjust.py
+tool and the purpose is to determine the rotation of the slit as a function of order and
+pixel along the orders.</p>
+<p>This will produce a model similar to xmod and wmod which is used within the spectral format
+function.</p>
+<p>This tool takes an 1D extracted arc frame and splits each order into sections (8 by default).
+It then loops through every order and section taking a cross correlation between two extracted
+profiles (objects 1 and 2 in std resolution mode; the object and sky in high resolution mode).
+The trigonometric solution of this cross correlation and the pixel separation between the centroid
+of each profile gives the angle for that section.
+Angles outside of +/- 10 degrees or those sections with no flux are given 0 weighting.</p>
+<p>The resulting measured angles for all sections are then fitted in a least squares approach
+to determine the best model for the slit rotation across the ccd.</p>
+</div>
+<div class="section" id="spatial-scale-fit-py">
+<h2>8.4. <code class="docutils literal"><span class="pre">spatial_scale_fit.py</span></code><a class="headerlink" href="#spatial-scale-fit-py" title="Permalink to this headline">¶</a></h2>
+<p>This script is designed to be used by the commissioning team to determine the
+spatial scale model for the spectrograph once the first flat frame is taken.</p>
+<p>All the file inputs are determined within the script, much like the ghost_slider_adjust.py
+tool and the purpose is to determine the rotation of scale in the spatial direction of
+the slit as a function of order and pixel along the orders.</p>
+<p>This will produce a model similar to xmod and wmod which is used within the spectral format
+function.</p>
+<p>This tool takes a flat field frame and splits each order into sections (8 by default).
+It then uses a range of pre-determined suitable scales (in slit microns per detector pixel) and
+tests all scenarios by convolving the slit profile scaled to each value with the flat field
+using the pre-existing slit_flat_convolve function of the ghost class.</p>
+<p>It then loops through every order and section taking the maximum of the convolution and corresponding
+scale for each section, in order to determine what is the best scale for each case.</p>
+<p>The resulting measured for all sections are then fitted in a least squares approach
+to determine the best model for the spectrograph. This fit is weighted by the maximum convolution value
+to ensure the edges of the chip where the flat flux is low are down weighted.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">8. Utility Scripts</a><ul>
+<li><a class="reference internal" href="#slit-viewer-py">8.1. <code class="docutils literal"><span class="pre">slit_viewer.py</span></code></a></li>
+<li><a class="reference internal" href="#ghost-slider-adjust-py">8.2. <code class="docutils literal"><span class="pre">ghost_slider_adjust.py</span></code></a></li>
+<li><a class="reference internal" href="#slit-rotation-fit-py">8.3. <code class="docutils literal"><span class="pre">slit_rotation_fit.py</span></code></a></li>
+<li><a class="reference internal" href="#spatial-scale-fit-py">8.4. <code class="docutils literal"><span class="pre">spatial_scale_fit.py</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="config.html"
+                        title="previous chapter">7. Configuration</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/utils.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="config.html" title="7. Configuration"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">GHOST Programmer&#39;s Manual 0.9 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016, RSAA, The Australian National University &amp; Gemini.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.5.
+    </div>
+  </body>
+</html>

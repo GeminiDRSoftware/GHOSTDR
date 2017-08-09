@@ -13,6 +13,7 @@ GHOST Users Manual
 
    instrument
    model
+   extraction
    recipes
    tipstricks
    issueslimitations

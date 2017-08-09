@@ -27,7 +27,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="3. Recipes for GHOST" href="recipes.html" />
+    <link rel="next" title="3. Extraction and Weights" href="extraction.html" />
     <link rel="prev" title="1. Overview of GHOST" href="instrument.html" /> 
   </head>
   <body role="document">
@@ -38,7 +38,7 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="recipes.html" title="3. Recipes for GHOST"
+          <a href="extraction.html" title="3. Extraction and Weights"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="instrument.html" title="1. Overview of GHOST"
@@ -84,19 +84,344 @@ is the coefficients for the polynomials as a function of order, which are then c
 as a function of y position on the CCD chip, defined as the CCD pixel numbers in the
 spectral direction.</p>
 <p>For mathematical convininence and correspondence with a testable reference, the polynomials
-are evaluated with respect to a reference order <img class="math" src="_images/math/050e729125cd4834fc336638165e6356b8fd03d1.png" alt="m_{\rm ref}"/>, defaulting as whatever
+are evaluated with respect to a reference order <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">m_{\rm ref}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+, defaulting as whatever
 order number is in the middle of the range used for each arm, and as a function of the middle
-pixel on the chip <img class="math" src="_images/math/cfa2af0012607f3eed596eb1c816e4652394880e.png" alt="y_{middle}"/>.</p>
+pixel on the chip <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">y_{middle}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+.</p>
 <p>The functional form is:</p>
-<div class="math">
-<p><img src="_images/math/189942cae19262ee23f657375aecf23a49504efb.png" alt="F(p) = p_0(m) + p_1(m)*y' + p_2(m)*y'^2 + ..."/></p>
-</div><p>with <img class="math" src="_images/math/9270e027ad321f912efa059fde7bf3a132a540f0.png" alt="y' = y - y_{middle}"/> , and:</p>
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">F(p) = p_0(m) + p_1(m)*y' + p_2(m)*y'^2 + ...</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+<p>with <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">y' = y - y_{middle}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ , and:</p>
 <blockquote>
-<div><div class="math">
-<p><img src="_images/math/2d4d2c33397b6a9911966b951333e86328d578eb.png" alt="p_0(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ..."/></p>
-</div></div></blockquote>
-<p>with <img class="math" src="_images/math/bccc4a601551938d43c51bb14d02b72b105ca172.png" alt="m' = m_{\rm ref}/m - 1"/></p>
-<p>In this functional form, <img class="math" src="_images/math/b69a066ee3c6db440c083a9cad71f15a34affae2.png" alt="F(p)"/> is whatever aspect we wish to model. In the specific
+<div><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">p_0(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ...</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+</div></blockquote>
+<p>with <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">m' = m_{\rm ref}/m - 1</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+</p>
+<p>In this functional form, <div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">F(p)</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ is whatever aspect we wish to model. In the specific
 example of GHOST, it will be the x position (defined in the spatial direction) in the first
 instance, but this same method is then used for the wavelength scale, and all three aspects
 of the slit image on the chip (spatial direction magnification scale, spectral direction
@@ -105,10 +430,198 @@ and position along the order.</p>
 <p>This means that the simplest wavelength scale spectrograph model should have:</p>
 <blockquote>
 <div><ul class="simple">
-<li><img class="math" src="_images/math/1fc62c925863a232605a89fbff608dbe2117dbeb.png" alt="q_{00}"/> : central wavelength of order m_ref</li>
-<li><img class="math" src="_images/math/eb721ba7096b6a677cd381b48848d65b00f33a1b.png" alt="q_{01}"/> : central wavelength of order m_ref</li>
-<li><img class="math" src="_images/math/26289486513075a3f5da014c2b71f2fa7d218ea9.png" alt="q_{10}"/> : central_wavelength/R_pix, with R_pix the resolving power / pixel.</li>
-<li><img class="math" src="_images/math/a239f66dd2ee37c4c707f404af9ee7f44cd39468.png" alt="q_{11}"/> : central_wavelength/R_pix, with R_pix the resolving power / pixel.</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{00}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : central wavelength of order m_ref</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{01}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : central wavelength of order m_ref</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{10}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : central_wavelength/R_pix, with R_pix the resolving power / pixel.</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{11}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : central_wavelength/R_pix, with R_pix the resolving power / pixel.</li>
 </ul>
 </div></blockquote>
 <p>... with everything else approximately zero.</p>
@@ -120,26 +633,494 @@ may require a different number of variables to fully describe the problem.</p>
 <h2>2.3. Description of model file contents<a class="headerlink" href="#description-of-model-file-contents" title="Permalink to this headline">¶</a></h2>
 <p>In the case of the x position, using default file <cite>xmod.fits</cite>, the contents of this file are as
 follows:</p>
-<div class="math" id="equation-e:matrix">
-<p><span class="eqno">(1)<a class="headerlink" href="#equation-e:matrix" title="Permalink to this equation">¶</a></span><img src="_images/math/30bf48a029dad4a7786a77dd9a4ebdba8c98da6f.png" alt="X_{mod} = \left[\begin{array}{ccccc}
+<div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">X_{mod} = \left[\begin{array}{ccccc}
    q_{24} &amp; q_{23} &amp; q_{22} &amp; q_{21} &amp; q_{20} \\
    q_{14} &amp; q_{13} &amp; q_{12} &amp; q_{11} &amp; q_{10} \\
    q_{04} &amp; q_{03} &amp; q_{02} &amp; q_{01} &amp; q_{00} \\
-\end{array}\right]"/></p>
-</div><p>The non standard way to define the variables within the files and imported array is related
+\end{array}\right]</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+<p>The non standard way to define the variables within the files and imported array is related
 to the way numpy&#8217;s poly1d function takes inputs, with the highest order coefficient first.</p>
 <p>In the case of x position, the coefficients represent:</p>
 <blockquote>
 <div><ul class="simple">
-<li><img class="math" src="_images/math/1fc62c925863a232605a89fbff608dbe2117dbeb.png" alt="q_{00}"/> : x position of the middle of the reference order.</li>
-<li><img class="math" src="_images/math/eb721ba7096b6a677cd381b48848d65b00f33a1b.png" alt="q_{01}"/> : linear term coefficient for order spacing</li>
-<li><img class="math" src="_images/math/adb9f3a6fb76eff7887ca0817bfef5474cebda86.png" alt="q_{02}"/> : quadratic term coefficient for order spacing</li>
-<li><img class="math" src="_images/math/26289486513075a3f5da014c2b71f2fa7d218ea9.png" alt="q_{10}"/> : common rotation term for all orders</li>
-<li><img class="math" src="_images/math/a239f66dd2ee37c4c707f404af9ee7f44cd39468.png" alt="q_{11}"/> : linear term coefficient for order rotation</li>
-<li><img class="math" src="_images/math/653f980eede01ddfcdb18f7f3d4dcecaa228d87d.png" alt="q_{12}"/> : quadratic term coefficient for order rotation</li>
-<li><img class="math" src="_images/math/1768ab7ce10283ae65aa2410f7eda5681d306440.png" alt="q_{20}"/> : common curvature term for all orders</li>
-<li><img class="math" src="_images/math/c8482f442165ac339d9c80f45a06e04b32d6b6a5.png" alt="q_{21}"/> : linear term coefficient for order curvature</li>
-<li><img class="math" src="_images/math/b3cf6f7a53f5e53a319d76e19c076c65237e3c7f.png" alt="q_{22}"/> : quadratic term coefficient for order curvature</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{00}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : x position of the middle of the reference order.</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{01}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : linear term coefficient for order spacing</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{02}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : quadratic term coefficient for order spacing</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{10}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : common rotation term for all orders</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{11}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : linear term coefficient for order rotation</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{12}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : quadratic term coefficient for order rotation</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{20}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : common curvature term for all orders</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{21}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : linear term coefficient for order curvature</li>
+<li><div class="system-message">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">q_{22}</tt>)</p>
+latex exited with error
+[stdout]
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6)
+ %&amp;-line parsing enabled.
+entering extended mode
+(./math.tex
+LaTeX2e &lt;2005/12/01&gt;
+Babel &lt;v3.8h&gt; and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, arabic, basque, bulgarian, coptic, welsh, czech, slovak, german, ng
+erman, danish, esperanto, spanish, catalan, galician, estonian, farsi, finnish,
+ french, greek, monogreek, ancientgreek, croatian, hungarian, interlingua, ibyc
+us, indonesian, icelandic, italian, latin, mongolian, dutch, norsk, polish, por
+tuguese, pinyin, romanian, russian, slovenian, uppersorbian, serbian, swedish, 
+turkish, ukenglish, ukrainian, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2005/09/16 v1.4f Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+(/usr/share/texmf/tex/latex/ucs/utf8x.def))
+(/usr/share/texmf/tex/latex/ucs/ucs.sty
+(/usr/share/texmf/tex/latex/ucs/data/uni-global.def))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?&#8217; option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texmf/tex/latex/amscls/amsthm.sty)
+(/usr/share/texmf/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texmf/tex/latex/amsfonts/amsfonts.sty))
+
+! LaTeX Error: File `anyfontsize.sty&#8217; not found.
+
+Type X to quit or &lt;RETURN&gt; to proceed,
+or enter new name. (Default extension: sty)
+
+Enter file name: 
+! Emergency stop.
+&lt;read *&gt; 
+         
+l.9 \usepackage
+               {bm}^^M
+No pages of output.
+Transcript written on math.log.
+</div>
+ : quadratic term coefficient for order curvature</li>
 </ul>
 </div></blockquote>
 <p>... with everything else approximately zero.</p>
@@ -166,8 +1147,8 @@ to the way numpy&#8217;s poly1d function takes inputs, with the highest order co
   <p class="topless"><a href="instrument.html"
                         title="previous chapter">1. Overview of GHOST</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="recipes.html"
-                        title="next chapter">3. Recipes for GHOST</a></p>
+  <p class="topless"><a href="extraction.html"
+                        title="next chapter">3. Extraction and Weights</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -196,7 +1177,7 @@ to the way numpy&#8217;s poly1d function takes inputs, with the highest order co
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="recipes.html" title="3. Recipes for GHOST"
+          <a href="extraction.html" title="3. Extraction and Weights"
              >next</a> |</li>
         <li class="right" >
           <a href="instrument.html" title="1. Overview of GHOST"

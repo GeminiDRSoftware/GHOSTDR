@@ -1,6 +1,10 @@
 GHOST DR Release Notes
 ======================
 
+MILESTONE-7
+  Milestones 6 and 7 release, including 2D slit profile and 2D object extraction
+
+
 MILESTONE-5A
   Re-release of Milestone 5, to fix minor issues
 
