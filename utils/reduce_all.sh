@@ -47,14 +47,14 @@ for mode in high std; do
         processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits`
 
     while read object <&3; do
-        reduce $OBJDIR/$object --override_cal \
+        echo Reducing $object
+        reduce $object --override_cal \
             processed_bias:`ls $CALDIR/bias*SLIT*.fits` \
             processed_dark:`ls $CALDIR/dark*SLIT*.fits` \
             processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits`
     done 3< <(
         typewalk --types GHOST_SLITV_IMAGE GHOST_$CAPMODE --dir $OBJDIR/ --filemask 'obj.*\.(fits|FITS)' \
-        | grep '^ ' \
-        | awk '{print $1}'
+            -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
     )
 done
 
@@ -89,7 +89,8 @@ for cam in red blue; do
 
         for seeing in 0.5 1.0; do
             while read object <&3; do
-                reduce $OBJDIR/$object --override_cal \
+                echo Reducing $object
+                reduce $object --override_cal \
                     processed_bias:`ls $CALDIR/bias*$cam*.fits` \
                     processed_dark:`ls $CALDIR/dark*$cam*.fits` \
                     processed_slitflat:`ls $CALDIR/flat*$mode*SLIT*.fits` \
@@ -98,8 +99,7 @@ for cam in red blue; do
                     processed_flat:`ls $CALDIR/flat*$mode*$cam*.fits`
             done 3< <(
                 typewalk --types GHOST_OBJECT GHOST_$CAPCAM GHOST_$CAPMODE --dir $OBJDIR/ --filemask ".*$seeing.*1x1.*\.(fits|FITS)" \
-                | grep '^ ' \
-                | awk '{print $1}'
+                    -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
             )
         done
     done
