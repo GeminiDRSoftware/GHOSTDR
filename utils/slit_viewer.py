@@ -38,9 +38,17 @@ try:
 except:
     objtype = False
 
+# Just accumulate the SCI extensions (and any unlabeled extensions)
+scihdus = []
+for h in hdus[1:]:
+    try:
+        if h.header['EXTNAME'] == 'SCI':
+            scihdus.append(h)
+    except KeyError:
+        scihdus.append(h)
 # get the 2d profiles/images
-red2d = [sv(h.data, None, mode=res).cutout('red') for h in hdus[1:]]
-blu2d = [sv(h.data, None, mode=res).cutout('blue') for h in hdus[1:]]
+red2d = [sv(h.data, None, mode=res).cutout('red') for h in scihdus]
+blu2d = [sv(h.data, None, mode=res).cutout('blue') for h in scihdus]
 
 # zero the simultaneous arc fibre pixels if requested and
 # file is a high res object frame
@@ -66,8 +74,8 @@ for r, b in zip(red2d[1:], blu2d[1:]):
 # generate the graphs/plots
 for arm, im, lines in zip(['red', 'blue'], [reds, blues], [red1d, blu1d]):
     nlines = len(lines)
-    fig = plt.figure(res+'/'+arm, figsize=(12, 6))
-    gs = gridspec.GridSpec(1, 1+nlines, width_ratios=[3.5]+[1]*nlines)
+    fig = plt.figure(res+'/'+arm, figsize=(0.5+1.5*nlines, 6))
+    gs = gridspec.GridSpec(1, 1+nlines, width_ratios=[0.5+1.2*nlines]+[2.5]*nlines)
 
     # image goes to the left
     axp = plt.subplot(gs[0])
@@ -89,6 +97,7 @@ for arm, im, lines in zip(['red', 'blue'], [reds, blues], [red1d, blu1d]):
 
     plt.subplots_adjust(wspace=0.3)
     fig.autofmt_xdate(rotation=75)
+    gs.tight_layout(fig)
 
 plt.show()
 
