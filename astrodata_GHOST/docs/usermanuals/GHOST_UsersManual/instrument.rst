@@ -9,7 +9,10 @@ Overview of GHOST
 .. note:: This section of documentation is a summary/transcription of the
           GHOST Concept of Operations Document (ConOps) as at November 2015. It
           should be reviewed and updated once the instrument is actually built
-          and commissioned.
+          and commissioned. Consideration should also be given to what
+          information should be presented in this Guide, which information
+          would more properly belong in an Operations Manual (or similar), and
+          which information should be duplicated.
 
 Description of the Instrument
 =============================
@@ -174,6 +177,21 @@ observations. This source is cycled on and off with a given duty cycle, giving
 total counts within a given exposure time to be similar in magnitude to the
 science fibres (and avoiding saturation).
 
+**Spectropolarimetry mode**
+
+.. note:: This mode is a desirable future upgrade.
+
+In this mode, the two object probes are placed to one side of the field of
+view under the spectropolarimetry module. A single star image is split into two
+images in orthogonal polarization states (e.g., Stokes I+V and Stokes I-V),
+with one probe detecting each polarization state. A standard acquisition
+sequence is used to position each of the probes, and then multiple exposures
+are taken with the polarization modulator in different states. For faint
+sources, the two probes are beam switched fo that the sky fibres see the
+difference in sky brightness at each output of the analyzer. In the
+high-resolution mode, 50% of the light is lost, but observations are
+otherwise identical.
+
 Description of the Data
 =======================
 
@@ -213,3 +231,104 @@ used for GHOS, and is summarized below:
 | 10 | 512   | SCI pixel value has been replaced, but **not** via              |
 |    |       | interpolation                                                   |
 +----+-------+-----------------------------------------------------------------+
+
+Observing Sequence
+==================
+
+.. note:: This observing sequence is derived from the ConOps, in addition
+          to further discussions that have since taken place between the GHOST
+          team and Gemini. It should be reviewed thoroughly during instrument
+          commissioning.
+
+Daytime Calibrations
+--------------------
+
+The stability of the GHOST spectrograph and its environment means that day time
+calibrations will suffice for almost all science programs, saving siginifcant
+night time for other instrument operations. However, the procedures described in
+this section can also be used for night time calibrations where required.
+
+For the purpose of day time calibrations, the two beam-switching modes are
+equivalent to the corresponding two-target modes, giving five distinct
+calibration modes. The user is responsible for requesting the correct
+day time calibration mode.
+
+**Wavelength Calibration**
+
+For all modes except High Resolution PRV, wavelength calibration will be
+provided via observation of arc lamps in the Gemini Facility Calibration Unit
+(GCAL). High Resolution PRV mode observations will use simultaneous wavelength
+calibration from the ThXe sources mounted on the GHOST Cassegrain Unit.
+
+Day time wavelength calibration frames must be taken with the same spectral
+resolution and detector binning as the science data. Calibration images are
+taken with both arms simultaneously.
+
+**Flat-field Calibration**
+
+Flat-field calibration in all modes will be provided by observations of the
+GCAL continuum lamp. No further illumination corrections (e.g. twilight flats)
+are required. Unlike arc calibration images, flat-field calibration images
+will not be detector binned; however, the corret spectral resolution mode must
+be selected. Calibration images are taken in both arms simultaneously.
+
+It has been agreed with Gemini Operations that no fewer than three flat-field
+images will be taken for each required spectral mode each night. This will
+preclude the need to apply cosmic ray detection to the flat-field calibration
+images.
+
+**Dark and Bias Images**
+
+At the end of each night, multiple bias frames will be taken for each detector.
+These will be built into 'master' bias frames to be used in the data
+reduction process.
+
+The GHOST instrument specification calls for low-amplitude dark current
+detectors, so dark calibration frames will generally not be required. However,
+the user is able to request them.
+
+Night Time Observations
+-----------------------
+
+**Mode Selection**
+
+The user is required to specify the observing mode in the Gemini Observing
+Tool (OT). The OT will also be used to specify the instrument position angle.
+Observing mode options are:
+
+* Resolution mode (standard, high resolution, high resolution PRV)
+* Detector binning (normal, faint, custom)
+* Fiber agitator (on or off)
+
+The OT will prevent the user from providing a spurious combination of the above
+options.
+
+**Exposure times**
+
+It is possible for the user to specify different exposure times in each of the
+instrument arms (e.g. a single 60-second exposure in the red arm, and
+simultaneously, five 12-second exposures in the blue arm). Note that each
+individual exposure will be provided as a separate extension in the FITS file
+output, thus incurring additional read-out penalties.
+
+**Target positions**
+
+Target positions are passed to the OT in a standard RA/Dec format in the
+coordinate system of choice. Proper motions may also be provided. In all modes
+except Two-Target mode, only one science target is observed per observation;
+in two-target mode, two science targets are observed simultaneously.
+
+For faint targets, it is possible to provide a bright reference target to use
+for telescope positioning, and then 'blind offset' to the faint science target.
+
+The final observing position will be provided in the output FITS file header.
+
+**Science Observation**
+
+The OT will provide a high degree of flexibility for the user to customize the
+precise sequence of science observations to be taken. Each individual exposure
+will be output to a new extension of the output FITS file. The data processing
+pipeline is capable of deconstructing and processing such a multi-extension
+file.
+
+
