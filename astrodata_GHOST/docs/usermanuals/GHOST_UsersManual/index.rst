@@ -12,11 +12,10 @@ GHOST Users Manual
    :maxdepth: 2
 
    instrument
-   model
-   extraction
    recipes
    tipstricks
    issueslimitations
+   algorithms
    primitives
 
 

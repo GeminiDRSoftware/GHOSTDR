@@ -58,10 +58,10 @@ with :math:`y' = y - y_{middle}` , and:
 
 	   p_0(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ...
 
-with :math:`m' = m_{\rm ref}/m - 1`
+with :math:`m' = m_{\rm ref}/m - 1`.
 
 In this functional form, :math:`F(p)` is whatever aspect we wish to model. In the specific
-example of GHOST, it will be the x position (defined in the spatial direction) in the first
+example of GHOST, it will be the :math:`x` position (defined in the spatial direction) in the first
 instance, but this same method is then used for the wavelength scale, and all three aspects
 of the slit image on the chip (spatial direction magnification scale, spectral direction
 magnification scale and rotation), all of which are expected to change as a function of order
@@ -69,21 +69,21 @@ and position along the order.
 
 This means that the simplest wavelength scale spectrograph model should have:
 
- * :math:`q_{00}` : central wavelength of order m_ref
- * :math:`q_{01}` : central wavelength of order m_ref
- * :math:`q_{10}` : central_wavelength/R_pix, with R_pix the resolving power / pixel.
- * :math:`q_{11}` : central_wavelength/R_pix, with R_pix the resolving power / pixel.
+ * :math:`q_{00}` : central wavelength of order :math:`m_{ref}`;
+ * :math:`q_{01}` : central wavelength of order :math:`m_{ref}`;
+ * :math:`q_{10}` : central_wavelength/:math:`R_{pix}`, with :math:`R_{pix}` the resolving power / pixel;
+ * :math:`q_{11}` : central_wavelength/:math:`R_{pix}`, with :math:`R_{pix}` the resolving power / pixel;
 
-... with everything else approximately zero.
+with everything else approximately zero.
 
 Please note that the order of polynomials is left undefined. The code that handles these
-parameters is identical and left generalised since each aspect (x position, wavelength, etc)
+parameters is identical and left generalised since each aspect (:math:`x` position, wavelength, etc)
 may require a different number of variables to fully describe the problem.
 
 Description of model file contents
 ==================================
 
-In the case of the x position, using default file `xmod.fits`, the contents of this file are as
+In the case of the x position, using default file ``xmod.fits``, the contents of this file are as
 follows:
 
 .. math::
@@ -96,18 +96,18 @@ follows:
   \end{array}\right]
 
 The non standard way to define the variables within the files and imported array is related
-to the way numpy's poly1d function takes inputs, with the highest order coefficient first.
+to the way ``numpy``'s ``poly1d`` function takes inputs, with the highest order coefficient first.
 
 In the case of x position, the coefficients represent:
 
- * :math:`q_{00}` : x position of the middle of the reference order.
- * :math:`q_{01}` : linear term coefficient for order spacing
- * :math:`q_{02}` : quadratic term coefficient for order spacing
- * :math:`q_{10}` : common rotation term for all orders
- * :math:`q_{11}` : linear term coefficient for order rotation
- * :math:`q_{12}` : quadratic term coefficient for order rotation
- * :math:`q_{20}` : common curvature term for all orders
- * :math:`q_{21}` : linear term coefficient for order curvature
- * :math:`q_{22}` : quadratic term coefficient for order curvature
+ * :math:`q_{00}` : :math:`x` position of the middle of the reference order;
+ * :math:`q_{01}` : linear term coefficient for order spacing;
+ * :math:`q_{02}` : quadratic term coefficient for order spacing;
+ * :math:`q_{10}` : common rotation term for all orders;
+ * :math:`q_{11}` : linear term coefficient for order rotation;
+ * :math:`q_{12}` : quadratic term coefficient for order rotation;
+ * :math:`q_{20}` : common curvature term for all orders;
+ * :math:`q_{21}` : linear term coefficient for order curvature;
+ * :math:`q_{22}` : quadratic term coefficient for order curvature;
 
-... with everything else approximately zero.
+with everything else approximately zero.
