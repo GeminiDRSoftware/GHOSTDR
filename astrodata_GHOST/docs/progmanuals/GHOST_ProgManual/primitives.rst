@@ -4,27 +4,25 @@
 Primitives
 **********
 
+Core Primitives
+===============
+
 .. module:: astrodata_GHOST.RECIPES_GHOST.primitives.primitives_GHOST
 .. autoclass:: GHOSTPrimitives
+    :members:
 
-    **Primitives**
+Calibration Primitives
+======================
 
-    .. automethod:: applyFlatBPM
-    .. automethod:: clipSigmaBPM
-    .. automethod:: correctSlitCosmics
-    .. automethod:: extractProfile
-    .. automethod:: findApertures
-    .. automethod:: fitWavelength
-    .. automethod:: flatCorrect
-    .. automethod:: fork
-    .. automethod:: processSlits
-    .. automethod:: rejectCosmicRays
-    .. automethod:: stackFrames
-    .. automethod:: standardizeHeaders
-    .. automethod:: standardizeStructure
-    .. automethod:: switchTo
-    .. automethod:: tileAmplifiers
-    .. automethod:: validateData
+These primitives are inherited by GHOSTPrimitives.
+
+.. note:: Most of these primitives are currently undocumented. This will
+          be rectified once the Gemini code refactor is completed.
+
+.. module:: astrodata_GHOST.RECIPES_GHOST.primitives.primitives_GHOST_calibration
+.. autoclass:: GHOST_CalibrationPrimitives
+    :members:
+    :private-members:
 
 .. **********
 .. Primitives

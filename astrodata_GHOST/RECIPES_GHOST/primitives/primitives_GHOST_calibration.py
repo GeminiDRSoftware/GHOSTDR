@@ -20,10 +20,39 @@ class GHOST_CalibrationPrimitives(CalibrationPrimitives):
     astrotype = "GHOST"
 
     def getProcessedSlit(self, rc):
+        """
+        Fetch a processed slit from the calibrations system suitable for the
+        files in the passed ReductionContext
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Returns
+        -------
+        The same ReductionContext, with the necessary calibrations loaded.
+        """
         self._getProcessed(rc)
         yield rc
 
     def getProcessedSlitBias(self, rc):
+        """
+        Fetch a processed slit bias from the calibrations system suitable for
+        the files in the passed ReductionContext
+
+        Parameters
+        ----------
+        rc : dict
+            The ReductionContext dictionary that holds the data stream
+            processing information.
+
+        Returns
+        -------
+        rc: dict
+            The same ReductionContext, with the necessary calibrations loaded.
+        """
         self._getProcessed(rc)
         yield rc
 
