@@ -18,7 +18,6 @@ GHOST Programmer's Manual
    primitives
    tests
    config
-   utils
 
 
 Indices and tables
