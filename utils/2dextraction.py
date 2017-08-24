@@ -3,6 +3,7 @@
 from __future__ import division, print_function
 from astrodata_GHOST import polyfit
 import astropy.io.fits as pyfits
+import numpy as np
 import numpy as pn
 import fnmatch, os
 import pdb
@@ -12,7 +13,7 @@ arm='blue'
 mode='std'
 ftype='arc'
 write_to_file = False
-flat_correct = False
+flat_correct = True
 extract_1d_first = True #Set this to false to test multiple times.
 
 # Firstly, let's find all the needed files
@@ -24,7 +25,9 @@ test_files_dir='/Users/mireland/python/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lo
 # For this example just use arcs. Proper science frame reduction is still not
 # available. 
 science_file  = fitsdir + ftype + '95_'+mode+'_'+arm+'_'+ftype+'.fits'
+science_file = fitsdir + 'obj95_0.5_std_blue_flatBPMApplied.fits'
 slit_image = fitsdir + ftype+ '95_'+mode+'_SLIT_'+ftype+'.fits'
+slit_image = fitsdir + 'obj95_0.5_std_SLIT_stack_slit.fits'
 flat_file  = fitsdir + 'flat95_'+mode+'_2_'+arm+'_flat.fits'
 
 # Use these files and flat_correct=False to test flat extraction.
@@ -82,7 +85,7 @@ extractor = polyfit.Extractor(arm, slitview)
 # Now extract. The option to correct for sky depends on the type of file. 
 if extract_1d_first:
     extracted_flux, extracted_var, extraction_weights = \
-        extractor.one_d_extract(science_data,correct_for_sky=correct_for_sky)
+        extractor.one_d_extract(science_data,correct_for_sky=correct_for_sky) #, debug_crs=True)
     with open('extraction_weights.pkl','w') as f:
        pickle.dump(extraction_weights, f)
 
