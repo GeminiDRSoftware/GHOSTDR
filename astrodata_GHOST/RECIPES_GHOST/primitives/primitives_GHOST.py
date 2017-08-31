@@ -77,28 +77,33 @@ class GHOSTPrimitives(GMOSPrimitives,
         Find the flat relevant to the file(s) being processed, and merge the
         flat's BPM into the target file's.
 
+        Notes
+        -----
+
+        Refer to the GHOST Programmer's Manual for more detailed documentation.
+
         Parameters
         ----------
-        rc : dict
+        rc : :any:`ReductionContext`
             The ReductionContext dictionary holding the data stream processing
             information
-        rc['flat'] : str
+        rc['flat'] : :obj:`str`
             The file path to the flat field to be used. Defaults to None, at
             which point the system will check flatstream (below).
-        rc['flatStream'] : str, optional
+        rc['flatStream'] : :obj:`str`, optional
             The name of the stream that the system will find the necessary
             flat field frame in. Defaults to None. If both rc['flat'] and
             rc['flatStream'] are None, the standard getProcessedFlat primitive
             will be used instead. If both rc['flat'] and rc['flatStream'] are
             provided, rc['flat'] will take precedence.
-        rc['writeResult'] : bool (default: True)
+        rc['writeResult'] : :obj:`bool`, optional
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
             quality assurance. Defaults to True.
 
         Yields
         -------
-        rc : dict
+        rc : :any:`ReductionContext`
             The same ReductionContext dictionary, with any necessary
             alterations.
         """

@@ -16,7 +16,7 @@ applyFlatBPM # Bitwise combine the flat BPM with the current BPM
              # for the data
 extractProfile
 flatCorrect # Need to write our own, NOT USE GMOS - extract the flat profile,
-#            # then simple division
+#           # then simple division
 #responseCorrect # canned standard star correction to the point of
                  # flatCorrect, plus a model flux
                  # User should be able to turn off this step
