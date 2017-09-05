@@ -156,7 +156,8 @@ class Extractor():
                 x_dir_map = np.dot(invmat, [1, 0])
                 self.slit_tilt[i, j] = x_dir_map[1] / x_dir_map[0]
 
-    def one_d_extract(self, data=None, file=None, correct_for_sky=True):
+    def one_d_extract(self, data=None, file=None, correct_for_sky=True,\
+        debug_crs=False):
         """ Extract flux by integrating down columns (the "y" direction),
         using an optimal extraction method.
 
@@ -309,7 +310,8 @@ class Extractor():
 
                 # Search for additional cosmic rays here, by seeing if the data
                 # look different to the model.
-                additional_crs = find_additional_crs(phi, slitim_offsets, col_data, col_inv_var)
+                additional_crs = find_additional_crs(phi, slitim_offsets, col_data, \
+                    col_inv_var, debug=debug_crs)
                 if (len(additional_crs) > 0):
                     col_inv_var[additional_crs] = 0
                     if self.badpixmask is not None:
@@ -345,8 +347,8 @@ class Extractor():
                 
                 #DEBUG
                 #if (np.max(pixel_weights) > 2) and (j > 0.1*ny):
-                #if (j==2000):
-                #    import pdb; pdb.set_trace()
+                if (j==2000):
+                    import pdb; pdb.set_trace()
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
                 #orders
