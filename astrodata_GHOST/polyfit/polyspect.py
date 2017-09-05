@@ -12,11 +12,15 @@ import matplotlib.cm as cm
 from matplotlib.widgets import Slider, Button
 import scipy.optimize as op
 from scipy.interpolate import interp1d
+
+
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
 
 class Polyspect(object):
-    """A class containing tools common for any spectrograph.
+    """
+    A class containing tools common for any spectrograph.
+
     This class should be inhereted by the specific spectrograph module.
     Contains functions related to polynomial modelling of spectrograph orders.
     """
@@ -38,25 +42,27 @@ class Polyspect(object):
         self.blaze = None
         self.matrices = None
 
-   
-    def evaluate_poly(self, params, data = None):
-        """ Function used to evaluate a polynomial of polynomials given model
-        parameters. This is a function designed to avoid code repetition.
+    def evaluate_poly(self, params, data=None):
+        """
+        Evaluates a polynomial of polynomial, given model parameters.
+
+        This is a function designed to avoid code repetition.
 
         Parameters
         ----------
 
-        params: float array
+        params: :obj:`numpy.ndarray`
             Model parameters with the coefficients to evaluate.
-        data: list (optional)
+
+        data: :obj:`list` (optional)
             Optional data input for the y_values and orders. 
 
         Returns
         -------
 
-        evaluation: float array
+        evaluation: :obj:`float` array
             This is a (orders,yvalues) array containing the polynomial
-        evaluation at every point.
+            evaluation at every point.
 
         """
         # params needs to be a np.array
@@ -73,16 +79,17 @@ class Polyspect(object):
             # parameters can be easily derived from class propoerties and should
             # not have to be provided as inputs. 
             y_values, orders = np.meshgrid(np.arange(self.szy),
-                                           np.arange(self.m_max - self.m_min + 1) +
+                                           np.arange(self.m_max -
+                                                     self.m_min + 1) +
                                            self.m_min)
         # However, we should just use the orders as a single array.
         if orders.ndim > 1:
-            orders = orders[:,0]
+            orders = orders[:, 0]
         mprime = np.float(self.m_ref) / orders - 1
         # In case of a single polynomial, this solves the index problem.
         if params.ndim == 1:
             polyp = np.poly1d(params)
-            evaluation = np.meshgrid(np.arange(self.szy),polyp(mprime))[1]
+            evaluation = np.meshgrid(np.arange(self.szy), polyp(mprime))[1]
         else:
             # Initiate a polynomials array.
             polynomials = np.empty((len(orders), ydeg + 1))
@@ -97,12 +104,14 @@ class Polyspect(object):
                 evaluation[i] = polyp(y_values[i] - self.szy // 2)
         return evaluation
 
-    
     def fit_resid(self, params, orders, y_values, data, ydeg=3, xdeg=3,
-                       sigma = None):
-        """A fit function for read_lines_and_fit (see that function for details)
-        to be used in scipy.optimize.leastsq as the minimisation function.
-        The same function is used in fit_to_x, but in that case
+                  sigma=None):
+        """
+        A fit function for :any:`read_lines_and_fit`.
+
+        This function is to be used in :any:`scipy.optimize.leasts`q as the
+        minimisation function.
+        The same function is used in :any:`fit_to_x`, but in that case
         "waves" is replaced by "xs".
 
         Parameters
@@ -129,8 +138,8 @@ class Polyspect(object):
 
         Returns
         -------
-
-        The residual between the model and data supplied.
+        float
+            The residual between the model and data supplied.
         """
         # params needs to be a np.array
         if not isinstance(params, np.ndarray):
@@ -144,22 +153,25 @@ class Polyspect(object):
 
         params = params.reshape((ydeg + 1, xdeg + 1))
         if len(orders) != len(y_values):
-            print("orders and y_values must all be the same length!")
-            raise UserWarning
-        
-        result = self.evaluate_poly(params,(y_values,orders))
+            raise UserWarning("orders and y_values must all be the same "
+                              "length!")
+
+        result = self.evaluate_poly(params, (y_values, orders))
         if sigma is None:
             sigma = np.ones_like(result)
+
         return (data - result) / sigma
 
-
-    
     def read_lines_and_fit(self, init_mod, arclines, ydeg=3, xdeg=3):
-        """Read in a series of text files that have a (Wavelength, pixel)
-        format in file names like order99.txt and order100.txt.
+        """
+        Read text files containing order information and fit to them.
+
+        Read in a series of text files that have a (Wavelength, pixel)
+        format, and file names like order99.txt, order100.txt, etc.
         Fit an nth order polynomial to the wavelength as a function
-        of pixel value. 
-        The functional form is:
+        of pixel value.
+
+        The functional form of the polynomial of polynomials is:
 
         ..math::
 
@@ -185,10 +197,10 @@ class Polyspect(object):
         Parameters
         ----------
 
-        init_mod: 2D array
+        init_mod: array-like, two-dimensional
             initial model parameters.
-        arclines: 
-            wavelengths of lines from the find_lines function.
+        arclines: array, like
+            wavelengths of lines from the :any:`find_lines` function.
         xdeg, ydeg: int
             Order of polynomial
 
@@ -204,22 +216,24 @@ class Polyspect(object):
         # base class.
         # This code needs more work since we will only have one format
         # for a GHOST arc line list
+        # FIXME Avoid hard-coding values for array positions
         lines = arclines
         orders = lines[:, 3]
         waves = lines[:, 0]
         y_values = lines[:, 1]
-        ydeg=init_mod.shape[0]-1
-        xdeg=init_mod.shape[1]-1
-        #For weighted fitting purposes, use the maximum of the gaussian fit.
-        sigma=1./lines[:,4]
-        
-        #init_resid = self.fit_resid(init_mod, orders, waves,
+        ydeg = init_mod.shape[0] - 1
+        xdeg = init_mod.shape[1] - 1
+        # For weighted fitting purposes, use the maximum of the gaussian fit.
+        sigma = 1. / lines[:, 4]
+
+        # init_resid = self.fit_resid(init_mod, orders, waves,
         #                                 y_values, ydeg=ydeg, xdeg=xdeg)
+        # TODO More detailed (comment) description of what's happening here
         bestp = op.leastsq(self.fit_resid, init_mod, args=(orders, y_values,
                                                            waves, ydeg, xdeg,
                                                            sigma))
         final_resid = self.fit_resid(bestp[0], orders, y_values, waves,
-                                          ydeg=ydeg, xdeg=xdeg)
+                                     ydeg=ydeg, xdeg=xdeg)
         # Output the fit residuals.
         wave_and_resid = np.array([waves, orders, final_resid]).T
         print("Fit residual RMS (Angstroms): {0:6.3f}".format(
@@ -228,21 +242,24 @@ class Polyspect(object):
         return params, wave_and_resid
 
     def spectral_format(self, wparams=None, xparams=None, img=None):
-        """Create a spectrum, with wavelengths sampled in 2 orders based on
-           a pre-existing wavelength and x position polynomial model.
-           This code takes the polynomial model and calculates the result as
-           a function of order number scaled to the reference order and then
-           as a function of y position.
-           Optionally a file can be supplied for the model to be overlayed
-           on top of.
+        """
+        Form a spectrum from wavelength and a polynomial model.
+
+        Create a spectrum, with wavelengths sampled in 2 orders based on
+        a pre-existing wavelength and x position polynomial model.
+        This code takes the polynomial model and calculates the result as
+        a function of order number scaled to the reference order and then
+        as a function of y position.
+        Optionally a file can be supplied for the model to be overlayed
+        on top of.
 
         Parameters
         ----------
-        wparams: float array (optional)
+        wparams: array-like, :obj:`float`, two-dimensional
             2D array with polynomial parameters for wavelength scale
-        xparams: float array (optional)
+        xparams: array-like, :obj:`float`, two-dimensional
             2D array with polynomial parameters for x scale
-        img: 2D array (optional)
+        img: array-like, :obj:`float`, two-dimensional
             2D array containing an image. This function
             uses this image and over plots the created position model.
 
@@ -263,6 +280,8 @@ class Polyspect(object):
             center of the CCD.
         """
 
+        # FIXME this function requires more detail in comments about procedure
+
         # Now lets interpolate onto a pixel grid rather than the arbitrary
         # wavelength grid we began with.
         norders = self.m_max - self.m_min + 1
@@ -278,9 +297,9 @@ class Polyspect(object):
         y_values, orders = np.meshgrid(np.arange(self.szy),
                                        np.arange(self.m_max - self.m_min + 1) +
                                        self.m_min)
-        order = orders[:,0]
+        order = orders[:, 0]
         if wparams is None:
-            wparams = np.ones((3,3))
+            wparams = np.ones((3, 3))
         wave_int = self.evaluate_poly(wparams)
         x_int = self.evaluate_poly(xparams)
 
@@ -289,9 +308,9 @@ class Polyspect(object):
         disp = wave_int[:, int(self.szy / 2 + 1)] - wcen
 
         order_width = (wcen / order) / disp
-        order_width = np.meshgrid(np.arange(self.szy),order_width)[1]
+        order_width = np.meshgrid(np.arange(self.szy), order_width)[1]
         blaze_int = np.sinc((y_values - self.szy / 2)
-                                                   / order_width)**2
+                            / order_width) ** 2
 
         # Plot this if we have an image file
         if (img is not None) and (xparams is not None):
@@ -310,23 +329,25 @@ class Polyspect(object):
 
         return x_int, wave_int, blaze_int
 
-
     def adjust_x(self, old_x, image, num_xcorr=21):
-        """Adjust the x pixel value based on an image and an initial
-            array from spectral_format().
-            This function performs a cross correlation between a pixel map
-            and a given 2D array image and calculates a shift along the spatial
-            direction. The result is used to inform an initial global shift for
-            the fitting procedure.
-            Only really designed for a single fiber flat, single fiber science
-            image or a convolution map.
-            This is a helper routine for fit_x_to_image.
+        """
+        Adjust the x-pixel value mapping.
+
+        Adjust the x pixel value based on an image and an initial
+        array from spectral_format().
+        This function performs a cross correlation between a pixel map
+        and a given 2D array image and calculates a shift along the spatial
+        direction. The result is used to inform an initial global shift for
+        the fitting procedure.
+        Only really designed for a single fiber flat, single fiber science
+        image or a convolution map.
+        This is a helper routine for :any:`fit_x_to_image`.
 
         Parameters
         ----------
-        old_x: numpy array
+        old_x: :any:`numpy.ndarray`, two-dimensional
             An old x pixel array
-        image: numpy array
+        image: :any:`numpy.ndarray`, two-dimensional
             A 2D image array to be used as the basis for the adjustment.
         num_xcorr: int
             Size of the cross correlation function. This should be an indication
@@ -364,11 +385,14 @@ class Polyspect(object):
 
     def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=20,
                        inspect=False):
-        """Fit a "tramline" map. Note that an initial map has to be pretty
+        """
+        Fit a "tramline" map.
+
+        Note that an initial map has to be pretty
         close, i.e. within "search_pix" everywhere. To get within search_pix
         everywhere, a simple model with a few paramers is fitted manually.
         This can be done with the GUI using the adjust_model function and
-        finally adjusted with the adjust_x function
+        finally adjusted with the adjust_x function.
 
         Parameters
         ----------
@@ -397,6 +421,8 @@ class Polyspect(object):
             The new model parameters fitted.
 
         """
+        # FIXME more detailed comments, more consistent input checking
+
         xbase, wave, blaze = self.spectral_format(xparams=xparams)
         if self.transpose:
             image = data.T
@@ -407,8 +433,9 @@ class Polyspect(object):
         x_values = self.adjust_x(xbase, image)
 
         if image.shape[0] % decrease_dim != 0:
-            raise UserWarning("Can not decrease image dimention by this amount. " +\
-                "Please check if the image size in the spectral dimention " +\
+            raise UserWarning(
+                "Can not decrease image dimention by this amount. "
+                "Please check if the image size in the spectral dimension "
                 "is exactly divisible by this amount.")
         # Median-filter in the dispersion direction.
         # This process will 'collapse' the image in the spectral direction
@@ -416,8 +443,10 @@ class Polyspect(object):
         image_med = image.reshape((image.shape[0] // decrease_dim,
                                    decrease_dim, image.shape[1]))
         image_med = np.median(image_med, axis=1)
-        order_y = np.meshgrid(np.arange(xbase.shape[1]),               # pylint: disable=maybe-no-member
-                              np.arange(xbase.shape[0]) + self.m_min)  # pylint: disable=maybe-no-member
+        order_y = np.meshgrid(np.arange(xbase.shape[1]),
+                              # pylint: disable=maybe-no-member
+                              np.arange(xbase.shape[
+                                            0]) + self.m_min)  # pylint: disable=maybe-no-member
         y_values = order_y[0]
         y_values = np.average(y_values.reshape(x_values.shape[0],
                                                x_values.shape[1] //
@@ -437,17 +466,17 @@ class Polyspect(object):
             for j in range(x_values.shape[1]):  # pylint: disable=maybe-no-member
                 xind = int(np.round(x_values[i, j]))
                 peakpix = image_med[j, self.szx // 2 + xind -
-                                    search_pix:self.szx // 2 +
-                                    xind + search_pix + 1]
+                                       search_pix:self.szx // 2 +
+                                                  xind + search_pix + 1]
                 x_values[i, j] += np.argmax(peakpix) - search_pix
-                #Put a sigma for weighted fit purposes
-                sigma[i,j] = 1./np.max(peakpix)
+                # Put a sigma for weighted fit purposes
+                sigma[i, j] = 1. / np.max(peakpix)
         # Down weight any regions where the flux peak was less than 0.
-        sigma[sigma<0]=1E30
+        sigma[sigma < 0] = 1E30
         if inspect:
             plt.clf()
             plt.imshow(data)
-            plt.plot(y_values,x_values+self.szx//2,'.')
+            plt.plot(y_values, x_values + self.szx // 2, '.')
             plt.show()
 
         fitted_params = self.fit_to_x(x_values, xparams, y_values=y_values,
@@ -460,7 +489,8 @@ class Polyspect(object):
             x_int, wave_int, blaze_int = \
                 self.spectral_format(wparams=None, xparams=fitted_params)
             ygrid = np.meshgrid(np.arange(data.shape[1]),
-                                np.arange(x_int.shape[0]))[0]  # pylint: disable=maybe-no-member
+                                np.arange(x_int.shape[0]))[
+                0]  # pylint: disable=maybe-no-member
             plt.plot(ygrid, x_int + data.shape[0] // 2,
                      color='green', linestyle='None', marker='.')
             plt.show()
@@ -469,7 +499,8 @@ class Polyspect(object):
 
     def fit_to_x(self, x_to_fit, init_mod, y_values=[], sigma=None,
                  decrease_dim=1):
-        """Fit to an (norders,ny) array of x-values.
+        """
+        Fit to an (norders, ny) array of x-values.
 
         The functional form is:
 
@@ -511,6 +542,8 @@ class Polyspect(object):
             Fitted parameters.
         """
 
+        # FIXME More vigourous input type checking (or casting)
+
         # Create an array of y and m values.
         x_values = x_to_fit.copy()
         order_y = np.meshgrid(np.arange(x_values.shape[1]),
@@ -525,7 +558,8 @@ class Polyspect(object):
                                                x_values.shape[1] //
                                                decrease_dim, decrease_dim),
                                 axis=2)
-            y_values = np.average(y_values.reshape(x_values.shape[0],  # pylint: disable=maybe-no-member
+            y_values = np.average(y_values.reshape(x_values.shape[0],
+                                                   # pylint: disable=maybe-no-member
                                                    x_values.shape[1] //
                                                    decrease_dim, decrease_dim),
                                   axis=2)
@@ -534,15 +568,14 @@ class Polyspect(object):
                                                    decrease_dim, decrease_dim),
                                   axis=2)
 
-        
         # Flatten arrays
         orders = orders.flatten()
         y_values = y_values.flatten()  # pylint: disable=maybe-no-member
         x_values = x_values.flatten()  # pylint: disable=maybe-no-member
         sigma = sigma.flatten()
-        
-        ydeg=init_mod.shape[0]-1
-        xdeg=init_mod.shape[1]-1
+
+        ydeg = init_mod.shape[0] - 1
+        xdeg = init_mod.shape[1] - 1
         # Do the fit!
         print("Fitting (this can sometimes take a while...)")
         init_resid = self.fit_resid(init_mod, orders, y_values, x_values,
@@ -550,23 +583,23 @@ class Polyspect(object):
         bestp = op.leastsq(self.fit_resid, init_mod,
                            args=(orders, y_values, x_values, ydeg, xdeg, sigma))
         final_resid = self.fit_resid(bestp[0], orders, y_values, x_values,
-                                     ydeg=ydeg, xdeg=xdeg,sigma=sigma)
+                                     ydeg=ydeg, xdeg=xdeg, sigma=sigma)
         params = bestp[0].reshape((ydeg + 1, xdeg + 1))
         print(init_resid, final_resid)
 
         return params
 
-
     def spectral_format_with_matrix(self, xmod, wavemod, spatmod=None,
                                     specmod=None, rotmod=None,
                                     return_arrays=False):
-        """Create a spectral format, including a detector to slit matrix at
-           every point. This is the faster version.
+        """
+        Create a spectral format, including a detector to slit matrix, at
+        every point. This is the faster version.
 
-           The input parameters are required for this to work and represent
-           the polynomial coefficients for second order descriptions of
-           how the spectral and spatial scales vary as a function of order
-           for each mode as well as a slit rotation indicator.
+        The input parameters are required for this to work and represent
+        the polynomial coefficients for second order descriptions of
+        how the spectral and spatial scales vary as a function of order
+        for each mode as well as a slit rotation indicator.
 
         The functional form is equivalent to all other models in the spectral
         format. For the 3 new parameters the simplest interpretation of the
@@ -612,7 +645,6 @@ class Polyspect(object):
         wavemod: float array
             pixel position model parameters. Used in the spectral format
             function. See documentation there for more details
-
         spatmod: (optional) float array
             Parameters from the spatial scale second order polynomial
             describing how the slit image varies in the spatial direction
@@ -677,15 +709,16 @@ class Polyspect(object):
         # This needs to be done separately because of the
         # matrix structure
         extra_rot_mat[:, :, 0, 0] = np.cos(r_rad) * \
-            slit_microns_per_det_pix_x
-        extra_rot_mat[:, :, 0, 1] = -np.sin(r_rad) *\
-            slit_microns_per_det_pix_x
-        extra_rot_mat[:, :, 1, 0] = np.sin(r_rad) *\
-            slit_microns_per_det_pix_y
-        extra_rot_mat[:, :, 1, 1] = np.cos(r_rad) *\
-            slit_microns_per_det_pix_y
+                                    slit_microns_per_det_pix_x
+        extra_rot_mat[:, :, 0, 1] = -np.sin(r_rad) * \
+                                    slit_microns_per_det_pix_x
+        extra_rot_mat[:, :, 1, 0] = np.sin(r_rad) * \
+                                    slit_microns_per_det_pix_y
+        extra_rot_mat[:, :, 1, 1] = np.cos(r_rad) * \
+                                    slit_microns_per_det_pix_y
         matrices = extra_rot_mat
 
+        # TODO Should the class update if return_arrays=True anyway?
         if return_arrays:
             return xbase, waves, blaze, matrices
         else:
@@ -696,9 +729,12 @@ class Polyspect(object):
             self.matrices = matrices
 
     def slit_flat_convolve(self, flat, slit_profile=None):
-        """Dummy function that would takes a flat field image and a slit profile
-           and convolves the two in 2D. Returns result of convolution, which
-           should be used for tramline fitting.
+        """
+        Dummy function, returns the input flat.
+
+        Dummy function that would takes a flat field image and a slit profile
+        and convolves the two in 2D. Returns result of convolution, which
+        should be used for tramline fitting.
         """
         return flat
 
@@ -706,7 +742,10 @@ class Polyspect(object):
                             xparams=None, spatparams=None, rotparams=None,
                             thar_spectrum=None, percentage_variation=10,
                             vary_wrt_max=True):
-        """Function that uses matplotlib slider widgets to adjust a polynomial
+        """
+        Interactive manual adjustment for a :module:`polyspect` module
+
+        Function that uses matplotlib slider widgets to adjust a polynomial
         model overlaid on top of a flat field image. In practice this will be
         overlaid on top of the result of convolving the flat with a slit
         profile in 2D which just reveals the location of the middle of the
@@ -760,7 +799,7 @@ class Polyspect(object):
 
         # FIXME: This function is undergoing substantial restructoring and will
         # fail
-        
+
         # Must provide xparams
         if (xparams is None):
             return 'Must provide at least an initial xparams'
@@ -770,7 +809,8 @@ class Polyspect(object):
                                                           xparams=xparams)
 
         # define what is to be plotted
-        def plot_data(model,xparams,wparams,nxbase,ygrid,thar_spectrum=None):
+        def plot_data(model, xparams, wparams, nxbase, ygrid,
+                      thar_spectrum=None):
             """ Function used for working out and defining
             the data to be plotted as a function of purpose 
 
@@ -798,28 +838,28 @@ class Polyspect(object):
             """
             xbase, wave, blaze = self.spectral_format(wparams=wparams,
                                                       xparams=xparams)
-            if model=='position':
-                return ygrid.flatten()[::10], xbase.flatten()[::10] + (nxbase //2)
-            elif model=='wavelength':
+            if model == 'position':
+                return ygrid.flatten()[::10], xbase.flatten()[::10] + (
+                nxbase // 2)
+            elif model == 'wavelength':
                 # This ensures that the thorium argon interpolation is within
                 # range
-                thar_spectrum[0][0]=wave.min()
-                thar_spectrum[0][-1]=wave.max()
-                thar_spectrum[1][0]=0.0
-                thar_spectrum[1][-1]=0.0
-                interp_thar=interp1d(thar_spectrum[0],thar_spectrum[1])
+                thar_spectrum[0][0] = wave.min()
+                thar_spectrum[0][-1] = wave.max()
+                thar_spectrum[1][0] = 0.0
+                thar_spectrum[1][-1] = 0.0
+                interp_thar = interp1d(thar_spectrum[0], thar_spectrum[1])
                 flux = interp_thar(wave)
                 # Now remove anything that is below 100 times the average sigma.
                 # This means only the very brightest lines are displayed.
-                thar_threshold = np.average(flux)*10.
-                ygrid_filtered = ygrid[np.where(flux>thar_threshold)]
-                xbase_filtered = xbase[np.where(flux>thar_threshold)]
-                return ygrid_filtered.flatten(), xbase_filtered.flatten() + (nxbase //2)
+                thar_threshold = np.average(flux) * 10.
+                ygrid_filtered = ygrid[np.where(flux > thar_threshold)]
+                xbase_filtered = xbase[np.where(flux > thar_threshold)]
+                return ygrid_filtered.flatten(), xbase_filtered.flatten() + (
+                nxbase // 2)
             else:
                 raise UserWarning('invalid model type for plot_data')
 
-
-        
         nxbase = data.shape[0]
         # Start by setting up the graphical part
         fig, axx = plt.subplots()
@@ -829,9 +869,9 @@ class Polyspect(object):
                             np.arange(x_int.shape[0]))[0]
         # The data must be flattened for the sliders to work.
         # Then plot it!
-        to_plot=plot_data(model,xparams,wparams,nxbase,ygrid,
-                                    thar_spectrum)
-        lplot, = plt.plot(to_plot[0],to_plot[1],
+        to_plot = plot_data(model, xparams, wparams, nxbase, ygrid,
+                            thar_spectrum)
+        lplot, = plt.plot(to_plot[0], to_plot[1],
                           color='green', linestyle='None', marker='.')
 
         # Now over plot the image.
@@ -847,21 +887,21 @@ class Polyspect(object):
             for i in range(npolys):
                 for j in range(polyorder):
                     params[i, j] = sliders[i][j].val
-            if model=='position':
-                to_plot=plot_data(model,params,wparams,nxbase,ygrid,
+            if model == 'position':
+                to_plot = plot_data(model, params, wparams, nxbase, ygrid,
                                     thar_spectrum)
-            elif model=='wavelength':
-                to_plot=plot_data(model,xparams,params,nxbase,ygrid,
+            elif model == 'wavelength':
+                to_plot = plot_data(model, xparams, params, nxbase, ygrid,
                                     thar_spectrum)
             lplot.set_xdata(to_plot[0])
             lplot.set_ydata(to_plot[1])
             fig.canvas.draw_idle()
 
-        if model=='position':
-            params=xparams
-        elif model=='wavelength':
-            params=wparams
-        
+        if model == 'position':
+            params = xparams
+        elif model == 'wavelength':
+            params = wparams
+
         polyorder = params.shape[1]
         npolys = params.shape[0]
         # Now we start putting sliders in depending on number of parameters
@@ -873,7 +913,7 @@ class Polyspect(object):
         if vary_wrt_max:
             for i in range(npolys):
                 frac_params[i] = np.max(
-                    frac_params[-1]) / (nxbase / 2.0)**(npolys - 1 - i)
+                    frac_params[-1]) / (nxbase / 2.0) ** (npolys - 1 - i)
         axq = [[0 for x in range(polyorder)] for y in range(npolys)]
         sliders = [[0 for x in range(polyorder)] for y in range(npolys)]
         # Now put all the sliders in the new figure based on position in the
@@ -911,5 +951,3 @@ class Polyspect(object):
 
         plt.show()
         return params
-
-
