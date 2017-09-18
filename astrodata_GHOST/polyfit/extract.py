@@ -17,11 +17,11 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var, \
     
     Parameters
     ----------
-    phi: numpy array
+    phi: :obj:`numpy.ndarray`
         A (npix x nobj) model PSF array.
-    col_data: numpy array
+    col_data: :obj:`numpy.ndarray'
         A (npix) data array
-    col_inv_var: numpy array
+    col_inv_var: :obj:`numpy.ndarray'
         A (npix) data variance array
     multiplicative_std: float
         An additional error variance, due to model uncertainties, which 
@@ -29,7 +29,8 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var, \
         
     Returns
     -------
-    List of bad pixels.
+    new_bad: :obj:`numpy.ndarray'
+        List of bad pixels.
     """
     n_o = phi.shape[1] #Number of objects.
     n_x = len(col_data)
@@ -69,20 +70,21 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var, \
 def subtract_scattered_light(data, mask):
     """Subtract a simple linear approximation to the scattered light
     on the detector. This is a place-holder function, which can be upgraded to 
-    higher order scattered light subtraction, depending on the performance of the
-    spectrograph.
+    higher order scattered light subtraction, depending on the performance of 
+    the spectrograph.
     
     Parameters
     ----------
-    data: numpy array
+    data: :obj:`numpy.ndarray'
         The data to be corrected for scattered light.
     
-    mask: numpy array
-        A mask which is True wherever there is only scattered light and no data.    
+    mask: :obj:`numpy.ndarray'
+        A mask which is True wherever there is only scattered light and no data.
     
     Returns
     -------
-    A scattered-light corrected image.
+    data: :obj:`numpy.ndarray'
+        A scattered-light corrected image.
     
     """
     return data
@@ -104,30 +106,32 @@ class Extractor():
         slit profile is to be assumed, then another (e.g. simplified or fake)
         slitview instance should be made, rather than modifying this class.
 
-        Parameters
+        Attributes
         ----------
-        polyspect_instance: Polyspect object
+        arm: Polyspect object
             This defines e.g. whether the camera is "red" or "blue"
 
-        slitview_instance: SlitView object
+        slitview: SlitView object
             This defines whether the mode is "std" or "high"
 
-        gain: float
+        gain: float, optional
             gain in electrons per ADU. From fits header.
 
-        rnoise: float
+        rnoise: float, optional
             Expected readout noise in electrons. From fits header.
 
-        badpixmask: numpy array
+        badpixmask: :obj:`numpy.ndarray', optional
             A data quality plane, which evaluates to False (i.e. 0) for good
             pixels.
 
-        transpose: bool (optional)
+        vararray: :obj:`numpy.ndarray', optional
+            A variance array. 
+        transpose: bool , optional
             Do we transpose the data before extraction?
         
-        cr_flag: integer
-            When we flag additional cosmic rays in the badpixmask, what value should
-            we use?
+        cr_flag: integer, optional
+            When we flag additional cosmic rays in the badpixmask, what value
+            should we use?
         """
         self.arm = polyspect_instance
         self.slitview = slitview_instance
@@ -167,24 +171,37 @@ class Extractor():
 
         Parameters
         ----------
-        data: numpy array (optional)
+        data: :obj:`numpy.ndarray' , optional
             Image data, transposed so that dispersion is in the "y" direction.
             Note that this is the transpose of a conventional echellogram.
             Either data or file must be given
 
-        file: string (optional)
+        file: string , optional
             A fits file with conventional row/column directions containing the
             data to be extracted.
 
-        correct_for_sky: bool
+        correct_for_sky: bool, optional
             Do we correct the object slit profiles for sky? Should be yes for
             objects and no for flats/arcs.
 
-        WARNING: Binning not implemented yet"""
+        WARNING: Binning not implemented yet
 
+        Returns
+        -------
+        extracted_flux: :obj:`numpy.ndarray`
+            Extracted fluxes as a function of pixel along the spectral direction
+        extracted_var: :obj:`numpy.ndarray`
+            Extracted variance as a function of pixel along the spectral direction
+        extraction_weights: :obj:`numpy.ndarray`
+            Extraction weights as a function of pixel along the spectral direction
+
+        """
+
+        # TODO: implement binning
+        
         if data is None:
             if file is None:
-                print("ERROR: Must input data or file")
+                raise UserWarning("Must input data or file")
             else:
                 data = pyfits.getdata(file)
 
@@ -384,16 +401,16 @@ class Extractor():
 
         Parameters
         ----------
-        data: numpy array
+        data: :obj:`numpy.ndarray', optional
             Image data, transposed so that dispersion is in the "y" direction.
             Note that this is the transpose of a conventional echellogram.
             Either data or file must be given
 
-        file: string (optional)
+        file: string , optional
             A fits file with conventional row/column directions containing the
             data to be extracted.
             
-        extraction_weights: numpy array
+        extraction_weights: :obj:`numpy.ndarray', optional
             Extraction weights created from a call to one_d_extract. Separating
             this makes the code more readable, but is not speed optimised.
         """
@@ -402,7 +419,7 @@ class Extractor():
         #is needed!
         if data is None:
             if file is None:
-                print("ERROR: Must input data or file")
+                raise UserWarning("ERROR: Must input data or file")
             else:
                 data = pyfits.getdata(file)
         
@@ -484,9 +501,7 @@ class Extractor():
                 # Find the pixel (including fractional pixels) within our cutout that 
                 # we'll use for extraction. First - find the pixel coordinates 
                 # according to slit tilt:
-                # JOAO: This is where the slit tilt comes in. It has to be tested and
-                # bugshot with e.g. pdb.set_trace(), with even the sign of the slit
-                # tilt not 100% certain
+                
                 ysub_pix = (x_ix - self.arm.x_map[i, j] - nx // 2) * \
                         self.slit_tilt[i, j] + ny_cutout // 2
                         
@@ -535,30 +550,31 @@ class Extractor():
                 
         return extracted_flux, extracted_var     
 
-    def find_lines(self, flux, arclines, hw=10, arcfile=[],
+    def find_lines(self, flux, arclines, hw=10, arcfile=None,
                    inspect=False):
-        """Find lines near the locations of input arc lines.
+        """Find lines near the locations of input arc lines. 
+        
+        This is done with Gaussian fits near the location of where lines are
+        expected to be. An initial decent model must be present, likely
+        the result of a manual adjustment.
 
         Parameters
         ----------
-        flux: numpy array
+        flux: :obj:`numpy.ndarray'
             Flux data extracted with the 1D extractor. Just the flux, not the
             variance.
 
         arclines: float array
             Array containing the wavelength of the arc lines.
 
-        hw: int (optional)
+        hw: int, optional
             Number of pixels from each order end to be ignored due to proximity
             with the edge of the chip.
-
-        flat_data: float array
-            Flat field data? For what?
 
         arcfile: float array
             Arc file data.
 
-        inspect: boolean (optional)
+        inspect: boolean, optional
             If true, show display of lines and where they are predicted to fall
 
         Returns
@@ -579,7 +595,7 @@ class Extractor():
         # noise.
         noise_level = np.median(np.abs(flux-np.median(flux)))
 
-        if inspect and len(arcfile) == 0:
+        if (inspect == 0) and (arcfile is None):
             print('Must provide an arc image for the inpection')
             raise UserWarning
         if inspect:
@@ -605,7 +621,6 @@ class Extractor():
                     continue
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
-                #pdb.set_trace()
                 # Any line with peak S/N under a value is not considered.
                 # And reject any saturated lines.
                 if (np.max(y) < 6 * noise_level) or (np.max(y) > 6E4):

@@ -12,7 +12,7 @@ class SlitView(object):
 
         Parameters
         ----------
-        slit_image: numpy array
+        slit_image: :obj:`numpy.ndarray'
             A single slit viewer image, which has been processed, cosmic-ray
             rejection etc.
 
@@ -69,15 +69,15 @@ class SlitView(object):
 
         Parameters
         ----------
-        arm: string
+        arm: string, optional
             Either 'red' or 'blue' for GHOST.
 
-        use_flat: bool
+        use_flat: bool, optional
             Cutout from the flat (True) or the slit frame (False).
 
         Returns
         -------
-        profile: numpy array (npix)
+        profile: :obj:`numpy.ndarray' (npix)
             The 2-dimensional slit profile cutout.
         """
         try:
@@ -96,27 +96,28 @@ class SlitView(object):
             central_pix[1]-self.extract_half_width:central_pix[1] +
             self.extract_half_width+1]
 
-    def slit_profile(self, arm='red', return_centroid=False, use_flat=False, denom_clamp=10):
+    def slit_profile(self, arm='red', return_centroid=False, use_flat=False,
+                     denom_clamp=10):
         """Extract the 1-dimensional slit profile.
 
         Parameters
         ----------
-        arm: string
+        arm: string, optional
             Either 'red' or 'blue' for GHOST.
 
-        return_centroid: bool
+        return_centroid: bool, optional
             Do we also return the pixel centroid of the slit?
             
-        use_flat: bool
+        use_flat: bool, optional
             Do we use the flat image? False for the object image.
             
-        denom_clamp: float
-            Denominator clamp - fluxes below this value are not used when computing
-            the centroid.
+        denom_clamp: float, optional
+            Denominator clamp - fluxes below this value are not used when
+            computing the centroid.
 
         Returns
         -------
-        profile: numpy array (npix)
+        profile: :obj:`numpy.ndarray' (npix)
             The summed 1-dimensional slit profile.
         """
         y_halfwidth = int(self.slit_length/self.microns_pix/2)

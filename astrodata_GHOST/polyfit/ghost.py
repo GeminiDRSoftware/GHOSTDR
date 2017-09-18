@@ -1,4 +1,3 @@
-
 """This is a simple simulation code for GHOST or Veloce,
 with a class ARM that simulates
 a single arm of the instrument. The key default parameters
@@ -36,6 +35,22 @@ class GhostArm(Polyspect):
     def __init__(self, arm='blue', mode='std'):
         """Initialisation function that sets all the mode specific parameters
         related to each configuration of the spectrograph.
+
+        Attributes
+        ----------
+        
+        arm: str
+            Which arm of the GHOST spectrograph is to be initialized.
+        spect: str
+            Which spectrograph in usage.
+        lenslet_high_size: int
+            Lenslet flat-to-flat in microns for high mode
+        lenslet_std_size: int
+            Lenslet flat-to-flat in microns for standard mode
+        mode: str
+            Resolution mode.
+        nlenslets: int
+            number of lenslets of the IFU
         """
         if arm == 'red':
             Polyspect.__init__(self, m_ref=50, szx=6144, szy=6160, m_min=34,
@@ -73,36 +88,36 @@ class GhostArm(Polyspect):
 
         Parameters
         ----------
-        flat: float array
+        flat: :obj:`numpy.ndarray`
             A flat field image from the spectrograph
             
-        slit_profile: numpy float array
+        slit_profile: :obj:`numpy.ndarray`, optional
             A slit profile as a 1D array with the slit profile fiber amplitudes.
             If none is supplied this function will assume identical fibers and
             create one to be used in the convolution based on default parameters
             specified in the ghost class.
             
-        spatpars: numpy float array
+        spatpars: :obj:`numpy.ndarray`, optional
             The 2D polynomial parameters for the slit spatial scale. 
             Required if slit_profile is not None.
         
-        microns_pix: float
+        microns_pix: float, optional
             The slit scale in microns per pixel
             Required if slit_profile is not None.
             
-        xpars: numpy float array
+        xpars:  :obj:`numpy.ndarray`, optional
             The 2D polynomial parameters for the x (along-slit) coordinate.
             Required if slit_profile is not None.
             
-        num_conv: int (optional)
+        num_conv: int, optional, optional
             The number of different convolution functions to use for different
             orders.
             The final convolved profile is an interpolation between these.
 
         Returns
         -------
-        flat_conv: float array
-            Returns the convolved 2D array.
+        flat_conv: :obj:`numpy.ndarray`
+            The convolved 2D array.
         """
         #FIXME: Error checking of inputs is needed here
         #TODO: Based on test of speed, the convolution code with an input slit_profile

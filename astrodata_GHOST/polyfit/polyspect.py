@@ -21,7 +21,7 @@ class Polyspect(object):
     """
     A class containing tools common for any spectrograph.
 
-    This class should be inhereted by the specific spectrograph module.
+    This class should be inherited by the specific spectrograph module.
     Contains functions related to polynomial modelling of spectrograph orders.
 
     Attributes
@@ -54,16 +54,16 @@ class Polyspect(object):
     """
 
     def __init__(self, m_ref, szx, szy, m_min, m_max, transpose):
-        """ Initialisation function for this class"""
+        """ Initialization function for this class"""
 
-        # All necessary parameters are listed here and initialised by the
+        # All necessary parameters are listed here and initialized by the
         # parent class
         self.m_ref = m_ref
         self.szx = szx
         self.szy = szy
         self.m_min = m_min
         self.m_max = m_max
-        # True if the spectral dispersion dimention is over the x (column) axis
+        # True if the spectral dispersion dimension is over the x (column) axis
         self.transpose = transpose
         self.x_map = None
         self.w_map = None
@@ -123,7 +123,7 @@ class Polyspect(object):
         else:
             # Create the y_values and orders.
             # This is essentially the purpose of creating this function. These
-            # parameters can be easily derived from class propoerties and should
+            # parameters can be easily derived from class properties and should
             # not have to be provided as inputs. 
             y_values, orders = np.meshgrid(np.arange(self.szy),
                                            np.arange(self.m_max -
@@ -157,7 +157,7 @@ class Polyspect(object):
         A fit function for :any:`read_lines_and_fit`.
 
         This function is to be used in :any:`scipy.optimize.leastsq` as the
-        minimisation function.
+        minimization function.
         The same function is used in :any:`fit_to_x`, but in that case
         "waves" is replaced by "xs".
 
@@ -170,7 +170,7 @@ class Polyspect(object):
         orders: int array
             The order numbers for the residual fit repeated ys times.
         y_values: :obj:`numpy.ndarray` array
-            This is an orders x y sized array with pixel indeces on y direction
+            This is an orders x y sized array with pixel indices on y direction
             for each order.
         data: :obj:`numpy.ndarray` array
             This is the data to be fitted, which will have the model subtracted
@@ -270,12 +270,12 @@ class Polyspect(object):
         y_values = lines[:, 1]
         ydeg = init_mod.shape[0] - 1
         xdeg = init_mod.shape[1] - 1
-        # For weighted fitting purposes, use the maximum of the gaussian fit.
+        # For weighted fitting purposes, use the maximum of the Gaussian fit.
         sigma = 1. / lines[:, 4]
 
-        # init_resid = self.fit_resid(init_mod, orders, waves,
-        #                                 y_values, ydeg=ydeg, xdeg=xdeg)
-        # TODO More detailed (comment) description of what's happening here
+        # Now we proceed to the least squares minimization.
+        # We provide the fit_resid function as the minimization function
+        # and the initial model. All required arguments are also provided.
         bestp = op.leastsq(self.fit_resid, init_mod, args=(orders, y_values,
                                                            waves, ydeg, xdeg,
                                                            sigma))
@@ -297,7 +297,7 @@ class Polyspect(object):
         This code takes the polynomial model and calculates the result as
         a function of order number scaled to the reference order and then
         as a function of y position.
-        Optionally a file can be supplied for the model to be overlayed
+        Optionally an image can be supplied for the model to be overlaid
         on top of.
 
         Parameters
@@ -421,7 +421,7 @@ class Polyspect(object):
         if not isinstance(image, np.ndarray):
             raise TypeError('image must be a numpy array')
         if image.ndim != 2:
-            raise UserWarning('image array must be 2 dimentional')
+            raise UserWarning('image array must be 2 dimensional')
 
         # Create an array with a single pixel with the value 1.0 at the
         # expected peak of each order.
@@ -449,7 +449,7 @@ class Polyspect(object):
 
         Note that an initial map has to be pretty
         close, i.e. within "search_pix" everywhere. To get within search_pix
-        everywhere, a simple model with a few paramers is fitted manually.
+        everywhere, a simple model with a few parameters is fitted manually.
         This can be done with the GUI using the adjust_model function and
         finally adjusted with the adjust_x function.
 
@@ -495,7 +495,7 @@ class Polyspect(object):
 
         if image.shape[0] % decrease_dim != 0:
             raise UserWarning(
-                "Can not decrease image dimention by this amount. "
+                "Can not decrease image dimension by this amount. "
                 "Please check if the image size in the spectral dimension "
                 "is exactly divisible by this amount.")
         # Median-filter in the dispersion direction.
@@ -605,7 +605,7 @@ class Polyspect(object):
             Fitted parameters.
         """
 
-        # FIXME More vigourous input type checking (or casting)
+        # FIXME More vigorous input type checking (or casting)
         if not isinstance(x_to_fit, np.ndarray):
             raise UserWarning('provided X model is not ndarray type.')
         if not isinstance(init_mod_file, np.ndarray):
@@ -613,7 +613,7 @@ class Polyspect(object):
 
         if x_to_fit.shape[0] % decrease_dim != 0:
             raise UserWarning(
-                "Can not decrease the x value dimention by this amount. "
+                "Can not decrease the x value dimension by this amount. "
                 "Please check if the image size in the spectral dimension "
                 "is exactly divisible by this amount.")
         
@@ -667,7 +667,7 @@ class Polyspect(object):
                                     return_arrays=False):
         """
         Create a spectral format, including a detector to slit matrix, at
-        every point. This is the faster version.
+        every point. 
 
         The input parameters are required for this to work and represent
         the polynomial coefficients for second order descriptions of
@@ -709,28 +709,36 @@ class Polyspect(object):
 
         if R is the rotation matrix and D is the scale diagonal matrix
 
+        Notes
+        -----
+        Function returns are optional and instead this function creates/updates
+        class attributes that are used in other circumstances. While this is
+        perhaps not advisable from a programmatic point of view, it does
+        benefit from a number of advantages, as the model evaluations are used
+        profusely throughout this module.
+
         Parameters
         ----------
 
-        xmod: :obj:`numpy.ndarray` array
+        xmod: :obj:`numpy.ndarray`
             pixel position model parameters. Used in the spectral format
             function. See documentation there for more details
-        wavemod: :obj:`numpy.ndarray` array
+        wavemod: :obj:`numpy.ndarray`
             pixel position model parameters. Used in the spectral format
             function. See documentation there for more details
-        spatmod: (optional) :obj:`numpy.ndarray` array
+        spatmod: :obj:`numpy.ndarray`, optional
             Parameters from the spatial scale second order polynomial
             describing how the slit image varies in the spatial direction
             as a function of order on the CCD
-        specmod: (optional) :obj:`numpy.ndarray` array
+        specmod: :obj:`numpy.ndarray`, optional
             Parameters from the spectral scale second order polynomial
             describing how the slit image varies in the spectral direction
             as a function of order on the CCD
-        rotmod: (optional) :obj:`numpy.ndarray` array
+        rotmod: :obj:`numpy.ndarray`, optional
             Parameters from the extra rotation second order polynomial
             describing how the slit image rotation varies
             as a function of order on the CCD
-        return_arrays: (optional) bool
+        return_arrays: bool, optional
             By default, we just set internal object properties. Return the
             arrays themselves instead as an option.
 
@@ -738,7 +746,7 @@ class Polyspect(object):
         -------
 
         All returns are optional, function by default will only update class
-        attributes
+        attributes. If desired, these are:
 
         x: (norders, ny) :obj:`numpy.ndarray` array
             The x-direction pixel co-ordinate corresponding to each y-pixel
@@ -764,7 +772,7 @@ class Polyspect(object):
         xbase, waves, blaze = self.spectral_format(xparams=xmod,
                                                    wparams=wavemod)
         matrices = np.zeros((xbase.shape[0], xbase.shape[1], 2, 2))
-        # Initialise key variables in case models are not supplied.
+        # Initialize key variables in case models are not supplied.
         slit_microns_per_det_pix_x = np.ones(self.szy)
         slit_microns_per_det_pix_y = np.ones(self.szy)
         rotation = np.zeros(self.szy)
@@ -791,28 +799,26 @@ class Polyspect(object):
                                     slit_microns_per_det_pix_y
         matrices = extra_rot_mat
 
-        # TODO Should the class update if return_arrays=True anyway?
+        self.x_map = xbase
+        self.w_map = waves
+        self.blaze = blaze
+        self.matrices = matrices
+
         if return_arrays:
             return xbase, waves, blaze, matrices
-        else:
-            # Store the results as properties
-            self.x_map = xbase
-            self.w_map = waves
-            self.blaze = blaze
-            self.matrices = matrices
-
+        
     def slit_flat_convolve(self, flat, slit_profile=None):
         """
         Dummy function, returns the input flat.
 
-        Dummy function that would takes a flat field image and a slit profile
+        Dummy function that would take a flat field image and a slit profile
         and convolves the two in 2D. Returns result of convolution, which
         should be used for tramline fitting.
         """
         return flat
 
     def manual_model_adjust(self, data, model='position', wparams=None,
-                            xparams=None, spatparams=None, rotparams=None,
+                            xparams, spatparams=None, rotparams=None,
                             thar_spectrum=None, percentage_variation=10,
                             vary_wrt_max=True):
         """
@@ -833,45 +839,42 @@ class Polyspect(object):
         
         Parameters
         ----------
-        data: :obj:`numpy.ndarray` array
+        data: :obj:`numpy.ndarray`
             an array containing data to be used as a visual comparison of the
             model
-        model: string (optional)
+        model: string, optional
             What model would you like to adjust? Either 'position' for the x
             model or 'wavelength' for the wavelength scale. Default is
             'position'
-        wparams: :obj:`numpy.ndarray` array (optional)
+        wparams: :obj:`numpy.ndarray`, optional
             2D array containing the initial wavelength
             model parameters.
-        xparams: :obj:`numpy.ndarray` array 
+        xparams: :obj:`numpy.ndarray`
             2D array containing the initial order location model parameters.
         spatparams: :obj:`numpy.ndarray` array (optional)
             2D array containing the initial spatial direction magnification
             model parameters.
-        rotparams: :obj:`numpy.ndarray` array (optional)
+        rotparams: :obj:`numpy.ndarray`, optional
             2D array containing the initial rotation model parameters.
-        thar_spectrum: floar array (optional)
+        thar_spectrum: :obj:`numpy.ndarray`, optional
             2D array containing the thar spectrum (from the simulator code) as a
-            function of wavelenght.
-        slitclass: class (optional)
+            function of wavelength.
+        slitclass: class, optional
             This is the polyfit.SlitView class. Optional input required for
             spatmod and rotmod adjustments
-        percentage_variation: int (optional)
+        percentage_variation: int, optional
             How much should the percentage adjustment in each bin as a function
-            of the parameter. Default is 10%
-        vary_wrt_max: bool (optional)
+            of the parameter.
+        vary_wrt_max: bool, optional
             Vary all parameters intelligently with a scaling of the maximum
             variation, rather than just a percentage of each.
 
         Returns
         -------
-        xparams: 2D :obj:`numpy.ndarray` array
+        xparams: :obj:`numpy.ndarray`
              New adjusted x parameters
 
         """
-
-        # FIXME: This function is undergoing substantial restructoring and will
-        # fail
 
         # Must provide xparams
         if (xparams is None):
@@ -896,7 +899,7 @@ class Polyspect(object):
             xparams: :obj:`numpy.ndarray` array
                 The (adjusted) position model parameters
             wparams: :obj:`numpy.ndarray` array
-                The (adjusted) wavelenght model parameters 
+                The (adjusted) wavelength model parameters 
             nxbase: :obj:`numpy.ndarray` array
                 The amount to add to the xbase after the spectral format
             ygrid: :obj:`numpy.ndarray` array
@@ -1015,7 +1018,7 @@ class Polyspect(object):
         button = Button(submitax, 'Submit', color=axcolor, hovercolor='0.975')
 
         # This is the triggered function on submit.
-        # Currently only works for the xmod but should be generalised
+        # Currently only works for the xmod but should be generalized
         def submit(event):
             """Function for the button tasks"""
             plt.close('all')
