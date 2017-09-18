@@ -75,9 +75,9 @@ ghost = polyfit.ghost.GhostArm(cam, mode=mode)
 
 if user == 'Joao':
     # fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
-    fitsdir = '/priv/mulga1/jbento/ghost/standard/calibrations/storedcals/'
+    fitsdir = '/home/jbento/code/ghostdr/simulator/pyghost/standard/calibrations/storedcals/'
     # test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
-    test_files_dir = '/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
+    test_files_dir = '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/'+ cam + '/' + mode + '/161120/'
     if model == 'W':
         arclinefile = '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
         # Define the files in use (NB xmod.txt and wavemod.txt should be
@@ -94,6 +94,7 @@ if user == 'Joao':
     # in the ghost class. If this needs to be overwritten, go ahead.
     xmodel_file = fitsdir + 'GHOST_1_1_' + cam + \
         '_' + mode + '_161120_xmodPolyfit.fits'
+    xmod_file = test_files_dir + 'xmod.fits'
     wmodel_file = fitsdir + 'GHOST_1_1_' + cam + \
         '_' + mode + '_161120_wmodPolyfit.fits'
     # xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'
@@ -128,7 +129,7 @@ if model == 'X':
     # Convolve the flat field with the slit profile
     # If no slit profile is given, assume a standard one.
     flat_conv = ghost.slit_flat_convolve(flat_data)
-    # flat_conv=flat_data
+    flat_conv= flat_data
     # Have a look at the default model and make small adjustments if needed.
     # This step should not be part of the primitive !!!!!
     # It is for engineering purposes only!
