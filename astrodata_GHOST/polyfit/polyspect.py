@@ -817,8 +817,8 @@ class Polyspect(object):
         """
         return flat
 
-    def manual_model_adjust(self, data, model='position', wparams=None,
-                            xparams, spatparams=None, rotparams=None,
+    def manual_model_adjust(self, data, xparams, model='position', wparams=None,
+                            spatparams=None, rotparams=None,
                             thar_spectrum=None, percentage_variation=10,
                             vary_wrt_max=True):
         """
