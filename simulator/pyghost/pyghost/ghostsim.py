@@ -461,7 +461,8 @@ class SlitViewer(object):
                 self.images[expid] += cosim
                 self.cosims.append(cosim)
 
-    def save(self, fname, obstype, res, bias=1000, readnoise=8.0, gain=1.0):
+    def save(self, fname, obstype, res, bias=1000, readnoise=8.0, gain=1.0,
+             data_label=1):
         """
         Save the slit viewer frames in self.images.
 
@@ -489,6 +490,21 @@ class SlitViewer(object):
         header['OBSTYPE'] = (obstype, 'Observation type')
         header['CCDNAME'] = ('Sony-ICX674', 'CCD name')
         header['ORIGFN'] = fname + 'SLIT.fits'
+
+        # populate OBSCLASS keyword
+        obsclass = dict(FLAT='partnerCal', ARC='partnerCal',  # noqa
+            OBJECT='science', BIAS='dayCal', DARK='dayCal', SKY='')
+        header['OBSCLASS'] = (obsclass[obstype], 'Observe class')
+
+        # populate GEMPRGID, OBSID, and DATALAB keywords
+        prgid = 'GS-2016B-Q-20'  # just choose a base at random
+        header['GEMPRGID'] = (prgid, 'Gemini programme ID')
+        obsid = dict(
+            FLAT='2', ARC='2', OBJECT='2', BIAS='1', DARK='5', SKY='6')
+        header['OBSID'] = (
+            prgid+'-'+obsid[obstype], 'Observation ID / Data label')
+        header['DATALAB'] = (prgid+'-'+obsid[obstype]+'-' + ('%03d' % \
+            data_label), 'DHS data label')  # noqa
 
         # perhaps wrongly (and out of line with their comments), the ghost
         # recipes interpret these keywords as the start/end times of the science
@@ -527,6 +543,7 @@ class SlitViewer(object):
             hdr['EXPID'] = expid
 
             # And all the other headers
+            hdr['EXTNAME'] = ('SCI', 'extension name')
             hdr['RDNOISE'] = (readnoise, 'Readout noise')
             hdr['GAIN'] = (gain, 'Amplifier gain')
             hdr['CAMERA'] = 'Slit'
@@ -557,14 +574,14 @@ class SlitViewer(object):
 
             hdulist.append(pf.ImageHDU(data=data, header=hdr))
 
-        if self.split:
-            print('Writing ' + fname + 'SLIT.fits')
-            hdulist.writeto(fname + 'SLIT.fits', clobber=True)
-            if self.cosmics and self.crplane:
-                print('Writing ' + fname + 'SLIT_CR.fits')
-                crhdu.writeto(fname + 'SLIT_CR.fits', clobber=True)
-        else:
+        if not self.split:
             return hdulist
+
+        print('Writing ' + fname + 'SLIT.fits')
+        hdulist.writeto(fname + 'SLIT.fits', clobber=True)
+        if self.cosmics and self.crplane:
+            print('Writing ' + fname + 'SLIT_CR.fits')
+            crhdu.writeto(fname + 'SLIT_CR.fits', clobber=True)
 
     def create_slitview_frames(self, im_slit, spectrum, slitview_wave,
                                slitview_frac, slitview_offset, mode='high'):
@@ -1279,7 +1296,7 @@ class Arm(object):
 
     def sky_background(self, mode):
         """Calculate a sky spectrum.
-Parameters
+        Parameters
         ----------
         mode: string
             Either 'std' or 'high' depending on the IFU mode in use.
@@ -1837,6 +1854,7 @@ Parameters
             hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
             for i, ampim in enumerate(opims):
                 hdr = pf.Header()
+                hdr['EXTNAME'] = ('SCI', 'extension name')
                 hdr['BUNIT'] = 'ADU'
                 # hdr['BSCALE'] = 1  # added by default
                 # hdr['BZERO'] = 32768  # added by default
@@ -2070,20 +2088,21 @@ class Ghost(object):
             thar_flatlamp=thar_flatlamp, seeing=seeing, data_label=data_label,
             flatlamp=flatlamp, obstype=obstype, binmode=binmode)
 
-        blue_hdu = self.blue.simulate_frame(  # pylint: disable=star-args
+        blue_hdul = self.blue.simulate_frame(  # pylint: disable=star-args
             additive_noise=self.additive_noise['blue'],
             scaling=self.scaling['blue'], **common_params)
-        red_hdu = self.red.simulate_frame(  # pylint: disable=star-args
+        red_hdul = self.red.simulate_frame(  # pylint: disable=star-args
             additive_noise=self.additive_noise['red'],
             scaling=self.scaling['red'], **common_params)
-        slit_hdu = self.slitv.save(output_prefix, obstype, res)
+        slit_hdul = self.slitv.save(output_prefix, obstype, res,
+            data_label=data_label)  # noqa
 
         if self.split:
             return
 
-        nslit_extns = 0 if slit_hdu is None else len(slit_hdu)-1
+        nslit_extns = 0 if slit_hdul is None else len(slit_hdul)-1
 
-        hdr = red_hdu[0].header
+        hdr = red_hdul[0].header
         del hdr['DETTYPE']
         del hdr['DETSIZE']
         del hdr['CAMERA']
@@ -2093,10 +2112,10 @@ class Ghost(object):
         hdr['NBLUEEXP'] = (1, 'Number of blue exposures')
         hdr['NSLITEXP'] = (nslit_extns, 'Number of slit-viewing exposures')
         hdulist = pf.HDUList([pf.PrimaryHDU(header=hdr)])
-        if slit_hdu is not None:
-            hdulist += slit_hdu[1:]
-        hdulist += red_hdu[1:]
-        hdulist += blue_hdu[1:]
+        if slit_hdul is not None:
+            hdulist += slit_hdul[1:]
+        hdulist += red_hdul[1:]
+        hdulist += blue_hdul[1:]
 
         print('Writing observation MEF to ' + output_prefix + 'MEF.fits')
         hdulist[0].header['EXTEND'] = True  # this works

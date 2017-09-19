@@ -32,8 +32,8 @@ cp -r ${PROGMAN}/_build/html/* ${DEST}/progman
 mkdir -p ${DEST}/userman
 cp -r ${USERMAN}/_build/html/* ${DEST}/userman
 
-# copy everything into the GHOSTDR_github directory
-rsync -a --exclude "externals" --exclude ".hg*" ${WORKSPACE}/hg/ ${JENKINS_HOME}/workspace/GHOSTDR_github/
+# copy everything into the GHOSTDR_github directory, and delete what should no longer be there
+rsync -av --delete --exclude ".git" --exclude "externals" --exclude ".hg*" ${WORKSPACE}/hg/ ${JENKINS_HOME}/workspace/GHOSTDR_github/
 
 # Push the changes back into the github repository
 cd ${JENKINS_HOME}/workspace/GHOSTDR_github
