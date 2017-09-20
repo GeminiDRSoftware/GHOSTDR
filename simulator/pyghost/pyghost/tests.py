@@ -2,11 +2,11 @@
 
 import math
 import numpy as np
-import pyghost
+import pyghost, sys
 
 
 def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
-        split=False, check=False):
+        split=True, check=False):
     """ The function that runs the test. """
 
     # Create the two arms
@@ -26,7 +26,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
     thar = pyghost.thar_spectrum()
 
     # We read out through 4 amps
-    namps = [2, 2]
+    namps = [1,1]#[2, 2]
 
     # Our default bias level
     bias_level = 100
@@ -67,7 +67,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split, check=check)
 
     target_binmode = (1, 1)  # (1, 2)
-
+    import pdb;pdb.set_trace()
     # This produces a bias with the above noise
     for i in range(1, nbias+1):
         ghost.simulate_observation(
