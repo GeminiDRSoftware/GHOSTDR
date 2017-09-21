@@ -16,11 +16,11 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
                       hpplane=hpplane, split=split, check=check)
 
     # Create a blank spectrum (used for the bias, dark, and sky)
-    blank = np.array([[0.1, 1.0], [0.0, 0.0]])
+    blank = np.array([[0.1, 1.2], [0.0, 0.0]])
 
     # Create a perfectly flat spectrum (used for the flat); need to replace
     # this with a better GCAL spectrum
-    flat = np.array([[0.1, 1.0], [100.0, 100.0]])
+    flat = np.array([[0.1, 1.2], [100.0, 100.0]])
 
     # Create a ThAr spectrum (used for the arc)
     thar = pyghost.thar_spectrum()
