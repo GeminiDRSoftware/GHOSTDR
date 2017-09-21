@@ -1224,7 +1224,7 @@ class Arm(object):
         # If no input spectrum, use the sun.
         if (spectrum is None) or len(spectrum) == 0:
             spectrum = self.get_solar_spectrum()
-
+        
         n_orders = x.shape[0]
         n_y = x.shape[1]
         if n_x == 0:
@@ -1234,8 +1234,8 @@ class Arm(object):
             check_image = np.zeros((n_orders, n_y))
         # Simulate the slit image within a small cutout region.
         cutout_xy = np.meshgrid(np.arange(81)-40, np.arange(7)-3)
-        # Loop over orders. Use a status line where the numbers change but new lines
-        # aren't created.
+        # Loop over orders. Use a status line where the numbers change but new
+        # lines aren't created.
         for i in range(n_orders):
             for j in range(n_y):
                 if x[i, j] != x[i, j]:
