@@ -88,7 +88,36 @@ def subtract_scattered_light(data, mask):
     
     """
     return data
+
+
+def bin_data(data, binning=[2,2]):
+    """ Generic Function used to create a binned equivalent of a spectrograph
+    image array for the purposes of equivalent extraction. 
+
+    Parameters
+    ----------
+    data: :obj:`numpy.ndarray'
+        The (unbinned) data to be binned
+    binning: list
+        A two element list with the binning factors
+
+    Returns
+    -------
+    binned_array: :obj:`numpy.ndarray'
+        The binned data
+    """
+    # TODO: Check that input data is unbinned by comparing array shape with
+    # spectrograph number of pixels
+
+    # TODO: Check what is a row and what is a column and check if
+    # self.transpose must be part of this.
     
+    rows = binning[0]
+    cols = binning[1]
+    binned_array = data.reshape(rows, data.shape[0]/rows, cols,
+                                data.shape[1]/cols).sum(axis=1).sum(axis=2)
+    return binned_array
+
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance,
                  gain = 1.0, rnoise = 3.0, cr_flag = 8,
@@ -647,3 +676,4 @@ class Extractor():
             plt.axis([0, nx, ny, 0])
             plt.show()
         return np.array(lines_out)
+
