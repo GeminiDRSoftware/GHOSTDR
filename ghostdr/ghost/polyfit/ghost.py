@@ -24,7 +24,7 @@ TODO:
 """
 from __future__ import division, print_function
 import numpy as np
-from ghostdr.polyfit.polyspect import Polyspect
+from .polyspect import Polyspect
 
 class GhostArm(Polyspect):
     """A class for each arm of the spectrograph. The initialisation
