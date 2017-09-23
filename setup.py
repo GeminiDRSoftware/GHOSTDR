@@ -6,7 +6,7 @@ Setup script for ghostdr
 Based on the setup.py from the gemini_python distribution.
 
 In this package:
-    astrodata_GHOST  : Recipes, Primitives and astrodata configuration for GHOST
+    ghostdr  : Recipes, Primitives and astrodata configuration for GHOST
     pyghost          : GHOST simulator
     polyfit          : GHOST find apertures and polynomial model fitting
     
@@ -29,7 +29,7 @@ dotpy = re.compile('.py$')
 
 PACKAGENAME = 'ghostdr'
 
-ADLIB_PACKAGES = ['GHOST']   # This is be used to form 'astrodata_GHOST'
+ADLIB_PACKAGES = ['GHOST']   # This is be used to form 'ghostdr'
 RECIPE_MODULES=[]
 PIF_MODULES=[]
 ADCONFIG_MODULES=[]

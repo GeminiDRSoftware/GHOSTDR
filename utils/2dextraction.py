@@ -1,7 +1,7 @@
 """ A script containing the basic principles of the 2D extraction"""
 
 from __future__ import division, print_function
-from astrodata_GHOST import polyfit
+from ghostdr import polyfit
 import astropy.io.fits as pyfits
 import numpy as pn
 import fnmatch, os
@@ -19,7 +19,7 @@ extract_1d_first = True #Set this to false to test multiple times.
 fitsdir='/priv/mulga1/jbento/ghost/calibrations/storedcals/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
 fitsdir='/Users/mireland/data/ghost/tilted/'
-test_files_dir='/Users/mireland/python/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/blue/std/161120/'
+test_files_dir='/Users/mireland/python/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/blue/std/161120/'
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 # For this example just use arcs. Proper science frame reduction is still not
 # available. 

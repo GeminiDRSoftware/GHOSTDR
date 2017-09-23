@@ -12,7 +12,7 @@ from scipy.interpolate import interp1d
 import scipy.optimize as op
 from astropy.modeling import models, fitting
 import astropy.io.fits as pyfits
-from astrodata_GHOST import polyfit
+from ghostdr import polyfit
 import numpy as np
 
 # pylint: disable=maybe-no-member, invalid-name

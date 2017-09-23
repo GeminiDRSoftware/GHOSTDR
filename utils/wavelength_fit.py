@@ -7,7 +7,7 @@ but instead for debugging and development purposes.
 """
 
 from __future__ import division, print_function
-from astrodata_GHOST import polyfit
+from ghostdr import polyfit
 import astropy.io.fits as pyfits
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,7 +22,7 @@ user = 'Joao'
 
 if user=='Mike':
     fitsdir='/Users/mireland/data/ghost/cal_frames/'
-    arclinefile= '/Users/mireland/python/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+    arclinefile= '/Users/mireland/python/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
     test_files_dir='/Users/mireland/data/ghost/cal_frames/testmodels/'
 
     #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
@@ -45,8 +45,8 @@ if user=='Mike':
 
 elif user=='Joao':
     fitsdir='/priv/mulga1/jbento/ghost/standard/calibrations/storedcals/'
-    arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
-    #arclinefile= '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
+    arclinefile= '/home/jbento/code/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+    #arclinefile= '/home/jbento/code/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
     test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
     arc_file  = fitsdir+"arc95_std_red_arc.fits"

@@ -1,7 +1,0 @@
-The AstroDataTypes defined here represent the nature of the data, eg.
-being GHOST, a spectrum, a calibration, etc.  Some generic AstroDataTypes
-are already defined in astrodata_Gemini, but there will certainly be a
-need to add GHOST-specific types.
-
-The types must be defined from the header keywords only.  The pixels must
-not be accessed.

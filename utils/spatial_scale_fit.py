@@ -10,7 +10,7 @@ from __future__ import division, print_function
 import fnmatch
 import os
 import pdb
-from astrodata_GHOST import polyfit
+from ghostdr import polyfit
 import astropy.io.fits as pyfits
 from astropy.modeling import fitting
 import numpy as np

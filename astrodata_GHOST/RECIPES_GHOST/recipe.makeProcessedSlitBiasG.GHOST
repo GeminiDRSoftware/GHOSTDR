@@ -1,7 +1,0 @@
-prepare  # Gemini superprimitive
-addDQ
-addVAR
-#addToList(purpose=forStack)
-#getList(purpose=forStack)
-stackFrames(operation=median, reject_method=none)
-storeProcessedSlitBias

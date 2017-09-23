@@ -2,7 +2,7 @@
 workings"""
 
 from __future__ import division, print_function
-from astrodata_GHOST import polyfit
+from ghostdr import polyfit
 import numpy as pn
 
 # Firstly, let's find all the needed files
@@ -26,7 +26,7 @@ specmod_file=test_files_dir+'specmod.fits'
 rotmod_file=test_files_dir+'rotmod2.fits'
 
 # Find the arc line list file
-arclinefile='/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+arclinefile='/home/jbento/code/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
 arcwaves, arcfluxes= np.loadtxt(arclinefile,usecols=[1,2]).T
 
 #instantiate the ghost arm
