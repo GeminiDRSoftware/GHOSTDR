@@ -82,7 +82,16 @@ class AstroDataGhost(AstroDataGemini):
             return 'blue'
         elif 'RED' in tags:
             return 'red'
+        elif 'SLITV' in tags:
+            return 'slit'
         return None
+
+    @astro_data_descriptor
+    def calibration_key(self):
+        """
+        Returns a suitable calibration key for GHOST, which includes the arm.
+        """
+        return (self.data_label(), self.arm())
 
     # TODO: GHOST descriptor returns no values if data are unprepared
     # The gain() descriptor is inherited from gemini/adclass, and returns
