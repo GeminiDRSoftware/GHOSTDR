@@ -18,11 +18,12 @@ def reduce(p):
     p.addDQ()
     p.addVAR(read_noise=True)
     p.overscanCorrect()
-    p.tileArrays()
+    #p.tileArrays()
     p.biasCorrect()
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
     p.darkCorrect()
+    p.tileArrays()
     #p.rejectCosmicRays()
     # TODO: Understand this! BPM combination is automatic in AD arithmetic
     p.applyFlatBPM() # Bitwise combine the flat BPM with the current BPM

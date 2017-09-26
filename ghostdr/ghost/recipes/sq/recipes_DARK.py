@@ -21,7 +21,7 @@ def makeProcessedDark(p):
     p.addDQ()
     p.addVAR(read_noise=True)
     p.overscanCorrect()
-    p.tileArrays()
+    #p.tileArrays()
     p.biasCorrect()
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)

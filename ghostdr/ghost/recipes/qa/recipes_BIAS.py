@@ -21,7 +21,7 @@ def makeProcessedBias(p):
     p.addDQ()
     p.addVAR(read_noise=True)
     p.overscanCorrect()
-    p.tileArrays()
+    #p.tileArrays()
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
     p.stackFrames(operation="median", mask=True)
