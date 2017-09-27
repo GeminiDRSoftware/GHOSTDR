@@ -20,6 +20,11 @@ class AstroDataGhost(AstroDataGemini):
         return TagSet(['GHOST'])
 
     @astro_data_tag
+    def _tag_bundle(self):
+        # Gets blocked by tags created by split files
+        return TagSet(['BUNDLE'])
+
+    @astro_data_tag
     def _tag_bias(self):
         if self.phu.get('OBSTYPE') == 'BIAS':
             return TagSet(['CAL', 'BIAS'])
@@ -45,19 +50,22 @@ class AstroDataGhost(AstroDataGemini):
             return TagSet(['SKY'])
 
     @astro_data_tag
-    def _tag_high(self):
-        if self.phu.get('SMPNAME', '') == 'HI_ONLY':
+    def _tag_res(self):
+        if self.phu.get('SMPNAME') == 'HI_ONLY':
             return TagSet(['HIGH'])
+        else:
+            return TagSet(['STD'])
 
     @astro_data_tag
     def _tag_slitv(self):
         if self.phu.get('CCDNAME', '').startswith('Sony-ICX674'):
-            return TagSet(['SLITV'], blocks=['SPECT'])
+            return TagSet(['SLITV', 'IMAGE'], blocks=['SPECT', 'BUNDLE'])
 
     @astro_data_tag
     def _tag_spect(self):
         # Also returns BLUE or RED if the CAMERA keyword is set thus
-        return TagSet(({self.phu.get('CAMERA')} & {'BLUE', 'RED'}) | {'SPECT'})
+        if 'CAMERA' in self.phu:
+            return TagSet(({self.phu['CAMERA']} & {'BLUE', 'RED'}) | {'SPECT'}, blocks=['BUNDLE'])
 
     @astro_data_tag
     def _status_processed_ghost_cals(self):
