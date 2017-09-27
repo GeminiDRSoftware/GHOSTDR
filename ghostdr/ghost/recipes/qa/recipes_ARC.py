@@ -29,11 +29,10 @@ def makeProcessedArc(p):
     # TODO? p.ADUToElectrons()
     p.darkCorrect()
     #p.rejectCosmicRays()
-    p.storeProcessedArc()
     p.tileArrays()
     p.extractProfile()
     p.fitWavelength()
-    p.storeProcessedWavefit()
+    p.storeProcessedArc()
     return
 
 default = makeProcessedArc

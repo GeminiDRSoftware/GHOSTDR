@@ -32,9 +32,8 @@ def makeProcessedFlat(p):
     p.getList(purpose="forStack")
     p.stackFrames(operation='median')
     p.tileArrays()
-    p.storeProcessedFlat()
     p.findApertures()
-    p.storeProcessedXmod()
+    p.storeProcessedFlat()
     return
 
 default = makeProcessedFlat

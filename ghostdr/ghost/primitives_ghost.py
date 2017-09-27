@@ -271,7 +271,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         timestamp_key = self.timestamp_keys[self.myself()]
 
         # CJS: Heavily edited because of the new AD way
-        # Get processed slits, slitFlats, and Xmods
+        # Get processed slits, slitFlats, and flats (for xmod)
         # slits and slitFlats may be provided as parameters
         slit_list = params["slit"]
         if slit_list is None:
@@ -282,14 +282,14 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             slit_list = [self._get_cal(ad, 'processed_slit')
                          for ad in adinputs]
 
-        flat_list = params["slitflat"]
-        if flat_list is None:
+        slitflat_list = params["slitflat"]
+        if slitflat_list is None:
             self.getProcessedSlitFlat(adinputs)
-            flat_list = [self._get_cal(ad, 'processed_slitflat')
+            slitflat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
-        self.getProcessedXmod(adinputs)
-        xmod_list = [self._get_cal(ad, 'processed_xmod') for ad in adinputs]
+        self.getProcessedFlat(adinputs)
+        flat_list = [self._get_cal(ad, 'processed_flat') for ad in adinputs]
 
         # TODO: Have gt.make_lists handle multiple auxiliary lists?
         # CJS: Here we call gt.make_lists. This has only been designed to work
@@ -300,17 +300,17 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         # auxiliary frames are the same, then the file is opened only once and
         # the reference to this AD is re-used, saving speed and memory.
         _, slit_list = gt.make_lists(adinputs, slit_list, force_ad=True)
+        _, slitflat_list = gt.make_lists(adinputs, slitflat_list, force_ad=True)
         _, flat_list = gt.make_lists(adinputs, flat_list, force_ad=True)
-        _, xmod_list = gt.make_lists(adinputs, xmod_list, force_ad=True)
 
-        for ad, slit, flat, xpars in zip(adinputs, slit_list,
-                                        flat_list, xmod_list):
+        for ad, slit, slitflat, flat in zip(adinputs, slit_list,
+                                        slitflat_list, flat_list):
             log.info(ad.info())
 
             # CJS: failure to find a suitable auxiliary file (either because
             # there's no calibration, or it's missing) places a None in the
             # list, allowing a graceful continuation.
-            if slit is None or flat is None or xpars is None:
+            if slit is None or slitflat is None or flat is None:
                 log.warning("Unable to find calibrations for {}; "
                             "skipping".format(ad.filename))
                 continue
@@ -318,7 +318,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             # CJS: Changed to log.debug() and changed the output
             log.debug("Slit parameters: ")
             log.debug("   processed_list: {}".format(slit.filename))
-            log.debug("   processed_flat: {}".format(flat.filename))
+            log.debug("   processed_flat: {}".format(slitflat.filename))
 
             res_mode = ad.res_mode()
             arm = GhostArm(arm=ad.arm(), mode=res_mode)
@@ -342,9 +342,9 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                             " skipping".format(ad.filename))
                 continue
 
-            arm.spectral_format_with_matrix(xpars[0].data, wpars[0].data,
+            arm.spectral_format_with_matrix(flat[0].XMOD, wpars[0].data,
                         spatpars[0].data, specpars[0].data, rotpars[0].data)
-            sview = SlitView(slit[0].data, flat[0].data, mode=res_mode)
+            sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
 
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
@@ -390,7 +390,6 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             flat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
-        adoutputs = []
         for ad, slit_flat in zip(*gt.make_lists(adinputs, flat_list, force_ad=True)):
             if not {'PREPARED', 'GHOST', 'FLAT'}.issubset(ad.tags):
                 log.warning("findApertures is only run on prepared flats: "
@@ -429,16 +428,15 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                                                      decrease_dim=8,
                                                      inspect=False)
 
-            # Minimal PrimaryHDU, but AD must recognize as "GHOST"
-            ad_xmod = astrodata.create({'INSTRUME': 'GHOST'})
-            ad_xmod.append(fitted_params)
-            ad_xmod.filename = ad.filename
-            # CJS: Need to add data_label for storeAsCalibration()
-            ad_xmod.phu['DATALAB'] = ad.data_label()
-            gt.mark_history(ad_xmod, primname=self.myself(), keyword=timestamp_key)
+            # CJS: Append the XMOD as an extension. It will inherit the
+            # header from the science plane (including irrelevant/wrong
+            # keywords like DATASEC) but that's not really a big deal.
+            # (The header can be modified/started afresh if needed.)
+            ad[0].XMOD = fitted_params
 
-            adoutputs.append(ad_xmod)
-        return adoutputs
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+
+        return adinputs
 
     def fitWavelength(self, adinputs=None, **params):
         """
@@ -448,12 +446,13 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        self.getProcessedXmod(adinputs)
-        xmod_list = [self._get_cal(ad, 'processed_xmod') for ad in adinputs]
+        self.getProcessedFlat(adinputs)
+        flat_list = [self._get_cal(ad, 'processed_flat') for ad in adinputs]
 
-        adoutputs = []
-        for ad, xpars in zip(*gt.make_lists(adinputs, xmod_list, force_ad=True)):
-            if not {'GHOST', 'PROCESSED', 'ARC'}.issubset(ad.tags):
+        for ad, flat in zip(*gt.make_lists(adinputs, flat_list, force_ad=True)):
+            # CJS: Since we're not saving the processed_arc before this, we
+            # can't check for the tags. Instead, let's look for the WGT extn
+            if not hasattr(ad[0], 'WGT'):
                 log.warning("fitWavelength is only run on prepared GHOST arc"
                             " files - skipping {}".format(ad.filename))
                 continue
@@ -463,8 +462,8 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                             "skipping".format(ad.filename))
                 continue
 
-            if xpars is None:
-                log.warning("Could not find processed_xmod calibration for "
+            if flat is None:
+                log.warning("Could not find processed_flat calibration for "
                             "{} - skipping".format(ad.filename))
                 continue
 
@@ -488,7 +487,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             arcwaves, arcfluxes = np.loadtxt(arclinefile, usecols=[1, 2]).T
 
             arm = GhostArm(arm=ad.arm(), mode=ad.res_mode())
-            arm.spectral_format_with_matrix(xpars[0].data,
+            arm.spectral_format_with_matrix(flat[0].XMOD,
                                             wpars[0].data,
                                             spatpars[0].data,
                                             specpars[0].data,
@@ -501,19 +500,14 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             fitted_params, wave_and_resid = arm.read_lines_and_fit(
                 wpars[0].data, lines_out)
 
-            # Much like the solution for findApertures, create a minimum-spec
-            # AstroData object to prepare the result for storage in the
-            # calibrations system
-            # CJS: Renamed to ad_wfit from ad_xmod
-            ad_wfit = astrodata.create({'INSTRUME': 'GHOST'})
-            ad_wfit.append(fitted_params)
-            ad_wfit.filename = ad.filename
-            # CJS: Need to add data_label for storeAsCalibration()
-            ad_wfit.phu['DATALAB'] = ad.data_label()
-            gt.mark_history(ad_wfit, primname=self.myself(), keyword=timestamp_key)
+            # CJS: Append the WFIT as an extension. It will inherit the
+            # header from the science plane (including irrelevant/wrong
+            # keywords like DATASEC) but that's not really a big deal.
+            ad[0].WFIT = fitted_params
 
-            adoutputs.append(ad_wfit)
-        return adoutputs
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+
+        return adinputs
 
     def flatCorrect(self, adinputs=None, **params):
         """
@@ -558,44 +552,46 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             slit_list = [self._get_cal(ad, 'processed_slit')
                          for ad in adinputs]
 
-        flat_list = params["slitflat"]
-        if flat_list is None:
+        # CJS: I've renamed flat -> slitflat and obj_flat -> flat because
+        # that's what the things are called! Sorry if I've overstepped.
+        slitflat_list = params["slitflat"]
+        if slitflat_list is None:
             self.getProcessedSlitFlat(adinputs)
-            flat_list = [self._get_cal(ad, 'processed_slitflat')
+            slitflat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
-        objflat_list = params["flat"]
-        if objflat_list is None:
+        flat_list = params["flat"]
+        if flat_list is None:
             self.getProcessedFlat(adinputs)
-            objflat_list = [self._get_cal(ad, 'processed_flat')
+            flat_list = [self._get_cal(ad, 'processed_flat')
                          for ad in adinputs]
-
-        self.getProcessedXmod(adinputs)
-        xmod_list = [self._get_cal(ad, 'processed_xmod') for ad in adinputs]
 
         # TODO: Have gt.make_lists handle multiple auxiliary lists?
         _, slit_list = gt.make_lists(adinputs, slit_list, force_ad=True)
+        _, slitflat_list = gt.make_lists(adinputs, slitflat_list, force_ad=True)
         _, flat_list = gt.make_lists(adinputs, flat_list, force_ad=True)
-        _, objflat_list = gt.make_lists(adinputs, objflat_list, force_ad=True)
-        _, xmod_list = gt.make_lists(adinputs, xmod_list, force_ad=True)
 
-        for ad, slit, flat, obj_flat, xpars in zip(adinputs, slit_list,
-                                        flat_list, objflat_list, xmod_list):
+        for ad, slit, slitflat, flat, in zip(adinputs, slitflat_list,
+                                        flat_list, flat_list):
             log.info(ad.info())
 
             # CJS: failure to find a suitable auxiliary file (either because
             # there's no calibration, or it's missing) places a None in the
             # list, allowing a graceful continuation.
-            if slit is None or flat is None or xpars is None or obj_flat is None:
+            if slit is None or slitflat is None or flat is None:
                 log.warning("Unable to find calibrations for {}; "
                             "skipping".format(ad.filename))
                 continue
 
             try:
-                wpars = astrodata.open(self._get_polyfit_filename(ad, 'wavemod'))
-                spatpars = astrodata.open(self._get_polyfit_filename(ad, 'spatmod'))
-                specpars = astrodata.open(self._get_polyfit_filename(ad, 'specmod'))
-                rotpars = astrodata.open(self._get_polyfit_filename(ad, 'rotmod'))
+                poly_wave = self._get_polyfit_filename(ad, 'wavemod')
+                poly_spat = self._get_polyfit_filename(ad, 'spatmod')
+                poly_spec = self._get_polyfit_filename(ad, 'specmod')
+                poly_rot = self._get_polyfit_filename(ad, 'rotmod')
+                wpars = astrodata.open(poly_wave)
+                spatpars = astrodata.open(poly_spat)
+                specpars = astrodata.open(poly_spec)
+                rotpars = astrodata.open(poly_rot)
             except IOError:
                 log.warning("Cannot open required initial model files for {};"
                             " skipping".format(ad.filename))
@@ -603,18 +599,17 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
             res_mode = ad.res_mode()
             arm = GhostArm(arm=ad.arm(), mode=res_mode)
-            arm.spectral_format_with_matrix(xpars[0].data,
+            arm.spectral_format_with_matrix(flat[0].XMOD,
                                             wpars[0].data,
                                             spatpars[0].data,
                                             specpars[0].data,
                                             rotpars[0].data)
 
-            sview = SlitView(slit[0].data, flat[0].data, mode=res_mode)
+            sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
 
             extractor = Extractor(arm, sview)
-            print obj_flat.filename, obj_flat[0].data.shape
             extracted_flux, extracted_var = extractor.two_d_extract(
-                obj_flat[0].data, extraction_weights=ad[0].WGT)
+                flat[0].data, extraction_weights=ad[0].WGT)
             # import pdb; pdb.set_trace()
 
             # Normalised extracted flat profile
@@ -1039,6 +1034,9 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         return adinputs
 
     # CJS: Primitive has been renamed for consistency with other instruments
+    # The geometry_conf.py file is not needed; all you're doing is tiling
+    # extensions according to their DETSEC keywords, without gaps or rotations
+    # so this shouldn't need any extra information.
     def tileArrays(self, adinputs=None, **params):
         """
         This primitive will tile the SCI frames of the input images, along
@@ -1046,8 +1044,8 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         """
         def simple_mosaic_function(ad):
             """
-            This should probably go into MosaicAD as the default function.
-            Being discussed within the team.
+            This will go into MosaicAD as the default function.
+            Being discussed within the SUSD team.
             """
             from gempy.mosaic.mosaicData import MosaicData
             from gempy.mosaic.mosaicGeometry import MosaicGeometry
@@ -1089,14 +1087,14 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
     # validateData() removed since inherited Standardize method will handle it
 
-    def _get_polyfit_filename(self, ad=None, cal_type=None):
+    def _get_polyfit_filename(self, ad, caltype):
         """
         Gets the filename of the relevant initial polyfit file for this
         input GHOST science image
 
         Returns
         -------
-        str/None: Filename of the required polyfit file
+        str/None: Filename (including path) of the required polyfit file
         """
         log = self.log
         polyfit_dir = os.path.join(os.path.dirname(polyfit_dict.__file__),
@@ -1111,10 +1109,10 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         key = 'GHOST_{}_{}_{}_{}'.format(xbin, ybin, arm, res_mode)
 
         try:
-            poly_dict = getattr(polyfit_dict, '{}_dict'.format(cal_type))
+            poly_dict = getattr(polyfit_dict, '{}_dict'.format(caltype))
         except AttributeError:
             log.warning("Invalid polyfit calibration type ({}) requested for "
-                        "{}".format(cal_type, ad.filename))
+                        "{}".format(caltype, ad.filename))
             return None
 
         dates_avail = set([k.split('_')[-1] for k in poly_dict.keys()])
