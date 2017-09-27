@@ -18,10 +18,15 @@ import functools
 import datetime
 from copy import deepcopy
 
-from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_GMOS import \
-    GMOSPrimitives
-from astrodata_Gemini.RECIPES_Gemini.primitives.primitives_stack import \
-    StackPrimitives
+# DON'T CHANGE THE FOLLOWING TO THE LONG/EXPLICIT FORM!!!  Kathleen wants them
+# in their short form, even though they may appear as an import error in your
+# editor or IDE.  During execution, the recipe system (way before reaching this
+# point) will have already walked the gemini_python/ tree and dynamically added
+# all astrodata_xyz/RECIPES_xyz/primitives/ subfolders to the search path.  So
+# these short form imports work just fine (either ignore the error annotation,
+# or manually configure your editor/IDE to include the necessary search paths).
+from primitives_GMOS import GMOSPrimitives
+from primitives_stack import StackPrimitives
 from primitives_GHOST_calibration import GHOST_CalibrationPrimitives
 
 from astrodata_GHOST.polyfit import GhostArm
