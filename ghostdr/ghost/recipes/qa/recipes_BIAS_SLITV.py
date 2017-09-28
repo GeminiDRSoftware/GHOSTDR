@@ -4,7 +4,7 @@ Default is "makeProcessedSlitBias".
 """
 recipe_tags = set(['GHOST', 'SLITV', 'CAL', 'BIAS'])
 
-def makeProcessedSlitBias(p):
+def makeProcessedBias(p):
     """
     This recipe performs the standardization and corrections needed to convert
     the raw input bias images into a single stacked bias image. This output
@@ -22,8 +22,8 @@ def makeProcessedSlitBias(p):
     p.addVAR(read_noise=True)
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackSlitFrames(operation='median', reject_method=None)
+    p.stackFrames(operation='median', reject_method=None)
     p.storeProcessedBias()
     return
 
-default = makeProcessedSlitBias
+default = makeProcessedBias

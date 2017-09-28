@@ -4,7 +4,7 @@ Default is "makeProcessedSlitDark".
 """
 recipe_tags = set(['GHOST', 'SLITV', 'CAL', 'DARK'])
 
-def makeProcessedSlitDark(p):
+def makeProcessedDark(p):
     """
     This recipe performs the standardization and corrections needed to convert
     the raw input dark images into a single stacked dark image. This output
@@ -25,8 +25,8 @@ def makeProcessedSlitDark(p):
     p.addVAR(poisson_noise=True)
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackSlitFrames(operation='median', reject_method=None)
+    p.stackFrames(operation='median', reject_method=None)
     p.storeProcessedDark()
     return
 
-default = makeProcessedSlitDark
+default = makeProcessedDark

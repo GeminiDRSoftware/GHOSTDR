@@ -24,10 +24,10 @@ def makeProcessedSlitArc(p):
     p.addVAR(poisson_noise=True)
     # TODO? p.ADUToElectrons()
     p.darkCorrect()
-    p.correctSlitCosmics()
+    p.CRCorrect()
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackSlitFrames(operation='median', reject_method=None)
+    p.stackFrames(operation='median', reject_method=None)
     p.storeProcessedSlit()
     return
 

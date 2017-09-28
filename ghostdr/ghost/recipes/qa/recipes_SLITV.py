@@ -20,11 +20,11 @@ def makeProcessedSlit(p):
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
     p.darkCorrect()
-    p.correctSlitCosmics()
+    p.CRCorrect()
     p.processSlits()
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackSlitFrames()
+    p.stackFrames()
     p.storeProcessedSlit()
     return
 

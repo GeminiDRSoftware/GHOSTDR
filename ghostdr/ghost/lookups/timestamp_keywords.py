@@ -6,11 +6,10 @@ timestamp_keys = {
     # has completed
     "applyFlatBPM": "APFLTBPM",
     "clipSigmaBPM": "CLIPSIGB",
-    "correctSlitCosmics": "FXSLITCR",
+    "CRCorrect": "FXSLITCR",
     "extractProfile": "EXTRPROF",
     "findApertures": "FINDAPER",
     "fitWavelength": "FITWAVLN",
     "flatCorrect": "FLATCORR",
     "processSlits": "PROCSLIT",
-    "stackSlitFrames": "STCKSLIT",
     }
