@@ -30,32 +30,8 @@ class CalibDBGHOST(CalibDB):
         self._assert_calibrations(adinputs, caltype)
         return adinputs
 
-    def getProcessedSlitBias(self, adinputs=None, **params):
-        caltype = "processed_slitbias"
-        self.getCalibration(adinputs, caltype=caltype)
-        self._assert_calibrations(adinputs, caltype)
-        return adinputs
-
-    def getProcessedSlitDark(self, adinputs=None, **params):
-        caltype = "processed_slitdark"
-        self.getCalibration(adinputs, caltype=caltype)
-        self._assert_calibrations(adinputs, caltype)
-        return adinputs
-
     def getProcessedSlitFlat(self, adinputs=None, **params):
         caltype = "processed_slitflat"
-        self.getCalibration(adinputs, caltype=caltype)
-        self._assert_calibrations(adinputs, caltype)
-        return adinputs
-
-    def getProcessedWavefit(self, adinputs=None, **params):
-        caltype = "processed_wavefit"
-        self.getCalibration(adinputs, caltype=caltype)
-        self._assert_calibrations(adinputs, caltype)
-        return adinputs
-
-    def getProcessedXmod(self, adinputs=None, **params):
-        caltype = "processed_xmod"
         self.getCalibration(adinputs, caltype=caltype)
         self._assert_calibrations(adinputs, caltype)
         return adinputs
@@ -70,47 +46,11 @@ class CalibDBGHOST(CalibDB):
         self.storeCalibration(adinputs, caltype=caltype)
         return adinputs
 
-    def storeProcessedSlitBias(self, adinputs=None, **params):
-        caltype = 'processed_slitbias'
-        sfx = params["suffix"]
-        self.log.debug(gt.log_message("primitive", self.myself(), "starting"))
-        adinputs = self.markAsCalibration(adinputs, suffix=sfx,
-                                    primname=self.myself(), keyword="PRSLITBI")
-        self.storeCalibration(adinputs, caltype=caltype)
-        return adinputs
-
-    def storeProcessedSlitDark(self, adinputs=None, **params):
-        caltype = 'processed_slitdark'
-        sfx = params["suffix"]
-        self.log.debug(gt.log_message("primitive", self.myself(), "starting"))
-        adinputs = self.markAsCalibration(adinputs, suffix=sfx,
-                                    primname=self.myself(), keyword="PRSLITDA")
-        self.storeCalibration(adinputs, caltype=caltype)
-        return adinputs
-
     def storeProcessedSlitFlat(self, adinputs=None, **params):
         caltype = 'processed_slitflat'
         sfx = params["suffix"]
         self.log.debug(gt.log_message("primitive", self.myself(), "starting"))
         adinputs = self.markAsCalibration(adinputs, suffix=sfx,
                                     primname=self.myself(), keyword="PRSLITFL")
-        self.storeCalibration(adinputs, caltype=caltype)
-        return adinputs
-
-    def storeProcessedWavefit(self, adinputs=None, **params):
-        caltype = 'processed_wavefit'
-        sfx = params["suffix"]
-        self.log.debug(gt.log_message("primitive", self.myself(), "starting"))
-        adinputs = self.markAsCalibration(adinputs, suffix=sfx,
-                                    primname=self.myself(), keyword="PRWAVLFT")
-        self.storeCalibration(adinputs, caltype=caltype)
-        return adinputs
-
-    def storeProcessedXmod(self, adinputs=None, **params):
-        caltype = 'processed_xmod'
-        sfx = params["suffix"]
-        self.log.debug(gt.log_message("primitive", self.myself(), "starting"))
-        adinputs = self.markAsCalibration(adinputs, suffix=sfx,
-                                    primname=self.myself(), keyword="PRPOLYFT")
         self.storeCalibration(adinputs, caltype=caltype)
         return adinputs
