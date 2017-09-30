@@ -393,8 +393,8 @@ class Extractor():
                 
                 #DEBUG
                 #if (np.max(pixel_weights) > 2) and (j > 0.1*ny):
-                if (j==2000):
-                    import pdb; pdb.set_trace()
+                #if (j==2000):
+                #    import pdb; pdb.set_trace()
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
                 #orders

@@ -608,7 +608,7 @@ class Polyspect(object):
         # FIXME More vigorous input type checking (or casting)
         if not isinstance(x_to_fit, np.ndarray):
             raise UserWarning('provided X model is not ndarray type.')
-        if not isinstance(init_mod_file, np.ndarray):
+        if not isinstance(init_mod, np.ndarray):
             raise UserWarning('provided initial model is not ndarray type.')
 
         if x_to_fit.shape[0] % decrease_dim != 0:
