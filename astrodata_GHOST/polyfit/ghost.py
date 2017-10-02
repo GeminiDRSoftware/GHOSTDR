@@ -79,7 +79,36 @@ class GhostArm(Polyspect):
             print("Unknown mode!")
             raise UserWarning
 
+    def bin_data(self,data, binning=[2,2]):
+        """ Generic Function used to create a binned equivalent of a spectrograph
+        image array for the purposes of equivalent extraction. 
 
+        Parameters
+        ----------
+        data: :obj:`numpy.ndarray'
+            The (unbinned) data to be binned
+        binning: list
+            A two element list with the binning factors
+
+        Returns
+        -------
+        binned_array: :obj:`numpy.ndarray'
+            The binned data
+        """
+        if data.shape != (self.szx,self.szy):
+            raise UserWarning('Input data for binning is not in the expected\
+            format')
+        
+        rows = binning[0]
+        cols = binning[1]
+        binned_array = data.reshape(int(data.shape[0]/rows),
+                                    rows,
+                                    int(data.shape[1]/cols),
+                                    cols).\
+                                    sum(axis=1).sum(axis=2)
+        return binned_array
+
+        
     def slit_flat_convolve(self, flat, slit_profile=None, spatpars=None,\
         microns_pix=None, xpars=None, num_conv=3):
         """Function that takes a flat field image and a slit profile and
