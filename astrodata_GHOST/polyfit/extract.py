@@ -624,7 +624,7 @@ class Extractor():
         # noise.
         noise_level = np.median(np.abs(flux-np.median(flux)))
 
-        if (inspect == 0) and (arcfile is None):
+        if (inspect == True) and (arcfile is None):
             print('Must provide an arc image for the inpection')
             raise UserWarning
         if inspect:
