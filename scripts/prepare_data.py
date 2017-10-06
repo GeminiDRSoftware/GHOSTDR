@@ -31,7 +31,7 @@ for f in all_files:
         elif f.startswith('obj'): 
             datalab[14] = ('8' if 'std' in f else '9')
             datalab[-1] = ('1' if '0.5' in f else '2')
-        elif 'ARC' in f and 'HIGH' in f:
+        elif 'ARC' in tags and 'HIGH' in tags:
             datalab = datalab[:14] + ['1', '0'] + datalab[15:]
         ad.phu['DATALAB'] = ''.join(datalab)
         ad.write(clobber=True)
