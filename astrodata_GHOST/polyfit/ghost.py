@@ -80,8 +80,8 @@ class GhostArm(Polyspect):
             raise UserWarning
 
     def bin_data(self,data, binning=[2,2]):
-        """ Generic Function used to create a binned equivalent of a spectrograph
-        image array for the purposes of equivalent extraction. 
+        """ Generic Function used to create a binned equivalent of a
+        spectrograph image array for the purposes of equivalent extraction. 
 
         Parameters
         ----------
@@ -89,6 +89,12 @@ class GhostArm(Polyspect):
             The (unbinned) data to be binned
         binning: list
             A two element list with the binning factors
+
+        Raises
+        ------
+        UserWarning: 
+            If the data provided is not consistent with CCD size. i.e: not
+            unbinned
 
         Returns
         -------
