@@ -32,9 +32,11 @@ class GhostArm(Polyspect):
     and "std" or "high" for the mode (second string).
     """
 
-    def __init__(self, arm='blue', mode='std'):
+    def __init__(self, arm='blue', mode='std', ccdsum = '1 1'):
         """Initialisation function that sets all the mode specific parameters
         related to each configuration of the spectrograph.
+
+        
 
         Attributes
         ----------
@@ -51,6 +53,11 @@ class GhostArm(Polyspect):
             Resolution mode.
         nlenslets: int
             number of lenslets of the IFU
+        ccdsum: str
+            The binning as present in the header keywords of the data.
+        binning: list
+            The initialisation converts the ccdsum input into a list and
+            renames it 'binning' to be easily used in functions. 
         """
         if arm == 'red':
             Polyspect.__init__(self, m_ref=50, szx=6144, szy=6160, m_min=34,
@@ -69,6 +76,9 @@ class GhostArm(Polyspect):
         self.lenslet_high_size = 118.0  # Lenslet flat-to-flat in microns
         self.lenslet_std_size = 197.0  # Lenslet flat-to-flat in microns
         self.mode = mode
+        # x is in the spatial direction
+        # y is in the spectral direction
+        self.ybin, self.xbin = list(np.int8(str.split(ccdsum,' ')))
 
         # Now we determine the number of fibers based on mode.
         if mode == 'high':
