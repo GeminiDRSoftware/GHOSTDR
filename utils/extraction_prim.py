@@ -2,7 +2,7 @@
 workings"""
 
 from __future__ import division, print_function
-from astrodata_GHOST import polyfit
+from ghostdr import polyfit
 import numpy as pn
 
 # Firstly, let's find all the needed files

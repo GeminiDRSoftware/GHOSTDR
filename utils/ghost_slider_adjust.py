@@ -15,7 +15,7 @@ import os
 import pdb
 import sys
 import numpy as np
-from astrodata_GHOST import polyfit
+from ghostdr import polyfit
 import astropy.io.fits as pyfits
 # plt.ion()
 
@@ -79,7 +79,7 @@ if user == 'Joao':
     # test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     test_files_dir = '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/'+ cam + '/' + mode + '/161120/'
     if model == 'W':
-        arclinefile = '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+        arclinefile = '/home/jbento/code/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
         # Define the files in use (NB xmod.txt and wavemod.txt should be
         # correct)
         arc_file = fitsdir + "arc95_" + mode + "_" + cam + "_arc.fits"
@@ -129,7 +129,7 @@ if model == 'X':
     # Convolve the flat field with the slit profile
     # If no slit profile is given, assume a standard one.
     flat_conv = ghost.slit_flat_convolve(flat_data)
-    flat_conv= flat_data
+    # flat_conv= flat_data
     # Have a look at the default model and make small adjustments if needed.
     # This step should not be part of the primitive !!!!!
     # It is for engineering purposes only!

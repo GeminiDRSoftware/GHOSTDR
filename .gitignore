@@ -64,3 +64,6 @@ target/
 
 # Eclipse
 .project
+
+# PyCharm
+.idea

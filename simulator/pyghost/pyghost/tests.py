@@ -2,8 +2,7 @@
 
 import math
 import numpy as np
-import pyghost, sys
-
+import pyghost
 
 def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         split=True, check=False):

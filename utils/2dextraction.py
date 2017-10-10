@@ -1,10 +1,9 @@
 """ A script containing the basic principles of the 2D extraction"""
 
 from __future__ import division, print_function
-from astrodata_GHOST import polyfit
+from ghostdr import polyfit
 import astropy.io.fits as pyfits
 import numpy as np
-import numpy as pn
 import fnmatch, os
 import pdb
 import pickle
@@ -20,14 +19,12 @@ extract_1d_first = True #Set this to false to test multiple times.
 fitsdir='/priv/mulga1/jbento/ghost/calibrations/storedcals/'
 test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
 fitsdir='/Users/mireland/data/ghost/tilted/'
-test_files_dir='/Users/mireland/python/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/blue/std/161120/'
+test_files_dir='/Users/mireland/python/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/blue/std/161120/'
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 # For this example just use arcs. Proper science frame reduction is still not
 # available. 
 science_file  = fitsdir + ftype + '95_'+mode+'_'+arm+'_'+ftype+'.fits'
-science_file = fitsdir + 'obj95_0.5_std_blue_flatBPMApplied.fits'
 slit_image = fitsdir + ftype+ '95_'+mode+'_SLIT_'+ftype+'.fits'
-slit_image = fitsdir + 'obj95_0.5_std_SLIT_stack_slit.fits'
 flat_file  = fitsdir + 'flat95_'+mode+'_2_'+arm+'_flat.fits'
 
 # Use these files and flat_correct=False to test flat extraction.

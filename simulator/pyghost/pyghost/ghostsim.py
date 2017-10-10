@@ -574,14 +574,14 @@ class SlitViewer(object):
 
             hdulist.append(pf.ImageHDU(data=data, header=hdr))
 
-        if not self.split:
+        if self.split:
+            print('Writing ' + fname + 'SLIT.fits')
+            hdulist.writeto(fname + 'SLIT.fits', clobber=True)
+            if self.cosmics and self.crplane:
+                print('Writing ' + fname + 'SLIT_CR.fits')
+                crhdu.writeto(fname + 'SLIT_CR.fits', clobber=True)
+        else:
             return hdulist
-
-        print('Writing ' + fname + 'SLIT.fits')
-        hdulist.writeto(fname + 'SLIT.fits', clobber=True)
-        if self.cosmics and self.crplane:
-            print('Writing ' + fname + 'SLIT_CR.fits')
-            crhdu.writeto(fname + 'SLIT_CR.fits', clobber=True)
 
     def create_slitview_frames(self, im_slit, spectrum, slitview_wave,
                                slitview_frac, slitview_offset, mode='high'):
@@ -1224,7 +1224,7 @@ class Arm(object):
         # If no input spectrum, use the sun.
         if (spectrum is None) or len(spectrum) == 0:
             spectrum = self.get_solar_spectrum()
-        
+
         n_orders = x.shape[0]
         n_y = x.shape[1]
         if n_x == 0:
