@@ -88,7 +88,8 @@ def subtract_scattered_light(data, mask):
     
     """
     return data
-    
+
+
 class Extractor():
     def __init__(self, polyspect_instance, slitview_instance,
                  gain = 1.0, rnoise = 3.0, cr_flag = 8,
@@ -210,9 +211,10 @@ class Extractor():
         nx = self.arm.szx
 
         #Our profiles... 
-        #FIXME: Consider carefully whether there is a way to extract x-centroids 
+        #FIXME: Consider carefully whether there is a way to extract x-centroids
         #as well for PRV, as part of slitim_offsets below.
-        profiles = self.slitview.object_slit_profiles(arm=self.arm.arm, correct_for_sky=correct_for_sky)
+        profiles = self.slitview.object_slit_profiles(\
+            arm = self.arm.arm, correct_for_sky = correct_for_sky)
 
         # Number of "objects" and "slit pixels"
         no = profiles.shape[0]
@@ -222,9 +224,10 @@ class Extractor():
 
         
         # To consider slit tilt for a 1D extraction, we need to know the profile
-        # centroids in the "y" direction. i.e. In principle, we could modify the wavelength
-        # scale for each object based on this. If 2D extraction works well, such an
-        # approach is not needed, but lets keep the idea of this code here for now.
+        # centroids in the "y" direction. i.e. In principle, we could modify the
+        # wavelength scale for each object based on this. If 2D extraction works
+        # well, such an approach is not needed, but lets keep the idea of this
+        # code here for now.
         
         # FIXME: This part doesn't actually do anything. But it's also not used.
         
@@ -232,7 +235,8 @@ class Extractor():
         y_centroids = np.empty( (no) )
         x_centroids = np.zeros( (no) )
         for object_ix, profile in enumerate(profiles):
-            y_centroids[object_ix] = np.sum(profile * profile_y_microns)/np.sum(profile)
+            y_centroids[object_ix] = np.sum(profile *
+                                            profile_y_microns)/np.sum(profile)
         centroids = np.array([x_centroids, y_centroids])
 
         #Our extracted arrays, and the weights array
@@ -243,8 +247,8 @@ class Extractor():
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
         # This really should come from an input "vararray" because of differing
-        # gain and readout noise parameters for different amplifiers, and known bad
-        # pixels.
+        # gain and readout noise parameters for different amplifiers, and known
+        # bad pixels.
         if self.vararray is None:
             pixel_inv_var = 1.0 / (np.maximum(data, 0) /
                                    self.gain + self.rnoise**2)
@@ -264,11 +268,15 @@ class Extractor():
         # too good, and we need to add optical aberrations.
         spat_conv_weights = np.array([0.25,.5,.25])
         if self.transpose:
-            pixel_inv_var = ndimage.convolve1d(pixel_inv_var, spec_conv_weights, axis=0)
-            pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var, spat_conv_weights, axis=1)
+            pixel_inv_var = ndimage.convolve1d(pixel_inv_var, spec_conv_weights,
+                                               axis=0)
+            pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var,
+                                                   spat_conv_weights, axis=1)
         else:
-            pixel_inv_var = ndimage.convolve1d(pixel_inv_var, spec_conv_weights, axis=1)
-            pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var, spat_conv_weights, axis=0)
+            pixel_inv_var = ndimage.convolve1d(pixel_inv_var, spec_conv_weights,
+                                               axis=1)
+            pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var,
+                                                   spat_conv_weights, axis=0)
         
         if self.badpixmask is not None:
             pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
@@ -289,7 +297,8 @@ class Extractor():
                 # we were going to output a new wavelength scale associated with a
                 # 1D extraction. This is currently only used to make the fitting as 
                 # part of the CR rejection neat.
-                slitim_offsets = np.dot(np.linalg.inv(self.arm.matrices[i,j]), centroids)
+                slitim_offsets = np.dot(np.linalg.inv(self.arm.matrices[i,j]),
+                                        centroids)
                 
                 profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
                 
@@ -364,8 +373,8 @@ class Extractor():
                 
                 #DEBUG
                 #if (np.max(pixel_weights) > 2) and (j > 0.1*ny):
-                if (j==2000):
-                    import pdb; pdb.set_trace()
+                #if (j==2000):
+                #    import pdb; pdb.set_trace()
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
                 #orders
@@ -595,7 +604,7 @@ class Extractor():
         # noise.
         noise_level = np.median(np.abs(flux-np.median(flux)))
 
-        if (inspect == 0) and (arcfile is None):
+        if (inspect == True) and (arcfile is None):
             print('Must provide an arc image for the inpection')
             raise UserWarning
         if inspect:
@@ -647,3 +656,4 @@ class Extractor():
             plt.axis([0, nx, ny, 0])
             plt.show()
         return np.array(lines_out)
+

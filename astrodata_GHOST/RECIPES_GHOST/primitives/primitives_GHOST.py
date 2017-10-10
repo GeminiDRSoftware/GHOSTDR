@@ -829,7 +829,6 @@ class GHOSTPrimitives(GMOSPrimitives,
                                              arcwaves,
                                              inspect=False)
 
-            #import pdb; pdb.set_trace()
             fitted_params, wave_and_resid = arm.read_lines_and_fit(
                 wpars[0].data, lines_out)
 
@@ -999,7 +998,6 @@ class GHOSTPrimitives(GMOSPrimitives,
                 obj_flat['SCI'].data,
                 extraction_weights=ad['WGT'].data,
             )
-            # import pdb; pdb.set_trace()
 
             # Normalised extracted flat profile
             med = np.median(extracted_flux)
