@@ -5,45 +5,12 @@ import ghost_instruments
 from ghostdr.ghost.primitives_ghost import GHOST
 
 all_files = [f for f in list(os.listdir('.')) if f.endswith('.fits')]
-#if len(all_files) != 60:
-#    raise IOError("Wrong number of files")
 
-# Add DATALAB to SLIT files and tweak the others
-# bias        1-00n
-# arc (std)   2-001
-# arc (high) 10-001
-# flat (std)  3-00n
-# flat (high) 4-00n
-# dark        5-00n
-# sky (std)   6-001
-# sky (high)  7-001
-# obj (std)   8-001 (0.5) 8-002 (1.0)
-# obj (high)  9-001 (0.5) 9-002 (1.0)
-for f in all_files:
-    if 'SLIT' not in f:
-        ad = astrodata.open(f)
-        tags = ad.tags
-        datalab = list(ad.data_label())
-        if 'FLAT' in tags:
-            datalab[14] = ('3' if 'std' in f else '4')
-        elif f.startswith('sky'):
-            datalab[14] = ('6' if 'std' in f else '7')
-        elif f.startswith('obj'): 
-            datalab[14] = ('8' if 'std' in f else '9')
-            datalab[-1] = ('1' if '0.5' in f else '2')
-        elif 'ARC' in tags and 'HIGH' in tags:
-            datalab = datalab[:14] + ['1', '0'] + datalab[15:]
-        ad.phu['DATALAB'] = ''.join(datalab)
-        ad.write(clobber=True)
-
-for f in all_files:
-    if 'SLIT' in f:
-        fname_start = f[:f.index('_SLIT')]
-        data_label = astrodata.open([g for g in all_files
-                                     if g.startswith(fname_start) and 'SLIT' not in g][0]).phu['DATALAB']
-        ad = astrodata.open(f)
-        ad.phu['DATALAB'] = data_label
-        ad.write(clobber=True)
+# don't process hotpixel planes, cosmic ray planes, check files, or bundle files (MEFs)
+all_files = filter(lambda f: 'HP' not in f, all_files)
+all_files = filter(lambda f: 'CR' not in f, all_files)
+all_files = filter(lambda f: 'chk' not in f, all_files)
+all_files = filter(lambda f: 'MEF' not in f, all_files)
 
 # Bias frames don't need calibrations so ditch them now
 all_files = filter(lambda f: not f.startswith('bias'), all_files)

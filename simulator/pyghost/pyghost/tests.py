@@ -109,11 +109,11 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         svfp /= svfp.max()
         sv_flux_profile = (np.arange(len(svfp)), svfp)
 
-        for seeing in (0.5, 1.0):  # in arcsecs
+        for i, seeing in enumerate((0.5, 1.0), start=1):  # in arcsecs
             ghost.simulate_observation(
                 duration=duration, output_prefix='obj'+str(duration)+'_' +
                 str(seeing)+'_'+res+'_', use_thar=True, add_sky=True, res=res,
-                obstype='OBJECT', seeing=seeing,
+                obstype='OBJECT', seeing=seeing, data_label=i,
                 sv_flux_profile=sv_flux_profile, binmode=target_binmode)
 
 if __name__ == "__main__":
