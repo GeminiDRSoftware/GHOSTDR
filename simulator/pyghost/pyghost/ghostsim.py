@@ -238,11 +238,9 @@ def to_ushort(img):
     return np.asarray(img, dtype=np.uint16)
 
 
-def add_overscan(i, oscan):
-    """
-    add a 0-valued overscan region to image i.
-    """
-    return np.hstack((i, np.zeros((i.shape[0], oscan))))
+def add_overscan(img, oscan):
+    """ add a 0-valued overscan region of width oscan to an image """
+    return np.hstack((img, np.zeros((img.shape[0], oscan))))
 
 
 class Fibers(object):
@@ -478,11 +476,12 @@ class SlitViewer(object):
         # Calculate the detector/ccd section
         y0 = 804 // self.binning
         x0 = 566 // self.binning
-        secstr = '[' + str(y0) + ":" + str(y0 + self.slitcam_ysz - 1) + "," + \
-                 str(x0) + ":" + str(x0 + self.slitcam_xsz - 1) + "]"
+        secstr = '[{}:{},{}:{}]'.format(
+            y0, y0 + self.slitcam_ysz - 1, x0, x0 + self.slitcam_xsz - 1)
         detsz = '[1:1928,1:1452]'  # TODO: per qsimaging.com, this is 1940x1460
 
         header = pf.Header()
+        header['CAMERA'] = ('Slit', 'Camera name')
         header['OBSERVAT'] = (
             'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
         header['TELESCOP'] = 'Gemini-South'
@@ -500,11 +499,15 @@ class SlitViewer(object):
         prgid = 'GS-2016B-Q-20'  # just choose a base at random
         header['GEMPRGID'] = (prgid, 'Gemini programme ID')
         obsid = dict(
-            FLAT='2', ARC='2', OBJECT='2', BIAS='1', DARK='5', SKY='6')
+            high=dict(BIAS='1', DARK='5', FLAT='4', ARC='10', OBJECT='9',
+                SKY='7'),  # noqa
+            std=dict(BIAS='1', DARK='5', FLAT='3', ARC='2', OBJECT='8',
+                SKY='6'),  # noqa
+            )
         header['OBSID'] = (
-            prgid+'-'+obsid[obstype], 'Observation ID / Data label')
-        header['DATALAB'] = (prgid+'-'+obsid[obstype]+'-' + ('%03d' % \
-            data_label), 'DHS data label')  # noqa
+            prgid+'-'+obsid[res][obstype], 'Observation ID / Data label')
+        header['DATALAB'] = (prgid+'-'+obsid[res][obstype]+'-' + (
+            '%03d' % data_label), 'DHS data label')
 
         # perhaps wrongly (and out of line with their comments), the ghost
         # recipes interpret these keywords as the start/end times of the science
@@ -546,7 +549,7 @@ class SlitViewer(object):
             hdr['EXTNAME'] = ('SCI', 'extension name')
             hdr['RDNOISE'] = (readnoise, 'Readout noise')
             hdr['GAIN'] = (gain, 'Amplifier gain')
-            hdr['CAMERA'] = 'Slit'
+            hdr['CAMERA'] = ('Slit', 'Camera name')
             hdr['DETSIZE'] = detsz
             hdr['CCDSIZE'] = detsz
             hdr['DETSEC'] = secstr
@@ -574,14 +577,14 @@ class SlitViewer(object):
 
             hdulist.append(pf.ImageHDU(data=data, header=hdr))
 
-        if self.split:
-            print('Writing ' + fname + 'SLIT.fits')
-            hdulist.writeto(fname + 'SLIT.fits', clobber=True)
-            if self.cosmics and self.crplane:
-                print('Writing ' + fname + 'SLIT_CR.fits')
-                crhdu.writeto(fname + 'SLIT_CR.fits', clobber=True)
-        else:
+        if not self.split:
             return hdulist
+
+        print('Writing ' + fname + 'SLIT.fits')
+        hdulist.writeto(fname + 'SLIT.fits', clobber=True)
+        if self.cosmics and self.crplane:
+            print('Writing ' + fname + 'SLIT_CR.fits')
+            crhdu.writeto(fname + 'SLIT_CR.fits', clobber=True)
 
     def create_slitview_frames(self, im_slit, spectrum, slitview_wave,
                                slitview_frac, slitview_offset, mode='high'):
@@ -1265,8 +1268,8 @@ class Arm(object):
                 xy_scaled = np.dot(
                     matrices[i, j],
                     np.array([cutout_xy[0][w_ix] + int(the_x) - the_x,
-                              cutout_xy[1][w_ix]]) / self.microns_pix)\
-                              .astype(int)
+                              cutout_xy[1][w_ix]]) / self.microns_pix
+                ).astype(int)
                 slit_y = xy_scaled[1] + im_slit.shape[0]/2
                 slit_x = xy_scaled[0] + im_slit.shape[1]/2
                 w_ix = np.where((slit_x >= 0) * (slit_y >= 0) *
@@ -1385,7 +1388,7 @@ class Arm(object):
                        thar_flatlamp=False, flatlamp=False, obstype=None,
                        additive_noise={}, scaling=None, seeing=0.8,
                        data_label=1, utstart=datetime.datetime.utcnow(),
-                       binmode=(1, 1)):
+                       binning=(1, 1)):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -1464,7 +1467,7 @@ class Arm(object):
             The UT start time from which to generate all time-related header
             keywords
 
-        binmode: 2-tuple of ints (optional)
+        binning: 2-tuple of ints (optional)
             The binning mode to apply to the output data frame
         """
 
@@ -1709,11 +1712,11 @@ class Arm(object):
             chkhdu = pf.HDUList(pf.PrimaryHDU(data=check_image))
             chkhdu.writeto(output_prefix + self.arm + '_chk.fits', clobber=True)
 
-        binmodes = [binmode]
+        binmodes = [binning]
         if obstype in ['BIAS', 'OBJECT']:
             binmodes = [(1, 1), (1, 2), (1, 8), (2, 4), (2, 8)]
-        for binning in binmodes:
-            if not self.split and binmode != binning:
+        for binmode in binmodes:
+            if not self.split and binning != binmode:
                 continue
 
             opims = deepcopy(ampims)
@@ -1726,8 +1729,8 @@ class Arm(object):
             opims = [i*s for i, s in zip(opims, scaling)]
 
             # apply binning
-            opims = [apply_binning(i, binning) for i in opims]
-            oscan = overscan / binning[0]  # the new binned overscan width
+            opims = [apply_binning(i, binmode) for i in opims]
+            oscan = overscan / binmode[0]  # the new binned overscan width
 
             # Add read noise (in electrons) for each amplifier
             opims = [i+r*np.random.normal(size=i.shape)
@@ -1738,8 +1741,8 @@ class Arm(object):
 
             # Add in the additive noise (this is assumed to be electronic noise,
             # so it's in ADUs)
-            if additive_noise and binning in additive_noise:
-                opims = [i+n for i, n in zip(opims, additive_noise[binning])]
+            if additive_noise and binmode in additive_noise:
+                opims = [i+n for i, n in zip(opims, additive_noise[binmode])]
 
             # add in each amp's bias level
             opims = [i+b for i, b in zip(opims, bias_level)]
@@ -1789,11 +1792,15 @@ class Arm(object):
             prgid = 'GS-2016B-Q-20'  # just choose a base at random
             hdr['GEMPRGID'] = (prgid, 'Gemini programme ID')
             obsid = dict(
-                FLAT='2', ARC='2', OBJECT='2', BIAS='1', DARK='5', SKY='6')
+                high=dict(BIAS='1', DARK='5', FLAT='4', ARC='10', OBJECT='9',
+                    SKY='7'),  # noqa
+                std=dict(BIAS='1', DARK='5', FLAT='3', ARC='2', OBJECT='8',
+                    SKY='6'),  # noqa
+                )
             hdr['OBSID'] = (
-                prgid+'-'+obsid[obstype], 'Observation ID / Data label')
-            hdr['DATALAB'] = (prgid+'-'+obsid[obstype]+'-' + ('%03d' % \
-                data_label), 'DHS data label')  # noqa
+                prgid+'-'+obsid[res][obstype], 'Observation ID / Data label')
+            hdr['DATALAB'] = (prgid+'-'+obsid[res][obstype]+'-' + (
+                '%03d' % data_label), 'DHS data label')
 
             # keywords that vary by time and position: first start with
             # a spot in the sky that's always visible from Gemini South
@@ -1885,7 +1892,7 @@ class Arm(object):
                 # TODO: replace static value below with dynamically determined
                 # value
                 hdr['CCDSUM'] = (
-                    ' '.join(map(str, binning)), 'CCD pixel summing')
+                    ' '.join(map(str, binmode)), 'CCD pixel summing')
                 # TODO: what's a realistic value for readout time?
                 hdr['DARKTIME'] = (duration + 5., 'Dark time (seconds)')
 
@@ -1910,7 +1917,7 @@ class Arm(object):
             if not self.split:
                 return hdulist
 
-            bins = 'x'.join(map(str, binning))
+            bins = 'x'.join(map(str, binmode))
             newfilename = output_prefix + bins + '_' + self.arm + '.fits'
             print('Writing ' + newfilename)
             hdulist.writeto(newfilename, clobber=True)
@@ -2086,7 +2093,7 @@ class Ghost(object):
             bias_level=self.bias_level, overscan=self.overscan, add_sky=add_sky,
             namps=self.namps, use_thar=use_thar, res=res, utstart=utstart,
             thar_flatlamp=thar_flatlamp, seeing=seeing, data_label=data_label,
-            flatlamp=flatlamp, obstype=obstype, binmode=binmode)
+            flatlamp=flatlamp, obstype=obstype, binning=binmode)
 
         blue_hdul = self.blue.simulate_frame(  # pylint: disable=star-args
             additive_noise=self.additive_noise['blue'],
