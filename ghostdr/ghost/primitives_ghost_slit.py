@@ -32,7 +32,7 @@ class GHOSTSlit(GHOST):
     def CRCorrect(self, adinputs=None, **params):
         """
         This primitive replaces CR-affected pixels in each individual slit
-        viewer image (taken from the current stream) with their equivalents\
+        viewer image (taken from the current stream) with their equivalents
         from the median frame of those images.
 
         Parameters
@@ -222,9 +222,6 @@ class GHOSTSlit(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        operation = params["operation"]
-        reject_method = params["reject_method"]
-
         # Keep hold of the first SLITV input's filename so the stacked
         # output has a sensible name.
         first_filename = None
@@ -254,29 +251,12 @@ class GHOSTSlit(GHOST):
                 adext.phu['ORIGNAME'] = filename
                 extinputs.append(adext)
 
-        # CJS: Could simply pass parameters as **params here
-        adout = super(GHOSTSlit, self).stackFrames(extinputs, operation=operation,
-                                 reject_method=reject_method)[0]
+        adout = super(GHOSTSlit, self).stackFrames(extinputs, **params)[0]
         if first_filename:
             adout.phu['ORIGNAME'] = first_filename
         gt.mark_history(adout, primname=self.myself(), keyword=timestamp_key)
         adoutputs.append(adout)
         return adoutputs
-
-    def standardizeStructure(self, adinputs=None, **params):
-        """
-        CJS: Only exists now to add DATASEC keyword to SLITV frames, which
-        is missing in the simulated data.
-        No longer promotes extensions of SLITV images to full AD instances
-        since stackSlitFrames() handles this.
-        """
-        log = self.log
-        log.debug(gt.log_message("primitive", self.myself(), "starting"))
-
-        for ad in adinputs:
-            if 'SLITV' in ad.tags:
-                ad.hdr['DATASEC'] = '[1:{1},1:{0}]'.format(*ad[0].data.shape)
-        return adinputs
 
 ##############################################################################
 # Below are the helper functions for the primitives in this module           #
