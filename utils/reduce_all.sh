@@ -13,6 +13,9 @@ COREDIR=$PWD
 CHECK=true
 
 BINNING='1x1'
+
+###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
+
 #Now you have the option of pointing to different directories for each file type.
 #All in the same place is the way forward.
 BIASDIR=$COREDIR
@@ -105,7 +108,7 @@ for cam in red blue; do
     fi
     
     for mode in high std; do
-        CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
+	CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
 
         typewalk --tags GHOST FLAT $CAPCAM $CAPMODE --dir $FLATDIR/ -o flat.list
         reduce --drpkg ghostdr @flat.list
@@ -124,8 +127,11 @@ for cam in red blue; do
 	    echo 'You can now check the reduction at this step.\n'
 	    read -p "Press any key to continue... " -n1 -s
 	fi
-	
-        for seeing in 0.5 1.0; do
+
+	###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
+	###### The pipeline combines too many things. Assumed is also that any
+	# 1.0 seeing files have also been removed, including the slitv ones.
+	for seeing in 0.5; do
             while read object <&3; do
                 echo Reducing $object
                 reduce --drpkg ghostdr $object
@@ -137,7 +143,7 @@ for cam in red blue; do
 		fi
 		
             done 3< <(
-                typewalk --tags GHOST $CAPCAM GHOST_$CAPMODE --dir $OBJDIR/ --filemask ".*$seeing.*'$BINNING'.*\.(fits|FITS)" \
+                typewalk --tags GHOST $CAPCAM $CAPMODE --dir $OBJDIR/ --filemask "obj.*$seeing.*$BINNING.*\.(fits|FITS)" \
                     -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
             )
         done
