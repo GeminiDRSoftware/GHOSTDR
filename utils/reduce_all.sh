@@ -8,9 +8,9 @@ trap 'exit' INT QUIT TERM
 #This must be ran from within where the GHOST data are kept, with default variables indicating where the various types of files are
 
 # Start by setting up all the locations for the files. Change this for each case.
-COREDIR=$PWD'/original'
+COREDIR=$PWD
 
-CALDIR=$PWD'/calibrations/storedcals'
+CHECK=true
 
 BINNING='1x1'
 #Now you have the option of pointing to different directories for each file type.
@@ -25,27 +25,55 @@ OBJDIR=$COREDIR
 #rm *stack* *forStack* adc* *.log *.list tmp* *_dark.fits *_bias.fits GHOST* *_arc.fits *_flat.fits
 
 
- echo 'Doing slits now'
+echo 'Doing slits now'
 
 typewalk --tags GHOST SLITV BIAS --dir $BIASDIR/ -o bias.list
 reduce --drpkg ghostdr @bias.list
 
+if $CHECK
+then
+    echo 'You can now check the reduction at this step.\n'
+    read -p "Press any key to continue... " -n1 -s
+fi    
+
 typewalk --tags GHOST SLITV DARK --dir $DARKDIR/ -o dark.list
 reduce --drpkg ghostdr @dark.list
+
+if $CHECK
+then
+    echo 'You can now check the reduction at this step.\n'
+    read -p "Press any key to continue... " -n1 -s
+fi
 
 for mode in high std; do
     CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
 
     typewalk --tags GHOST SLITV FLAT $CAPMODE --dir $FLATDIR/ -o flat.list
     reduce --drpkg ghostdr @flat.list
+
+    if $CHECK
+    then
+	echo 'You can now check the reduction at this step.\n'
+	read -p "Press any key to continue... " -n1 -s
+    fi
     
     typewalk --tags GHOST SLITV ARC $CAPMODE --dir $ARCDIR/ -o arc.list
     reduce --drpkg ghostdr @arc.list
+
+    if $CHECK
+    then
+	echo 'You can now check the reduction at this step.\n'
+	read -p "Press any key to continue... " -n1 -s
+    fi
     
     while read object <&3; do
         echo Reducing $object
         reduce --drpkg ghostdr $object
-	
+	if $CHECK
+	then
+	    echo 'You can now check the reduction at this step.\n'
+	    read -p "Press any key to continue... " -n1 -s
+	fi
     done 3< <(
         typewalk --tags GHOST SLITV IMAGE $CAPMODE --dir $OBJDIR/ --filemask 'obj.*\.(fits|FITS)' \
             -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
@@ -61,22 +89,52 @@ for cam in red blue; do
     typewalk --tags GHOST BIAS $CAPCAM --dir $BIASDIR/ --filemask '.*'$BINNING'.*\.(fits|FITS)' -o bias.list
     reduce --drpkg ghostdr @bias.list
 
+    if $CHECK
+    then
+	echo 'You can now check the reduction at this step.\n'
+	read -p "Press any key to continue... " -n1 -s
+    fi
+    
     typewalk --tags GHOST DARK $CAPCAM --dir $DARKDIR/ -o dark.list
-    reduce --drpkg ghostdr @dark.list 
-
+    reduce --drpkg ghostdr @dark.list
+    
+    if $CHECK
+    then
+	echo 'You can now check the reduction at this step.\n'
+	read -p "Press any key to continue... " -n1 -s
+    fi
+    
     for mode in high std; do
         CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
 
         typewalk --tags GHOST FLAT $CAPCAM $CAPMODE --dir $FLATDIR/ -o flat.list
         reduce --drpkg ghostdr @flat.list
 
+	if $CHECK
+	then
+	    echo 'You can now check the reduction at this step.\n'
+	    read -p "Press any key to continue... " -n1 -s
+	fi
+	
         typewalk --tags GHOST ARC $CAPCAM $CAPMODE --dir $ARCDIR/ -o arc.list
         reduce --drpkg ghostdr @arc.list 
 
+	if $CHECK
+	then
+	    echo 'You can now check the reduction at this step.\n'
+	    read -p "Press any key to continue... " -n1 -s
+	fi
+	
         for seeing in 0.5 1.0; do
             while read object <&3; do
                 echo Reducing $object
                 reduce --drpkg ghostdr $object
+		
+		if $CHECK
+		then
+		    echo 'You can now check the reduction at this step.\n'
+		    read -p "Press any key to continue... " -n1 -s
+		fi
 		
             done 3< <(
                 typewalk --tags GHOST $CAPCAM GHOST_$CAPMODE --dir $OBJDIR/ --filemask ".*$seeing.*'$BINNING'.*\.(fits|FITS)" \
