@@ -35,7 +35,7 @@ reduce --drpkg ghostdr @bias.list
 
 if $CHECK
 then
-    echo 'You can now check the reduction at this step.\n'
+    echo 'You can now check the reduction at this step.'
     read -p "Press any key to continue... " -n1 -s
 fi    
 
@@ -44,7 +44,7 @@ reduce --drpkg ghostdr @dark.list
 
 if $CHECK
 then
-    echo 'You can now check the reduction at this step.\n'
+    echo 'You can now check the reduction at this step.'
     read -p "Press any key to continue... " -n1 -s
 fi
 
@@ -56,7 +56,7 @@ for mode in high std; do
 
     if $CHECK
     then
-	echo 'You can now check the reduction at this step.\n'
+	echo 'You can now check the reduction at this step.'
 	read -p "Press any key to continue... " -n1 -s
     fi
     
@@ -65,7 +65,7 @@ for mode in high std; do
 
     if $CHECK
     then
-	echo 'You can now check the reduction at this step.\n'
+	echo 'You can now check the reduction at this step.'
 	read -p "Press any key to continue... " -n1 -s
     fi
     
@@ -74,7 +74,7 @@ for mode in high std; do
         reduce --drpkg ghostdr $object
 	if $CHECK
 	then
-	    echo 'You can now check the reduction at this step.\n'
+	    echo 'You can now check the reduction at this step.'
 	    read -p "Press any key to continue... " -n1 -s
 	fi
     done 3< <(
@@ -94,7 +94,7 @@ for cam in red blue; do
 
     if $CHECK
     then
-	echo 'You can now check the reduction at this step.\n'
+	echo 'You can now check the reduction at this step.'
 	read -p "Press any key to continue... " -n1 -s
     fi
     
@@ -103,7 +103,7 @@ for cam in red blue; do
     
     if $CHECK
     then
-	echo 'You can now check the reduction at this step.\n'
+	echo 'You can now check the reduction at this step.'
 	read -p "Press any key to continue... " -n1 -s
     fi
     
@@ -115,7 +115,7 @@ for cam in red blue; do
 
 	if $CHECK
 	then
-	    echo 'You can now check the reduction at this step.\n'
+	    echo 'You can now check the reduction at this step.'
 	    read -p "Press any key to continue... " -n1 -s
 	fi
 	
@@ -124,7 +124,7 @@ for cam in red blue; do
 
 	if $CHECK
 	then
-	    echo 'You can now check the reduction at this step.\n'
+	    echo 'You can now check the reduction at this step.'
 	    read -p "Press any key to continue... " -n1 -s
 	fi
 
@@ -138,7 +138,7 @@ for cam in red blue; do
 		
 		if $CHECK
 		then
-		    echo 'You can now check the reduction at this step.\n'
+		    echo 'You can now check the reduction at this step.'
 		    read -p "Press any key to continue... " -n1 -s
 		fi
 		
