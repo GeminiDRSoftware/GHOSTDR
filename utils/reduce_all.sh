@@ -28,23 +28,23 @@ OBJDIR=$COREDIR
  echo 'Doing slits now'
 
 typewalk --tags GHOST SLITV BIAS --dir $BIASDIR/ -o bias.list
-reduce @bias.list
+reduce --drpkg ghostdr @bias.list
 
 typewalk --tags GHOST SLITV DARK --dir $DARKDIR/ -o dark.list
-reduce @dark.list --override_cal processed_bias:`ls $CALDIR/bias*SLIT*.fits`
+reduce --drpkg ghostdr @dark.list
 
 for mode in high std; do
     CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
 
     typewalk --tags GHOST SLITV FLAT $CAPMODE --dir $FLATDIR/ -o flat.list
-    reduce @flat.list
+    reduce --drpkg ghostdr @flat.list
     
     typewalk --tags GHOST SLITV ARC $CAPMODE --dir $ARCDIR/ -o arc.list
-    reduce @arc.list
+    reduce --drpkg ghostdr @arc.list
     
     while read object <&3; do
         echo Reducing $object
-        reduce $object
+        reduce --drpkg ghostdr $object
 	
     done 3< <(
         typewalk --tags GHOST SLITV IMAGE $CAPMODE --dir $OBJDIR/ --filemask 'obj.*\.(fits|FITS)' \
@@ -59,24 +59,24 @@ for cam in red blue; do
     CAPCAM=`echo $cam | tr '[:lower:]' '[:upper:]'`
 
     typewalk --tags GHOST BIAS $CAPCAM --dir $BIASDIR/ --filemask '.*'$BINNING'.*\.(fits|FITS)' -o bias.list
-    reduce @bias.list
+    reduce --drpkg ghostdr @bias.list
 
     typewalk --tags GHOST DARK $CAPCAM --dir $DARKDIR/ -o dark.list
-    reduce @dark.list 
+    reduce --drpkg ghostdr @dark.list 
 
     for mode in high std; do
         CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
 
         typewalk --tags GHOST FLAT $CAPCAM $CAPMODE --dir $FLATDIR/ -o flat.list
-        reduce @flat.list
+        reduce --drpkg ghostdr @flat.list
 
         typewalk --tags GHOST ARC $CAPCAM $CAPMODE --dir $ARCDIR/ -o arc.list
-        reduce @arc.list 
+        reduce --drpkg ghostdr @arc.list 
 
         for seeing in 0.5 1.0; do
             while read object <&3; do
                 echo Reducing $object
-                reduce $object
+                reduce --drpkg ghostdr $object
 		
             done 3< <(
                 typewalk --tags GHOST $CAPCAM GHOST_$CAPMODE --dir $OBJDIR/ --filemask ".*$seeing.*'$BINNING'.*\.(fits|FITS)" \
