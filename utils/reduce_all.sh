@@ -10,9 +10,10 @@ trap 'exit' INT QUIT TERM
 # Start by setting up all the locations for the files. Change this for each case.
 COREDIR=$PWD
 
-CHECK=true
+CHECK=false
 
 BINNING='1x1'
+SEEING=0.5
 
 ###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
 
@@ -30,7 +31,7 @@ OBJDIR=$COREDIR
 
 echo 'Doing slits now'
 
-typewalk --tags GHOST SLITV BIAS --dir $BIASDIR/ -o bias.list
+typewalk --tags GHOST SLITV BIAS --dir $BIASDIR/ -n -o bias.list
 reduce --drpkg ghostdr @bias.list
 
 if $CHECK
@@ -39,7 +40,7 @@ then
     read -p "Press any key to continue... " -n1 -s
 fi    
 
-typewalk --tags GHOST SLITV DARK --dir $DARKDIR/ -o dark.list
+typewalk --tags GHOST SLITV DARK --dir $DARKDIR/ -n -o dark.list
 reduce --drpkg ghostdr @dark.list
 
 if $CHECK
@@ -51,7 +52,7 @@ fi
 for mode in high std; do
     CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
 
-    typewalk --tags GHOST SLITV FLAT $CAPMODE --dir $FLATDIR/ -o flat.list
+    typewalk --tags GHOST SLITV FLAT $CAPMODE --dir $FLATDIR/ -n -o flat.list
     reduce --drpkg ghostdr @flat.list
 
     if $CHECK
@@ -60,7 +61,7 @@ for mode in high std; do
 	read -p "Press any key to continue... " -n1 -s
     fi
     
-    typewalk --tags GHOST SLITV ARC $CAPMODE --dir $ARCDIR/ -o arc.list
+    typewalk --tags GHOST SLITV ARC $CAPMODE --dir $ARCDIR/ -n -o arc.list
     reduce --drpkg ghostdr @arc.list
 
     if $CHECK
@@ -79,7 +80,7 @@ for mode in high std; do
 	fi
     done 3< <(
         typewalk --tags GHOST SLITV IMAGE $CAPMODE --dir $OBJDIR/ --filemask 'obj.*\.(fits|FITS)' \
-            -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
+            -n -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
     )
 done
 
@@ -89,7 +90,7 @@ for cam in red blue; do
     echo "Doing $cam images now"
     CAPCAM=`echo $cam | tr '[:lower:]' '[:upper:]'`
 
-    typewalk --tags GHOST BIAS $CAPCAM --dir $BIASDIR/ --filemask '.*'$BINNING'.*\.(fits|FITS)' -o bias.list
+    typewalk --tags GHOST BIAS $CAPCAM --dir $BIASDIR/ --filemask '.*'$BINNING'.*\.(fits|FITS)' -n -o bias.list
     reduce --drpkg ghostdr @bias.list
 
     if $CHECK
@@ -98,7 +99,7 @@ for cam in red blue; do
 	read -p "Press any key to continue... " -n1 -s
     fi
     
-    typewalk --tags GHOST DARK $CAPCAM --dir $DARKDIR/ -o dark.list
+    typewalk --tags GHOST DARK $CAPCAM --dir $DARKDIR/ -n -o dark.list
     reduce --drpkg ghostdr @dark.list
     
     if $CHECK
@@ -110,7 +111,7 @@ for cam in red blue; do
     for mode in high std; do
 	CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
 
-        typewalk --tags GHOST FLAT $CAPCAM $CAPMODE --dir $FLATDIR/ -o flat.list
+        typewalk --tags GHOST FLAT $CAPCAM $CAPMODE --dir $FLATDIR/ -n -o flat.list
         reduce --drpkg ghostdr @flat.list
 
 	if $CHECK
@@ -119,7 +120,7 @@ for cam in red blue; do
 	    read -p "Press any key to continue... " -n1 -s
 	fi
 	
-        typewalk --tags GHOST ARC $CAPCAM $CAPMODE --dir $ARCDIR/ -o arc.list
+        typewalk --tags GHOST ARC $CAPCAM $CAPMODE --dir $ARCDIR/ -n -o arc.list
         reduce --drpkg ghostdr @arc.list 
 
 	if $CHECK
@@ -131,21 +132,19 @@ for cam in red blue; do
 	###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
 	###### The pipeline combines too many things. Assumed is also that any
 	# 1.0 seeing files have also been removed, including the slitv ones.
-	for seeing in 0.5; do
-            while read object <&3; do
-                echo Reducing $object
-                reduce --drpkg ghostdr $object
-		
-		if $CHECK
-		then
-		    echo 'You can now check the reduction at this step.'
-		    read -p "Press any key to continue... " -n1 -s
-		fi
-		
-            done 3< <(
-                typewalk --tags GHOST $CAPCAM $CAPMODE --dir $OBJDIR/ --filemask "obj.*$seeing.*$BINNING.*\.(fits|FITS)" \
-                    -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
-            )
-        done
+	while read object <&3; do
+            echo Reducing $object
+            reduce --drpkg ghostdr $object
+	    
+	    if $CHECK
+	    then
+		echo 'You can now check the reduction at this step.'
+		read -p "Press any key to continue... " -n1 -s
+	    fi
+	    
+        done 3< <(
+            typewalk --tags GHOST $CAPCAM $CAPMODE --dir $OBJDIR/ --filemask "obj.*$seeing.*$BINNING.*\.(fits|FITS)" \
+                     -n -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
+        )
     done
 done

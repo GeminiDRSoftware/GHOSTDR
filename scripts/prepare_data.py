@@ -3,6 +3,7 @@ import os
 import astrodata
 import ghost_instruments
 from ghostdr.ghost.primitives_ghost import GHOST
+import pickle
 
 all_files = [f for f in list(os.listdir('.')) if f.endswith('.fits')]
 
@@ -44,3 +45,12 @@ for f in all_files:
                     p.addCalibration(caltype='processed_slit', calfile='calibrations/processed_slit/obj95_{}_{}_SLIT_slit.fits'.format(seeing, res))
                 p.addCalibration(caltype='processed_flat', calfile='calibrations/processed_flat/flat95_{}_1_1x1_{}_flat.fits'.format(res, arm))
                 p.addCalibration(caltype='processed_slitflat', calfile='calibrations/processed_slitflat/flat95_{}_1_SLIT_slitflat.fits'.format(res))
+
+# Now that we have all the calibrations and stacking determined, let's sort the
+# stack entries to avoid the _x_ issue with file names.
+pkl = open('.reducecache/stkindex.pkl')
+stk = pickle.load(pkl)
+pkl.close()
+for i in stk:
+    stk[i].sort()
+pickle.dump( stk, open( ".reducecache/stkindex.pkl", "wb" ) )
