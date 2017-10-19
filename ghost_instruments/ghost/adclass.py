@@ -128,10 +128,12 @@ class AstroDataGhost(AstroDataGemini):
             desc_list = ['observation_id', 'res_mode']
         desc_list.append('arm')
 
+        # MCW: We care about the resolution mode EXCEPT for dark and bias
+        if 'DARK' not in tags and 'BIAS' not in tags:
+            desc_list.append('res_mode')
+
         # CJS: Generally need to stop FLATs being stacked with science
         additional_item = 'FLAT' if 'FLAT' in tags else None
-
-        # CJS: Probably needs something to do with the slit width too!
 
         return build_group_id(self, desc_list, prettify=[],
                               additional=additional_item)
