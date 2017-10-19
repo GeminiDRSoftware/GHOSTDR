@@ -10,9 +10,9 @@ trap 'exit' INT QUIT TERM
 # Start by setting up all the locations for the files. Change this for each case.
 COREDIR=$PWD
 
-CHECK=false
+CHECK=true
 
-BINNING='1x1'
+BINNING='1x2'
 SEEING=0.5
 
 ###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
@@ -26,7 +26,7 @@ ARCDIR=$COREDIR
 OBJDIR=$COREDIR
 
 #This line is for cleaning up your directory of all the stuff the reduction creates.
-#rm *stack* *forStack* adc* *.log *.list tmp* *_dark.fits *_bias.fits GHOST* *_arc.fits *_flat.fits
+#rm *stack* *forStack* adc* *.log *.list tmp* *_dark.fits *_bias.fits GHOST* *_arc.fits *_flat.fits *slit* *slit*
 
 
 echo 'Doing slits now'
@@ -79,7 +79,7 @@ for mode in high std; do
 	    read -p "Press any key to continue... " -n1 -s
 	fi
     done 3< <(
-        typewalk --tags GHOST SLITV IMAGE $CAPMODE --dir $OBJDIR/ --filemask 'obj.*\.(fits|FITS)' \
+        typewalk --tags GHOST SLITV IMAGE $CAPMODE --dir $OBJDIR/ --filemask 'obj.*$seeing.*\.(fits|FITS)' \
             -n -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
     )
 done
@@ -90,8 +90,14 @@ for cam in red blue; do
     echo "Doing $cam images now"
     CAPCAM=`echo $cam | tr '[:lower:]' '[:upper:]'`
 
-    typewalk --tags GHOST BIAS $CAPCAM --dir $BIASDIR/ --filemask '.*'$BINNING'.*\.(fits|FITS)' -n -o bias.list
+    typewalk --tags GHOST BIAS $CAPCAM --dir $BIASDIR/ --filemask '.*1x1.*\.(fits|FITS)' -n -o bias.list
     reduce --drpkg ghostdr @bias.list
+    
+    if [ $BINNING != '1x1' ]
+    then
+	typewalk --tags GHOST BIAS $CAPCAM --dir $BIASDIR/ --filemask '.*'$BINNING'.*\.(fits|FITS)' -n -o bias.list
+	reduce --drpkg ghostdr @bias.list
+    fi
 
     if $CHECK
     then
