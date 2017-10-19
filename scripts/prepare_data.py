@@ -23,6 +23,12 @@ for f in all_files:
     p = GHOST([ad])
     arm = ad.arm()
     res = ad.res_mode()
+    # For the purposes of assigning the correct calibrations to different
+    # binnings, find the binning section of the file name and save it
+    try:
+        x_index = f.index('x')
+        binning = f[x_index-1:x_index+2]
+    except: pass
     seeing = '0.5' if '0.5' in f else '1.0'
 
     if 'SLIT' in f:
@@ -33,7 +39,7 @@ for f in all_files:
             if 'FLAT' not in tags:
                 p.addCalibration(caltype='processed_slitflat', calfile='calibrations/processed_slitflat/flat95_{}_1_SLIT_slitflat.fits'.format(res))
     else:
-        p.addCalibration(caltype='processed_bias', calfile='calibrations/processed_bias/bias_1_1x1_{}_bias.fits'.format(arm))
+        p.addCalibration(caltype='processed_bias', calfile='calibrations/processed_bias/bias_1_{}_{}_bias.fits'.format(binning, arm))
         if 'DARK' not in tags:
             p.addCalibration(caltype='processed_dark', calfile='calibrations/processed_dark/dark95_1_1x1_{}_dark.fits'.format(arm))
             if 'FLAT' in tags:
@@ -48,9 +54,9 @@ for f in all_files:
 
 # Now that we have all the calibrations and stacking determined, let's sort the
 # stack entries to avoid the _x_ issue with file names.
-pkl = open('.reducecache/stkindex.pkl')
-stk = pickle.load(pkl)
-pkl.close()
-for i in stk:
-    stk[i].sort()
-pickle.dump( stk, open( ".reducecache/stkindex.pkl", "wb" ) )
+# pkl = open('.reducecache/stkindex.pkl')
+# stk = pickle.load(pkl)
+# pkl.close()
+# for i in stk:
+#     stk[i].sort()
+# pickle.dump( stk, open( ".reducecache/stkindex.pkl", "wb" ) )
