@@ -101,6 +101,54 @@ class AstroDataGhost(AstroDataGemini):
         """
         return (self.data_label().replace('_stack', ''), self.arm())
 
+    @astro_data_descriptor
+    def detector_x_bin(self):
+        """
+        Returns the detector binning in the x-direction
+
+        Returns
+        -------
+        int
+            The detector binning
+        """
+        def _get_xbin(b):
+            try:
+                return int(b.split()[0])
+            except (AttributeError, ValueError):
+                return None
+
+        binning = self.hdr.get('CCDSUM')
+        if self.is_single:
+            return _get_xbin(binning)
+        else:
+            xbin_list = [_get_xbin(b) for b in binning]
+            # Check list is single-valued
+            return xbin_list[0] if xbin_list == xbin_list[::-1] else None
+
+    @astro_data_descriptor
+    def detector_y_bin(self):
+        """
+        Returns the detector binning in the y-direction
+
+        Returns
+        -------
+        int
+            The detector binning
+        """
+        def _get_ybin(b):
+            try:
+                return int(b.split()[1])
+            except (AttributeError, ValueError, IndexError):
+                return None
+
+        binning = self.hdr.get('CCDSUM')
+        if self.is_single:
+            return _get_ybin(binning)
+        else:
+            ybin_list = [_get_ybin(b) for b in binning]
+            # Check list is single-valued
+            return ybin_list[0] if ybin_list == ybin_list[::-1] else None
+
     # TODO: GHOST descriptor returns no values if data are unprepared
     # The gain() descriptor is inherited from gemini/adclass, and returns
     # the value of the GAIN keyword (as a list if sent a complete AD object,
@@ -127,6 +175,10 @@ class AstroDataGhost(AstroDataGemini):
         else:  # science exposures (and ARCs)
             desc_list = ['observation_id', 'res_mode']
         desc_list.append('arm')
+
+        # never stack frames of mixed binning modes
+        desc_list.append('detector_x_bin')
+        desc_list.append('detector_y_bin')
 
         # MCW: We care about the resolution mode EXCEPT for dark and bias
         if 'DARK' not in tags and 'BIAS' not in tags:
