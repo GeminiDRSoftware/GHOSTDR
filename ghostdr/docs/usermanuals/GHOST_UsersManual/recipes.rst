@@ -6,57 +6,130 @@
 Recipes for GHOST
 *****************
 
-Typical Processing Flows
-========================
+Setting up the development DRAGONS system
+=========================================
 
-Here we review some of the typical processing workflows for GHOST data
-reduction. For this discussion, it is assumed you've already installed the
-latest Ureka package and made a local clone of the ``ghostdr`` Hg repository.
-(For illustrative purposes, the text below assumes the clone's working copy
-root is ``wc/``.)
+For this discussion, we assume that you've already installed
+a compatible Anaconda Python distribution, and done the setup necessary to
+create a Gemini data reduction environment. For the purposes of this manual,
+we assume that your environment is named ``geminidev``. Therefore, before doing
+anything, you'll need to activate the environment::
+
+    source activate geminidev
 
 Furthermore, for the commands given below to work properly, you must:
 
- #. initialize the Ureka environment: ``ur_setup``
- #. create a symlink named ``wc/externals/gemini_python/astrodata_GHOST``
-    pointing to ``wc/astrodata_GHOST``,
- #. add ``wc/externals/gemini_python`` to the beginning of your ``PYTHONPATH``,
-    and
- #. add ``wc/externals/gemini_python/astrodata/scripts`` and
-    ``wc/externals/
-    gemini_python/recipe_system/apps`` to the beginning of your
-    ``PATH``
+ #. Add the following line to the top of ``DRAGONS/gempy/scripts/typewalk.py``::
+
+        import ghost_instruments
+
+ #. There is currently an issue in the :any:`stackFrames` primitive which causes
+    unexpected behaviour when using the cheat calibration setup. To rectify
+    this, add the following below line 58 of
+    ``DRAGONS/geminidr/core/primitives_bookkeeping.py``::
+
+        for i in self.stacks: self.stacks[i].sort()
+
+    This issue will be rectified once the full calibration manager is up and
+    running.
+ #. Add the following paths to your system ``PATH`` variable::
+
+        DRAGONS/recipe_system/scripts
+        GHOSTDR/scripts
+        DRAGONS/gempy/scripts
+
+ #. Add the following paths to your environment ``PYTHONPATH`` variable::
+
+        DRAGONS
+        GHOSTDR/simulator/pyghost
+        GHOSTDR
+
+Typical Processing Flows
+========================
+
+This section describes how to process simulated GHOST data. For information on
+how to use the simulator to generate simulated GHOST data, please refer to
+its documentation: :any:`ghostsim`.
+
+Setting up the calibrations system
+----------------------------------
+
+At present, we do not have a functioning local calibration system. In the
+meantime, Chris Simpson from Gemini has provided us with a script that creates
+an association dictionary between the simulator observation ID, file name and
+the name of the expected calibrator(s). It should be run in the same directory
+as your data files::
+
+    python prepare_data.py
+
+This script will generate a dictionary keyed by observation ID and required
+calibration type, the value of which is the name of the expected calibration
+file (which will eventually be written into the appropriate
+``calibrations/processed_*`` directory.
+
+The output of this script is pickled into the file ``.reducecache/calindex.pkl``
+within your working directory. You can inspect it by loading it into a
+(i)Python shell::
+
+    import pickle
+    with open('./reducecache/calindex.pkl', 'r') as fileobj:
+        caldict = pickle.load(fileobj)
+
+.. note::
+    The expected calibrator names are hard-coded into ``prepare_data.py``,
+    and assume that you haven't changed the data file names from what the
+    simulator generated. If you do need/want to change the file names for
+    whatever reason, you will need to modify ``prepare_data.py``, or load
+    the calibrations dictionary, edit it yourself, and re-pickle it to disk.
+
+Bulk-reducing simulated data
+----------------------------
+
+To simplify the end-to-end testing of :any:``ghostdr``, Joao Bento has
+contributed a bash script to run the entire reduction sequence in one command::
+
+    ./GHOSTDR/utils/reduce_all.sh
+
+The script will run reductions for all combinations of spectrograph arm and
+resolution in sequence. The script will pause between each distinct
+reduction step (e.g. bias reduction, dark reduction, etc.) to allow you to
+review the output. Alternatively, you could choose to run through the steps
+manually yourself, as described below.
 
 Generating a Bias Calibration frame
 -----------------------------------
 
-To generate a bias calibration frame you need 2 or more GHOST bias frames from
-the same arm.  Until the instrument is live, you can use the GHOST simulator to
-generate this data.  Its ``testsim.py`` script will create several types of
-frames, including 3 bias frames for each arm, 3 darks for each arm, and 3 flats
-for each arm and resolution combination. You can comment out the generation of
-non-bias frame types to speed things up.
-
 Once you have a few biases of the same arm to work with, generate a file list
 using the ``typewalk`` utility.  The following command assumes you have
-generated several red arm biases (if you don't specify either ``GHOST_RED`` or
-``GHOST_BLUE``, you may get mixed red and blue frames which don't stack well!)::
+generated several red arm biases::
 
-    typewalk --types GHOST_BIAS GHOST_RED --dir <path_to>/data_folder --filemask '.*1x1.*\.(fits|FITS)' -o bias.list
+    typewalk --tags BIAS RED --dir <path_to>/data_folder -o bias_red.list
+
+The ``--dir`` argument can be omitted if you are already within the folder
+containing the data.
+
+.. warning::
+    Make sure you've made the necessary changes to the ``typewalk.py`` script!
 
 Now you are ready to generate a bias calibration frame.  The following command
 (which runs the ``makeProcessedBiasG`` Gemini recipe behind the scenes) will
-stack the bias frames in listed ``bias.list`` and store the finished bias
-calibration in ``calibrations/storedcals/``::
+stack the bias frames in listed ``bias_red.list`` and store the finished bias
+calibration in ``calibrations/processed_bias/``::
 
-    reduce @<path_to>/bias.list
+    reduce --drpkg ghostdr @<path_to>/bias.list
 
 Don't forget the @ character in this line, e.g. if <path_to> is ``data`` then
 this command should be ``reduce @data/bias.list``. The @ parameter is a legacy
 from IRAF, and tells ``reduce`` that you're passing a list of filenames instead
 of a data file.
+
+The ``--drpkg ghostdr`` flag tells the recipe system it should attempt to import
+from the ``ghostdr`` folder (which should now be on your ``PYTHONPATH``), in
+addition to the standard ``DRAGONS`` system. In production, this flag will
+be unnecessary; ``ghostdr`` will come as part of ``DRAGONS``.
+
 This code call will place a file named ``bias_1_red_bias.fits`` in the
-``calibrations/storedcals`` directory of your present working directory.
+``calibrations/processed_bias`` directory of your present working directory.
 
 The whole process behind Gemini's ``makeProcessedBias`` recipe is documented in
 the following flowchart (thanks Kathleen Labrie):
@@ -75,28 +148,19 @@ Generating a Dark Calibration Frame
 -----------------------------------
 
 The procedure for generating a dark calibration frame is broadly similar to
-making a bias calibration frame. However, the type to be passed to ``typewalk``
-should be ``GHOST_DARK`` instead of ``GHOST_BIAS`` (in addition to the
-necessary ``GHOST_RED``/``GHOST_BLUE`` type)::
+making a bias calibration frame. However, the tags to be passed to ``typewalk``
+should be ``DARK`` instead of ``GHOST_BIAS`` (in addition to the
+necessary ``RED``/``BLUE`` tag)::
 
-    typewalk --types GHOST_DARK GHOST_RED --dir <path_to>/data_folder -o dark.list
+    typewalk --tags DARK RED --dir <path_to>/data_folder -o dark_red.list
 
-Assuming ``typewalk`` has output your list of dark frames to ``dark.list``,
-attempting to run::
+The dark frames may then be reduced by invoking::
 
-    reduce @<path_to>/dark.list
+    reduce --drpkg ghostdr @<path_to>/dark.list
 
-will fail. This is because the framework cannot currently find calibrations
-stored on disk (it uses a much more complicated lookup scheme).  The workaround
-for the time being is to force it to look on disk in a particular area using the
-``--override_cal`` option::
-
-    reduce @<path_to>/dark.list --override_cal processed_bias:calibrations/storedcals/bias_1_1x1_red_bias.fits
-
-(Depending on your specific bias.list contents, your bias calibration under
-your calibrations/storedcals directory may have a different name, so double-
-check.) This command will place a file ``dark95_1_red_dark.fits`` into the
-``calibrations/storedcals`` directory.
+Make sure you've run ``prepare_data.py`` over your data directory before
+attempting this step, otherwise the reduction system will not be able to locate
+your previous bias calibration.
 
 The whole process behind Gemini's ``makeProcessedDark`` recipe is documented in
 the following flowchart (thanks Kathleen Labrie):
@@ -116,26 +180,22 @@ Generating a Flat Calibration Frame
 -----------------------------------
 
 .. warning:: You *must* have performed a full slit viewer reduction before
-             attempting to make a flatc calibrator. See
+             attempting to make a flat calibrator. See
              :ref:`reducing-slit-viewing-images` for details.
 
 The procedure for generating a flat field calibration frame is similar to
-creating a dark or bias, although you have to ``typewalk`` over GHOST_FLAT files
-instead, e.g.::
+creating a dark or bias, although you have to ``typewalk`` over FLAT files
+instead. You also need to specify an instrument resolution for the first time,
+e.g.::
 
-    typewalk --types GHOST_FLAT GHOST_RED GHOST_HIGH --dir <path_to>/data_folder -o flat.list
+    typewalk --types FLAT GHOST HIGH --dir <path_to>/data_folder -o flat_red.list
 
-(Note this is the first place where we have to explicitly specify the
-resolution mode/type of the object file we ultimately intend to reduce.)
-Then, when you call ``reduce`` on the ``flat.list``, you must provide both
-the bias and dark file path explicitly::
+A simple call to ``reduce`` once again processes the list of flats::
 
-    reduce @<path_to>/flat.list --override_cal processed_bias:calibrations/storedcals/bias_1_1x1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_1x1_red_dark.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits
-
-(or whatever the filename of the processed dark turns out to be).
+    reduce --drpkg ghostdr @<path_to>/flat.list
 
 After the flat field has been created, the spectrograph apertures are fit using
-a ``polyfit`` approach. The RecipeSystem will read in the appropriate aperture
+a ``polyfit`` approach. ``DRAGONS`` will read in the appropriate aperture
 model from the ``lookups`` system, fit it to the flat field, and store the
 resulting model in the calibrations system.
 
@@ -183,15 +243,13 @@ Generating an Arc Calibration Frame
              :ref:`reducing-slit-viewing-images` for details.
 
 Making an arc calibration frame is similar to the previous calibration steps.
-The correct type to ``typewalk`` across is ``GHOST_ARC``::
+The correct tag to ``typewalk`` across is ``ARC``::
 
-    typewalk --types GHOST_ARC GHOST_RED GHOST_HIGH --dir <path_to>/data_folder -o arc.list
+    typewalk --tags ARC RED HIGH --dir <path_to>/data_folder -o arc_red.list
 
-Additional calibrators required are reduced slit viewer flats and slit viewer
-images, as well as the aperture fit made during the generation of the
-flat calibration image::
+Then, the following command reduces the arcs:
 
-    reduce @<path_to>/arc.list --override_cal processed_bias:calibrations/storedcals/bias_1_1x1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_1x1_red_dark.fits processed_slit:calibrations/storedcals/obj95_1.0_high_SLIT_stack_slit.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits processed_xmod:calibrations/storedcals/GHOST_1_1_red_high_xmodPolyfit.fits
+    reduce --drpkg ghostdr @<path_to>/arc.list
 
 Arc reduction not only generates a reduced arc image and places it in the
 calibrations directory, but also uses the ``polyfit`` module to extract the
@@ -205,10 +263,11 @@ Reducing an Object frame (Spectra)
 ----------------------------------
 
 The GHOST simulator produces object spectra frames like
-``obj95_1.0_std_red.fits`` whose names follow this convention:
+``obj95_1.0_high_red.fits`` whose names follow this convention:
 ``obj{exptime}_{seeing}_{resolution}_{arm}.fits``. If you run ``typewalk`` on
-the folder containing these, you'll see that they are identified as
-``GHOST_OBJECT``::
+the folder containing these, you'll see that they are identified as having the
+tag ``SPECT``, but none of the further tags we've encountered already (e.g.
+``BIAS``, ``DARK``, etc.)::
 
     typewalk --dir <path_to>/data_folder
 
@@ -218,12 +277,7 @@ have dark and bias calibration frames (for the moment, we have commented the
 remaining steps out of the ``reduceG`` recipe so it will complete
 successfully)::
 
-    reduce <path_to>/data_folder/obj95_1.0_high_red.fits
-
-The above command will fail due to the faulty calibrations lookup. Again, we
-need to use the ``--override_cal`` option::
-
-    reduce <path_to>/data_folder/obj95_1.0_high_1x1_red.fits --override_cal processed_bias:calibrations/storedcals/bias_1_1x1_red_bias.fits processed_dark:calibrations/storedcals/dark95_1_1x1_red_dark.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits processed_slit:calibrations/storedcals/obj95_1.0_high_SLIT_stack_slit.fits processed_xmod:calibrations/storedcals/GHOST_1_1_red_high_xmodPolyfit.fits processed_flat:calibrations/storedcals/flat95_high_1_1x1_red_flat.fits
+    reduce --drpkg ghostdr <path_to>/data_folder/obj95_1.0_high_red.fits
 
 This produces a ``obj95_1.0_high_1x1_red_flatCorrected.fits`` (or similar) file, a
 bias, dark and flat corrected GHOST spectrum frame.
@@ -245,43 +299,40 @@ including steps to generate bias, dark and flat calibration frames, plus a
 final step to process the slit viewer frames (which removes cosmic rays and
 computes the mean exposure epoch).  The first step, computing the bias
 calibrator, may be skipped in favour of simply pointing to a slit bias frame
-(of type ``GHOST_SLITV_BIAS``).  Or, follow these steps to produce one by
+(with tags ``SLITV`` and ``BIAS``).  Or, follow these steps to produce one by
 stacking multiple frames together::
 
-    typewalk --types GHOST_SLITV_BIAS --dir <path_to>/data_folder -o slit_bias.list
-    reduce @slit_bias.list
+    typewalk --tags BIAS SLITV --dir <path_to>/data_folder -o slit_bias.list
+    reduce --drpkg ghostdr @slit_bias.list
 
 The next step is to generate the dark calibrator.  Follow these steps to produce
 one::
 
-    typewalk --types GHOST_SLITV_DARK --dir <path_to>/data_folder -o slit_dark.list
-    reduce @slit_dark.list --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits
+    typewalk --tags SLITV DARK --dir <path_to>/data_folder -o slit_dark.list
+    reduce --drpkg ghostdr @slit_dark.list
 
 Now generate the flat calibrator.  For this you will now need to specify an
 additional type to ``typewalk`` that identifies the resolution of the data that
 you wish to process (as mixing resolutions would be nonsensical).  Follow these
 steps as an example::
 
-    typewalk --types GHOST_SLITV_FLAT GHOST_HIGH --dir <path_to>/data_folder -o slit_flat_high.list
-    reduce @slit_flat_high.list --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits processed_dark:calibrations/storedcals/dark95_1_SLIT_stack_slitDark.fits
+    typewalk --tags SLITV FLAT HIGH --dir <path_to>/data_folder -o slit_flat_high.list
+    reduce --drpkg ghostdr @slit_flat_high.list
 
 Though not (yet) used in our final object reduction, you can also produce a
 master arc frame::
 
-    typewalk --types GHOST_SLITV_ARC GHOST_HIGH --dir <path_to>/data_folder -o slit_arc_high.list
-    reduce @slit_arc_high.list --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits processed_dark:calibrations/storedcals/dark95_1_SLIT_stack_slitDark.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits
+    typewalk --tags SLITV ARC HIGH --dir <path_to>/data_folder -o slit_arc_high.list
+    reduce --drpkg ghostdr @slit_arc_high.list
 
 The final step is to use all of the above calibrators (except the arc) in a call
 to ``reduce`` a set of slit viewer images taken concurrently with a science
 frame, usually found in files named like ``obj95_1.0_high_SLIT.fits`` (following
-this convention: ``obj{exptime}_{seeing}_{resolution}_SLIT.fits``).  If you run
-``typewalk`` on the folder containing these, you'll see that they are identified
-as ``GHOST_SLITV_IMAGE``.  This informs the reduction framework to run the
-``makeProcessedSlitG`` GHOST recipe on them.  Run the reduction as follows
-(note that the flat is provided to ``--override_cal`` as ``process_slitflat``
-and not simply ``processed_flat``)::
+this convention: ``obj{exptime}_{seeing}_{resolution}_SLIT.fits``).
+This informs the reduction framework to run the
+``makeProcessedSlit`` GHOST recipe on them.  Run the reduction as follows::
 
-    reduce <path_to>/data_folder/obj95_1.0_high_SLIT.fits --override_cal processed_bias:calibrations/storedcals/bias_1_SLIT_stack_slitBias.fits processed_dark:calibrations/storedcals/dark95_1_SLIT_stack_slitDark.fits processed_slitflat:calibrations/storedcals/flat95_high_1_SLIT_stack_slitFlat.fits
+    reduce --drpkg ghostdr <path_to>/data_folder/obj95_1.0_high_SLIT.fits
 
 
 Other Processing Flows
