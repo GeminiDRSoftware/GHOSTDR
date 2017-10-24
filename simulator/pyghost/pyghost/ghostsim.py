@@ -490,6 +490,10 @@ class SlitViewer(object):
         header['CCDNAME'] = ('Sony-ICX674', 'CCD name')
         header['ORIGFN'] = fname + 'SLIT.fits'
 
+        # required by the calibration manager
+        header['RAWPIREQ'] = 'yes'  # 'no', 'check', 'unknown'
+        header['RAWGEMQA'] = 'usable'  # 'bad', 'check', 'unknown'
+
         # populate OBSCLASS keyword
         obsclass = dict(FLAT='partnerCal', ARC='partnerCal',  # noqa
             OBJECT='science', BIAS='dayCal', DARK='dayCal', SKY='')
@@ -557,7 +561,8 @@ class SlitViewer(object):
             datasec = '[1:{1},1:{0}]'.format(*data.shape)
             hdr['DATASEC'] = (datasec, 'Data section(s)')
             hdr['TRIMSEC'] = (datasec, 'Trim section(s)')
-            hdr['CCDNAME'] = 'Sony-ICX674'
+            hdr['AMPNAME'] = (0, 'Amplifier name')
+            hdr['CCDNAME'] = ('Sony-ICX674', 'CCD name')
             hdr['CCDSUM'] = str(self.binning) + " " + str(self.binning)
             hdr['EXPTIME'] = self.duration
             utcnow = self.utstart + datetime.timedelta(
@@ -1771,6 +1776,10 @@ class Arm(object):
             hdr['TELESCOP'] = 'Gemini-South'
             hdr['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
             hdr['OBSTYPE'] = (obstype, 'Observation type')
+
+            # required by the calibration manager
+            hdr['RAWPIREQ'] = 'yes'  # 'no', 'check', 'unknown'
+            hdr['RAWGEMQA'] = 'usable'  # 'bad', 'check', 'unknown'
 
             # these are removed from the primary header when writing the MEF;
             # conversely the MEF splitter primitive will (may?) need to add
