@@ -561,7 +561,8 @@ class SlitViewer(object):
             datasec = '[1:{1},1:{0}]'.format(*data.shape)
             hdr['DATASEC'] = (datasec, 'Data section(s)')
             hdr['TRIMSEC'] = (datasec, 'Trim section(s)')
-            hdr['CCDNAME'] = 'Sony-ICX674'
+            hdr['AMPNAME'] = (0, 'Amplifier name')
+            hdr['CCDNAME'] = ('Sony-ICX674', 'CCD name')
             hdr['CCDSUM'] = str(self.binning) + " " + str(self.binning)
             hdr['EXPTIME'] = self.duration
             utcnow = self.utstart + datetime.timedelta(
