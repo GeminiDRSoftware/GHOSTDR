@@ -7,6 +7,7 @@ from gemini_instruments.common import build_group_id
 class AstroDataGhost(AstroDataGemini):
 
     __keyword_dict = dict(array_section = 'CCDSEC',
+                          array_name = 'AMPNAME',
                           overscan_section = 'BIASSEC',
                           res_mode = 'SMPNAME',
                           )
@@ -73,6 +74,28 @@ class AstroDataGhost(AstroDataGemini):
                       'PRWAVLFT', 'PRPOLYFT'])
         if set(self.phu.keywords) & kwords:
             return TagSet(['PROCESSED'])
+
+    @astro_data_descriptor
+    def amp_read_area(self):
+        """
+        Returns a list of amplifier read areas, one per extension, made by
+        combining the amplifier name and detector section. Or returns a
+        string if called on a single-extension slice.
+
+        Returns
+        -------
+        list/str
+            read_area of each extension
+        """
+        ampname = self.array_name()
+        detsec = self.detector_section(pretty=True)
+        # Combine the amp name(s) and detector section(s)
+        if self.is_single:
+            return "'{}':{}".format(ampname,
+                        detsec) if ampname and detsec else None
+        else:
+            return ["'{}':{}".format(a,d) if a is not None and d is not None else None
+                    for a,d in zip(ampname, detsec)]
 
     @astro_data_descriptor
     def arm(self):
@@ -208,3 +231,8 @@ class AstroDataGhost(AstroDataGemini):
         return None
 
     # TODO: read_noise(): see comments on gain()
+
+    @astro_data_descriptor
+    def read_speed_setting(self):
+        return None
+
