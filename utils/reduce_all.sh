@@ -10,7 +10,7 @@ trap 'exit' INT QUIT TERM
 # Start by setting up all the locations for the files. Change this for each case.
 COREDIR=$PWD
 
-CHECK=true
+CHECK=false
 
 BINNING='1x2'
 SEEING=0.5
@@ -31,44 +31,44 @@ OBJDIR=$COREDIR
 
 echo 'Doing slits now'
 
-# typewalk --tags GHOST SLITV BIAS --dir $BIASDIR/ -n -o bias.list
-# reduce --drpkg ghostdr @bias.list
+typewalk --tags GHOST SLITV BIAS --dir $BIASDIR/ -n -o bias.list
+reduce --drpkg ghostdr @bias.list
 
-# if $CHECK
-# then
-#     echo 'You can now check the reduction at this step.'
-#     read -p "Press any key to continue... " -n1 -s
-# fi    
+if $CHECK
+then
+    echo 'You can now check the reduction at this step.'
+    read -p "Press any key to continue... " -n1 -s
+fi    
 
-# typewalk --tags GHOST SLITV DARK --dir $DARKDIR/ -n -o dark.list
-# reduce --drpkg ghostdr @dark.list
+typewalk --tags GHOST SLITV DARK --dir $DARKDIR/ -n -o dark.list
+reduce --drpkg ghostdr @dark.list
 
-# if $CHECK
-# then
-#     echo 'You can now check the reduction at this step.'
-#     read -p "Press any key to continue... " -n1 -s
-# fi
+if $CHECK
+then
+    echo 'You can now check the reduction at this step.'
+    read -p "Press any key to continue... " -n1 -s
+fi
 
 for mode in high std; do
     CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
 
-    # typewalk --tags GHOST SLITV FLAT $CAPMODE --dir $FLATDIR/ -n -o flat.list
-    # reduce --drpkg ghostdr @flat.list
+    typewalk --tags GHOST SLITV FLAT $CAPMODE --dir $FLATDIR/ -n -o flat.list
+    reduce --drpkg ghostdr @flat.list
 
-    # if $CHECK
-    # then
-    # 	echo 'You can now check the reduction at this step.'
-    # 	read -p "Press any key to continue... " -n1 -s
-    # fi
+    if $CHECK
+    then
+    	echo 'You can now check the reduction at this step.'
+    	read -p "Press any key to continue... " -n1 -s
+    fi
     
-    # typewalk --tags GHOST SLITV ARC $CAPMODE --dir $ARCDIR/ -n -o arc.list
-    # reduce --drpkg ghostdr @arc.list
+    typewalk --tags GHOST SLITV ARC $CAPMODE --dir $ARCDIR/ -n -o arc.list
+    reduce --drpkg ghostdr @arc.list
 
-    # if $CHECK
-    # then
-    # 	echo 'You can now check the reduction at this step.'
-    # 	read -p "Press any key to continue... " -n1 -s
-    # fi
+    if $CHECK
+    then
+    	echo 'You can now check the reduction at this step.'
+    	read -p "Press any key to continue... " -n1 -s
+    fi
     
     while read object <&3; do
         echo Reducing $object
