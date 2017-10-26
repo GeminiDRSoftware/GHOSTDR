@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # make it so CTRL-C kills *all* subprocesses (doesn't require the user to press CTRL-C multiple times)
 trap 'kill -s KILL -- -$$ 2>/dev/null' EXIT
