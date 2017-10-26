@@ -387,6 +387,8 @@ class SlitViewer(object):
         self.microns_pix = 2.0  # slit image microns per pixel
         # Below comes from CY_RPT_044, with 50mm/180mm demagnification and
         # the Bigeye G-283 (Sony ICX674) with 4.54 micron pixels.
+        self.det_ysz = 1928  # TODO: per qsimaging.com, this is 1940
+        self.det_xsz = 1452  # TODO: per qsimaging.com, this is 1460
         self.binning = 2  # Assumed that we bin in both directions
         # Effective pixel size of the slit viewer in microns.
         self.slitview_pxsize = 16.344 * self.binning
@@ -474,11 +476,12 @@ class SlitViewer(object):
             return
 
         # Calculate the detector/ccd section
-        y0 = 804 // self.binning
-        x0 = 566 // self.binning
+        y0 = self.det_ysz / 2 - self.slitcam_ysz
+        x0 = self.det_xsz / 2 - self.slitcam_xsz
         secstr = '[{}:{},{}:{}]'.format(
-            y0, y0 + self.slitcam_ysz - 1, x0, x0 + self.slitcam_xsz - 1)
-        detsz = '[1:1928,1:1452]'  # TODO: per qsimaging.com, this is 1940x1460
+            y0, y0 + self.slitcam_ysz*self.binning - 1,
+            x0, x0 + self.slitcam_xsz*self.binning - 1)
+        detsz = '[1:{},1:{}]'.format(self.det_ysz, self.det_xsz)
 
         header = pf.Header()
         header['CAMERA'] = ('Slit', 'Camera name')
@@ -489,6 +492,10 @@ class SlitViewer(object):
         header['OBSTYPE'] = (obstype, 'Observation type')
         header['CCDNAME'] = ('Sony-ICX674', 'CCD name')
         header['ORIGFN'] = fname + 'SLIT.fits'
+
+        # required by the calibration manager
+        header['RAWPIREQ'] = 'yes'  # 'no', 'check', 'unknown'
+        header['RAWGEMQA'] = 'usable'  # 'bad', 'check', 'unknown'
 
         # populate OBSCLASS keyword
         obsclass = dict(FLAT='partnerCal', ARC='partnerCal',  # noqa
@@ -510,10 +517,12 @@ class SlitViewer(object):
             '%03d' % data_label), 'DHS data label')
 
         # perhaps wrongly (and out of line with their comments), the ghost
-        # recipes interpret these keywords as the start/end times of the science
+        # recipes interpret the following as the start/end times of the science
         # exposure taken concurrently with this series of slit viewer images
         # (and when the MEF-splitter primitive is written, it must remember to
         # populate them as such)
+        header['DATE-OBS'] = (
+            self.utstart.strftime("%Y-%m-%d"), 'UT date at observation start')
         header['UTSTART'] = (self.utstart.strftime("%H:%M:%S.%f")[:-3],
             'UT time at observation start')  # noqa
         header['UTEND'] = (
@@ -557,7 +566,8 @@ class SlitViewer(object):
             datasec = '[1:{1},1:{0}]'.format(*data.shape)
             hdr['DATASEC'] = (datasec, 'Data section(s)')
             hdr['TRIMSEC'] = (datasec, 'Trim section(s)')
-            hdr['CCDNAME'] = 'Sony-ICX674'
+            hdr['AMPNAME'] = (0, 'Amplifier name')
+            hdr['CCDNAME'] = ('Sony-ICX674', 'CCD name')
             hdr['CCDSUM'] = str(self.binning) + " " + str(self.binning)
             hdr['EXPTIME'] = self.duration
             utcnow = self.utstart + datetime.timedelta(
@@ -1771,6 +1781,10 @@ class Arm(object):
             hdr['TELESCOP'] = 'Gemini-South'
             hdr['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
             hdr['OBSTYPE'] = (obstype, 'Observation type')
+
+            # required by the calibration manager
+            hdr['RAWPIREQ'] = 'yes'  # 'no', 'check', 'unknown'
+            hdr['RAWGEMQA'] = 'usable'  # 'bad', 'check', 'unknown'
 
             # these are removed from the primary header when writing the MEF;
             # conversely the MEF splitter primitive will (may?) need to add
