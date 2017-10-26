@@ -49,10 +49,8 @@ then
     read -p "Press any key to continue... " -n1 -s
 fi
 
-for mode in high std; do
-    CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
-
-    typewalk --tags GHOST SLITV FLAT $CAPMODE --dir $FLATDIR/ -n -o flat.list
+for MODE in HIGH STD; do
+    typewalk --tags GHOST SLITV FLAT $MODE --dir $FLATDIR/ -n -o flat.list
     reduce --drpkg ghostdr @flat.list
 
     if $CHECK
@@ -61,7 +59,7 @@ for mode in high std; do
     	read -p "Press any key to continue... " -n1 -s
     fi
     
-    typewalk --tags GHOST SLITV ARC $CAPMODE --dir $ARCDIR/ -n -o arc.list
+    typewalk --tags GHOST SLITV ARC $MODE --dir $ARCDIR/ -n -o arc.list
     reduce --drpkg ghostdr @arc.list
 
     if $CHECK
@@ -72,30 +70,31 @@ for mode in high std; do
     
     while read object <&3; do
         echo Reducing $object
-        reduce --drpkg ghostdr $object
+        reduce --drpkg ghostdr $OBJDIR/$object
 	if $CHECK
 	then
 	    echo 'You can now check the reduction at this step.'
 	    read -p "Press any key to continue... " -n1 -s
 	fi
     done 3< <(
-        typewalk --tags GHOST SLITV IMAGE $CAPMODE --dir $OBJDIR/ --filemask 'obj.*$SEEING.*\.(fits|FITS)' \
-            -n -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
+        typewalk --tags GHOST SLITV IMAGE $MODE --dir $OBJDIR/ --filemask "obj.*$SEEING.*\.(fits|FITS)" -n \
+            | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g" \
+            | grep '^\s' \
+            | awk '{print $1}'
     )
 done
 
 echo 'Now the spectrograph data'
 
-for cam in red blue; do
-    echo "Doing $cam images now"
-    CAPCAM=`echo $cam | tr '[:lower:]' '[:upper:]'`
+for CAM in RED BLUE; do
+    echo "Doing $CAM images now"
 
-    typewalk --tags GHOST BIAS $CAPCAM --dir $BIASDIR/ --filemask '.*1x1.*\.(fits|FITS)' -n -o bias.list
+    typewalk --tags GHOST BIAS $CAM --dir $BIASDIR/ --filemask '.*1x1.*\.(fits|FITS)' -n -o bias.list
     reduce --drpkg ghostdr @bias.list
     
     if [ $BINNING != '1x1' ]
     then
-	typewalk --tags GHOST BIAS $CAPCAM --dir $BIASDIR/ --filemask '.*'$BINNING'.*\.(fits|FITS)' -n -o bias.list
+	typewalk --tags GHOST BIAS $CAM --dir $BIASDIR/ --filemask '.*'$BINNING'.*\.(fits|FITS)' -n -o bias.list
 	reduce --drpkg ghostdr @bias.list
     fi
 
@@ -105,7 +104,7 @@ for cam in red blue; do
 	read -p "Press any key to continue... " -n1 -s
     fi
     
-    typewalk --tags GHOST DARK $CAPCAM --dir $DARKDIR/ -n -o dark.list
+    typewalk --tags GHOST DARK $CAM --dir $DARKDIR/ -n -o dark.list
     reduce --drpkg ghostdr @dark.list
     
     if $CHECK
@@ -114,10 +113,8 @@ for cam in red blue; do
 	read -p "Press any key to continue... " -n1 -s
     fi
     
-    for mode in high std; do
-	CAPMODE=`echo $mode | tr '[:lower:]' '[:upper:]'`
-
-        typewalk --tags GHOST FLAT $CAPCAM $CAPMODE --dir $FLATDIR/ -n -o flat.list
+    for MODE in HIGH STD; do
+        typewalk --tags GHOST FLAT $CAM $MODE --dir $FLATDIR/ -n -o flat.list
         reduce --drpkg ghostdr @flat.list
 
 	if $CHECK
@@ -126,7 +123,7 @@ for cam in red blue; do
 	    read -p "Press any key to continue... " -n1 -s
 	fi
 	
-        typewalk --tags GHOST ARC $CAPCAM $CAPMODE --dir $ARCDIR/ -n -o arc.list
+        typewalk --tags GHOST ARC $CAM $MODE --dir $ARCDIR/ -n -o arc.list
         reduce --drpkg ghostdr @arc.list 
 
 	if $CHECK
@@ -140,7 +137,7 @@ for cam in red blue; do
 	# 1.0 seeing files have also been removed, including the slitv ones.
 	while read object <&3; do
             echo Reducing $object
-            reduce --drpkg ghostdr $object
+            reduce --drpkg ghostdr $OBJDIR/$object
 	    
 	    if $CHECK
 	    then
@@ -149,8 +146,10 @@ for cam in red blue; do
 	    fi
 	    
         done 3< <(
-            typewalk --tags GHOST $CAPCAM $CAPMODE --dir $OBJDIR/ --filemask "obj.*$SEEING.*$BINNING.*\.(fits|FITS)" \
-                     -n -o tmp$$.list >& /dev/null && cat tmp$$.list | grep -v '^#'; rm tmp$$.list
+            typewalk --tags GHOST $CAM $MODE --dir $OBJDIR/ --filemask "obj.*$SEEING.*$BINNING.*\.(fits|FITS)" -n \
+                | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g" \
+                | grep '^\s' \
+                | awk '{print $1}'
         )
     done
 done
