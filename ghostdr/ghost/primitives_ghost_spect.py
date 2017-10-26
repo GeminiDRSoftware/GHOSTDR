@@ -231,7 +231,9 @@ class GHOSTSpect(GHOST):
             log.debug("   processed_flat: {}".format(slitflat.filename))
 
             res_mode = ad.res_mode()
-            arm = GhostArm(arm=ad.arm(), mode=res_mode)
+            arm = GhostArm(arm = ad.arm(), mode = res_mode,
+                           detector_x_bin = ad.detector_x_bin(),
+                           detector_y_bin = ad.detector_y_bin())
 
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
@@ -853,11 +855,9 @@ class GHOSTSpect(GHOST):
 
         # CJS: This is a method that only exists *if* the input is of type
         # GHOST, so no need to check
-        xbin = ad.detector_x_bin()
-        ybin = ad.detector_y_bin()
         arm = ad.arm()
         res_mode = ad.res_mode()
-        key = 'GHOST_{}_{}_{}_{}'.format(xbin, ybin, arm, res_mode)
+        key = 'GHOST_1_1_{}_{}'.format(arm, res_mode)
 
         try:
             poly_dict = getattr(polyfit_dict, '{}_dict'.format(caltype))

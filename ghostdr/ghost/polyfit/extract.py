@@ -161,6 +161,31 @@ class Extractor():
                 x_dir_map = np.dot(invmat, [1, 0])
                 self.slit_tilt[i, j] = x_dir_map[1] / x_dir_map[0]
 
+    def bin_model(self, model=None):
+        """ Function used to artificially bin the models so that they apply to
+        whatever binning mode the data are. This requires knowledge of the 
+        x and y binning from the arm class, which is assumed this class
+        inherits. 
+        
+        The binning is done as essentially a running average, in which the 
+        values for each binned pixel are assumed to be equivalent to the average
+        value of all physical pixels that are part of the binned pixel.
+
+        Parameters
+        ----------
+        model: :obj:`numpy.ndarray'
+            Model values to be binned. This could be the xmod, wmod or any other
+            model
+        
+        Returns
+        -------
+        binned_model: :obj:`numpy.ndarray'
+            Binned version of the model
+        """
+        if model is None:
+            return 'Failed to bin because model was not provided.'
+        
+
     def one_d_extract(self, data=None, file=None, correct_for_sky=True,\
         debug_crs=False):
         """ Extract flux by integrating down columns (the "y" direction),
@@ -206,6 +231,11 @@ class Extractor():
             else:
                 data = pyfits.getdata(file)
 
+        # This function needs to call the model binning on all required models
+        # CURRENTLY A PLACE HOLDER
+        if self.arm.xbin != 1 or self.arm.ybin != 1:
+            pass
+        
         ny = self.arm.x_map.shape[1]
         nm = self.arm.x_map.shape[0]
         nx = self.arm.szx
