@@ -161,7 +161,7 @@ class Extractor():
                 x_dir_map = np.dot(invmat, [1, 0])
                 self.slit_tilt[i, j] = x_dir_map[1] / x_dir_map[0]
 
-    def bin_model(self, model=None):
+    def bin_models(self):
         """ Function used to artificially bin the models so that they apply to
         whatever binning mode the data are. This requires knowledge of the 
         x and y binning from the arm class, which is assumed this class
@@ -173,19 +173,66 @@ class Extractor():
 
         Parameters
         ----------
-        model: :obj:`numpy.ndarray'
-            Model values to be binned. This could be the xmod, wmod or any other
-            model
-        
+            None, assumes all necessary parameters are class attributes. 
         Returns
         -------
-        binned_model: :obj:`numpy.ndarray'
-            Binned version of the model
+        x_map: :obj:`numpy.ndarray'
+            Binned version of the x map model
+        wmap: :obj:`numpy.ndarray'
+            Binned version of the wavelength map model
+        blaze: :obj:`numpy.ndarray'
+            Binned version of the blaze map model
+        matrices: :obj:`numpy.ndarray'
+            Binned version of the matrices array
         """
-        if model is None:
-            return 'Failed to bin because model was not provided.'
-        
+        if self.arm.xbin==1 and self.arm.ybin==1:
+            return self.arm.x_map, self.arm.w_map, self.arm.blaze, self.arm.matrices
+        # Start by getting the order number. This should never change.
+        n_orders = self.arm.x_map.shape[0]
 
+        x_map = self.arm.x_map.copy()
+        w_map = self.arm.w_map.copy()
+        blaze = self.arm.blaze.copy()
+        matrices = self.arm.matrices.copy()
+        # The best way to do this is to firstly do all the ybinning, and then do
+        # the x binning
+        if self.arm.ybin > 1:
+            # Now bin the x_map, firstly in the spectral direction
+            # We do this by reshaping the array by adding another dimension of
+            # length ybin and then averaging over this axis
+            x_map = np.mean(x_map.reshape(n_orders,
+                                                   int(self.arm.szx/self.arm.ybin),
+                                                   self.arm.ybin),axis=2)
+
+            # Now do the same for the wavelength scale and blaze where necessary
+            w_map = np.mean(w_map.reshape(n_orders,
+                                               int(self.arm.szx/self.arm.ybin),
+                                                   self.arm.ybin),axis=2)
+
+            blaze = np.mean(blaze.reshape(n_orders,
+                                                   int(self.arm.szx/self.arm.ybin),
+                                                   self.arm.ybin),axis=2)
+            # The matrices are a bit harder to work with, but still the same
+            # principle applies.
+            matrices = np.mean(matrices.reshape(n_orders,
+                                                         int(self.arm.szx/self.arm.ybin),
+                                                         self.arm.ybin, 2, 2),axis=2)
+
+        if self.arm.xbin > 1:
+            # Now, naturally, the actualy x values must change according to the
+            # xbin
+            x_map /= self.arm.xbin
+            # The w_map and blaze remain unchanged by this. 
+
+        # Now we must modify the values of the [0,0] and [1,1] elements of
+        # each matrix according to the binning to reflect the now size of
+        # binned pixels.
+        rescale_mat = np.array([[self.arm.xbin, 0] , [0 , self.arm.ybin]])
+        matrices = np.dot(matrices, rescale_mat)
+
+        return x_map, w_map, blaze, matrices    
+
+            
     def one_d_extract(self, data=None, file=None, correct_for_sky=True,\
         debug_crs=False):
         """ Extract flux by integrating down columns (the "y" direction),
@@ -217,9 +264,11 @@ class Extractor():
         extracted_flux: :obj:`numpy.ndarray`
             Extracted fluxes as a function of pixel along the spectral direction
         extracted_var: :obj:`numpy.ndarray`
-            Extracted variance as a function of pixel along the spectral direction
+            Extracted variance as a function of pixel along the spectral
+            direction
         extraction_weights: :obj:`numpy.ndarray`
-            Extraction weights as a function of pixel along the spectral direction
+            Extraction weights as a function of pixel along the spectral
+            direction
 
         """
 
@@ -231,14 +280,14 @@ class Extractor():
             else:
                 data = pyfits.getdata(file)
 
-        # This function needs to call the model binning on all required models
-        # CURRENTLY A PLACE HOLDER
-        if self.arm.xbin != 1 or self.arm.ybin != 1:
-            pass
-        
-        ny = self.arm.x_map.shape[1]
-        nm = self.arm.x_map.shape[0]
-        nx = self.arm.szx
+        try:
+            x_map, w_map, blaze, matrices = self.bin_models()
+        except Exception:
+            return 'Extraction failed, unable to bin models.'
+
+        ny = x_map.shape[1]
+        nm = x_map.shape[0]
+        nx = int(self.arm.szx/self.arm.xbin)
 
         #Our profiles... 
         #FIXME: Consider carefully whether there is a way to extract x-centroids
@@ -317,7 +366,7 @@ class Extractor():
 
             #Create an empty weight array. Base the size on the largest slit magnification
             #for this order.
-            nx_cutout = int(np.ceil(self.slitview.slit_length/np.min(self.arm.matrices[i,:,0,0])))
+            nx_cutout = int(np.ceil(self.slitview.slit_length/np.min(matrices[i,:,0,0])))
             phi = np.empty((nx_cutout, no))
 
             for j in range(ny):
@@ -327,13 +376,13 @@ class Extractor():
                 # we were going to output a new wavelength scale associated with a
                 # 1D extraction. This is currently only used to make the fitting as 
                 # part of the CR rejection neat.
-                slitim_offsets = np.dot(np.linalg.inv(self.arm.matrices[i,j]),
+                slitim_offsets = np.dot(np.linalg.inv(matrices[i,j]),
                                         centroids)
                 
-                profile_y_pix = profile_y_microns/self.arm.matrices[i,j,0,0]
+                profile_y_pix = profile_y_microns/matrices[i,j,0,0]
                 
                 # Check for NaNs
-                if self.arm.x_map[i, j] != self.arm.x_map[i, j]:
+                if x_map[i, j] != x_map[i, j]:
                     extracted_var[i, j, :] = np.nan
                     continue
 
@@ -342,11 +391,11 @@ class Extractor():
                 # FIXME: Profiles should be convolved by a detector pixel,
                 # but binning has to be taken into account properly!
                 x_ix = int(np.round(
-                    self.arm.x_map[i, j])) - nx_cutout // 2 +\
+                    x_map[i, j])) - nx_cutout // 2 +\
                     np.arange(nx_cutout, dtype=int) + nx // 2
                 for k in range(no):
                     phi[:, k] = np.interp(
-                        x_ix - self.arm.x_map[i, j] - nx // 2, profile_y_pix,
+                        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
                         profiles[k])
                     phi[:, k] /= np.sum(phi[:, k])
                 # Deal with edge effects...
@@ -467,10 +516,15 @@ class Extractor():
         mask = np.sum(extraction_weights,axis=0) == 0
         data = subtract_scattered_light(data, mask)
 
+        try:
+            x_map, w_map, blaze, matrices = self.bin_models()
+        except Exception:
+            return 'Extraction failed, unable to bin models.'
+
         #Set up convenience local variables
-        ny = self.arm.x_map.shape[1]
-        nm = self.arm.x_map.shape[0]
-        nx = self.arm.szx
+        ny = x_map.shape[1]
+        nm = x_map.shape[0]
+        nx = int(self.arm.szx/self.arm.xbin)
 
         # Our profiles... we re-extract these in order to include the centroids.
         profile, centroids = self.slitview.slit_profile(arm=self.arm.arm, \
@@ -478,7 +532,7 @@ class Extractor():
 
         # Convolve centroids in order to average over sub-pixel effects.
         # also convert the centroids to units of slit plane microns.
-        slit_microns_per_det_pix_x = np.mean(self.arm.matrices[:, :, 0, 0])
+        slit_microns_per_det_pix_x = np.mean(matrices[:, :, 0, 0])
         slit_pix_per_det_pix = slit_microns_per_det_pix_x/self.slitview.microns_pix
         #Create the profile of a mean detector pixel in slit pixel units.
         det_pix = np.ones(int(slit_pix_per_det_pix) + 2)
@@ -506,19 +560,19 @@ class Extractor():
 
             #Create an empty weight array. Base the size on the largest slit magnification
             #for this order.
-            nx_cutout = int(np.ceil(self.slitview.slit_length/np.min(self.arm.matrices[i,:,0,0])))
+            nx_cutout = int(np.ceil(self.slitview.slit_length/np.min(matrices[i,:,0,0])))
             ny_cutout = 2 * \
                 int(nx_cutout * np.nanmax(np.abs(self.slit_tilt)) / 2) + 3
 
             for j in range(ny):
                 # Check for NaNs
-                if self.arm.x_map[i, j] != self.arm.x_map[i, j]:
+                if x_map[i, j] != x_map[i, j]:
                     extracted_var[i, j, :] = np.nan
                     continue
 
                 # Create our cutout of columns for the data. 
                 x_ix = int(np.round(
-                    self.arm.x_map[i, j])) - nx_cutout // 2 +\
+                    x_map[i, j])) - nx_cutout // 2 +\
                     np.arange(nx_cutout, dtype=int) + nx // 2
                 y_ix = j + np.arange(ny_cutout, dtype=int) - ny_cutout // 2
 
@@ -541,7 +595,7 @@ class Extractor():
                 # we'll use for extraction. First - find the pixel coordinates 
                 # according to slit tilt:
                 
-                ysub_pix = (x_ix - self.arm.x_map[i, j] - nx // 2) * \
+                ysub_pix = (x_ix - x_map[i, j] - nx // 2) * \
                         self.slit_tilt[i, j] + ny_cutout // 2
                         
                 #DEBUG
@@ -558,9 +612,9 @@ class Extractor():
                 # FIXME: See 1d code for how this was done for profiles...
                 # PRV: This is only absolutely needed for PRV mode, with 
                 # matrices[i,j,1,1] coming from "specmod.fits".
-                ysub_pix += np.interp(x_ix - self.arm.x_map[i, j] - nx // 2, \
-                    slit_ix/self.arm.matrices[i, j, 0, 0], \
-                    centroids/self.arm.matrices[i, j, 1, 1])
+                ysub_pix += np.interp(x_ix - x_map[i, j] - nx // 2, \
+                    slit_ix/matrices[i, j, 0, 0], \
+                    centroids/matrices[i, j, 1, 1])
                 
                 #Make sure this is within the limits of our subarray.
                 ysub_pix = np.maximum(ysub_pix, 0)
