@@ -510,7 +510,9 @@ class GHOSTSpect(GHOST):
                 continue
 
             res_mode = ad.res_mode()
-            arm = GhostArm(arm=ad.arm(), mode=res_mode)
+            arm = GhostArm(arm=ad.arm(), mode=res_mode, 
+                           detector_x_bin = ad.detector_x_bin(),
+                           detector_y_bin = ad.detector_y_bin())
             arm.spectral_format_with_matrix(flat[0].XMOD,
                                             wpars[0].data,
                                             spatpars[0].data,
@@ -521,8 +523,7 @@ class GHOSTSpect(GHOST):
 
             extractor = Extractor(arm, sview)
             extracted_flux, extracted_var = extractor.two_d_extract(
-                flat[0].data, extraction_weights=ad[0].WGT)
-            # import pdb; pdb.set_trace()
+                arm.bin(data(flat[0].data), extraction_weights=ad[0].WGT)
 
             # Normalised extracted flat profile
             med = np.median(extracted_flux)

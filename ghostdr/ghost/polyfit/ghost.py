@@ -33,7 +33,7 @@ class GhostArm(Polyspect):
     """
 
     def __init__(self, arm='blue', mode='std',
-                 detector_x_bin=1, detector_y_bin=1 ):
+                 detector_x_bin = 1, detector_y_bin = 1 ):
         """Initialisation function that sets all the mode specific parameters
         related to each configuration of the spectrograph.
         
@@ -90,7 +90,7 @@ class GhostArm(Polyspect):
             print("Unknown mode!")
             raise UserWarning
 
-    def bin_data(self,data, binning=[2,2]):
+    def bin_data(self,data):
         """ Generic Function used to create a binned equivalent of a
         spectrograph image array for the purposes of equivalent extraction. 
 
@@ -98,9 +98,7 @@ class GhostArm(Polyspect):
         ----------
         data: :obj:`numpy.ndarray'
             The (unbinned) data to be binned
-        binning: list
-            A two element list with the binning factors
-
+        
         Raises
         ------
         UserWarning: 
@@ -116,8 +114,8 @@ class GhostArm(Polyspect):
             raise UserWarning('Input data for binning is not in the expected\
             format')
         
-        rows = binning[0]
-        cols = binning[1]
+        rows = self.xbin
+        cols = self.ybin
         binned_array = data.reshape(int(data.shape[0]/rows),
                                     rows,
                                     int(data.shape[1]/cols),
