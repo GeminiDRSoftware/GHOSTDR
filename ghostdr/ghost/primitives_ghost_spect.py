@@ -523,7 +523,7 @@ class GHOSTSpect(GHOST):
 
             extractor = Extractor(arm, sview)
             extracted_flux, extracted_var = extractor.two_d_extract(
-                arm.bin(data(flat[0].data), extraction_weights=ad[0].WGT)
+                arm.bin_data(flat[0].data), extraction_weights=ad[0].WGT)
 
             # Normalised extracted flat profile
             med = np.median(extracted_flux)

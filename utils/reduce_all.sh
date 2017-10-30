@@ -10,9 +10,9 @@ trap 'exit' INT QUIT TERM
 # Start by setting up all the locations for the files. Change this for each case.
 COREDIR=$PWD
 
-CHECK=true
+CHECK=false
 
-BINNING='1x2'
+BINNING='2x4'
 SEEING=0.5
 
 ###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
