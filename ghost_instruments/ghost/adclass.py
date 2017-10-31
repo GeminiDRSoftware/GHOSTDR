@@ -75,6 +75,17 @@ class AstroDataGhost(AstroDataGemini):
         if set(self.phu.keywords) & kwords:
             return TagSet(['PROCESSED'])
 
+    @astro_data_tag
+    def _tag_binning_mode(self):
+        binnings = self.hdr.get('CCDSUM')
+        if isinstance(binnings, list):
+            if all([x == binnings[0] for x in binnings]):
+                return TagSet([binnings[0].replace(' ', 'x', 1)])
+            else:
+                return TagSet(['NxN'])
+        else:
+            return TagSet([binnings.replace(' ', 'x', 1)])
+
     @astro_data_descriptor
     def amp_read_area(self):
         """
