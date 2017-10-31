@@ -201,21 +201,21 @@ class Extractor():
             # We do this by reshaping the array by adding another dimension of
             # length ybin and then averaging over this axis
             x_map = np.mean(x_map.reshape(n_orders,
-                                                   int(self.arm.szx/self.arm.ybin),
+                                                   int(self.arm.szy/self.arm.ybin),
                                                    self.arm.ybin),axis=2)
 
             # Now do the same for the wavelength scale and blaze where necessary
             w_map = np.mean(w_map.reshape(n_orders,
-                                               int(self.arm.szx/self.arm.ybin),
+                                               int(self.arm.szy/self.arm.ybin),
                                                    self.arm.ybin),axis=2)
 
             blaze = np.mean(blaze.reshape(n_orders,
-                                                   int(self.arm.szx/self.arm.ybin),
+                                                   int(self.arm.szy/self.arm.ybin),
                                                    self.arm.ybin),axis=2)
             # The matrices are a bit harder to work with, but still the same
             # principle applies.
             matrices = np.mean(matrices.reshape(n_orders,
-                                                         int(self.arm.szx/self.arm.ybin),
+                                                         int(self.arm.szy/self.arm.ybin),
                                                          self.arm.ybin, 2, 2),axis=2)
 
         if self.arm.xbin > 1:

@@ -114,6 +114,9 @@ class GhostArm(Polyspect):
             raise UserWarning('Input data for binning is not in the expected\
             format')
         
+        if self.xbin == 1 and self.ybin == 1:
+            return data
+        
         rows = self.xbin
         cols = self.ybin
         binned_array = data.reshape(int(data.shape[0]/rows),
