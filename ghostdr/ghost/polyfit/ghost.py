@@ -32,12 +32,11 @@ class GhostArm(Polyspect):
     and "std" or "high" for the mode (second string).
     """
 
-    def __init__(self, arm='blue', mode='std', ccdsum = '1 1'):
+    def __init__(self, arm='blue', mode='std',
+                 detector_x_bin = 1, detector_y_bin = 1 ):
         """Initialisation function that sets all the mode specific parameters
         related to each configuration of the spectrograph.
-
         
-
         Attributes
         ----------
         
@@ -55,9 +54,10 @@ class GhostArm(Polyspect):
             number of lenslets of the IFU
         ccdsum: str
             The binning as present in the header keywords of the data.
-        binning: list
-            The initialisation converts the ccdsum input into a list and
-            renames it 'binning' to be easily used in functions. 
+        detector_x_bin: int, optional
+            The x binning of the detector
+        detector_y_bin: int, optional
+            The y binning of the detector
         """
         if arm == 'red':
             Polyspect.__init__(self, m_ref=50, szx=6144, szy=6160, m_min=34,
@@ -76,9 +76,10 @@ class GhostArm(Polyspect):
         self.lenslet_high_size = 118.0  # Lenslet flat-to-flat in microns
         self.lenslet_std_size = 197.0  # Lenslet flat-to-flat in microns
         self.mode = mode
-        # x is in the spatial direction
+        # x is in the spatial direction for this module, contrary to intuition
+        # and convention because Mike is weird like this....
         # y is in the spectral direction
-        self.ybin, self.xbin = list(np.int8(str.split(ccdsum,' ')))
+        self.ybin, self.xbin = detector_x_bin, detector_y_bin
 
         # Now we determine the number of fibers based on mode.
         if mode == 'high':
@@ -89,7 +90,7 @@ class GhostArm(Polyspect):
             print("Unknown mode!")
             raise UserWarning
 
-    def bin_data(self,data, binning=[2,2]):
+    def bin_data(self,data):
         """ Generic Function used to create a binned equivalent of a
         spectrograph image array for the purposes of equivalent extraction. 
 
@@ -97,9 +98,7 @@ class GhostArm(Polyspect):
         ----------
         data: :obj:`numpy.ndarray'
             The (unbinned) data to be binned
-        binning: list
-            A two element list with the binning factors
-
+        
         Raises
         ------
         UserWarning: 
@@ -115,8 +114,11 @@ class GhostArm(Polyspect):
             raise UserWarning('Input data for binning is not in the expected\
             format')
         
-        rows = binning[0]
-        cols = binning[1]
+        if self.xbin == 1 and self.ybin == 1:
+            return data
+        
+        rows = self.xbin
+        cols = self.ybin
         binned_array = data.reshape(int(data.shape[0]/rows),
                                     rows,
                                     int(data.shape[1]/cols),

@@ -12,7 +12,7 @@ COREDIR=$PWD
 
 CHECK=false
 
-BINNING='1x2'
+BINNING='2x4'
 SEEING=0.5
 
 ###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
@@ -132,9 +132,6 @@ for CAM in RED BLUE; do
 	    read -p "Press any key to continue... " -n1 -s
 	fi
 
-	###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
-	###### The pipeline combines too many things. Assumed is also that any
-	# 1.0 seeing files have also been removed, including the slitv ones.
 	while read object <&3; do
             echo Reducing $object
             reduce --drpkg ghostdr $OBJDIR/$object

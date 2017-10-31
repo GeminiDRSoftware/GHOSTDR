@@ -231,7 +231,9 @@ class GHOSTSpect(GHOST):
             log.debug("   processed_flat: {}".format(slitflat.filename))
 
             res_mode = ad.res_mode()
-            arm = GhostArm(arm=ad.arm(), mode=res_mode)
+            arm = GhostArm(arm = ad.arm(), mode = res_mode,
+                           detector_x_bin = ad.detector_x_bin(),
+                           detector_y_bin = ad.detector_y_bin())
 
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
@@ -508,7 +510,9 @@ class GHOSTSpect(GHOST):
                 continue
 
             res_mode = ad.res_mode()
-            arm = GhostArm(arm=ad.arm(), mode=res_mode)
+            arm = GhostArm(arm=ad.arm(), mode=res_mode, 
+                           detector_x_bin = ad.detector_x_bin(),
+                           detector_y_bin = ad.detector_y_bin())
             arm.spectral_format_with_matrix(flat[0].XMOD,
                                             wpars[0].data,
                                             spatpars[0].data,
@@ -519,8 +523,7 @@ class GHOSTSpect(GHOST):
 
             extractor = Extractor(arm, sview)
             extracted_flux, extracted_var = extractor.two_d_extract(
-                flat[0].data, extraction_weights=ad[0].WGT)
-            # import pdb; pdb.set_trace()
+                arm.bin_data(flat[0].data), extraction_weights=ad[0].WGT)
 
             # Normalised extracted flat profile
             med = np.median(extracted_flux)
@@ -853,11 +856,9 @@ class GHOSTSpect(GHOST):
 
         # CJS: This is a method that only exists *if* the input is of type
         # GHOST, so no need to check
-        xbin = ad.detector_x_bin()
-        ybin = ad.detector_y_bin()
         arm = ad.arm()
         res_mode = ad.res_mode()
-        key = 'GHOST_{}_{}_{}_{}'.format(xbin, ybin, arm, res_mode)
+        key = 'GHOST_1_1_{}_{}'.format(arm, res_mode)
 
         try:
             poly_dict = getattr(polyfit_dict, '{}_dict'.format(caltype))
