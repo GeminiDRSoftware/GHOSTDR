@@ -580,7 +580,7 @@ class SlitViewer(object):
 
             if self.cosmics:
                 cosim = self.cosims[expid]
-                hdr['CRPIXEL'] = np.count_nonzero(cosim)
+                hdr['NCRPIX'] = np.count_nonzero(cosim)
 
                 if self.crplane:
                     crhdr = pf.Header()
@@ -1927,7 +1927,7 @@ class Arm(object):
                         ampim.shape[0]), 'Bias section(s)')
 
                 if self.cosmics:
-                    hdr['CRPIXEL'] = np.count_nonzero(cosims[i])
+                    hdr['NCRPIX'] = np.count_nonzero(cosims[i])
 
                 hdulist.append(pf.ImageHDU(data=ampim, header=hdr, name='SCI'))
 
