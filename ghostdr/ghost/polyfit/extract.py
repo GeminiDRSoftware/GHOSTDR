@@ -186,7 +186,8 @@ class Extractor():
             Binned version of the matrices array
         """
         if self.arm.xbin==1 and self.arm.ybin==1:
-            return self.arm.x_map, self.arm.w_map, self.arm.blaze, self.arm.matrices
+            return self.arm.x_map, self.arm.w_map, self.arm.blaze,\
+                self.arm.matrices
         # Start by getting the order number. This should never change.
         n_orders = self.arm.x_map.shape[0]
 
@@ -201,22 +202,22 @@ class Extractor():
             # We do this by reshaping the array by adding another dimension of
             # length ybin and then averaging over this axis
             x_map = np.mean(x_map.reshape(n_orders,
-                                                   int(self.arm.szy/self.arm.ybin),
-                                                   self.arm.ybin),axis=2)
+                                          int(self.arm.szy/self.arm.ybin),
+                                          self.arm.ybin),axis=2)
 
             # Now do the same for the wavelength scale and blaze where necessary
             w_map = np.mean(w_map.reshape(n_orders,
-                                               int(self.arm.szy/self.arm.ybin),
-                                                   self.arm.ybin),axis=2)
+                                          int(self.arm.szy/self.arm.ybin),
+                                          self.arm.ybin),axis=2)
 
             blaze = np.mean(blaze.reshape(n_orders,
-                                                   int(self.arm.szy/self.arm.ybin),
-                                                   self.arm.ybin),axis=2)
+                                          int(self.arm.szy/self.arm.ybin),
+                                          self.arm.ybin),axis=2)
             # The matrices are a bit harder to work with, but still the same
             # principle applies.
             matrices = np.mean(matrices.reshape(n_orders,
-                                                         int(self.arm.szy/self.arm.ybin),
-                                                         self.arm.ybin, 2, 2),axis=2)
+                                                int(self.arm.szy/self.arm.ybin),
+                                                self.arm.ybin, 2, 2),axis=2)
 
         if self.arm.xbin > 1:
             # Now, naturally, the actualy x values must change according to the
