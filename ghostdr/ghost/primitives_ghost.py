@@ -13,6 +13,13 @@ from .lookups import timestamp_keywords as ghost_stamps
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
+def filename_updater(ad, **kwargs):
+    origname = ad.filename
+    ad.update_filename(**kwargs)
+    rv = ad.filename
+    ad.filename = origname
+    return rv
+
 @parameter_override
 class GHOST(Gemini, CCD, CalibDBGHOST):
     """

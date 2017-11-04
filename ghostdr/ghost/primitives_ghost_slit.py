@@ -12,6 +12,7 @@ from gempy.gemini import gemini_tools as gt
 from .polyfit import SlitView
 
 from .primitives_ghost import GHOST
+from .primitives_ghost import filename_updater
 from .parameters_ghost_slit import ParametersGHOSTSlit
 
 from recipe_system.utils.decorators import parameter_override
@@ -85,13 +86,13 @@ class GHOSTSlit(GHOST):
                 # # uncomment to output the residuals for debugging
                 # myresid = deepcopy(ad)
                 # myresid[0].data = residuals
-                # myresid.filename = gt.filename_updater(ad, suffix='_resid')
+                # myresid.update_filename(suffix='_resid')
                 # myresid.write()
 
                 # # uncomment to output the indices for debugging
                 # myindex = deepcopy(ad)
                 # myindex[0].data = indices.astype(int)
-                # myindex.filename = gt.filename_updater(ad, suffix='_index')
+                # myindex.update_filename(suffix='_index')
                 # myindex.write()
 
                 # Output and record number of pixels replaced
@@ -103,8 +104,7 @@ class GHOSTSlit(GHOST):
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
-                                              strip=True)
+            ad.update_filename(suffix=params["suffix"], strip=True)
 
         return adinputs
 
@@ -157,8 +157,7 @@ class GHOSTSlit(GHOST):
             except ValueError:
                 # This is most likely because the science frame has multiple
                 # extensions and the slitflat needs to be copied
-                slitflat = gt.clip_auxiliary_data(ad, slitflat, aux_type='cal',
-                                    keyword_comments=self.keyword_comments)
+                slitflat = gt.clip_auxiliary_data(ad, slitflat, aux_type='cal')
                 # An Error will be raised if they don't match now
                 gt.check_inputs_match(ad, slitflat, check_filter=False)
 
@@ -209,8 +208,7 @@ class GHOSTSlit(GHOST):
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
-                                              strip=True)
+            ad.update_filename(suffix=params["suffix"], strip=True)
         return adinputs
 
     def stackFrames(self, adinputs=None, **params):
@@ -246,7 +244,7 @@ class GHOSTSlit(GHOST):
             # CJS: This is ugly but should go with pythonic stacking
             for index, ext in enumerate(ad, start=1):
                 adext = deepcopy(ext)
-                filename = gt.filename_updater(ad, suffix='{:04d}'.format(index))
+                filename = filename_updater(ad, suffix='{:04d}'.format(index))
                 adext.filename = filename
                 adext.phu['ORIGNAME'] = filename
                 extinputs.append(adext)

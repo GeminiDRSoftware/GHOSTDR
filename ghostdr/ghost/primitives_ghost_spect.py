@@ -100,8 +100,7 @@ class GHOSTSpect(GHOST):
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
-                                              strip=True)
+            ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
                 ad.write(clobber=True)
 
@@ -274,8 +273,7 @@ class GHOSTSpect(GHOST):
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
-                                              strip=True)
+            ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
                 ad.write(clobber=True)
 
@@ -531,8 +529,8 @@ class GHOSTSpect(GHOST):
             extracted_var /= med**2
 
             flatprof_ad = deepcopy(ad)
-            flatprof_ad.filename = gt.filename_updater(flatprof_ad,
-                            suffix='_extractedFlatProfile, strip=True')
+            flatprof_ad.update_filename(suffix='_extractedFlatProfile',
+                                        strip=True)
             flatprof_ad[0].reset(extracted_flux, mask=None,
                                  variance=extracted_var)
             if params["write_result"]:
@@ -772,8 +770,7 @@ class GHOSTSpect(GHOST):
             # CJS: Added this because you check for the keyword in this primitive!
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
-                                              strip=True)
+            ad.update_filename(suffix=params["suffix"], strip=True)
         return adinputs
 
     def standardizeStructure(self, adinputs=None, **params):
@@ -834,8 +831,7 @@ class GHOSTSpect(GHOST):
             ad_mos = mo.as_astrodata(tile=True)
 
             gt.mark_history(ad_mos, primname=self.myself(), keyword=timestamp_key)
-            ad_mos.filename = gt.filename_updater(ad_mos, suffix=params["suffix"],
-                                              strip=True)
+            ad_mos.update_filename(suffix=params["suffix"], strip=True)
             adoutputs.append(ad_mos)
         return adoutputs
 
