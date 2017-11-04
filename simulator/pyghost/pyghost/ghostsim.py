@@ -1702,7 +1702,7 @@ class Arm(object):
         if self.split and self.crplane and self.cosmics:
             cosims = [to_ushort(i) for i in cosims]
             crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
-            for cosim in cosims:
+            for i, cosim in enumerate(cosims):
                 crhdr = pf.Header()
                 crhdr['DETSIZE'] = ("[1:%d,1:%d]" % (
                     cosim.shape[1], cosim.shape[0]), 'Detector size')
