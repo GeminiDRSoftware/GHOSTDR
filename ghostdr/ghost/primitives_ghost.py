@@ -89,8 +89,8 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
         # Re-binning
         log.stdinfo('Re-binning %s' % ad.filename)
-        rows = xb
-        cols = yb
+        rows = yb
+        cols = xb
         for ext in ad:
             # Do the re-binning
             binned_array = ext.data.reshape(
@@ -100,32 +100,40 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             ext.data = binned_array
             # Update header values
             ext.hdr.set('CCDSUM',
-                        value='%d %d' % (rows, cols,),
-                        comment='Re-binned to %dx%d' % (rows, cols,))
+                        value='%d %d' % (cols, rows,),
+                        comment='Re-binned to %dx%d' % (cols, rows,))
 
             old_datasec = ext.hdr.get('DATASEC')
             if old_datasec:
                 datasec_values = _HDR_SIZE_REGEX.match(old_datasec)
                 ext.hdr.set('DATASEC',
                             value='[%d:%d,%d:%d]' %
-                                  (max(int(datasec_values.group('x1')) / yb, 1),
-                                   max(int(datasec_values.group('x2')) / yb, 1),
-                                   max(int(datasec_values.group('y1')) / xb, 1),
-                                   max(int(datasec_values.group('y2')) / xb, 1),
+                                  (max(int(datasec_values.group('x1')) / cols,
+                                       1),
+                                   max(int(datasec_values.group('x2')) / cols,
+                                       1),
+                                   max(int(datasec_values.group('y1')) / rows,
+                                       1),
+                                   max(int(datasec_values.group('y2')) / rows,
+                                       1),
                                    ),
-                            comment='Re-binned to %dx%d' % (rows, cols,)
+                            comment='Re-binned to %dx%d' % (cols, rows,),
                             )
             old_trimsec = ext.hdr.get('TRIMSEC')
             if old_trimsec:
                 trimsec_values = _HDR_SIZE_REGEX.match(old_trimsec)
                 ext.hdr.set('TRIMSEC',
                             value='[%d:%d,%d:%d]' %
-                                  (max(int(datasec_values.group('x1')) / yb, 1),
-                                   max(int(datasec_values.group('x2')) / yb, 1),
-                                   max(int(datasec_values.group('y1')) / xb, 1),
-                                   max(int(datasec_values.group('y2')) / xb, 1),
+                                  (max(int(trimsec_values.group('x1')) / cols,
+                                       1),
+                                   max(int(trimsec_values.group('x2')) / cols,
+                                       1),
+                                   max(int(trimsec_values.group('y1')) / rows,
+                                       1),
+                                   max(int(trimsec_values.group('y2')) / rows,
+                                       1),
                                    ),
-                            comment='Re-binned to %dx%d' % (rows, cols,)
+                            comment='Re-binned to %dx%d' % (cols, rows,),
                             )
 
             old_ampsize = ext.hdr.get('AMPSIZE')
@@ -133,12 +141,16 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                 ampsize_values = _HDR_SIZE_REGEX.match(old_ampsize)
                 ext.hdr.set('AMPSIZE',
                             value='[%d:%d,%d:%d]' %
-                                  (max(int(datasec_values.group('x1')) / yb, 1),
-                                   max(int(datasec_values.group('x2')) / yb, 1),
-                                   max(int(datasec_values.group('y1')) / xb, 1),
-                                   max(int(datasec_values.group('y2')) / xb, 1),
+                                  (max(int(ampsize_values.group('x1')) / cols,
+                                       1),
+                                   max(int(ampsize_values.group('x2')) / cols,
+                                       1),
+                                   max(int(ampsize_values.group('y1')) / rows,
+                                       1),
+                                   max(int(ampsize_values.group('y2')) / rows,
+                                       1),
                                    ),
-                            comment='Re-binned to %dx%d' % (rows, cols,)
+                            comment='Re-binned to %dx%d' % (cols, rows,),
                             )
 
         return ad
