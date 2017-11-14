@@ -12,6 +12,9 @@ from .parameters_ghost import ParametersGHOST
 from .lookups import timestamp_keywords as ghost_stamps
 
 from recipe_system.utils.decorators import parameter_override
+
+import re
+import astrodata
 # ------------------------------------------------------------------------------
 _HDR_SIZE_REGEX = re.compile(r'^\[(?P<x1>[0-9]*)\:'
                              r'(?P<x2>[0-9]*),'
@@ -105,34 +108,35 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                 datasec_values = _HDR_SIZE_REGEX.match(old_datasec)
                 ext.hdr.set('DATASEC',
                             value='[%d:%d,%d:%d]' %
-                                  (max(int(datasec_values.group('x1')) / xb, 1),
-                                   max(int(datasec_values.group('x2')) / xb, 1),
-                                   max(int(datasec_values.group('y1')) / yb, 1),
-                                   max(int(datasec_values.group('y2')) / yb, 1),
+                                  (max(int(datasec_values.group('x1')) / yb, 1),
+                                   max(int(datasec_values.group('x2')) / yb, 1),
+                                   max(int(datasec_values.group('y1')) / xb, 1),
+                                   max(int(datasec_values.group('y2')) / xb, 1),
                                    ),
                             comment='Re-binned to %dx%d' % (rows, cols,)
                             )
             old_trimsec = ext.hdr.get('TRIMSEC')
             if old_trimsec:
+                trimsec_values = _HDR_SIZE_REGEX.match(old_trimsec)
                 ext.hdr.set('TRIMSEC',
                             value='[%d:%d,%d:%d]' %
-                                  (max(int(datasec_values.group('x1')) / xb, 1),
-                                   max(int(datasec_values.group('x2')) / xb, 1),
-                                   max(int(datasec_values.group('y1')) / yb, 1),
-                                   max(int(datasec_values.group('y2')) / yb, 1),
+                                  (max(int(datasec_values.group('x1')) / yb, 1),
+                                   max(int(datasec_values.group('x2')) / yb, 1),
+                                   max(int(datasec_values.group('y1')) / xb, 1),
+                                   max(int(datasec_values.group('y2')) / xb, 1),
                                    ),
                             comment='Re-binned to %dx%d' % (rows, cols,)
                             )
 
             old_ampsize = ext.hdr.get('AMPSIZE')
             if old_ampsize:
-                ampsize_values = _HDR_SIZE_REGEX.match(old_datasec)
+                ampsize_values = _HDR_SIZE_REGEX.match(old_ampsize)
                 ext.hdr.set('AMPSIZE',
                             value='[%d:%d,%d:%d]' %
-                                  (max(int(ampsize_values.group('x1')) / xb, 1),
-                                   max(int(ampsize_values.group('x2')) / xb, 1),
-                                   max(int(ampsize_values.group('y1')) / yb, 1),
-                                   max(int(ampsize_values.group('y2')) / yb, 1),
+                                  (max(int(datasec_values.group('x1')) / yb, 1),
+                                   max(int(datasec_values.group('x2')) / yb, 1),
+                                   max(int(datasec_values.group('y1')) / xb, 1),
+                                   max(int(datasec_values.group('y2')) / xb, 1),
                                    ),
                             comment='Re-binned to %dx%d' % (rows, cols,)
                             )
