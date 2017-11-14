@@ -9,6 +9,7 @@ from copy import deepcopy
 import scipy
 import functools
 from datetime import datetime
+import re
 
 import astrodata
 
@@ -26,6 +27,7 @@ from .lookups import polyfit_dict, line_list
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
+
 @parameter_override
 class GHOSTSpect(GHOST):
     """
@@ -148,6 +150,122 @@ class GHOSTSpect(GHOST):
             # Timestamp; DO NOT update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
 
+        return adinputs
+
+    def darkCorrect(self, adinputs=None, **params):
+        """
+        GHOST-specific darkCorrect primitive
+
+        This primitive, at it's core, simply copies the standard
+        DRAGONS darkCorrect (part of :any:`Preprocess`). However, it has
+        the ability to examine the binning mode of the requested dark,
+        compare it to the adinput(s), and re-bin the dark to the
+        correct format.
+
+        To do this, this version of darkCorrect takes over the actual fetching
+        of calibrations from subtractDark, manipulates the dark(s) as necessary,
+        saves the updated dark to the present working directory, and then
+        passes the updated list of dark frame(s) on to subtractDark.
+
+        As a result, IOError will be raised if the adinputs do not
+        all share the same binning mode.
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        dark: str/list
+            name(s) of the dark file(s) to be subtracted
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        # timestamp_key = self.timestamp_keys[self.myself()]
+
+        # Check if all the inputs have matching detector_x_bin and
+        # detector_y_bin descriptors
+        if not(all(
+                [_.detector_x_bin() == adinputs[0].detector_x_bin() for
+                 _ in adinputs])) or not(all(
+            [_.detector_y_bin() == adinputs[0].detector_y_bin() for
+             _ in adinputs]
+        )):
+            log.stdinfo('Detector x bins: %s' %
+                        str([_.detector_x_bin() for _ in adinputs]))
+            log.stdinfo('Detector y bins: %s' %
+                        str([_.detector_y_bin() for _ in adinputs]))
+            raise IOError('Your input list of files contains a mix of '
+                          'different binning modes')
+
+        if params.get('dark', None):
+            pass
+        else:
+            # All this line seems to do is check the valid darks can be found
+            # for the adinputs
+            self.getProcessedDark(adinputs)
+
+        # Here we need to ape the part of subtractDark which creates the
+        # dark_list, then re-bin as required, and send the updated dark_list
+        # through to subtractDark
+        # This is preferable to writing our own subtractDark, as it should
+        # be stable against algorithm changes to dark subtraction
+        dark_list = params["dark"] if params["dark"] else [
+            self._get_cal(ad, 'processed_dark') for ad in adinputs]
+
+        # We need to make sure we:
+        # - Provide a dark AD object for each science frame;
+        # - Do not unnecessarily re-bin the same dark to the same binning
+        #   multiple times
+        dark_list_out = []
+        dark_processing_done = {}
+        for ad, dark in zip(*gt.make_lists(adinputs, dark_list,
+                                           force_ad=True)):
+            if dark is None:
+                if 'qa' in self.context:
+                    log.warning("No changes will be made to {}, since no "
+                                "dark was specified".format(ad.filename))
+                    dark_list_out.append(None)
+                    continue
+                else:
+                    raise IOError("No processed dark listed for {}".
+                                  format(ad.filename))
+
+            if dark.detector_x_bin() == ad.detector_x_bin() and \
+                    dark.detector_y_bin() == ad.detector_y_bin():
+                log.stdinfo('Binning for %s already matches input file' %
+                            dark.filename)
+                dark_list_out.append(dark.filename)
+                continue
+
+            # If we hit this point, we need to see if we've already re-binned
+            # the current dark to the required binning
+            # If so, we just need to provide the filename to the correct dark
+            # Otherwise, perform the re-binning
+            xb = ad.detector_x_bin()
+            yb = ad.detector_y_bin()
+            if (dark.filename, xb, yb) in dark_processing_done.keys():
+                log.stdinfo('No need to re-bin %s' % dark.filename)
+                dark_list_out.append(
+                    dark_processing_done[(dark.filename, xb, yb)]
+                )
+            else:
+                # OK, we actually have to re-bin now
+                dark = self._rebin_ghost_ad(dark, xb, yb)
+                # Re-name the dark so we don't blow away the old one on save
+                dark_filename_orig = dark.filename
+                dark.filename = gt.filename_updater(adinput=dark,
+                                                    suffix='rebin%dx%d' %
+                                                           (rows, cols, ),
+                                                    strip=True)
+                dark.write(clobber=False)
+                dark_processing_done[
+                    (dark_filename_orig, xb, yb)] = dark.filename
+                dark_list_out.append(dark.filename)
+                log.debug('Wrote out re-binned dark %s' % dark.filename)
+
+        # Strip the original 'dark' from the input parameters
+        _ = params.pop('dark', None)
+
+        adinputs = self.subtractDark(adinputs, dark=dark_list_out, **params)
         return adinputs
 
     def extractProfile(self, adinputs=None, **params):
