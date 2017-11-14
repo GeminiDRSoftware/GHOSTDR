@@ -56,7 +56,7 @@ the following steps to prepare the calibration manager for use:
     python /path/to/GeminiCalMgr-0.9.9.6-ghost/setup.py install
 
 #. Initialize your local database, something like this (on a Unix system; for
-   MacOSX or Windows, use an appropriate file path)::
+   MacOSX or Windows, use an appropriate file path for your calibration file)::
 
     mkdir /home/you/calmgrdb
     mkdir /home/you/.geminidr
