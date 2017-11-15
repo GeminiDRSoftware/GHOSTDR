@@ -23,7 +23,7 @@ def makeProcessedSlit(p):
     p.darkCorrect()
     #p.correctSlitCosmics()
     p.processSlits()
-    p.stackSlitFrames()
+    p.stackFrames(apply_dq=True)
     p.storeProcessedSlit()
     return
 
