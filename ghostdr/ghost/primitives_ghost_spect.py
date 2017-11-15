@@ -179,7 +179,8 @@ class GHOSTSpect(GHOST):
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
-        # timestamp_key = self.timestamp_keys[self.myself()]
+        timestamp_key = self.timestamp_keys[self.myself()]
+        sfx = params["suffix"]
 
         # Check if all the inputs have matching detector_x_bin and
         # detector_y_bin descriptors
@@ -234,21 +235,9 @@ class GHOSTSpect(GHOST):
                 log.stdinfo('Binning for %s already matches input file' %
                             dark.filename)
                 dark_list_out.append(dark.filename)
-                continue
-
-            # If we hit this point, we need to see if we've already re-binned
-            # the current dark to the required binning
-            # If so, we just need to provide the filename to the correct dark
-            # Otherwise, perform the re-binning
-            xb = ad.detector_x_bin()
-            yb = ad.detector_y_bin()
-            if (dark.filename, xb, yb) in dark_processing_done.keys():
-                log.stdinfo('No need to re-bin %s' % dark.filename)
-                dark_list_out.append(
-                    dark_processing_done[(dark.filename, xb, yb)]
-                )
             else:
-                # OK, we actually have to re-bin now
+                xb = ad.detector_x_bin()
+                yb = ad.detector_y_bin()
                 dark = self._rebin_ghost_ad(dark, xb, yb)
                 # Re-name the dark so we don't blow away the old one on save
                 dark_filename_orig = dark.filename
@@ -256,16 +245,34 @@ class GHOSTSpect(GHOST):
                                                     suffix='rebin%dx%d' %
                                                            (rows, cols, ),
                                                     strip=True)
-                dark.write(clobber=False)
+                dark.write(clobber=True)
                 dark_processing_done[
                     (dark_filename_orig, xb, yb)] = dark.filename
                 dark_list_out.append(dark.filename)
-                log.debug('Wrote out re-binned dark %s' % dark.filename)
+                log.stdinfo('Wrote out re-binned dark %s' % dark.filename)
 
-        # Strip the original 'dark' from the input parameters
-        _ = params.pop('dark', None)
+            # Check the inputs have matching binning, and shapes
+            # Copied from standard darkCorrect (primitives_preprocess)
+            # TODO: Check exposure time?
+            try:
+                gt.check_inputs_match(ad, dark, check_filter=False)
+            except ValueError:
+                # Else try to extract a matching region from the dark
+                dark = gt.clip_auxiliary_data(ad, aux=dark, aux_type="cal")
 
-        adinputs = self.subtractDark(adinputs, dark=dark_list_out, **params)
+                # Check again, but allow it to fail if they still don't match
+                gt.check_inputs_match(ad, dark, check_filter=False)
+
+            log.stdinfo("Subtracting the dark ({}) from the input "
+                        "AstroData object {}".
+                        format(dark.filename, ad.filename))
+            ad.subtract(dark)
+
+            # Record dark used, timestamp, and update filename
+            ad.phu.set('DARKIM', dark.filename, self.keyword_comments["DARKIM"])
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=sfx, strip=True)
+
         return adinputs
 
     def extractProfile(self, adinputs=None, **params):

@@ -24,7 +24,7 @@ def makeProcessedSlitFlat(p):
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
     p.darkCorrect()
-    p.stackSlitFrames(operation='median', reject_method=None)
+    p.stackFrames(operation='median', reject_method=None, apply_dq=True)
     p.storeProcessedSlitFlat()
     return
 
