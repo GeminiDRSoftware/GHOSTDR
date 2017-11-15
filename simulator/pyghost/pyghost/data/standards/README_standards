@@ -1,0 +1,3 @@
+The standard star spectra were obtained from the space telescope science institute website at http://www.stsci.edu/hst/observatory/crds/calspec.html.
+
+All fluxes are in vacuum and in units of erg/s/cm^2/Angstrom and must be converted to the correct flux scale as done in the module.

@@ -16,6 +16,10 @@ CHECK=false
 BINNING='1x1'
 SEEING=0.5
 
+# Now we define the context. For Quality Assessment, use '--qa', for Quick Look
+# use '--ql', for Science Quality, leave blank
+QUALITY=''
+
 ###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
 
 #Now you have the option of pointing to different directories for each file type.
@@ -42,7 +46,7 @@ reduce_db.py init -v -w  # we're using the local calibration manager instead
 echo 'Doing slits now'
 
 typewalk --tags GHOST SLITV BIAS UNPREPARED --dir $BIASDIR/ -n -o bias.list
-reduce --drpkg ghostdr @bias.list 2>&1 | tee >(add_to_calib_mgr)
+reduce --drpkg ghostdr $QUALITY @bias.list 2>&1 | tee >(add_to_calib_mgr)
 
 if $CHECK; then
     echo 'You can now check the reduction at this step.'
@@ -50,7 +54,7 @@ if $CHECK; then
 fi    
 
 typewalk --tags GHOST SLITV DARK UNPREPARED --dir $DARKDIR/ -n -o dark.list
-reduce --drpkg ghostdr @dark.list 2>&1 | tee >(add_to_calib_mgr)
+reduce --drpkg ghostdr $QUALITY @dark.list 2>&1 | tee >(add_to_calib_mgr)
 
 if $CHECK; then
     echo 'You can now check the reduction at this step.'
@@ -59,7 +63,7 @@ fi
 
 for MODE in HIGH STD; do
     typewalk --tags GHOST SLITV FLAT UNPREPARED $MODE --dir $FLATDIR/ -n -o flat.list
-    reduce --drpkg ghostdr @flat.list 2>&1 | tee >(add_to_calib_mgr)
+    reduce --drpkg ghostdr $QUALITY @flat.list 2>&1 | tee >(add_to_calib_mgr)
 
     if $CHECK; then
         echo 'You can now check the reduction at this step.'
@@ -67,7 +71,7 @@ for MODE in HIGH STD; do
     fi
     
     typewalk --tags GHOST SLITV ARC UNPREPARED $MODE --dir $ARCDIR/ -n -o arc.list
-    reduce --drpkg ghostdr @arc.list 2>&1 | tee >(add_to_calib_mgr)
+    reduce --drpkg ghostdr $QUALITY @arc.list 2>&1 | tee >(add_to_calib_mgr)
 
     if $CHECK; then
         echo 'You can now check the reduction at this step.'
@@ -76,7 +80,7 @@ for MODE in HIGH STD; do
     
     while read object <&3; do
         echo Reducing $object
-        reduce --drpkg ghostdr $OBJDIR/$object
+        reduce --drpkg ghostdr $QUALITY $OBJDIR/$object
         if $CHECK; then
             echo 'You can now check the reduction at this step.'
             read -p "Press any key to continue... " -n1 -s
@@ -94,12 +98,12 @@ echo 'Now the spectrograph data'
 for CAM in RED BLUE; do
     echo "Doing $CAM images now"
 
-    typewalk --tags GHOST BIAS UNPREPARED $CAM --dir $BIASDIR/ --filemask '.*1x1.*\.(fits|FITS)' -n -o bias.list
-    reduce --drpkg ghostdr @bias.list 2>&1 | tee >(add_to_calib_mgr)
+    typewalk --tags GHOST BIAS UNPREPARED 1x1 $CAM --dir $BIASDIR/ -n -o bias.list
+    reduce --drpkg ghostdr $QUALITY @bias.list 2>&1 | tee >(add_to_calib_mgr)
     
     if [ $BINNING != '1x1' ]; then
-        typewalk --tags GHOST BIAS UNPREPARED $CAM --dir $BIASDIR/ --filemask '.*'$BINNING'.*\.(fits|FITS)' -n -o bias.list
-        reduce --drpkg ghostdr @bias.list 2>&1 | tee >(add_to_calib_mgr)
+        typewalk --tags GHOST BIAS UNPREPARED $BINNING $CAM --dir $BIASDIR/ -n -o bias.list
+        reduce --drpkg ghostdr $QUALITY @bias.list 2>&1 | tee >(add_to_calib_mgr)
     fi
 
     if $CHECK; then
@@ -108,7 +112,7 @@ for CAM in RED BLUE; do
     fi
     
     typewalk --tags GHOST DARK UNPREPARED $CAM --dir $DARKDIR/ -n -o dark.list
-    reduce --drpkg ghostdr @dark.list 2>&1 | tee >(add_to_calib_mgr)
+    reduce --drpkg ghostdr $QUALITY @dark.list 2>&1 | tee >(add_to_calib_mgr)
     
     if $CHECK; then
         echo 'You can now check the reduction at this step.'
@@ -117,7 +121,7 @@ for CAM in RED BLUE; do
     
     for MODE in HIGH STD; do
         typewalk --tags GHOST FLAT UNPREPARED $CAM $MODE --dir $FLATDIR/ -n -o flat.list
-        reduce --drpkg ghostdr @flat.list 2>&1 | tee >(add_to_calib_mgr)
+        reduce --drpkg ghostdr $QUALITY @flat.list 2>&1 | tee >(add_to_calib_mgr)
 
         if $CHECK; then
             echo 'You can now check the reduction at this step.'
@@ -125,7 +129,7 @@ for CAM in RED BLUE; do
         fi
 
         typewalk --tags GHOST ARC UNPREPARED $CAM $MODE --dir $ARCDIR/ -n -o arc.list
-        reduce --drpkg ghostdr @arc.list  2>&1 | tee >(add_to_calib_mgr)
+        reduce --drpkg ghostdr $QUALITY @arc.list  2>&1 | tee >(add_to_calib_mgr)
 
         if $CHECK; then
             echo 'You can now check the reduction at this step.'
@@ -134,13 +138,13 @@ for CAM in RED BLUE; do
 
         while read object <&3; do
             echo Reducing $object
-            reduce --drpkg ghostdr $OBJDIR/$object
+            reduce --drpkg ghostdr $QUALITY $OBJDIR/$object
             if $CHECK; then
                 echo 'You can now check the reduction at this step.'
                 read -p "Press any key to continue... " -n1 -s
             fi
         done 3< <(
-            typewalk --tags GHOST UNPREPARED $CAM $MODE --dir $OBJDIR/ --filemask "obj.*$SEEING.*$BINNING.*\.(fits|FITS)" -n \
+            typewalk --tags GHOST UNPREPARED $BINNING $CAM $MODE --dir $OBJDIR/ --filemask "obj.*$SEEING.*\.(fits|FITS)" -n \
             | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g" \
             | grep '^\s' \
             | awk '{print $1}'
