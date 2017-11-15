@@ -64,7 +64,11 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
         Parameters
         ----------
-        ad : :any:`astrodata.AstroData` object
+        ad : :obj:`astrodata.AstroData`
+            AstroData object to be re-binned. Each extension of the object
+            will be rebinned separately. A :any:`ValueError` will be thrown
+            if the object's extensions are found to have different binning
+            modes to one another.
         xb : :obj:`int`
             x-binning
         yb : :obj:`int`
@@ -98,6 +102,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                 int(ext.data.shape[1] / cols), cols
             ).sum(axis=1).sum(axis=2)
             ext.data = binned_array
+
             # Update header values
             ext.hdr.set('CCDSUM',
                         value='%d %d' % (cols, rows,),
