@@ -14,7 +14,6 @@ class ParametersGHOSTSlit(ParametersGHOST):
     }
     stackFrames = {
         "suffix"            : "_stack",
-        "mask"              : False,
         "nhigh"             : 1,
         "nlow"              : 1,
         "operation"         : "average",
