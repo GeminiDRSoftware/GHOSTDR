@@ -1210,6 +1210,21 @@ class Arm(object):
                              np.append(0.1, np.maximum(data['SOLARFLUX'],0))*flux_scale])
         return spectrum
 
+    def get_standard_spectrum(self, std='hd160617.fits'):
+        """Extract the spectrum of one of the standard stars in the data folder"""
+        try:
+            data = pf.getdata(os.path.join(LOCAL_DIR, 'data/standards/'+std))
+        except:
+            return 'Standard specified does not have data in the standards directory'
+        as_flux = data['FLUX'] * u.erg/ u.s / u.cm**2 / u.angstrom
+        as_flux = as_flux.to(u.photon/u.s/u.angstrom/u.cm**2,
+                             equivalencies=u.spectral_density(data['WAVELENGTH'] * u.AA))
+        # Now calculate the approximate telescope area in cm**2
+        telescope_area = np.pi * (8.1 * 100. / 2.)**2
+        flux = as_flux * telescope_area / 50E3
+        spectrum = np.array([data['WAVELENGTH'] / 1e4, np.maximum(flux,0)])
+        return spectrum
+
     def simulate_image(self, x, wave, blaze, matrices, im_slit, spectrum=None,
                        n_x=0, xshift=0.0, yshift=0.0, radvel=0.0, return_check=False):
         """Simulate a spectrum on the CCD.
