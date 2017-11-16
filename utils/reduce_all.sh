@@ -80,7 +80,7 @@ for MODE in HIGH STD; do
     
     while read object <&3; do
         echo Reducing $object
-        reduce --drpkg ghostdr $QUALITY $OBJDIR/$object
+        reduce --drpkg ghostdr $QUALITY $OBJDIR/$object 2>&1 | tee >(add_to_calib_mgr)
         if $CHECK; then
             echo 'You can now check the reduction at this step.'
             read -p "Press any key to continue... " -n1 -s
