@@ -28,7 +28,7 @@ def makeProcessedSlitArc(p):
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
     p.stackFrames(operation='median', reject_method=None)
-    p.storeProcessedSlit()
+    p.storeProcessedArc()
     return
 
 default = makeProcessedSlitArc
