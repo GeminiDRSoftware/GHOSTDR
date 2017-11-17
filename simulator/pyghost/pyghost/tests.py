@@ -70,40 +70,40 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
 
     target_binmode = (1, 1)  # (1, 2)
 
-    # # This produces a bias with the above noise
-    # for i in range(1, nbias+1):
-    #     ghost.simulate_observation(
-    #         duration=0.0, output_prefix='bias_'+str(i)+'_',
-    #         spectrum_in=blank, use_thar=False, add_sky=False,
-    #         obstype='BIAS', data_label=i, binmode=target_binmode)
+    # This produces a bias with the above noise
+    for i in range(1, nbias+1):
+        ghost.simulate_observation(
+            duration=0.0, output_prefix='bias_'+str(i)+'_',
+            spectrum_in=blank, use_thar=False, add_sky=False,
+            obstype='BIAS', data_label=i, binmode=target_binmode)
 
-    # # This produces a dark frame
-    # for i in range(1, ndark+1):
-    #     ghost.simulate_observation(
-    #         duration=duration, output_prefix='dark'+str(duration)+'_{0:d}_'
-    #         .format(i), use_thar=False, spectrum_in=blank, add_sky=False,
-    #         obstype='DARK', data_label=i, binmode=target_binmode)
+    # This produces a dark frame
+    for i in range(1, ndark+1):
+        ghost.simulate_observation(
+            duration=duration, output_prefix='dark'+str(duration)+'_{0:d}_'
+            .format(i), use_thar=False, spectrum_in=blank, add_sky=False,
+            obstype='DARK', data_label=i, binmode=target_binmode)
 
     for res in ('std', 'high'):
-        # # This (should) produce a GCAL flat frame
-        # for i in range(1, nflat+1):
-        #     ghost.simulate_observation(
-        #         duration=duration, output_prefix='flat'+str(duration)+'_'+res +
-        #         '_{0:d}_'.format(i), use_thar=False, spectrum_in=flat,
-        #         add_sky=False, res=res, flatlamp=True, obstype='FLAT',
-        #         data_label=i, binmode=target_binmode)
+        # This (should) produce a GCAL flat frame
+        for i in range(1, nflat+1):
+            ghost.simulate_observation(
+                duration=duration, output_prefix='flat'+str(duration)+'_'+res +
+                '_{0:d}_'.format(i), use_thar=False, spectrum_in=flat,
+                add_sky=False, res=res, flatlamp=True, obstype='FLAT',
+                data_label=i, binmode=target_binmode)
 
-        # # This produces an arc frame
-        # ghost.simulate_observation(
-        #     duration=duration, output_prefix='arc'+str(duration)+'_'+res+'_',
-        #     use_thar=False, spectrum_in=thar, add_sky=False, res=res,
-        #     flatlamp=True, obstype='ARC', binmode=target_binmode)
+        # This produces an arc frame
+        ghost.simulate_observation(
+            duration=duration, output_prefix='arc'+str(duration)+'_'+res+'_',
+            use_thar=False, spectrum_in=thar, add_sky=False, res=res,
+            flatlamp=True, obstype='ARC', binmode=target_binmode)
 
-        # # This produces a sky frame
-        # ghost.simulate_observation(
-        #     duration=duration, output_prefix='sky'+str(duration)+'_'+res+'_',
-        #     use_thar=False, spectrum_in=blank, add_sky=True, res=res,
-        #     obstype='SKY', binmode=target_binmode)
+        # This produces a sky frame
+        ghost.simulate_observation(
+            duration=duration, output_prefix='sky'+str(duration)+'_'+res+'_',
+            use_thar=False, spectrum_in=blank, add_sky=True, res=res,
+             obstype='SKY', binmode=target_binmode)
 
         # Make the slit-viewing flux a bit random, to simulate clouds
         svfp = np.random.randn(100)
@@ -122,12 +122,12 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
                 data_label=1, sv_flux_profile=sv_flux_profile,
                 binmode=target_binmode)
 
-        # for i, seeing in enumerate((0.5, 1.0), start=1):  # in arcsecs
-        #     ghost.simulate_observation(
-        #         duration=duration, output_prefix='obj'+str(duration)+'_' +
-        #         str(seeing)+'_'+res+'_', use_thar=True, add_sky=True, res=res,
-        #         obstype='OBJECT', seeing=seeing, data_label=i,
-        #         sv_flux_profile=sv_flux_profile, binmode=target_binmode)
+        for i, seeing in enumerate((0.5, 1.0), start=1):  # in arcsecs
+            ghost.simulate_observation(
+                duration=duration, output_prefix='obj'+str(duration)+'_' +
+                str(seeing)+'_'+res+'_', use_thar=True, add_sky=True, res=res,
+                obstype='OBJECT', seeing=seeing, data_label=i,
+                sv_flux_profile=sv_flux_profile, binmode=target_binmode)
 
 if __name__ == "__main__":
     run()
