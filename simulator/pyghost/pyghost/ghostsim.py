@@ -489,7 +489,10 @@ class SlitViewer(object):
             'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
         header['TELESCOP'] = 'Gemini-South'
         header['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
-        header['OBSTYPE'] = (obstype, 'Observation type')
+        if obstype=='STANDARD':
+            header['OBSTYPE'] = ('OBJECT', 'Observation type')
+        else:
+            header['OBSTYPE'] = (obstype, 'Observation type')
         header['CCDNAME'] = ('Sony-ICX674', 'CCD name')
         header['ORIGFN'] = fname + 'SLIT.fits'
 
@@ -499,7 +502,8 @@ class SlitViewer(object):
 
         # populate OBSCLASS keyword
         obsclass = dict(FLAT='partnerCal', ARC='partnerCal',  # noqa
-            OBJECT='science', BIAS='dayCal', DARK='dayCal', SKY='')
+                        OBJECT='science', BIAS='dayCal', DARK='dayCal', SKY='',
+                        STANDARD='partnerCal')
         header['OBSCLASS'] = (obsclass[obstype], 'Observe class')
 
         # populate GEMPRGID, OBSID, and DATALAB keywords
@@ -507,9 +511,9 @@ class SlitViewer(object):
         header['GEMPRGID'] = (prgid, 'Gemini programme ID')
         obsid = dict(
             high=dict(BIAS='1', DARK='5', FLAT='4', ARC='10', OBJECT='9',
-                SKY='7'),  # noqa
+                      SKY='7', STANDARD='11'),  # noqa
             std=dict(BIAS='1', DARK='5', FLAT='3', ARC='2', OBJECT='8',
-                SKY='6'),  # noqa
+                     SKY='6', STANDARD='10'),  # noqa
             )
         header['OBSID'] = (
             prgid+'-'+obsid[res][obstype], 'Observation ID / Data label')
@@ -1210,20 +1214,6 @@ class Arm(object):
                              np.append(0.1, np.maximum(data['SOLARFLUX'],0))*flux_scale])
         return spectrum
 
-    def get_standard_spectrum(self, std='hd160617.fits'):
-        """Extract the spectrum of one of the standard stars in the data folder"""
-        try:
-            data = pf.getdata(os.path.join(LOCAL_DIR, 'data/standards/'+std))
-        except:
-            return 'Standard specified does not have data in the standards directory'
-        as_flux = data['FLUX'] * u.erg/ u.s / u.cm**2 / u.angstrom
-        as_flux = as_flux.to(u.photon/u.s/u.angstrom/u.cm**2,
-                             equivalencies=u.spectral_density(data['WAVELENGTH'] * u.AA))
-        # Now calculate the approximate telescope area in cm**2
-        telescope_area = np.pi * (8.1 * 100. / 2.)**2
-        flux = as_flux * telescope_area / 50E3
-        spectrum = np.array([data['WAVELENGTH'] / 1e4, np.maximum(flux,0)])
-        return spectrum
 
     def simulate_image(self, x, wave, blaze, matrices, im_slit, spectrum=None,
                        n_x=0, xshift=0.0, yshift=0.0, radvel=0.0, return_check=False):
@@ -1414,9 +1404,9 @@ class Arm(object):
                        bias_level=10, overscan=0, namps=[1, 1], use_thar=True,
                        res='high', add_sky=True, return_image=False,
                        thar_flatlamp=False, flatlamp=False, obstype=None,
-                       additive_noise={}, scaling=None, seeing=0.8,
-                       data_label=1, utstart=datetime.datetime.utcnow(),
-                       binning=(1, 1)):
+                       objname=None, additive_noise={}, scaling=None,
+                       seeing=0.8, data_label=1,
+                       utstart=datetime.datetime.utcnow(), binning=(1, 1)):
         """Simulate a single frame.
 
         TODO (these can be implemented manually using the other functions):
@@ -1478,6 +1468,13 @@ class Arm(object):
         use_thar: bool (optional)
             Is the Thorium/Argon lamp in use?
 
+        obstype: string
+            The value for the OBSTYPE FITS keyword
+
+        obsname: string
+            The name of the target to be created. Will populate the OBJECT
+            keyword.
+        
         res: string (optional)
             Can be 'high' or 'std' for the resolution mode.
 
@@ -1741,7 +1738,7 @@ class Arm(object):
             chkhdu.writeto(output_prefix + self.arm + '_chk.fits', clobber=True)
 
         binmodes = [binning]
-        if obstype in ['BIAS', 'OBJECT']:
+        if obstype in ['BIAS', 'OBJECT', 'STANDARD']:
             binmodes = [(1, 1), (1, 2), (1, 8), (2, 4), (2, 8)]
         for binmode in binmodes:
             if not self.split and binning != binmode:
@@ -1795,7 +1792,10 @@ class Arm(object):
                 'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
             hdr['TELESCOP'] = 'Gemini-South'
             hdr['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
-            hdr['OBSTYPE'] = (obstype, 'Observation type')
+            if obstype=='STANDARD':
+                hdr['OBSTYPE'] = ('OBJECT', 'Observation type')
+            else:
+                hdr['OBSTYPE'] = (obstype, 'Observation type')
 
             # required by the calibration manager
             hdr['RAWPIREQ'] = 'yes'  # 'no', 'check', 'unknown'
@@ -1810,14 +1810,17 @@ class Arm(object):
             hdr['DETTYPE'] = (self.dettype, 'Detector array type')
             hdr['CAMERA'] = (self.arm.upper(), 'Camera name')
 
-            # populate OBJECT keyword
-            obj = dict(FLAT='GCALflat', ARC='ThAr', OBJECT='V492 Car',
-                BIAS='Bias', DARK='Dark', SKY='')  # noqa
-            hdr['OBJECT'] = (obj[obstype], 'Object Name')
-
+            if objname==None:
+                # populate OBJECT keyword
+                obj = dict(FLAT='GCALflat', ARC='ThAr', OBJECT='V492 Car',
+                           BIAS='Bias', DARK='Dark', SKY='')  # noqa
+                hdr['OBJECT'] = (obj[obstype], 'Object Name')
+            else:
+                hdr['OBJECT'] = (objname, 'Object Name')
             # populate OBSCLASS keyword
             obsclass = dict(FLAT='partnerCal', ARC='partnerCal',  # noqa
-                OBJECT='science', BIAS='dayCal', DARK='dayCal', SKY='')
+                            OBJECT='science', BIAS='dayCal', DARK='dayCal',
+                            SKY='', STANDARD='partnerCal')
             hdr['OBSCLASS'] = (obsclass[obstype], 'Observe class')
 
             # populate GEMPRGID, OBSID, and DATALAB keywords
@@ -1825,9 +1828,9 @@ class Arm(object):
             hdr['GEMPRGID'] = (prgid, 'Gemini programme ID')
             obsid = dict(
                 high=dict(BIAS='1', DARK='5', FLAT='4', ARC='10', OBJECT='9',
-                    SKY='7'),  # noqa
+                          SKY='7', STANDARD='9'),  # noqa
                 std=dict(BIAS='1', DARK='5', FLAT='3', ARC='2', OBJECT='8',
-                    SKY='6'),  # noqa
+                         SKY='6', STANDARD='8'),  # noqa
                 )
             hdr['OBSID'] = (
                 prgid+'-'+obsid[res][obstype], 'Observation ID / Data label')
@@ -2032,12 +2035,29 @@ class Ghost(object):
         self.blue = Arm('blue', **common)
         self.red = Arm('red', **common)
 
+
+    def get_standard_spectrum(self, std='hd160617.fits'):
+        """Extract the spectrum of one of the standard stars in the data folder"""
+        try:
+            data = pf.getdata(os.path.join(LOCAL_DIR, 'data/standards/'+std))
+        except:
+            return 'Standard specified does not have data in the standards directory'
+        as_flux = data['FLUX'] * u.erg/ u.s / u.cm**2 / u.angstrom
+        as_flux = as_flux.to(u.photon/u.s/u.angstrom/u.cm**2,
+                             equivalencies=u.spectral_density(data['WAVELENGTH'] * u.AA))
+        # Now calculate the approximate telescope area in cm**2
+        telescope_area = np.pi * (8.1 * 100. / 2.)**2
+        flux = as_flux * telescope_area / 50E3
+        spectrum = np.array([data['WAVELENGTH'] / 1e4, np.maximum(flux,0)])
+        return spectrum
+
+        
     def simulate_observation(self, duration=0.0, output_prefix='test_',
                              spectrum_in=None, xshift=0.0, yshift=0.0,
                              rv_thar=0.0, flux=1, use_thar=True, res='high',
                              add_sky=True, radvel=0.0, thar_flatlamp=False,
-                             flatlamp=False, obstype=None, seeing=0.8,
-                             sv_duration=10.0, sv_flux_profile=None,
+                             flatlamp=False, obstype=None, objname=None,
+                             seeing=0.8, sv_duration=10.0, sv_flux_profile=None,
                              data_label=1, binmode=(1, 1)):
         """
         Simulate an observation with the whole instrument.
@@ -2095,6 +2115,10 @@ class Ghost(object):
         obstype: string
             The value for the OBSTYPE FITS keyword
 
+        obsname: string
+            The name of the target to be created. Will populate the OBJECT
+            keyword.
+
         seeing: float (optional)
             Determines the flux in each fiber (if flatlamp=False)
 
@@ -2125,7 +2149,7 @@ class Ghost(object):
             bias_level=self.bias_level, overscan=self.overscan, add_sky=add_sky,
             namps=self.namps, use_thar=use_thar, res=res, utstart=utstart,
             thar_flatlamp=thar_flatlamp, seeing=seeing, data_label=data_label,
-            flatlamp=flatlamp, obstype=obstype, binning=binmode)
+            flatlamp=flatlamp, obstype=obstype, objname=objname, binning=binmode)
 
         blue_hdul = self.blue.simulate_frame(  # pylint: disable=star-args
             additive_noise=self.additive_noise['blue'],
