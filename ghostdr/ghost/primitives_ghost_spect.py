@@ -20,7 +20,7 @@ from gempy.mosaic.mosaicAD import MosaicAD
 
 from .polyfit import GhostArm, Extractor, SlitView
 
-from .primitives_ghost import GHOST
+from .primitives_ghost import GHOST, filename_updater
 from .parameters_ghost_spect import ParametersGHOSTSpect
 
 from .lookups import polyfit_dict, line_list
@@ -241,10 +241,10 @@ class GHOSTSpect(GHOST):
                 dark = self._rebin_ghost_ad(dark, xb, yb)
                 # Re-name the dark so we don't blow away the old one on save
                 dark_filename_orig = dark.filename
-                dark.filename = gt.filename_updater(adinput=dark,
-                                                    suffix='rebin%dx%d' %
-                                                           (rows, cols, ),
-                                                    strip=True)
+                dark.filename = filename_updater(dark,
+                                                 suffix='_rebin%dx%d' %
+                                                        (xb, yb, ),
+                                                 strip=True)
                 dark.write(clobber=True)
                 dark_processing_done[
                     (dark_filename_orig, xb, yb)] = dark.filename
@@ -258,6 +258,7 @@ class GHOSTSpect(GHOST):
                 gt.check_inputs_match(ad, dark, check_filter=False)
             except ValueError:
                 # Else try to extract a matching region from the dark
+                log.warning('AD inputs did not match - attempting to clip dark')
                 dark = gt.clip_auxiliary_data(ad, aux=dark, aux_type="cal")
 
                 # Check again, but allow it to fail if they still don't match
@@ -406,8 +407,8 @@ class GHOSTSpect(GHOST):
 
     def findApertures(self, adinputs=None, **params):
         """
-        Locate the apertures within a GHOST frame, and write out polyfit-
-        compliant FITS files to the calibrations system
+        Locate the apertures within a GHOST frame, and insert a :any:`polyfit`
+        model into a new extension on each data frame
         
         Parameters
         ----------
