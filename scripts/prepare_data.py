@@ -19,6 +19,7 @@ all_files = filter(lambda f: not f.startswith('bias'), all_files)
 # Not the most efficient way, but the clearest (I think)
 for f in all_files:
     ad = astrodata.open(f)
+    print(f)
     tags = ad.tags
     p = GHOST([ad])
     arm = ad.arm()

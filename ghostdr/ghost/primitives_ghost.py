@@ -15,6 +15,7 @@ from recipe_system.utils.decorators import parameter_override
 
 import re
 import astrodata
+import numpy as np
 # ------------------------------------------------------------------------------
 _HDR_SIZE_REGEX = re.compile(r'^\[(?P<x1>[0-9]*)\:'
                              r'(?P<x2>[0-9]*),'
@@ -97,11 +98,43 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         cols = xb
         for ext in ad:
             # Do the re-binning
+            # Re-bin data
             binned_array = ext.data.reshape(
                 int(ext.data.shape[0] / rows), rows,
                 int(ext.data.shape[1] / cols), cols
             ).sum(axis=1).sum(axis=2)
+
+            # Re-bin variance
+            # These are summed in quadrature
+            binned_var = ext.variance ** 2
+            binned_var = binned_var.reshape(
+                int(ext.variance.shape[0] / rows), rows,
+                int(ext.variance.shape[1] / cols), cols
+            ).sum(axis=1).sum(axis=2)
+            binner_var = np.sqrt(binned_var)
+
+            # Re-bin mask
+            # This can't be done in an easy one-liner - numpy bitwise_and
+            # is designed to combine two distinct arrays, not combine a
+            # unitary array a la, e.g. sum
+            reshaped_mask = ext.mask.reshape(
+                int(ext.mask.shape[0] / rows), rows,
+                int(ext.mask.shape[1] / cols), cols
+            )
+            binned_mask_r = reshaped_mask[:, 0, :, :]
+            for i in range(1, rows):
+                binned_mask_r = np.bitwise_and(binned_mask_r,
+                                               reshaped_mask[:, i, :, :])
+            binned_mask = binned_mask_r[:, :, 0]
+            for j in range(1, cols):
+                binned_mask = np.bitwise_and(binned_mask,
+                                             binned_mask_r[:, :, j])
+
+            # Alter the data values (do this all together in case one of the
+            # calculations above bombs
             ext.data = binned_array
+            ext.variance = binned_var
+            ext.mask = binned_mask
 
             # Update header values
             ext.hdr.set('CCDSUM',
@@ -157,5 +190,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                                    ),
                             comment='Re-binned to %dx%d' % (cols, rows,),
                             )
+
+        log.stdinfo('Re-binning complete')
 
         return ad
