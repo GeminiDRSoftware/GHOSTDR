@@ -21,7 +21,7 @@ def reduce(p):
     p.biasCorrect()
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
-    #p.darkCorrect()
+    p.darkCorrect()
     p.tileArrays()
     #p.rejectCosmicRays()
     # TODO: Understand this! BPM combination is automatic in AD arithmetic
