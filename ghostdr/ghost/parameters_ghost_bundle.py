@@ -4,4 +4,8 @@
 from .parameters_ghost import ParametersGHOST
 
 class ParametersGHOSTBundle(ParametersGHOST):
-    pass
+
+    splitBundle = {
+        "suffix"            : "_unbundled",
+    }
+
