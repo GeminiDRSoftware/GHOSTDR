@@ -81,6 +81,22 @@ class GHOSTSpect(GHOST):
                             "skipping".format(ad.filename))
                 continue
 
+            # Re-bin the flat if necessary
+            # We only need the mask, but it's best to use the full rebin
+            # helper function in case the mask rebin code needs to change
+            if flat.detector_x_bin() != ad.detector_x_bin(
+            ) or flat.detector_y_bin != ad.detector_y_bin():
+                xb = ad.detector_x_bin()
+                yb = ad.detector_y_bin()
+                flat = self._rebin_ghost_ad(flat, xb, yb)
+                # Re-name the flat so we don't blow away the old one on save
+                flat_filename_orig = flat.filename
+                flat.filename = filename_updater(flat,
+                                                 suffix='_rebin%dx%d' %
+                                                        (xb, yb,),
+                                                 strip=True)
+                flat.write(clobber=True)
+
             # CJS: Edited here to require that the science and flat frames'
             # extensions are the same shape. The original code would no-op
             # with a warning for each pair that didn't, but I don't see how
