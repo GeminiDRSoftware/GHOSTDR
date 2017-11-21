@@ -1,8 +1,8 @@
 """
-Recipes available to data with tags: GHOST, BUNDLE, NxN, UNPREPARED
+Recipes available to data with tags: GHOST, BUNDLE, RAW, UNPREPARED
 Default is "makeProcessedBundle".
 """
-recipe_tags = set(['GHOST', 'BUNDLE', 'NxN', 'UNPREPARED'])
+recipe_tags = set(['GHOST', 'BUNDLE', 'RAW', 'UNPREPARED'])
 
 def makeProcessedBundle(p):
     """
