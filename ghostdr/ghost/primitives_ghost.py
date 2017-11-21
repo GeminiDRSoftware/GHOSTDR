@@ -59,6 +59,11 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         AstroData objects that will be saved during reduction. It is designed
         to handle the correct adjustment of the relevant header keywords.
 
+        If the input ad contains a variance plane, the re-binned variance
+        plane is computed by summing over the binned variance pixels in
+        quadrature. If a mask plane is present, the re-binned mask plane is
+        computed by sequentially bitwise_or combining the input mask pixels.
+
         This function has been included within the GHOST primitive class
         mostly so logging is consistent. Otherwise, it could be defined as
         a @staticmethod (or just exist outside the class completely).
@@ -104,39 +109,44 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                 int(ext.data.shape[1] / cols), cols
             ).sum(axis=1).sum(axis=2)
 
+            reset_kwargs = {'check': True, }
+
             # Re-bin variance
             # These are summed in quadrature
-            binned_var = ext.variance ** 2
-            binned_var = binned_var.reshape(
-                int(ext.variance.shape[0] / rows), rows,
-                int(ext.variance.shape[1] / cols), cols
-            ).sum(axis=1).sum(axis=2)
-            binner_var = np.sqrt(binned_var)
+            if ext.variance is not None:
+                binned_var = ext.variance ** 2
+                binned_var = binned_var.reshape(
+                    int(ext.variance.shape[0] / rows), rows,
+                    int(ext.variance.shape[1] / cols), cols
+                ).sum(axis=1).sum(axis=2)
+                binned_var = np.sqrt(binned_var)
+                reset_kwargs['variance'] = binned_var
 
             # Re-bin mask
             # This can't be done in an easy one-liner - numpy bitwise_and
             # is designed to combine two distinct arrays, not combine a
             # unitary array a la, e.g. sum
-            reshaped_mask = ext.mask.reshape(
-                int(ext.mask.shape[0] / rows), rows,
-                int(ext.mask.shape[1] / cols), cols
-            )
-            binned_mask_r = reshaped_mask[:, 0, :, :]
-            for i in range(1, rows):
-                binned_mask_r = np.bitwise_and(binned_mask_r,
-                                               reshaped_mask[:, i, :, :])
-            binned_mask = binned_mask_r[:, :, 0]
-            for j in range(1, cols):
-                binned_mask = np.bitwise_and(binned_mask,
-                                             binned_mask_r[:, :, j])
+            if ext.mask is not None:
+                reshaped_mask = ext.mask.reshape(
+                    int(ext.mask.shape[0] / rows), rows,
+                    int(ext.mask.shape[1] / cols), cols
+                )
+                binned_mask_r = reshaped_mask[:, 0, :, :]
+                for i in range(1, rows):
+                    binned_mask_r = np.bitwise_or(binned_mask_r,
+                                                  reshaped_mask[:, i, :, :])
+                binned_mask = binned_mask_r[:, :, 0]
+                for j in range(1, cols):
+                    binned_mask = np.bitwise_or(binned_mask,
+                                                binned_mask_r[:, :, j])
+                reset_kwargs['mask'] = binned_mask
 
             # Alter the data values (do this all together in case one of the
             # calculations above bombs
             # ext.data = binned_array
             # ext.variance = binned_var
             # ext.mask = binned_mask
-            ext.reset(binned_array, mask=binned_mask, variance=binned_var,
-                      check=True)
+            ext.reset(binned_array, **reset_kwargs)
 
             # Update header values
             ext.hdr.set('CCDSUM',
