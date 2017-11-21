@@ -1,6 +1,6 @@
 """
 Recipes available to data with tags ['GHOST', 'SPECT'].
-Default is "makeProcessedArc". SQ is identical to QA recipe.
+Default is "reduce". SQ is identical to QA recipe.
 """
 recipe_tags = set(['GHOST', 'SPECT'])
 
