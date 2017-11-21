@@ -132,9 +132,11 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
             # Alter the data values (do this all together in case one of the
             # calculations above bombs
-            ext.data = binned_array
-            ext.variance = binned_var
-            ext.mask = binned_mask
+            # ext.data = binned_array
+            # ext.variance = binned_var
+            # ext.mask = binned_mask
+            ext.reset(binned_array, mask=binned_mask, variance=binned_var,
+                      check=True)
 
             # Update header values
             ext.hdr.set('CCDSUM',

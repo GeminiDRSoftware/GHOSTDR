@@ -956,9 +956,14 @@ class GHOSTSpect(GHOST):
             mo = MosaicAD(ad, mosaic_ad_function=simple_mosaic_function)
             ad_mos = mo.as_astrodata(tile=True)
 
-            gt.mark_history(ad_mos, primname=self.myself(), keyword=timestamp_key)
-            ad_mos.update_filename(suffix=params["suffix"], strip=True)
+            gt.mark_history(ad_mos, primname=self.myself(),
+                            keyword=timestamp_key)
+            ad_mos.update_filename(suffix=params["suffix"],
+                                   strip=True)
             adoutputs.append(ad_mos)
+
+            # ad_mos.write(clobber=True)
+
         return adoutputs
 
     # validateData() removed since inherited Standardize method will handle it
