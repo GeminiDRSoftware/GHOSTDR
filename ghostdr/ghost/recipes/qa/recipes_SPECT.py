@@ -30,7 +30,7 @@ def reduce(p):
     p.extractProfile()
     p.flatCorrect() # Need to write our own, NOT USE GMOS - extract the flat profile,
                     # then simple division
-    #p.responseCorrect() # canned standard star correction to the point of
+    # p.responseCorrect() # canned standard star correction to the point of
                      # flatCorrect, plus a model flux
                      # User should be able to turn off this step
                      # Possible option for telluric correction (so
