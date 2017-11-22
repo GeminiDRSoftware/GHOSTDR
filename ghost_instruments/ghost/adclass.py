@@ -86,6 +86,11 @@ class AstroDataGhost(AstroDataGemini):
         else:
             return TagSet([binnings.replace(' ', 'x', 1)])
 
+    @astro_data_tag
+    def _tag_obsclass(self):
+        if self.phu.get('OBSCLASS') == 'partnerCal':
+            return TagSet(['PARTNER_CAL'])
+
     @astro_data_descriptor
     def amp_read_area(self):
         """
