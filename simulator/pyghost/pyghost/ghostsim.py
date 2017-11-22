@@ -573,7 +573,7 @@ class SlitViewer(object):
             hdr['AMPNAME'] = (0, 'Amplifier name')
             hdr['CCDNAME'] = ('Sony-ICX674', 'CCD name')
             hdr['CCDSUM'] = str(self.binning) + " " + str(self.binning)
-            hdr['EXPTIME'] = self.duration
+
             utcnow = self.utstart + datetime.timedelta(
                 seconds=expid*self.duration)
             hdr['EXPUTST'] = (utcnow.strftime("%H:%M:%S.%f")[:-3],
@@ -581,6 +581,8 @@ class SlitViewer(object):
             hdr['EXPUTEND'] = (
                 (utcnow + datetime.timedelta(seconds=self.duration))
                 .strftime("%H:%M:%S.%f")[:-3], 'UT time at exposure end')
+            # needed by gemcombine.cl (used by stackFrames())
+            hdr['EXPTIME'] = self.duration
 
             if self.cosmics:
                 cosim = self.cosims[expid]
@@ -1877,7 +1879,6 @@ class Arm(object):
             # hdr['CRFOLLOW'] = (0, '')  # TODO: where can I get this info?
 
             # time-related keywords
-            hdr['EXPTIME'] = (duration, 'Exposure time in seconds')
             hdr['DATE-OBS'] = (
                 utstart.strftime("%Y-%m-%d"), 'UT date at observation start')
             hdr['UTSTART'] = (utstart.strftime("%H:%M:%S.%f")[:-3],
@@ -1906,11 +1907,14 @@ class Arm(object):
                 hdr['EXPID'] = (data_label, 'Exposure ID')
                 hdr['PCOUNT'] = (0, 'Required keyword; must = 0')
                 hdr['GCOUNT'] = (1, 'Required keyword; must = 1')
+
                 hdr['EXPUTST'] = (utstart.strftime("%H:%M:%S.%f")[:-3],
                     'UT time at exposure start')  # noqa
                 hdr['EXPUTEND'] = (
                     (utstart + datetime.timedelta(seconds=duration))
                     .strftime("%H:%M:%S.%f")[:-3], 'UT time at exposure end')
+                # needed by gemcombine.cl (used by stackFrames())
+                hdr['EXPTIME'] = (duration, 'Exposure time in seconds')
 
                 hdr['DETSIZE'] = (detsz, 'Detector size')
                 hdr['CCDSIZE'] = (detsz, 'CCD size')
