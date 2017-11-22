@@ -175,7 +175,7 @@ class GHOSTSlit(GHOST):
                 earliest_end = min(sc_end, sv_end)
                 overlap = (earliest_end - latest_start).seconds
                 overlap = 0.0 if overlap < 0.0 else overlap  # no overlap edge case
-                sv_duration = ext.hdr['EXPTIME']
+                sv_duration = (sv_end - sv_start).seconds
                 overlap /= sv_duration  # convert into a percentage
 
                 # compute the offset (the value to be weighted), in seconds,
@@ -292,12 +292,12 @@ def _total_obj_flux(res, data, flat_data=None):
     """
     sky_correction = flat_data is not None
     svobj = SlitView(data, flat_data, mode=res)  # OK to pass None for flat
-    reds = svobj.object_slit_profiles('red',  # noqa
-                                      correct_for_sky=sky_correction, append_sky=False,
-                                      normalise_profiles=False)
-    blues = svobj.object_slit_profiles('blue',  # noqa
-                                       correct_for_sky=sky_correction, append_sky=False,
-                                       normalise_profiles=False)
+    reds = svobj.object_slit_profiles(
+        'red', correct_for_sky=sky_correction, append_sky=False,
+        normalise_profiles=False)
+    blues = svobj.object_slit_profiles(
+        'blue', correct_for_sky=sky_correction, append_sky=False,
+        normalise_profiles=False)
 
     # discard the arc profiles if high res
     if res == 'high':
