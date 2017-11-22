@@ -444,7 +444,13 @@ class Extractor():
                 # Naturally, if this happens on iteration one, this will crash
                 # on the next loop.
                 try: pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
-                except: pass #import pdb;pdb.set_trace()
+                except:
+                    try:
+                        pixel_weights
+                    except:
+                        pixel_weights = b_mat.copy()
+                    else:
+                        pass
 
                 #FIXME Bugshooting: Some tilted, bright arc lines cause strange
                 #weightings here... Probably OK - only strange weightings in 2D

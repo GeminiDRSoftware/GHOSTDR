@@ -13,7 +13,7 @@ COREDIR=$PWD
 
 CHECK=false
 
-BINNING='1x1'
+BINNING='2x4'
 SEEING=0.5
 
 # Now we define the context. For Quality Assessment, use '--qa', for Quick Look
@@ -66,7 +66,7 @@ for MODE in HIGH STD; do
     reduce --drpkg ghostdr $QUALITY @flat.list 2>&1 | tee >(add_to_calib_mgr)
 
     if $CHECK; then
-        echo 'You can now check the reduction at this step.'
+	echo 'You can now check the reduction at this step.'
         read -p "Press any key to continue... " -n1 -s
     fi
     
@@ -78,6 +78,20 @@ for MODE in HIGH STD; do
         read -p "Press any key to continue... " -n1 -s
     fi
     
+    while read object <&3; do
+        echo Reducing $object
+        reduce --drpkg ghostdr $QUALITY $OBJDIR/$object 2>&1 | tee >(add_to_calib_mgr)
+        if $CHECK; then
+            echo 'You can now check the reduction at this step.'
+            read -p "Press any key to continue... " -n1 -s
+        fi
+    done 3< <(
+        typewalk --tags GHOST SLITV IMAGE UNPREPARED $MODE --dir $OBJDIR/ --filemask "standard.*\.(fits|FITS)" -n \
+        | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g" \
+        | grep 'fits' \
+        | awk '{print $1}'
+    )
+
     while read object <&3; do
         echo Reducing $object
         reduce --drpkg ghostdr $QUALITY $OBJDIR/$object 2>&1 | tee >(add_to_calib_mgr)
@@ -136,6 +150,20 @@ for CAM in RED BLUE; do
             read -p "Press any key to continue... " -n1 -s
         fi
 
+	while read object <&3; do
+            echo Reducing $object
+            reduce --drpkg ghostdr $QUALITY $OBJDIR/$object
+            if $CHECK; then
+                echo 'You can now check the reduction at this step.'
+                read -p "Press any key to continue... " -n1 -s
+            fi
+        done 3< <(
+            typewalk --tags GHOST UNPREPARED $BINNING $CAM $MODE --dir $OBJDIR/ --filemask "standard.*\.(fits|FITS)" -n \
+            | sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g" \
+            | grep 'fits' \
+            | awk '{print $1}'
+        )
+	
         while read object <&3; do
             echo Reducing $object
             reduce --drpkg ghostdr $QUALITY $OBJDIR/$object
