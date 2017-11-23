@@ -19,4 +19,5 @@ class ParametersGHOSTSlit(ParametersGHOST):
         "operation"         : "average",
         "reject_method"     : "none",
         "apply_dq"          : True,
+        "zero"              : False,
     }
