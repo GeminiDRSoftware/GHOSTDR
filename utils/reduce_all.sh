@@ -43,6 +43,10 @@ add_to_calib_mgr() {
 rm -rf calibrations .reducecache  # prepare_data.py outputs not needed because
 reduce_db.py init -v -w  # we're using the local calibration manager instead
 
+echo 'Splitting MEFs'
+typewalk --tags BUNDLE -n -o bundle
+reduce --drpkg ghostdr @bundle
+
 echo 'Doing slits now'
 
 typewalk --tags GHOST SLITV BIAS UNPREPARED --dir $BIASDIR/ -n -o bias.list
