@@ -1740,12 +1740,11 @@ class Arm(object):
             chkhdu.writeto(output_prefix + self.arm + '_chk.fits', clobber=True)
 
         binmodes = [binning]
-        if obstype in ['BIAS', 'OBJECT', 'STANDARD']:
+        if obstype not in ['BIAS', 'OBJECT', 'STANDARD']:
+            binmodes = [(1, 1)]
+        elif self.split:
             binmodes = [(1, 1), (1, 2), (1, 8), (2, 4), (2, 8)]
         for binmode in binmodes:
-            if not self.split and binning != binmode:
-                continue
-
             opims = deepcopy(ampims)
 
             # slap on an overscan region
