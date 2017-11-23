@@ -22,7 +22,7 @@ def makeProcessedSlitArc(p):
     p.addVAR(read_noise=True)
     p.biasCorrect()
     p.addVAR(poisson_noise=True)
-    # TODO? p.ADUToElectrons()
+    p.ADUToElectrons()
     p.darkCorrect()
     p.CRCorrect()
     p.addToList(purpose="forStack")
