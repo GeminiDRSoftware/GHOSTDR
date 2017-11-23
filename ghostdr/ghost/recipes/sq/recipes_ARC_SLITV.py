@@ -22,7 +22,7 @@ def makeProcessedSlitArc(p):
     p.addVAR(read_noise=True)
     p.biasCorrect()
     p.addVAR(poisson_noise=True)
-    # TODO? p.ADUToElectrons()
+    p.ADUToElectrons()
     p.darkCorrect()
     #p.correctSlitCosmics()
     p.stackFrames(operation='median', reject_method=None, apply_dq=True)
