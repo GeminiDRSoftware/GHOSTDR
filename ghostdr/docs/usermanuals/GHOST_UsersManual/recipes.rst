@@ -128,6 +128,122 @@ reduction step (e.g. bias reduction, dark reduction, etc.) to allow you to
 review the output. Alternatively, you could choose to run through the steps
 manually yourself, as described below.
 
+Data Reduction Steps
+--------------------
+
+The reduction of each component of a GHOSTDR observing package (bias, dark,
+flat, etc.) can be broken down into three parts:
+
+``typewalk``
+++++++++++++
+
+.. note::
+    For reducing a single file, you don't need to use the ``typewalk``
+    utility.
+
+The ``typewalk`` utility is used for generating lists of files to reduce
+together. This may be because the list of files will eventually require
+stacking, or simply as a convenience for reducing a number of data frames
+with a single command.
+
+The most common usage for ``typewalk`` is to generate a list of files
+with matching :module:`AstroData` tags. For example, to generate a list
+of all files in the current directory which are red camera biases with 2x4
+binning, and write this list out to a text file called
+``bias.1x1.red.list``, use the following::
+
+    typewalk --tags GHOST BIAS RED 1x1 -o bias.1x1.red.list
+
+There are several other options available (e.g. using a regex filemask to
+further restrict the files you're considering) -- type ``typewalk --help`` to
+see these options.
+
+``reduce``
+++++++++++
+
+The ``reduce`` command is part of :any:`DRAGONS`, and works
+in a similar fashion to an old ``IRAF`` call. Please see the :any:`DRAGONS`
+documentation for more detail. However, there are two important options to
+take note of for development GHOST reduction::
+
+    reduce --drpkg ghostdr @bias.1x1.red.list
+
+The option ``--drpkg ghostdr`` tells ``reduce`` to import the ``ghost``
+data reduction package, in addition to the standard :any:`DRAGONS`. This
+will not be required in production, and ``ghostdr`` will be incorporated
+into :any:`DRAGONS` by Gemini.
+
+The ``@`` modifier tells ``reduce`` that the input file is in fact a list,
+and should be broken apart for reduction. If you were only passing a single
+FITS file to ``reduce``, you would leave the ``@`` modifier off.
+
+``reduce_db.py``
+++++++++++++++++
+
+The current iteration of the local calibration manager has no ability to
+automatically detect when a new calibrator has appeared in the
+``calibrations/`` directory. Therefore, you will need to manually load
+your calibrators into the system::
+
+    reduce_db.py add calibrations/processed_bias/bias_1_1x1_red_bias.fits
+
+The ``reduce_db.py remove`` command has the same syntax, and can be used to
+remove files from the database. This is useful if your original calibrator
+has been superseded, or you've accidentally added a file to the database you
+shouldn't have (e.g. a rebinned dark or flat). To see all the files
+currently referenced in the database, use::
+
+    reduce_db.py list
+
+.. _reducing-slit-viewing-images:
+
+Reducing Slit Viewing Images
+----------------------------
+
+The first step in reduction is to create slit viewer frames
+(which, when applied, remove cosmic rays and
+compute the mean exposure epoch).  The first step, computing the slit bias
+calibrator, may be skipped in favour of simply pointing to a single slit bias
+frame
+(with tags ``SLITV`` and ``BIAS``).  Or, follow these steps to produce one by
+stacking multiple frames together::
+
+    typewalk --tags GHOST BIAS SLITV --dir <path_to>/data_folder -o slit.bias.list
+    reduce --drpkg ghostdr @slit.bias.list
+    reduce_db.py add calibrations/processed_bias/your_red_SLIT_bias.fits
+
+The next step is to generate the dark calibrator.  Follow these steps to produce
+one::
+
+    typewalk --tags GHOST SLITV DARK --dir <path_to>/data_folder -o slit.dark.list
+    reduce --drpkg ghostdr @slit.dark.list
+    reduce_db.py add calibrations/processed_dark/your_red_SLIT_dark.fits
+
+Now generate the flat calibrator.  For this you will now need to specify an
+additional type to ``typewalk`` that identifies the resolution of the data that
+you wish to process (as mixing resolutions would be nonsensical).  Follow these
+steps as an example::
+
+    typewalk --tags GHOST SLITV FLAT STD --dir <path_to>/data_folder -o slit.flat.std.list
+    reduce --drpkg ghostdr @slit.flat.std.list
+    reduce_db.py add calibrations/processed_slitflat/your_red_SLIT_slitflat.fits
+
+Though not (yet) used in our final object reduction, you can also produce a
+master arc frame::
+
+    typewalk --tags GHOST SLITV ARC HIGH --dir <path_to>/data_folder -o slit.arc.std.list
+    reduce --drpkg ghostdr @slit.arc.std.list
+    reduce_db.py add calibrations/processed_arc/your_red_SLIT_arc.fits
+
+The final step is to use all of the above calibrators (except the arc) in a call
+to ``reduce`` a set of slit viewer images taken concurrently with a science
+frame, usually found in files named like ``obj95_1.0_high_SLIT.fits`` (following
+this convention: ``obj{exptime}_{seeing}_{resolution}_SLIT.fits``).
+This informs the reduction framework to run the
+``makeProcessedSlit`` GHOST recipe on them.  Run the reduction as follows::
+
+    reduce --drpkg ghostdr <path_to>/data_folder/obj95_1.0_high_SLIT.fits
+
 Generating a Bias Calibration frame
 -----------------------------------
 
@@ -344,55 +460,6 @@ a bias, dark and flat corrected GHOST spectrum frame.
              working, but aperture removal/re-instatement is required to avoid
              accidentally flagging spectral peaks and the edges of orders as
              cosmic rays, and this has yet to be implemented.
-
-.. _reducing-slit-viewing-images:
-
-Reducing Slit Viewing Images
-----------------------------
-
-Reducing slit viewer images is very similar to reducing standard images,
-including steps to generate bias, dark and flat calibration frames, plus a
-final step to process the slit viewer frames (which removes cosmic rays and
-computes the mean exposure epoch).  The first step, computing the bias
-calibrator, may be skipped in favour of simply pointing to a slit bias frame
-(with tags ``SLITV`` and ``BIAS``).  Or, follow these steps to produce one by
-stacking multiple frames together::
-
-    typewalk --tags GHOST BIAS SLITV --dir <path_to>/data_folder -o slit.bias.list
-    reduce --drpkg ghostdr @slit.bias.list
-    reduce_db.py add calibrations/processed_bias/your_red_SLIT_bias.fits
-
-The next step is to generate the dark calibrator.  Follow these steps to produce
-one::
-
-    typewalk --tags GHOST SLITV DARK --dir <path_to>/data_folder -o slit.dark.list
-    reduce --drpkg ghostdr @slit.dark.list
-    reduce_db.py add calibrations/processed_dark/your_red_SLIT_dark.fits
-
-Now generate the flat calibrator.  For this you will now need to specify an
-additional type to ``typewalk`` that identifies the resolution of the data that
-you wish to process (as mixing resolutions would be nonsensical).  Follow these
-steps as an example::
-
-    typewalk --tags GHOST SLITV FLAT STD --dir <path_to>/data_folder -o slit.flat.std.list
-    reduce --drpkg ghostdr @slit.flat.std.list
-    reduce_db.py add calibrations/processed_slitflat/your_red_SLIT_slitflat.fits
-
-Though not (yet) used in our final object reduction, you can also produce a
-master arc frame::
-
-    typewalk --tags GHOST SLITV ARC HIGH --dir <path_to>/data_folder -o slit.arc.std.list
-    reduce --drpkg ghostdr @slit.arc.std.list
-    reduce_db.py add calibrations/processed_arc/your_red_SLIT_arc.fits
-
-The final step is to use all of the above calibrators (except the arc) in a call
-to ``reduce`` a set of slit viewer images taken concurrently with a science
-frame, usually found in files named like ``obj95_1.0_high_SLIT.fits`` (following
-this convention: ``obj{exptime}_{seeing}_{resolution}_SLIT.fits``).
-This informs the reduction framework to run the
-``makeProcessedSlit`` GHOST recipe on them.  Run the reduction as follows::
-
-    reduce --drpkg ghostdr <path_to>/data_folder/obj95_1.0_high_SLIT.fits
 
 
 Other Processing Flows
