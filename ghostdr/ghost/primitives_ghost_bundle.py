@@ -10,7 +10,8 @@ from gempy.gemini import gemini_tools as gt
 from recipe_system.utils.decorators import parameter_override
 
 import astrodata
-from copy import deepcopy
+import copy
+import itertools
 # ------------------------------------------------------------------------------
 @parameter_override
 class GHOSTBundle(GHOST):
@@ -52,17 +53,23 @@ class GHOSTBundle(GHOST):
                             ad.filename, self.myself()))
                 continue
 
-            for cam in ['Slit', 'RED', 'BLUE']:
-                n = astrodata.create(phu=deepcopy(ad.header[0]))
-                n.filename = ad.filename
+            log.stdinfo("Unbundling {}:".format(ad.filename))
+
+            # BEWARE: this doesn't preserve prior behaviour of putting all SV
+            # exposures into a single file: test further with reduction system
+            key = lambda x: (x.hdr['CAMERA'], x.hdr['EXPID'])
+            extns = sorted(ad, key=key)
+            for k, g in itertools.groupby(extns, key=key):
+                n = astrodata.create(copy.deepcopy(ad.header[0]))
                 for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:
                     del n.phu[kw]
-                for x in ad:
-                    if x.hdr['CAMERA'] == cam:
-                        n.append(x)
+                for x in g: n.append(x)
                 for kw in ['CAMERA', 'CCDNAME']:
                     n.phu[kw] = n[0].hdr[kw]
-                n.update_filename(suffix='_'+cam)
+                n.filename = ad.filename
+                binning = 'x'.join(n[0].hdr['CCDSUM'].split())
+                n.update_filename(suffix='_'+binning+'_'+k[0].lower()+str(k[1]))
+                log.stdinfo("   Writing {}".format(n.filename))
                 n.write(clobber=True)  # should we always overwrite?
 
             # Timestamp and update filename
