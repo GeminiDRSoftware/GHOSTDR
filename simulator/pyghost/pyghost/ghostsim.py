@@ -1855,7 +1855,7 @@ class Arm(object):
         elif self.split:
             binmodes = [(1, 1), (1, 2), (1, 8), (2, 4), (2, 8)]
         elif obstype == 'BIAS' and binning != (1, 1):
-            binmodes.append((1, 1))
+            binmodes.insert(0, (1, 1))
 
         for expid, binmode in enumerate(binmodes, start=1):
             opims = deepcopy(ampims)
