@@ -28,7 +28,8 @@ def makeProcessedArc(p):
     p.addVAR(poisson_noise=True)
     # TODO? p.ADUToElectrons()
     p.darkCorrect()
-    #p.rejectCosmicRays()
+    #p.rejectCosmicRays(
+    # )
     p.tileArrays()
     p.extractProfile()
     p.fitWavelength()

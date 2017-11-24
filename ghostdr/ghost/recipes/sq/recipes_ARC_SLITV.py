@@ -4,6 +4,8 @@ Default is "makeProcessedSlitArc".
 """
 recipe_tags = set(['GHOST', 'CAL', 'SLITV', 'ARC'])
 
+from .recipes_SLITV import makeProcessedSlit
+
 def makeProcessedSlitArc(p):
     """
     This recipe performs the standardization and corrections needed to convert
@@ -24,9 +26,11 @@ def makeProcessedSlitArc(p):
     p.addVAR(poisson_noise=True)
     p.ADUToElectrons()
     p.darkCorrect()
-    #p.correctSlitCosmics()
+    # p.correctSlitCosmics()
     p.stackFrames(operation='median', reject_method=None, apply_dq=True)
     p.storeProcessedArc()
     return
+
+makeProcessedSlitArc = makeProcessedSlit
 
 default = makeProcessedSlitArc

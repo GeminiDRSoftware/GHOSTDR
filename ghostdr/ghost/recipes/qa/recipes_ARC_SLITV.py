@@ -2,7 +2,9 @@
 Recipes available to data with tags ['GHOST', 'CAL', 'SLITV', 'ARC'].
 Default is "makeProcessedSlitArc".
 """
-recipe_tags = set(['GHOST', 'CAL', 'SLITV', 'ARC'])
+recipe_tags = set(['GHOST', 'CAL', 'SLITV', 'ARC',])
+
+from .recipes_SLITV import makeProcessedSlit
 
 def makeProcessedSlitArc(p):
     """
@@ -30,5 +32,7 @@ def makeProcessedSlitArc(p):
     p.stackFrames(operation='median', reject_method=None)
     p.storeProcessedArc()
     return
+
+makeProcessedSlitArc = makeProcessedSlit
 
 default = makeProcessedSlitArc

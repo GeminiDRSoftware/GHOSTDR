@@ -141,6 +141,15 @@ class AstroDataGhost(AstroDataGemini):
         return (self.data_label().replace('_stack', ''), self.arm())
 
     @astro_data_descriptor
+    def detector_name(self):
+        """
+        Returns the detector (CCD) name.
+        """
+        if self.phu.get('CCDNAME') is not None:
+            return self.phu.get('CCDNAME')
+        return self.phu.get('DETTYPE')
+
+    @astro_data_descriptor
     def detector_x_bin(self):
         """
         Returns the detector binning in the x-direction
