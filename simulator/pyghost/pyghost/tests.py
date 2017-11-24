@@ -80,8 +80,8 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
     # This produces a dark frame
     for i in range(1, ndark+1):
         ghost.simulate_observation(
-            duration=duration, output_prefix='dark'+str(duration)+'_{0:d}_'
-            .format(i), use_thar=False, spectrum_in=blank, add_sky=False,
+            duration=duration, output_prefix='dark'+str(duration)+'_'+str(i)+'_',
+            use_thar=False, spectrum_in=blank, add_sky=False,
             obstype='DARK', data_label=i, binmode=target_binmode)
 
     for res in ('std', 'high'):
@@ -89,7 +89,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         for i in range(1, nflat+1):
             ghost.simulate_observation(
                 duration=duration, output_prefix='flat'+str(duration)+'_'+res +
-                '_{0:d}_'.format(i), use_thar=False, spectrum_in=flat,
+                '_'+str(i)+'_', use_thar=False, spectrum_in=flat,
                 add_sky=False, res=res, flatlamp=True, obstype='FLAT',
                 data_label=i, binmode=target_binmode)
 
@@ -117,7 +117,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
             spectrum = ghost.get_standard_spectrum(std=std)
             ghost.simulate_observation(
                 duration=duration, output_prefix='standard'+str(duration)+'_' +
-                std[:-5] + '_'+res+'_', use_thar=True, spectrum_in = spectrum,
+                std[:-5]+'_'+res+'_', use_thar=True, spectrum_in = spectrum,
                 add_sky=True, res=res, obstype='STANDARD', objname=std[:-5],
                 data_label=1, sv_flux_profile=sv_flux_profile,
                 binmode=target_binmode)

@@ -540,7 +540,7 @@ class SlitViewer(object):
 
         hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
         crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
-        for expid, image in enumerate(self.images):
+        for expid, image in enumerate(self.images, start=1):
             # Construct a new header
             hdr = pf.Header()
 
@@ -1739,12 +1739,125 @@ class Arm(object):
             chkhdu = pf.HDUList(pf.PrimaryHDU(data=check_image))
             chkhdu.writeto(output_prefix + self.arm + '_chk.fits', clobber=True)
 
+        # some datetimes for use in creating the header below
+        ltnow = utstart.replace(tzinfo=tz.tzutc())
+        ltnow = ltnow.astimezone(tz.tzlocal())
+
+        # Now create our fits image!
+        # By adding the DETSIZE and DETSEC keywords we can open the
+        # raw image in ds9 as an IRAF mosaic.
+        hdr = pf.Header()
+        hdr['OBSERVAT'] = (
+            'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
+        hdr['TELESCOP'] = 'Gemini-South'
+        hdr['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
+        if obstype=='STANDARD':
+            hdr['OBSTYPE'] = ('OBJECT', 'Observation type')
+        else:
+            hdr['OBSTYPE'] = (obstype, 'Observation type')
+
+        # required by the calibration manager
+        hdr['RAWPIREQ'] = 'yes'  # 'no', 'check', 'unknown'
+        hdr['RAWGEMQA'] = 'usable'  # 'bad', 'check', 'unknown'
+
+        # these are removed from the primary header when writing the MEF;
+        # conversely the MEF splitter primitive will (may?) need to add
+        # these to the split individual frame files in order for them to be
+        # correctly categorized by the type system
+        detsz = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
+        hdr['DETSIZE'] = (detsz, 'Detector size')
+        hdr['DETTYPE'] = (self.dettype, 'Detector array type')
+        hdr['CAMERA'] = (self.arm.upper(), 'Camera name')
+
+        if objname==None:
+            # populate OBJECT keyword
+            obj = dict(FLAT='GCALflat', ARC='ThAr', OBJECT='V492 Car',
+                       BIAS='Bias', DARK='Dark', SKY='')  # noqa
+            hdr['OBJECT'] = (obj[obstype], 'Object Name')
+        else:
+            hdr['OBJECT'] = (objname, 'Object Name')
+        # populate OBSCLASS keyword
+        obsclass = dict(FLAT='partnerCal', ARC='partnerCal',  # noqa
+                        OBJECT='science', BIAS='dayCal', DARK='dayCal',
+                        SKY='', STANDARD='partnerCal')
+        hdr['OBSCLASS'] = (obsclass[obstype], 'Observe class')
+
+        # populate GEMPRGID, OBSID, and DATALAB keywords
+        prgid = 'GS-2016B-Q-20'  # just choose a base at random
+        hdr['GEMPRGID'] = (prgid, 'Gemini programme ID')
+        obsid = dict(
+            high=dict(BIAS='1', DARK='5', FLAT='4', ARC='10', OBJECT='9',
+                      SKY='7', STANDARD='9'),  # noqa
+            std=dict(BIAS='1', DARK='5', FLAT='3', ARC='2', OBJECT='8',
+                     SKY='6', STANDARD='8'),  # noqa
+            )
+        hdr['OBSID'] = (
+            prgid+'-'+obsid[res][obstype], 'Observation ID / Data label')
+        hdr['DATALAB'] = (prgid+'-'+obsid[res][obstype]+'-' + (
+            '%03d' % data_label), 'DHS data label')
+
+        # keywords that vary by time and position: first start with
+        # a spot in the sky that's always visible from Gemini South
+        my_ra, my_dec = 149.2442500, -69.1009167  # V492 Car
+        spot = SkyCoord(my_ra, my_dec, unit=u.deg, frame='fk5')
+        # location and UTC time at Gemini South
+        gs_locn = EarthLocation(
+            lat=-30.24075*u.deg, lon=-70.736693*u.deg, height=2722*u.m)
+        gs_time = Time(ltnow, location=gs_locn) - 3*u.hour
+        aa_start = AltAz(obstime=gs_time, location=gs_locn)
+        aa_end = AltAz(obstime=gs_time+duration*u.second, location=gs_locn)
+        horz_start = spot.transform_to(aa_start)
+        horz_end = spot.transform_to(aa_end)
+        hdr['RA'] = (my_ra, 'Right Ascension')
+        hdr['DEC'] = (my_dec, 'Declination of Target')
+        hdr['ELEVATIO'] = (horz_start.alt.deg, 'Current Elevation')
+        hdr['AZIMUTH'] = (horz_start.az.deg, 'Current Azimuth')
+        # TODO: use apparent sidereal time below instead of mean?
+        hra = gs_time.sidereal_time('mean') - my_ra*u.deg  # hour angle
+        hdr['HA'] = (hra.to_string(unit=u.deg, sep=':'), 'Telescope hour angle')
+        hdr['AMSTART'] = (horz_start.secz.value, 'Airmass at start of exposure')
+        hdr['AMEND'] = (horz_end.secz.value, 'Airmass at end of exposure')
+        # assumes linear transition from AMSTART to AMEND which is likely wrong
+        mean_airmass = (horz_end.secz.value + horz_start.secz.value)/2
+        hdr['AIRMASS'] = (mean_airmass, 'Mean airmass for the observation')
+
+        # keywords that are constant
+        hdr['EQUINOX'] = (2000., 'Equinox of coordinate system')
+        hdr['HUMIDITY'] = (39., 'The Relative Humidity (fraction, 0..101)')
+        hdr['TAMBIENT'] = (8.8, 'The ambient temp (C)')
+        hdr['PRESSURE'] = (546.95412, 'The atmospheric pressure (mm Hg)')
+        hdr['PA'] = (90., 'Sky Position Angle at start of exposure')
+        hdr['IAA'] = (359.78, 'Instrument Alignment Angle')
+        hdr['CRPA'] = (-187.344883172036, 'Current Cass Rotator Position Angle')
+        # hdr['CRFOLLOW'] = (0, '')  # TODO: where can I get this info?
+
+        # time-related keywords
+        hdr['DATE-OBS'] = (
+            utstart.strftime("%Y-%m-%d"), 'UT date at observation start')
+        hdr['UTSTART'] = (utstart.strftime("%H:%M:%S.%f")[:-3],
+            'UT time at observation start')  # noqa
+        hdr['UTEND'] = (
+            (utstart + datetime.timedelta(seconds=duration))
+            .strftime("%H:%M:%S.%f")[:-3], 'UT time at observation end')
+        hdr['LT'] = (ltnow.strftime("%H:%M:%S.%f")[:-3],
+            'Local time at start of observation')  # noqa
+
+        # resolution-related keywords
+        if obstype != 'BIAS' and obstype != 'DARK':
+            hdr['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
+            hdr['SMPPOS'] = (1 if res == 'high' else 2)
+
+        hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
+
         binmodes = [binning]
         if obstype not in ['BIAS', 'OBJECT', 'STANDARD']:
             binmodes = [(1, 1)]
         elif self.split:
             binmodes = [(1, 1), (1, 2), (1, 8), (2, 4), (2, 8)]
-        for binmode in binmodes:
+        elif obstype == 'BIAS' and binning != (1, 1):
+            binmodes.append((1, 1))
+
+        for expid, binmode in enumerate(binmodes, start=1):
             opims = deepcopy(ampims)
 
             # slap on an overscan region
@@ -1781,119 +1894,6 @@ class Arm(object):
             if return_image:
                 return opims
 
-            # some datetimes for use in creating the header below
-            ltnow = utstart.replace(tzinfo=tz.tzutc())
-            ltnow = ltnow.astimezone(tz.tzlocal())
-
-            # Now create our fits image!
-            # By adding the DETSIZE and DETSEC keywords we can open the
-            # raw image in ds9 as an IRAF mosaic.
-            hdr = pf.Header()
-            hdr['OBSERVAT'] = (
-                'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
-            hdr['TELESCOP'] = 'Gemini-South'
-            hdr['INSTRUME'] = ('GHOST', 'Instrument used to acquire data')
-            if obstype=='STANDARD':
-                hdr['OBSTYPE'] = ('OBJECT', 'Observation type')
-            else:
-                hdr['OBSTYPE'] = (obstype, 'Observation type')
-
-            # required by the calibration manager
-            hdr['RAWPIREQ'] = 'yes'  # 'no', 'check', 'unknown'
-            hdr['RAWGEMQA'] = 'usable'  # 'bad', 'check', 'unknown'
-
-            # these are removed from the primary header when writing the MEF;
-            # conversely the MEF splitter primitive will (may?) need to add
-            # these to the split individual frame files in order for them to be
-            # correctly categorized by the type system
-            detsz = "[1:%d,1:%d]" % (image.shape[1], image.shape[0])
-            hdr['DETSIZE'] = (detsz, 'Detector size')
-            hdr['DETTYPE'] = (self.dettype, 'Detector array type')
-            hdr['CAMERA'] = (self.arm.upper(), 'Camera name')
-
-            if objname==None:
-                # populate OBJECT keyword
-                obj = dict(FLAT='GCALflat', ARC='ThAr', OBJECT='V492 Car',
-                           BIAS='Bias', DARK='Dark', SKY='')  # noqa
-                hdr['OBJECT'] = (obj[obstype], 'Object Name')
-            else:
-                hdr['OBJECT'] = (objname, 'Object Name')
-            # populate OBSCLASS keyword
-            obsclass = dict(FLAT='partnerCal', ARC='partnerCal',  # noqa
-                            OBJECT='science', BIAS='dayCal', DARK='dayCal',
-                            SKY='', STANDARD='partnerCal')
-            hdr['OBSCLASS'] = (obsclass[obstype], 'Observe class')
-
-            # populate GEMPRGID, OBSID, and DATALAB keywords
-            prgid = 'GS-2016B-Q-20'  # just choose a base at random
-            hdr['GEMPRGID'] = (prgid, 'Gemini programme ID')
-            obsid = dict(
-                high=dict(BIAS='1', DARK='5', FLAT='4', ARC='10', OBJECT='9',
-                          SKY='7', STANDARD='9'),  # noqa
-                std=dict(BIAS='1', DARK='5', FLAT='3', ARC='2', OBJECT='8',
-                         SKY='6', STANDARD='8'),  # noqa
-                )
-            hdr['OBSID'] = (
-                prgid+'-'+obsid[res][obstype], 'Observation ID / Data label')
-            hdr['DATALAB'] = (prgid+'-'+obsid[res][obstype]+'-' + (
-                '%03d' % data_label), 'DHS data label')
-
-            # keywords that vary by time and position: first start with
-            # a spot in the sky that's always visible from Gemini South
-            my_ra, my_dec = 149.2442500, -69.1009167  # V492 Car
-            spot = SkyCoord(my_ra, my_dec, unit=u.deg, frame='fk5')
-            # location and UTC time at Gemini South
-            gs_locn = EarthLocation(
-                lat=-30.24075*u.deg, lon=-70.736693*u.deg, height=2722*u.m)
-            gs_time = Time(ltnow, location=gs_locn) - 3*u.hour
-            aa_start = AltAz(obstime=gs_time, location=gs_locn)
-            aa_end = AltAz(obstime=gs_time+duration*u.second, location=gs_locn)
-            horz_start = spot.transform_to(aa_start)
-            horz_end = spot.transform_to(aa_end)
-            hdr['RA'] = (my_ra, 'Right Ascension')
-            hdr['DEC'] = (my_dec, 'Declination of Target')
-            hdr['ELEVATIO'] = (horz_start.alt.deg, 'Current Elevation')
-            hdr['AZIMUTH'] = (horz_start.az.deg, 'Current Azimuth')
-            # TODO: use apparent sidereal time below instead of mean?
-            hra = gs_time.sidereal_time('mean') - my_ra*u.deg  # hour angle
-            hdr['HA'] = (
-                hra.to_string(unit=u.deg, sep=':'), 'Telescope hour angle')
-            hdr['AMSTART'] = (
-                horz_start.secz.value, 'Airmass at start of exposure')
-            hdr['AMEND'] = (horz_end.secz.value, 'Airmass at end of exposure')
-            # assumes linear transition from AMSTART to AMEND which is likely
-            # wrong
-            mean_airmass = (horz_end.secz.value + horz_start.secz.value)/2
-            hdr['AIRMASS'] = (mean_airmass, 'Mean airmass for the observation')
-
-            # keywords that are constant
-            hdr['EQUINOX'] = (2000., 'Equinox of coordinate system')
-            hdr['HUMIDITY'] = (39., 'The Relative Humidity (fraction, 0..101)')
-            hdr['TAMBIENT'] = (8.8, 'The ambient temp (C)')
-            hdr['PRESSURE'] = (546.95412, 'The atmospheric pressure (mm Hg)')
-            hdr['PA'] = (90., 'Sky Position Angle at start of exposure')
-            hdr['IAA'] = (359.78, 'Instrument Alignment Angle')
-            hdr['CRPA'] = (
-                -187.344883172036, 'Current Cass Rotator Position Angle')
-            # hdr['CRFOLLOW'] = (0, '')  # TODO: where can I get this info?
-
-            # time-related keywords
-            hdr['DATE-OBS'] = (
-                utstart.strftime("%Y-%m-%d"), 'UT date at observation start')
-            hdr['UTSTART'] = (utstart.strftime("%H:%M:%S.%f")[:-3],
-                'UT time at observation start')  # noqa
-            hdr['UTEND'] = (
-                (utstart + datetime.timedelta(seconds=duration))
-                .strftime("%H:%M:%S.%f")[:-3], 'UT time at observation end')
-            hdr['LT'] = (ltnow.strftime("%H:%M:%S.%f")[:-3],
-                'Local time at start of observation')  # noqa
-
-            # resolution-related keywords
-            if obstype != 'BIAS' and obstype != 'DARK':
-                hdr['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
-                hdr['SMPPOS'] = (1 if res == 'high' else 2)
-
-            hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
             for i, ampim in enumerate(opims):
                 hdr = pf.Header()
                 hdr['EXTNAME'] = ('SCI', 'extension name')
@@ -1903,7 +1903,7 @@ class Arm(object):
                 hdr['CAMERA'] = (self.arm.upper(), 'Camera name')
                 hdr['RDNOISE'] = (rnoise[i], 'Readout noise')
                 hdr['GAIN'] = (gain[i], 'Amplifier gain')
-                hdr['EXPID'] = (data_label, 'Exposure ID')
+                hdr['EXPID'] = (expid, 'Exposure ID')
                 hdr['PCOUNT'] = (0, 'Required keyword; must = 0')
                 hdr['GCOUNT'] = (1, 'Required keyword; must = 1')
 
@@ -1919,7 +1919,7 @@ class Arm(object):
                 hdr['CCDSIZE'] = (detsz, 'CCD size')
 
                 hdr['CCDNAME'] = (self.dettype, 'CCD name')
-                hdr['AMPNAME'] = (i, 'Amplifier name')
+                hdr['AMPNAME'] = ('ABCD'[i], 'Amplifier name')
                 hdr['AMPSIZE'] = ("[1:%d,1:%d]" % (
                     ampim.shape[1], ampim.shape[0]), 'Amplifier size')
 
@@ -1952,13 +1952,14 @@ class Arm(object):
 
                 hdulist.append(pf.ImageHDU(data=ampim, header=hdr, name='SCI'))
 
-            if not self.split:
-                return hdulist
+            if self.split:
+                bins = 'x'.join(map(str, binmode))
+                newfilename = output_prefix + bins + '_' + self.arm + '.fits'
+                print('Writing ' + newfilename)
+                hdulist.writeto(newfilename, clobber=True)
+                continue
 
-            bins = 'x'.join(map(str, binmode))
-            newfilename = output_prefix + bins + '_' + self.arm + '.fits'
-            print('Writing ' + newfilename)
-            hdulist.writeto(newfilename, clobber=True)
+        return None if self.split else hdulist
 
 
 class Ghost(object):
@@ -2154,34 +2155,36 @@ class Ghost(object):
             thar_flatlamp=thar_flatlamp, seeing=seeing, data_label=data_label,
             flatlamp=flatlamp, obstype=obstype, objname=objname, binning=binmode)
 
-        blue_hdul = self.blue.simulate_frame(  # pylint: disable=star-args
+        hdul_b = self.blue.simulate_frame(  # pylint: disable=star-args
             additive_noise=self.additive_noise['blue'],
             scaling=self.scaling['blue'], **common_params)
-        red_hdul = self.red.simulate_frame(  # pylint: disable=star-args
+        hdul_r = self.red.simulate_frame(  # pylint: disable=star-args
             additive_noise=self.additive_noise['red'],
             scaling=self.scaling['red'], **common_params)
-        slit_hdul = self.slitv.save(output_prefix, obstype, res,
+        hdul_s = self.slitv.save(output_prefix, obstype, res,
             data_label=data_label)  # noqa
 
         if self.split:
             return
 
-        nslit_extns = 0 if slit_hdul is None else len(slit_hdul)-1
+        nextns_s = 0 if hdul_s is None else len(hdul_s)-1
+        nextns_r = 0 if hdul_r is None else len(hdul_r)-1
+        nextns_b = 0 if hdul_b is None else len(hdul_b)-1
 
-        hdr = red_hdul[0].header
+        hdr = hdul_r[0].header
         del hdr['DETTYPE']
         del hdr['DETSIZE']
         del hdr['CAMERA']
         # hdr['EXTEND'] = True  # this has no effect for some reason
-        hdr['NEXTEND'] = (2*4 + nslit_extns, 'Number of extensions')
-        hdr['NREDEXP'] = (1, 'Number of red exposures')
-        hdr['NBLUEEXP'] = (1, 'Number of blue exposures')
-        hdr['NSLITEXP'] = (nslit_extns, 'Number of slit-viewing exposures')
+        hdr['NEXTEND'] = (nextns_r+nextns_b+nextns_s, 'Number of extensions')
+        hdr['NREDEXP'] = (int(nextns_r/4), 'Number of red exposures')
+        hdr['NBLUEEXP'] = (int(nextns_b/4), 'Number of blue exposures')
+        hdr['NSLITEXP'] = (nextns_s, 'Number of slit-viewing exposures')
         hdulist = pf.HDUList([pf.PrimaryHDU(header=hdr)])
-        if slit_hdul is not None:
-            hdulist += slit_hdul[1:]
-        hdulist += red_hdul[1:]
-        hdulist += blue_hdul[1:]
+        if hdul_s is not None:
+            hdulist += hdul_s[1:]
+        hdulist += hdul_r[1:]
+        hdulist += hdul_b[1:]
 
         print('Writing observation MEF to ' + output_prefix + 'MEF.fits')
         hdulist[0].header['EXTEND'] = True  # this works
