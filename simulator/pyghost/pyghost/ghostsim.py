@@ -540,7 +540,7 @@ class SlitViewer(object):
 
         hdulist = pf.HDUList([pf.PrimaryHDU(header=header)])
         crhdu = pf.HDUList(pf.PrimaryHDU(header=pf.Header()))
-        for expid, image in enumerate(self.images, start=1):
+        for expid, image in enumerate(self.images):
             # Construct a new header
             hdr = pf.Header()
 
@@ -556,7 +556,7 @@ class SlitViewer(object):
             data = np.minimum(np.maximum(data, 0), 1 << 14).astype(np.int16)
 
             # Set the id of this extension
-            hdr['EXPID'] = expid
+            hdr['EXPID'] = expid+1
 
             # And all the other headers
             hdr['EXTNAME'] = ('SCI', 'extension name')
