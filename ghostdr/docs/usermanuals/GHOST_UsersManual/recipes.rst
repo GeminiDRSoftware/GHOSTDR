@@ -201,9 +201,19 @@ currently referenced in the database, use::
 Data Reduction Flowchart
 ------------------------
 
-.. note::
-    MCW: I have a hand-drawn schematic for this chart, but need to make it
-    up properly before including it here.
+.. figure:: images/GhostFlow.png
+    :scale: 100
+    :alt: GHOST DR Data Reduction Flow
+
+    This flow chart visualizes the reduction flow required for GHOST data.
+    Legend:
+
+    - *Orange*: Slit viewer camera image
+    - *Blue*: Main camera image
+    - *Red*: Science object frame
+    - *Solid arrow*: Required data flow (e.g. the data product at the start of
+      the arrow is required for the data product at the end of the arrow)
+    - *Dashed arrow*: Optional data flow
 
 Reducing Slit Viewing Images
 ----------------------------
