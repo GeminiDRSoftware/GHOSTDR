@@ -162,18 +162,19 @@ see these options.
 ++++++++++
 
 The ``reduce`` command is part of :any:`DRAGONS`, and works
-in a similar fashion to an old ``IRAF`` call. Please see the :any:`DRAGONS`
+in a similar fashion to the old ``IRAF`` call. Please see the :any:`DRAGONS`
 documentation for more detail. However, there are two important options to
 take note of for development GHOST reduction::
 
     reduce --drpkg ghostdr @bias.1x1.red.list
 
-The option ``--drpkg ghostdr`` tells ``reduce`` to import the ``ghost``
-data reduction package, in addition to the standard :any:`DRAGONS`. This
-will not be required in production, and ``ghostdr`` will be incorporated
+The option ``--drpkg ghostdr`` tells ``reduce`` to import the ``ghostdr``
+data reduction package, in addition to the standard :any:`DRAGONS` packages.
+This
+will not be required in production, as ``ghostdr`` will be incorporated
 into :any:`DRAGONS` by Gemini.
 
-The ``@`` modifier tells ``reduce`` that the input file is in fact a list,
+The ``@`` modifier tells ``reduce`` that the input file is, in fact, a list,
 and should be broken apart for reduction. If you were only passing a single
 FITS file to ``reduce``, you would leave the ``@`` modifier off.
 
@@ -197,6 +198,13 @@ currently referenced in the database, use::
 
 .. _reducing-slit-viewing-images:
 
+Data Reduction Flowchart
+------------------------
+
+.. note::
+    MCW: I have a hand-drawn schematic for this chart, but need to make it
+    up properly before including it here.
+
 Reducing Slit Viewing Images
 ----------------------------
 
@@ -211,6 +219,9 @@ stacking multiple frames together::
     typewalk --tags GHOST BIAS SLITV --dir <path_to>/data_folder -o slit.bias.list
     reduce --drpkg ghostdr @slit.bias.list
     reduce_db.py add calibrations/processed_bias/your_red_SLIT_bias.fits
+
+.. warning::
+    Make sure you've made the necessary changes to the ``typewalk.py`` script!
 
 The next step is to generate the dark calibrator.  Follow these steps to produce
 one::
@@ -228,21 +239,26 @@ steps as an example::
     reduce --drpkg ghostdr @slit.flat.std.list
     reduce_db.py add calibrations/processed_slitflat/your_red_SLIT_slitflat.fits
 
-Though not (yet) used in our final object reduction, you can also produce a
-master arc frame::
-
-    typewalk --tags GHOST SLITV ARC HIGH --dir <path_to>/data_folder -o slit.arc.std.list
-    reduce --drpkg ghostdr @slit.arc.std.list
-    reduce_db.py add calibrations/processed_arc/your_red_SLIT_arc.fits
-
-The final step is to use all of the above calibrators (except the arc) in a call
+The final step is to use all of the above calibrators in a call
 to ``reduce`` a set of slit viewer images taken concurrently with a science
-frame, usually found in files named like ``obj95_1.0_high_SLIT.fits`` (following
+frame, usually found in files named like ``obj95_1.0_std_SLIT.fits`` (following
 this convention: ``obj{exptime}_{seeing}_{resolution}_SLIT.fits``).
 This informs the reduction framework to run the
 ``makeProcessedSlit`` GHOST recipe on them.  Run the reduction as follows::
 
-    reduce --drpkg ghostdr <path_to>/data_folder/obj95_1.0_high_SLIT.fits
+    reduce --drpkg ghostdr <path_to>/data_folder/obj95_1.0_std_SLIT.fits
+    reduce_db.py add calibrations/processed_slit/obj95_1.0_std_SLIT_slit.fits
+
+This ``processed_slit`` calibrator is a required part of the object frame
+reduction. Similarly, if you are planning on reducing any arc or standard
+star frames, their related slit images will need to be reduced and added
+to the calibration system as well, e.g.::
+
+    reduce --drpkg ghostdr <path_to>/data_folder/arc95_std_SLIT.fits
+    reduce_db.py add calibrations/processed_slit/arc95_std_SLIT_slit.fits
+
+Every arc/standard star/science frame will have a related slit viewer image.
+
 
 Generating a Bias Calibration frame
 -----------------------------------
@@ -256,9 +272,6 @@ generated several red arm biases with a 1x1 binning::
 The ``--dir`` argument can be omitted if you are already within the folder
 containing the data.
 
-.. warning::
-    Make sure you've made the necessary changes to the ``typewalk.py`` script!
-
 Now you are ready to generate a bias calibration frame.  The following command
 (which runs the ``makeProcessedBiasG`` Gemini recipe behind the scenes) will
 stack the bias frames in listed ``bias_red.list`` and store the finished bias
@@ -268,9 +281,7 @@ calibration in ``calibrations/processed_bias/``::
     reduce_db.py add calibrations/processed_bias/your_red_bias.fits
 
 Don't forget the @ character in this line, e.g. if <path_to> is ``data`` then
-this command should be ``reduce @data/bias.list``. The @ parameter is a legacy
-from IRAF, and tells ``reduce`` that you're passing a list of filenames instead
-of a data file.
+this command should be ``reduce @data/bias.list``.
 
 .. note::
     This example uses 1x1 binned data. If you are reducing data in another
@@ -318,19 +329,15 @@ Generating a Dark Calibration Frame
 
 The procedure for generating a dark calibration frame is broadly similar to
 making a bias calibration frame. However, the tags to be passed to ``typewalk``
-should be ``DARK`` instead of ``GHOST_BIAS`` (in addition to the
+should be ``DARK`` instead of ``BIAS`` (in addition to the
 necessary ``RED``/``BLUE`` tag)::
 
-    typewalk --tags DARK RED --dir <path_to>/data_folder -o dark.red.list
+    typewalk --tags GHOST DARK RED --dir <path_to>/data_folder -o dark.red.list
 
 The dark frames may then be reduced by invoking::
 
     reduce --drpkg ghostdr @<path_to>/dark.red.list
     reduce_db.py add calibrations/processed_dark/your_red_dark.fits
-
-Make sure you've run ``prepare_data.py`` over your data directory before
-attempting this step, otherwise the reduction system will not be able to locate
-your previous bias calibration.
 
 The whole process behind Gemini's ``makeProcessedDark`` recipe is documented in
 the following flowchart (thanks Kathleen Labrie):
@@ -349,9 +356,10 @@ the following flowchart (thanks Kathleen Labrie):
 Generating a Flat Calibration Frame
 -----------------------------------
 
-.. warning:: You *must* have performed a full slit viewer reduction before
-             attempting to make a flat calibrator. See
-             :ref:`reducing-slit-viewing-images` for details.
+.. warning::
+    You *must* have performed a full slit viewer reduction before
+    attempting to make a flat calibrator. See
+    :ref:`reducing-slit-viewing-images` for details.
 
 The procedure for generating a flat field calibration frame is similar to
 creating a dark or bias, although you have to ``typewalk`` over FLAT files
@@ -367,21 +375,16 @@ A simple call to ``reduce`` once again processes the list of flats::
 
 After the flat field has been created, the spectrograph apertures are fit using
 a ``polyfit`` approach. ``DRAGONS`` will read in the appropriate aperture
-model from the ``lookups`` system, fit it to the flat field, and store the
-resulting model in the calibrations system.
+model from the ``lookups`` system, fit it to the flat field, and append the
+resulting model to a new extension in the output flat file.
 
 The selection of the appropriate ``polyfit`` model to start with is
 determined by the spectrograph arm, resolution, and the date the observations
 are made on. Ideally, there will only be one model per arm and resolution
 combination; however, spectrograph maintenance (i.e. dis- and re-assembly) may
 result in the model changing at a specific point in time. Therefore, the
-RecipeSystem *should* (see below) automatically choose the most recent
-applicable model for the dataset being considered.
-
-.. note:: Date-based model selection is currently not implemented - instead,
-          only a single model is provided for each arm/resolution combination.
-          This is sufficient for testing involving the simulator data.
-          Date-based selection will be implemented soon.
+RecipeSystem will automatically choose the most recent
+applicable starting model for the dataset being considered.
 
 The process behind ``makeProcessedFlatG`` is summarized in the following
 flowchart (thanks Kathleen Labrie):
@@ -423,13 +426,11 @@ Then, the following command reduces the arcs::
     reduce --drpkg ghostdr @<path_to>/arc.red.std.list
     reduce_db.py add calibrations/processed_arc/your_red_arc.fits
 
-Arc reduction not only generates a reduced arc image and places it in the
-calibrations directory, but also uses the ``polyfit`` module to extract the
+This recipe reduces the arc frame, then uses the ``polyfit`` module to extract the
 flux profiles of the object/sky fibres in the input image. It then uses this
 fit, and a line set stored in the RecipeSystem lookups system, to make a
 wavelength fit to the arc image. This fit is also stored in the calibrations
 directory/system.
-
 
 Reducing an Object frame (Spectra)
 ----------------------------------
@@ -443,10 +444,10 @@ tag ``SPECT``, but none of the further tags we've encountered already (e.g.
 
     typewalk --dir <path_to>/data_folder
 
-This informs the reduction framework to run the ``reduceG`` GHOST recipe on
+This informs the reduction framework to run the ``reduce`` GHOST recipe on
 them. which should run to at least the ``flatCorrect`` step now that you
 have dark and bias calibration frames (for the moment, we have commented the
-remaining steps out of the ``reduceG`` recipe so it will complete
+remaining steps out of the ``reduce`` recipe so it will complete
 successfully)::
 
     reduce --drpkg ghostdr <path_to>/data_folder/obj95_1.0_std_1x1_red.fits
@@ -455,7 +456,7 @@ This produces a ``obj95_1.0_std_1x1_red_flatCorrected.fits`` (or similar) file,
 a bias, dark and flat corrected GHOST spectrum frame.
 
 .. warning:: The primitive ``rejectCosmicRays`` would normally be called as
-             part of ``reduceG``, after the ``darkCorrect`` step. It is
+             part of ``reduce``, after the ``darkCorrect`` step. It is
              currently commented out - the underlying LACosmic algorithm is
              working, but aperture removal/re-instatement is required to avoid
              accidentally flagging spectral peaks and the edges of orders as
