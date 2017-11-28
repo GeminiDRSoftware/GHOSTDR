@@ -5,6 +5,10 @@ from .parameters_ghost import ParametersGHOST
 
 class ParametersGHOSTSpect(ParametersGHOST):
 
+
+    addWavelengthSolution = {
+        "suffix": "_wavelengthAdded",
+    }
     applyFlatBPM = {
         "suffix"            : "_flatBPMApplied",
         "flat"              : None,

@@ -41,6 +41,31 @@ class GHOSTSpect(GHOST):
         super(GHOSTSpect, self).__init__(adinputs, **kwargs)
         self.parameters = ParametersGHOSTSpect
 
+    def addWavelengthSolution(self, adinputs=None, **params):
+        """
+        Apply the wavelength solution from an arc file (or set of arc files)
+        to the data.
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        """
+
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        for ad in adinputs:
+
+            # Timestamp and update filename
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=params["suffix"], strip=True)
+            if params["write_result"]:
+                ad.write(clobber=True)
+
+        return adinputs
+
     def applyFlatBPM(self, adinputs=None, **params):
         """
         Find the flat relevant to the file(s) being processed, and merge the
