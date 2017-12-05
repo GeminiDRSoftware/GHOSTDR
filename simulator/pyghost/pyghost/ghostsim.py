@@ -2062,7 +2062,7 @@ class Ghost(object):
                              add_sky=True, radvel=0.0, thar_flatlamp=False,
                              flatlamp=False, obstype=None, objname=None,
                              seeing=0.8, sv_duration=10.0, sv_flux_profile=None,
-                             data_label=1, binmode=(1, 1)):
+                             data_label=1, binmode=(1, 1), utstart=None):
         """
         Simulate an observation with the whole instrument.
         This includes slit-viewing exposures, a blue and a red science exposure.
@@ -2138,7 +2138,8 @@ class Ghost(object):
             keyword
         """
 
-        utstart = datetime.datetime.utcnow()
+        if utstart is None:
+            utstart = datetime.datetime.utcnow()
 
         if (sv_duration > 0) and (duration > 0):
             self.slitv.set_exposure(

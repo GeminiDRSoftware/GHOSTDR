@@ -3,9 +3,12 @@
 import math
 import numpy as np
 import pyghost
+import datetime
 
 def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
-        split=True, check=False):
+        split=True, check=False,
+        # This should be 8pm in Chile local time
+        start_dt=datetime.datetime(2017, 12, 1, 23, 0, 0)):
     """ The function that runs the test. """
 
     # Create the two arms
@@ -66,7 +69,8 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
     ghost = pyghost.Ghost(
         rnoise=3.0, gain=1.0, namps=namps, overscan=oscan,
         bias_level=bias_level, additive_noise=noise, scaling=scaling,
-        cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split, check=check)
+        cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split,
+        check=check)
 
     target_binmode = (1, 1)  # (1, 2)
 
@@ -75,14 +79,17 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         ghost.simulate_observation(
             duration=0.0, output_prefix='bias_'+str(i)+'_',
             spectrum_in=blank, use_thar=False, add_sky=False,
-            obstype='BIAS', data_label=i, binmode=target_binmode)
+            obstype='BIAS', data_label=i, binmode=target_binmode,
+            utstart=start_dt)
 
     # This produces a dark frame
     for i in range(1, ndark+1):
         ghost.simulate_observation(
             duration=duration, output_prefix='dark'+str(duration)+'_'+str(i)+'_',
             use_thar=False, spectrum_in=blank, add_sky=False,
-            obstype='DARK', data_label=i, binmode=target_binmode)
+            obstype='DARK', data_label=i, binmode=target_binmode,
+            utstart=start_dt)
+        start_dt += datetime.timedelta(seconds=duration)
 
     for res in ('std', 'high'):
         # This (should) produce a GCAL flat frame
@@ -91,19 +98,25 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
                 duration=duration, output_prefix='flat'+str(duration)+'_'+res +
                 '_'+str(i)+'_', use_thar=False, spectrum_in=flat,
                 add_sky=False, res=res, flatlamp=True, obstype='FLAT',
-                data_label=i, binmode=target_binmode)
+                data_label=i, binmode=target_binmode,
+                utstart=start_dt)
+            start_dt += datetime.timedelta(seconds=duration)
 
         # This produces an arc frame
         ghost.simulate_observation(
-            duration=duration, output_prefix='arc'+str(duration)+'_'+res+'_',
+            duration=duration, output_prefix='arc_a'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=thar, add_sky=False, res=res,
-            flatlamp=True, obstype='ARC', binmode=target_binmode)
+            flatlamp=True, obstype='ARC', binmode=target_binmode,
+            utstart=start_dt)
+        start_dt += datetime.timedelta(seconds=duration)
+
 
         # This produces a sky frame
         ghost.simulate_observation(
             duration=duration, output_prefix='sky'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=blank, add_sky=True, res=res,
-             obstype='SKY', binmode=target_binmode)
+             obstype='SKY', binmode=target_binmode, utstart=start_dt)
+        start_dt += datetime.timedelta(seconds=duration)
 
         # Make the slit-viewing flux a bit random, to simulate clouds
         svfp = np.random.randn(100)
@@ -120,14 +133,27 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
                 std[:-5]+'_'+res+'_', use_thar=True, spectrum_in = spectrum,
                 add_sky=True, res=res, obstype='STANDARD', objname=std[:-5],
                 data_label=1, sv_flux_profile=sv_flux_profile,
-                binmode=target_binmode)
+                binmode=target_binmode,
+                utstart=start_dt)
+            start_dt += datetime.timedelta(seconds=duration)
 
         for i, seeing in enumerate((0.5, 1.0), start=1):  # in arcsecs
             ghost.simulate_observation(
                 duration=duration, output_prefix='obj'+str(duration)+'_' +
                 str(seeing)+'_'+res+'_', use_thar=True, add_sky=True, res=res,
                 obstype='OBJECT', seeing=seeing, data_label=i,
-                sv_flux_profile=sv_flux_profile, binmode=target_binmode)
+                sv_flux_profile=sv_flux_profile, binmode=target_binmode,
+                utstart=start_dt)
+            start_dt += datetime.timedelta(seconds=duration)
+
+        # Now need to take the 'after' arcs
+        # This produces an arc frame
+        ghost.simulate_observation(
+            duration=duration, output_prefix='arc_b'+str(duration)+'_'+res+'_',
+            use_thar=False, spectrum_in=thar, add_sky=False, res=res,
+            flatlamp=True, obstype='ARC', binmode=target_binmode,
+            utstart=start_dt)
+        start_dt += datetime.timedelta(seconds=duration)
 
 if __name__ == "__main__":
     run()
