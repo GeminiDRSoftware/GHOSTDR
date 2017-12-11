@@ -36,16 +36,16 @@ OBJDIR=$COREDIR
 add_to_calib_mgr() {
     grep 'Calibration stored as' - | awk '{print $4}' | {
         read calib
-        reduce_db.py add -v $calib
+        caldb add -v $calib
     }
 }
 
 rm -rf calibrations .reducecache  # prepare_data.py outputs not needed because
-reduce_db.py init -v -w  # we're using the local calibration manager instead
+caldb init -v -w  # we're using the local calibration manager instead
 
 echo 'Splitting MEFs'
-typewalk --tags BUNDLE -n -o bundle
-reduce --drpkg ghostdr @bundle
+#typewalk --tags BUNDLE -n -o bundle
+#reduce --drpkg ghostdr @bundle
 
 echo 'Doing slits now'
 
