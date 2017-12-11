@@ -1895,62 +1895,62 @@ class Arm(object):
                 return opims
 
             for i, ampim in enumerate(opims):
-                hdr = pf.Header()
-                hdr['EXTNAME'] = ('SCI', 'extension name')
-                hdr['BUNIT'] = 'ADU'
-                # hdr['BSCALE'] = 1  # added by default
-                # hdr['BZERO'] = 32768  # added by default
-                hdr['CAMERA'] = (self.arm.upper(), 'Camera name')
-                hdr['RDNOISE'] = (rnoise[i], 'Readout noise')
-                hdr['GAIN'] = (gain[i], 'Amplifier gain')
-                hdr['EXPID'] = (expid, 'Exposure ID')
-                hdr['PCOUNT'] = (0, 'Required keyword; must = 0')
-                hdr['GCOUNT'] = (1, 'Required keyword; must = 1')
+                xhdr = pf.Header()
+                xhdr['EXTNAME'] = ('SCI', 'extension name')
+                xhdr['BUNIT'] = 'ADU'
+                # xhdr['BSCALE'] = 1  # added by default
+                # xhdr['BZERO'] = 32768  # added by default
+                xhdr['CAMERA'] = (self.arm.upper(), 'Camera name')
+                xhdr['RDNOISE'] = (rnoise[i], 'Readout noise')
+                xhdr['GAIN'] = (gain[i], 'Amplifier gain')
+                xhdr['EXPID'] = (expid, 'Exposure ID')
+                xhdr['PCOUNT'] = (0, 'Required keyword; must = 0')
+                xhdr['GCOUNT'] = (1, 'Required keyword; must = 1')
 
-                hdr['EXPUTST'] = (utstart.strftime("%H:%M:%S.%f")[:-3],
+                xhdr['EXPUTST'] = (utstart.strftime("%H:%M:%S.%f")[:-3],
                     'UT time at exposure start')  # noqa
-                hdr['EXPUTEND'] = (
+                xhdr['EXPUTEND'] = (
                     (utstart + datetime.timedelta(seconds=duration))
                     .strftime("%H:%M:%S.%f")[:-3], 'UT time at exposure end')
                 # needed by gemcombine.cl (used by stackFrames())
-                hdr['EXPTIME'] = (duration, 'Exposure time in seconds')
+                xhdr['EXPTIME'] = (duration, 'Exposure time in seconds')
 
-                hdr['DETSIZE'] = (detsz, 'Detector size')
-                hdr['CCDSIZE'] = (detsz, 'CCD size')
+                xhdr['DETSIZE'] = (detsz, 'Detector size')
+                xhdr['CCDSIZE'] = (detsz, 'CCD size')
 
-                hdr['CCDNAME'] = (self.dettype, 'CCD name')
-                hdr['AMPNAME'] = ('ABCD'[i], 'Amplifier name')
-                hdr['AMPSIZE'] = ("[1:%d,1:%d]" % (
+                xhdr['CCDNAME'] = (self.dettype, 'CCD name')
+                xhdr['AMPNAME'] = ('ABCD'[i], 'Amplifier name')
+                xhdr['AMPSIZE'] = ("[1:%d,1:%d]" % (
                     ampim.shape[1], ampim.shape[0]), 'Amplifier size')
 
                 detsec = "[%d:%d,%d:%d]" % (cxl[i]+1, cxh[i], cyl[i]+1, cyh[i])
-                hdr['DETSEC'] = (detsec, 'Detector section(s)')
-                hdr['CCDSEC'] = (detsec, 'CCD section(s)')
+                xhdr['DETSEC'] = (detsec, 'Detector section(s)')
+                xhdr['CCDSEC'] = (detsec, 'CCD section(s)')
 
                 # TODO: replace static value below with dynamically determined
                 # value
-                hdr['CCDSUM'] = (
+                xhdr['CCDSUM'] = (
                     ' '.join(map(str, binmode)), 'CCD pixel summing')
                 # TODO: what's a realistic value for readout time?
-                hdr['DARKTIME'] = (duration + 5., 'Dark time (seconds)')
+                xhdr['DARKTIME'] = (duration + 5., 'Dark time (seconds)')
 
                 datasec = "[1:%d,1:%d]" % (ampim.shape[1]-oscan, ampim.shape[0])
-                hdr['DATASEC'] = (datasec, 'Data section(s)')
-                hdr['TRIMSEC'] = (datasec, 'Trim section(s)')
+                xhdr['DATASEC'] = (datasec, 'Data section(s)')
+                xhdr['TRIMSEC'] = (datasec, 'Trim section(s)')
 
                 # TODO: where can I find these values?
-                hdr['DSPTIMBN'] = ('???', 'ARC timing board dsp code')
-                hdr['DSPTIMBV'] = (0, 'ARC timing board dsp version')
+                xhdr['DSPTIMBN'] = ('???', 'ARC timing board dsp code')
+                xhdr['DSPTIMBV'] = (0, 'ARC timing board dsp version')
 
                 if oscan > 0:
-                    hdr['BIASSEC'] = ("[%d:%d,1:%d]" % (
+                    xhdr['BIASSEC'] = ("[%d:%d,1:%d]" % (
                         ampim.shape[1]-oscan+1, ampim.shape[1],
                         ampim.shape[0]), 'Bias section(s)')
 
                 if self.cosmics:
-                    hdr['NCRPIX'] = np.count_nonzero(cosims[i])
+                    xhdr['NCRPIX'] = np.count_nonzero(cosims[i])
 
-                hdulist.append(pf.ImageHDU(data=ampim, header=hdr, name='SCI'))
+                hdulist.append(pf.ImageHDU(data=ampim, header=xhdr, name='SCI'))
 
             if self.split:
                 bins = 'x'.join(map(str, binmode))
