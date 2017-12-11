@@ -1957,6 +1957,8 @@ class Arm(object):
                 newfilename = output_prefix + bins + '_' + self.arm + '.fits'
                 print('Writing ' + newfilename)
                 hdulist.writeto(newfilename, clobber=True)
+                # clear hdulist in preparation for next binning mode
+                hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
                 continue
 
         return None if self.split else hdulist
