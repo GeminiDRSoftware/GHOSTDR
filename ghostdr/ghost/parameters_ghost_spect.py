@@ -15,6 +15,10 @@ class ParametersGHOSTSpect(ParametersGHOST):
         "flat_stream"       : None,
         "write_result"      : True,
     }
+    barycentricCorrect = {
+        "suffix": "_barycentricCorrected",
+        "correction_factor": None,
+    }
     clipSigmaBPM = {
 #        "suffix"            : "_clipSigmaBPMApplied",
         "sigma"             : 3.0,

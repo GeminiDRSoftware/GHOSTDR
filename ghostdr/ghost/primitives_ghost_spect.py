@@ -19,6 +19,7 @@ from gempy.gemini import gemini_tools as gt
 from gempy.mosaic.mosaicAD import MosaicAD
 
 from .polyfit import GhostArm, Extractor, SlitView
+from .polyfit.ghost import GhostArm
 
 from .primitives_ghost import GHOST, filename_updater
 from .parameters_ghost_spect import ParametersGHOSTSpect
@@ -56,13 +57,64 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        for ad in adinputs:
+        # CJS: Heavily edited because of the new AD way
+        # Get processed slits, slitFlats, and flats (for xmod)
+        # slits and slitFlats may be provided as parameters
+        arc_list = params.get("arc")
+        if arc_list is None:
+            # CJS: This populates the calibrations cache (dictionary) with
+            # "processed_slit" filenames for each input AD
+            self.getProcessedArc(adinputs)
+            # This then gets those filenames
+            arc_list = [self._get_cal(ad, 'processed_arc')
+                         for ad in adinputs]
+
+        for ad, arcs in zip(
+                *gt.make_lists(adinputs, arc_list, force_ad=True)):
+
+            try:
+                arc_before, arc_after = arcs
+            except (TypeError, ValueError):
+                # Triggers if only one arc, or more than two
+                arc_before = arcs
+                arc_after = None
+
+            # Stand up a GhostArm instance for this ad
+            gs = GhostArm(arm=ad.arm(), mode=ad.res_mode(),
+                          detector_x_bin=ad.detector_x_bin(),
+                          detector_y_bin=ad.detector_y_bin())
+
+            if arc_before is None:
+                # arc = arc_after
+                wfit = gs.evaluate_poly(arc_after[0].WFIT)
+            elif arc_after is None:
+                # arc = arc_before
+                wfit = gs.evaluate_poly(arc_before[0].WFIT)
+            else:
+                # Need to weighted-average the wavelength fits from the arcs
+                # Determine the weights (basically, the inverse time between
+                # the observation and the arc)
+                wfit_b = gs.evaluate_poly(arc_before[0].WFIT)
+                wfit_a = gs.evaluate_poly(arc_after[0].WFIT)
+                weight_b = abs((arc_before.ut_datetime() -
+                                ad.ut_datetime()).total_seconds)
+                weight_a = abs((arc_after.ut_datetime() -
+                                ad.ut_datetime()).total_seconds)
+                weight_a, weight_b = 1. / weight_a, 1 / weight_b
+                log.stdinfo('Cominbing wavelength solutions with weights '
+                            '%.1f, %.1f' %
+                            (weight_a / (weight_a + weight_b),
+                             weight_b / (weight_a + weight_b),
+                             ))
+                # Compute weighted mean fit
+                wfit = wfit_a * weight_a + wfit_b * weight_b
+                wfit /= (weight_a + weight_b)
+
+            ad[0].WFIT = wfit
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
-            if params["write_result"]:
-                ad.write(clobber=True)
 
         return adinputs
 
@@ -146,6 +198,45 @@ class GHOSTSpect(GHOST):
             ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
                 ad.write(clobber=True)
+
+        return adinputs
+
+    def barycentricCorrect(self, adinputs=None, **params):
+        """
+        Perform barycentric correction of the wavelength extension in the input
+        files.
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        correction_factor: int
+            Barycentric correction factor to be applied. Defaults to None, at
+            which point a default value will be applied.
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        for ad in adinputs:
+
+            # TODO: Insert actual correction factor
+            # Will the correction factor:
+            # - Be allowed to be passed by the user?
+            # - Be taken from the file header?
+            # - Be computed here from the observing time of the image?
+            if params.get('correction_factor') is None:
+                cf = 1.0
+            else:
+                cf = params.get('correction_factor')
+
+            # Multiply the wavelength scale by the correction factor
+            log.stdinfo('Applying barycentric correction factor of %f' % cf)
+            ad[0].WFIT *= cf
+
+            # Timestamp and update filename
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=params["suffix"], strip=True)
 
         return adinputs
 

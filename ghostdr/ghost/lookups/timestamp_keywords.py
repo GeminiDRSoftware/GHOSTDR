@@ -5,6 +5,7 @@ timestamp_keys = {
     # writing a timestamp keyword to the header once the user level function
     # has completed
     "applyFlatBPM": "APFLTBPM",
+    "barycentricCorrect": "BARYCORR",
     "clipSigmaBPM": "CLIPSIGB",
     "CRCorrect": "FXSLITCR",
     "extractProfile": "EXTRPROF",
