@@ -14,4 +14,5 @@ timestamp_keys = {
     "flatCorrect": "FLATCORR",
     "processSlits": "PROCSLIT",
     "splitBundle": "SPLTBNDL",
+    "responseCorrect": "RESPCORR",
     }

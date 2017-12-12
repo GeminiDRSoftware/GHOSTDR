@@ -1031,6 +1031,31 @@ class GHOSTSpect(GHOST):
             ad.update_filename(suffix=params["suffix"], strip=True)
         return adinputs
 
+    def responseCorrect(self, adinputs=None, **params):
+        """
+        Perform a sigma-clipping on the input data frame, such that any pixels
+        outside the sigma threshold have their BPM value updated
+
+        Parameters
+        ----------
+        skip: bool
+            If True, this primitive will just return the adinputs immediately
+        """
+        if params.get('skip'):
+            log.stdinfo('Skipping the response correct stage')
+            return adinputs
+
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        for ad in adinputs:
+
+            # Timestamp; DO NOT update filename
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+
+        return adinputs
+
     def standardizeStructure(self, adinputs=None, **params):
         """
         The Gemini-level will try to attach an MDF because a GHOST image is

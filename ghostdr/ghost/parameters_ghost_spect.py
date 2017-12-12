@@ -60,6 +60,10 @@ class ParametersGHOSTSpect(ParametersGHOST):
         "f_lim"             : 5.0,
         "n_steps"           : 1,
     }
+    responseCorrect = {
+        "suffix"            : "_responseCorrected",
+        "skip"              : False,
+    }
     tileAmplifiers = {
         "suffix"            : "_ampsTiled",
     }
