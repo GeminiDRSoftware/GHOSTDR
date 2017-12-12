@@ -65,7 +65,7 @@ the following steps to prepare the calibration manager for use:
         standalone = True
         database_dir = /home/you/calmgrdb/cal_manager.db
     HERE
-    reduce_db.py init -v -w
+    caldb init -v -w
 
 #. Apply the following GHOST-related patches to the calibration system code:
 
@@ -101,7 +101,7 @@ the following steps to prepare the calibration manager for use:
 DRAGONS does not currently automatically send its output calibration files to
 the GeminiCalMgr. You will have to do this manually after each step, e.g.::
 
-    reduce_db.py add calibrations/processed_thing/my_processed_thing.fits
+    caldb add calibrations/processed_thing/my_processed_thing.fits
 
 where ``thing`` is ``bias``, ``flat``, ``dark``, etc.
 
@@ -178,7 +178,7 @@ The ``@`` modifier tells ``reduce`` that the input file is, in fact, a list,
 and should be broken apart for reduction. If you were only passing a single
 FITS file to ``reduce``, you would leave the ``@`` modifier off.
 
-``reduce_db.py``
+``caldb``
 ++++++++++++++++
 
 The current iteration of the local calibration manager has no ability to
@@ -186,15 +186,15 @@ automatically detect when a new calibrator has appeared in the
 ``calibrations/`` directory. Therefore, you will need to manually load
 your calibrators into the system::
 
-    reduce_db.py add calibrations/processed_bias/bias_1_1x1_red_bias.fits
+    caldb add calibrations/processed_bias/bias_1_1x1_red_bias.fits
 
-The ``reduce_db.py remove`` command has the same syntax, and can be used to
+The ``caldb remove`` command has the same syntax, and can be used to
 remove files from the database. This is useful if your original calibrator
 has been superseded, or you've accidentally added a file to the database you
 shouldn't have (e.g. a rebinned dark or flat). To see all the files
 currently referenced in the database, use::
 
-    reduce_db.py list
+    caldb list
 
 .. _reducing-slit-viewing-images:
 
@@ -228,7 +228,7 @@ stacking multiple frames together::
 
     typewalk --tags GHOST BIAS SLITV --dir <path_to>/data_folder -o slit.bias.list
     reduce --drpkg ghostdr @slit.bias.list
-    reduce_db.py add calibrations/processed_bias/your_red_SLIT_bias.fits
+    caldb add calibrations/processed_bias/your_red_SLIT_bias.fits
 
 .. warning::
     Make sure you've made the necessary changes to the ``typewalk.py`` script!
@@ -238,7 +238,7 @@ one::
 
     typewalk --tags GHOST SLITV DARK --dir <path_to>/data_folder -o slit.dark.list
     reduce --drpkg ghostdr @slit.dark.list
-    reduce_db.py add calibrations/processed_dark/your_red_SLIT_dark.fits
+    caldb add calibrations/processed_dark/your_red_SLIT_dark.fits
 
 Now generate the flat calibrator.  For this you will now need to specify an
 additional type to ``typewalk`` that identifies the resolution of the data that
@@ -247,7 +247,7 @@ steps as an example::
 
     typewalk --tags GHOST SLITV FLAT STD --dir <path_to>/data_folder -o slit.flat.std.list
     reduce --drpkg ghostdr @slit.flat.std.list
-    reduce_db.py add calibrations/processed_slitflat/your_red_SLIT_slitflat.fits
+    caldb add calibrations/processed_slitflat/your_red_SLIT_slitflat.fits
 
 The final step is to use all of the above calibrators in a call
 to ``reduce`` a set of slit viewer images taken concurrently with a science
@@ -257,7 +257,7 @@ This informs the reduction framework to run the
 ``makeProcessedSlit`` GHOST recipe on them.  Run the reduction as follows::
 
     reduce --drpkg ghostdr <path_to>/data_folder/obj95_1.0_std_SLIT.fits
-    reduce_db.py add calibrations/processed_slit/obj95_1.0_std_SLIT_slit.fits
+    caldb add calibrations/processed_slit/obj95_1.0_std_SLIT_slit.fits
 
 This ``processed_slit`` calibrator is a required part of the object frame
 reduction. Similarly, if you are planning on reducing any arc or standard
@@ -265,7 +265,7 @@ star frames, their related slit images will need to be reduced and added
 to the calibration system as well, e.g.::
 
     reduce --drpkg ghostdr <path_to>/data_folder/arc95_std_SLIT.fits
-    reduce_db.py add calibrations/processed_slit/arc95_std_SLIT_slit.fits
+    caldb add calibrations/processed_slit/arc95_std_SLIT_slit.fits
 
 Every arc/standard star/science frame will have a related slit viewer image.
 
@@ -288,7 +288,7 @@ stack the bias frames in listed ``bias_red.list`` and store the finished bias
 calibration in ``calibrations/processed_bias/``::
 
     reduce --drpkg ghostdr @<path_to>/bias.1x1.red.list
-    reduce_db.py add calibrations/processed_bias/your_red_bias.fits
+    caldb add calibrations/processed_bias/your_red_bias.fits
 
 Don't forget the @ character in this line, e.g. if <path_to> is ``data`` then
 this command should be ``reduce @data/bias.list``.
@@ -310,7 +310,7 @@ This code call will place a file named something like ``bias_1_red_bias.fits``
 in the
 ``calibrations/processed_bias`` directory of your present working directory.
 This file will then be added to the calibrations directory by the
-``reduce_db.py`` script call.
+``caldb`` script call.
 
 .. note::
     The final name of stacked frames (of which your bias is one) depends on
@@ -347,7 +347,7 @@ necessary ``RED``/``BLUE`` tag)::
 The dark frames may then be reduced by invoking::
 
     reduce --drpkg ghostdr @<path_to>/dark.red.list
-    reduce_db.py add calibrations/processed_dark/your_red_dark.fits
+    caldb add calibrations/processed_dark/your_red_dark.fits
 
 The whole process behind Gemini's ``makeProcessedDark`` recipe is documented in
 the following flowchart (thanks Kathleen Labrie):
@@ -381,7 +381,7 @@ e.g.::
 A simple call to ``reduce`` once again processes the list of flats::
 
     reduce --drpkg ghostdr @<path_to>/flat.red.std.list
-    reduce_db.py add calibrations/processed_flat/your_red_flat.fits
+    caldb add calibrations/processed_flat/your_red_flat.fits
 
 After the flat field has been created, the spectrograph apertures are fit using
 a ``polyfit`` approach. ``DRAGONS`` will read in the appropriate aperture
@@ -434,7 +434,7 @@ The correct tag to ``typewalk`` across is ``ARC``::
 Then, the following command reduces the arcs::
 
     reduce --drpkg ghostdr @<path_to>/arc.red.std.list
-    reduce_db.py add calibrations/processed_arc/your_red_arc.fits
+    caldb add calibrations/processed_arc/your_red_arc.fits
 
 This recipe reduces the arc frame, then uses the ``polyfit`` module to extract the
 flux profiles of the object/sky fibres in the input image. It then uses this
