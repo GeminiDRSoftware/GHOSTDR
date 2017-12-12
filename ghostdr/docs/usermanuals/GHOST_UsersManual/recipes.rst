@@ -417,8 +417,8 @@ flowchart (thanks Kathleen Labrie):
           almost all cosmic rays.
 
 
-Generating an Arc Calibration Frame
------------------------------------
+Generating Arc Calibration Frames
+---------------------------------
 
 .. warning:: You *must* have performed a full slit viewer reduction before
              attempting to make an arc calibrator - the results of the slit
@@ -426,17 +426,44 @@ Generating an Arc Calibration Frame
              extraction and subsequent wavelength fitting work. See
              :ref:`reducing-slit-viewing-images` for details.
 
-Making an arc calibration frame is similar to the previous calibration steps.
-The correct tag to ``typewalk`` across is ``ARC``::
+Arc reduction works slightly differently for the GHOST instrument. The aim is
+to have two arc frames available for each science frame: one taken before the
+science observation, and one afterwards. The wavelength solutions from the
+two arcs are then interpolated in time to provide the wavelength solution for
+the science frame. This is done via a simple weighted average, such that the
+arc frame taken close in time to the science frame is more heavily weighted.
 
-    typewalk --tags GHOST ARC RED STD --dir <path_to>/data_folder -o arc.red.std.list
+.. note::
+    The ``addWavelengthSolution`` primitive that is called during
+    science/standard frame reduction can handle forming this interpolated
+    wavelength fit (although it's not been tested yet),
+    but the calibration system can't return multiple arcs
+    per frame. For the moment, the wavelength solution is just taken from
+    whichever arc frame happens to be returned.
 
-Then, the following command reduces the arcs::
+The result of all this is that it isn't correct to blindly make a file
+reduction list based on file types as we have been doing previously. Instead,
+you need to do one of two things:
 
-    reduce --drpkg ghostdr @<path_to>/arc.red.std.list
-    caldb add calibrations/processed_arc/your_red_arc.fits
+- If only a single arc frame has been taken before and after your science
+  observation, these can be directly reduced::
 
-This recipe reduces the arc frame, then uses the ``polyfit`` module to extract the
+    reduce --drpkg ghostdr @<path_to>/your_arc_before.fits
+    caldb add calibrations/processed_arc/your_arc_before.fits
+    reduce --drpkg ghostdr @<path_to>/your_arc_after.fits
+    caldb add calibrations/processed_arc/your_arc_after.fits
+
+- Alternatively, if you have sets of arcs from before and after that need
+  to be stacked before their wavelength solution is determined, you will need
+  to construct file reduction lists as we do above for the other calibrator
+  types. You can't make these lists just using ``typewalk --tags``, as this will
+  capture both the 'before' and 'after' arcs in the same list. Instead, you will
+  need to either make the lists manually, or use the ``--filemask`` option to
+  ``typewalk`` to further filter the files in the auto-generated list based on
+  filename. Then, reduce the file lists as above, remembering to use the ``@``
+  symbol in front of the file list names.
+
+This recipe reduces the arc frame(s), then uses the ``polyfit`` module to extract the
 flux profiles of the object/sky fibres in the input image. It then uses this
 fit, and a line set stored in the RecipeSystem lookups system, to make a
 wavelength fit to the arc image. This fit is also stored in the calibrations
