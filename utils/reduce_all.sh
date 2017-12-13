@@ -33,6 +33,13 @@ OBJDIR=$COREDIR
 #This line is for cleaning up your directory of all the stuff the reduction creates.
 #rm *stack* *forStack* adc* *.log *.list tmp* *_dark.fits *_bias.fits GHOST* *_arc.fits *_flat.fits *slit* *slit* *darkCorrected*
 
+allow_inspection() {
+    if $CHECK; then
+        echo 'You can now check the reduction at this step.'
+        read -p "Press any key to continue... " -n1 -s
+    fi
+}
+
 add_to_calib_mgr() {
     grep 'Calibration stored as' - | awk '{print $4}' | {
         read calib
@@ -51,56 +58,37 @@ echo 'Doing slits now'
 
 typewalk --tags GHOST SLITV BIAS UNPREPARED --dir $BIASDIR/ -n -o bias.list
 reduce --drpkg ghostdr $QUALITY @bias.list 2>&1 | tee >(add_to_calib_mgr)
-
-if $CHECK; then
-    echo 'You can now check the reduction at this step.'
-    read -p "Press any key to continue... " -n1 -s
-fi    
+allow_inspection
 
 typewalk --tags GHOST SLITV DARK UNPREPARED --dir $DARKDIR/ -n -o dark.list
 reduce --drpkg ghostdr $QUALITY @dark.list 2>&1 | tee >(add_to_calib_mgr)
-
-if $CHECK; then
-    echo 'You can now check the reduction at this step.'
-    read -p "Press any key to continue... " -n1 -s
-fi
+allow_inspection
 
 for MODE in HIGH STD; do
     typewalk --tags GHOST SLITV FLAT UNPREPARED $MODE --dir $FLATDIR/ -n -o flat.list
     reduce --drpkg ghostdr $QUALITY @flat.list 2>&1 | tee >(add_to_calib_mgr)
-
-    if $CHECK; then
-	echo 'You can now check the reduction at this step.'
-        read -p "Press any key to continue... " -n1 -s
-    fi
+    allow_inspection
     
-    typewalk --tags GHOST SLITV ARC UNPREPARED $MODE --dir $ARCDIR/ -n -o arc.list
-    reduce --drpkg ghostdr $QUALITY @arc.list 2>&1 | tee >(add_to_calib_mgr)
+    while read ARC <&3; do
+        echo Reducing slit arc $ARC
+        reduce --drpkg ghostdr $QUALITY $ARC 2>&1 | tee >(add_to_calib_mgr)
+        allow_inspection
+    done 3< <( typewalk --tags GHOST SLITV ARC UNPREPARED $MODE --dir $ARCDIR/ -n -o /dev/fd/2 2>&1 1>/dev/null | grep -v '^#' )
 
-    if $CHECK; then
-        echo 'You can now check the reduction at this step.'
-        read -p "Press any key to continue... " -n1 -s
-    fi
     
-    while read object <&3; do
-        echo Reducing $object
-        reduce --drpkg ghostdr $QUALITY $object 2>&1 | tee >(add_to_calib_mgr)
-        if $CHECK; then
-            echo 'You can now check the reduction at this step.'
-            read -p "Press any key to continue... " -n1 -s
-        fi
+    while read STAND <&3; do
+        echo Reducing slit standard $STAND
+        reduce --drpkg ghostdr $QUALITY $STAND 2>&1 | tee >(add_to_calib_mgr)
+        allow_inspection
     done 3< <(
         typewalk --tags GHOST SLITV IMAGE UNPREPARED $MODE --dir $OBJDIR/ --filemask "standard.*\.(fits|FITS)" -n -o /dev/fd/2 2>&1 1>/dev/null \
         | grep -v '^#'
     )
 
-    while read object <&3; do
-        echo Reducing $object
-        reduce --drpkg ghostdr $QUALITY $object 2>&1 | tee >(add_to_calib_mgr)
-        if $CHECK; then
-            echo 'You can now check the reduction at this step.'
-            read -p "Press any key to continue... " -n1 -s
-        fi
+    while read OBJECT <&3; do
+        echo Reducing slit object $OBJECT
+        reduce --drpkg ghostdr $QUALITY $OBJECT 2>&1 | tee >(add_to_calib_mgr)
+        allow_inspection
     done 3< <(
         typewalk --tags GHOST SLITV IMAGE UNPREPARED $MODE --dir $OBJDIR/ --filemask "obj.*$SEEING.*\.(fits|FITS)" -n -o /dev/fd/2 2>&1 1>/dev/null \
         | grep -v '^#'
@@ -114,61 +102,42 @@ for CAM in RED BLUE; do
 
     typewalk --tags GHOST BIAS UNPREPARED 1x1 $CAM --dir $BIASDIR/ -n -o bias.list
     reduce --drpkg ghostdr $QUALITY @bias.list 2>&1 | tee >(add_to_calib_mgr)
+    allow_inspection
     
     if [ $BINNING != '1x1' ]; then
         typewalk --tags GHOST BIAS UNPREPARED $BINNING $CAM --dir $BIASDIR/ -n -o bias.list
         reduce --drpkg ghostdr $QUALITY @bias.list 2>&1 | tee >(add_to_calib_mgr)
-    fi
-
-    if $CHECK; then
-        echo 'You can now check the reduction at this step.'
-        read -p "Press any key to continue... " -n1 -s
+        allow_inspection
     fi
     
     typewalk --tags GHOST DARK UNPREPARED $CAM --dir $DARKDIR/ -n -o dark.list
     reduce --drpkg ghostdr $QUALITY @dark.list 2>&1 | tee >(add_to_calib_mgr)
-    
-    if $CHECK; then
-        echo 'You can now check the reduction at this step.'
-        read -p "Press any key to continue... " -n1 -s
-    fi
+    allow_inspection
     
     for MODE in HIGH STD; do
         typewalk --tags GHOST FLAT UNPREPARED $CAM $MODE --dir $FLATDIR/ -n -o flat.list
         reduce --drpkg ghostdr $QUALITY @flat.list 2>&1 | tee >(add_to_calib_mgr)
+        allow_inspection
 
-        if $CHECK; then
-            echo 'You can now check the reduction at this step.'
-            read -p "Press any key to continue... " -n1 -s
-        fi
+        while read ARC <&3; do
+            echo Reducing arc $ARC
+            reduce --drpkg ghostdr $QUALITY $ARC 2>&1 | tee >(add_to_calib_mgr)
+            allow_inspection
+        done 3< <( typewalk --tags GHOST ARC UNPREPARED $CAM $MODE --dir $ARCDIR/ -n -o /dev/fd/2 2>&1 1>/dev/null | grep -v '^#' )
 
-        typewalk --tags GHOST ARC UNPREPARED $CAM $MODE --dir $ARCDIR/ -n -o arc.list
-        reduce --drpkg ghostdr $QUALITY @arc.list  2>&1 | tee >(add_to_calib_mgr)
-
-        if $CHECK; then
-            echo 'You can now check the reduction at this step.'
-            read -p "Press any key to continue... " -n1 -s
-        fi
-
-	while read object <&3; do
-            echo Reducing $object
-            reduce --drpkg ghostdr $QUALITY $object
-            if $CHECK; then
-                echo 'You can now check the reduction at this step.'
-                read -p "Press any key to continue... " -n1 -s
-            fi
+        while read STAND <&3; do
+            echo Reducing standard $STAND
+            reduce --drpkg ghostdr $QUALITY $STAND
+            allow_inspection
         done 3< <(
             typewalk --tags GHOST UNPREPARED $BINNING $CAM $MODE --dir $OBJDIR/ --filemask "standard.*\.(fits|FITS)" -n -o /dev/fd/2 2>&1 1>/dev/null \
             | grep -v '^#'
         )
-	
-        while read object <&3; do
-            echo Reducing $object
-            reduce --drpkg ghostdr $QUALITY $object
-            if $CHECK; then
-                echo 'You can now check the reduction at this step.'
-                read -p "Press any key to continue... " -n1 -s
-            fi
+
+        while read OBJECT <&3; do
+            echo Reducing object $OBJECT
+            reduce --drpkg ghostdr $QUALITY $OBJECT
+            allow_inspection
         done 3< <(
             typewalk --tags GHOST UNPREPARED $BINNING $CAM $MODE --dir $OBJDIR/ --filemask "obj.*$SEEING.*\.(fits|FITS)" -n -o /dev/fd/2 2>&1 1>/dev/null \
             | grep -v '^#'
