@@ -64,24 +64,38 @@ class GHOSTSpect(GHOST):
         # Get processed slits, slitFlats, and flats (for xmod)
         # slits and slitFlats may be provided as parameters
         arc_list = params.get("arc")
-        if arc_list is None:
-            # CJS: This populates the calibrations cache (dictionary) with
-            # "processed_slit" filenames for each input AD
-            self.getProcessedArc(adinputs)
-            # This then gets those filenames
-            arc_list = [self._get_cal(ad, 'processed_arc')
-                         for ad in adinputs]
-            log.stdinfo(arc_list)
+        # if arc_list is None:
+        #     # CJS: This populates the calibrations cache (dictionary) with
+        #     # "processed_slit" filenames for each input AD
+        #     self.getProcessedArc(adinputs)
+        #     # This then gets those filenames
+        #     arc_list = [self._get_cal(ad, 'processed_arc')
+        #                  for ad in adinputs]
+        #     log.stdinfo(arc_list)
 
-        for ad, arcs in zip(
-                *gt.make_lists(adinputs, arc_list, force_ad=True)):
+        # for ad, arcs in zip(
+        #         *gt.make_lists(adinputs, arc_list, force_ad=True)):
+        for i, ad in enumerate(adinputs):
 
-            try:
-                arc_before, arc_after = arcs
-            except (TypeError, ValueError):
-                # Triggers if only one arc, or more than two
-                arc_before = arcs
-                arc_after = None
+            found_arcs = False
+
+            if arc_list:
+                try:
+                    arc_before, arc_after = arc_list[i]
+                    found_arcs = True
+                except (TypeError, ValueError):
+                    pass
+
+            if found_arcs == False:
+                try:
+                    self.getProcessedArc(ad)
+                    arc_before, arc_after = self._get_cal(ad, 'processed_arc',)
+                except (TypeError, ValueError):
+                    # Triggers if only one arc, or more than two
+                    arc_before = self._get_cal(ad, 'processed_arc',)
+                    arc_after = None
+
+            log.stdinfo('Arcs for {}: {}, {}'.format(ad, arc_before, arc_after))
 
             # Stand up a GhostArm instance for this ad
             gs = GhostArm(arm=ad.arm(), mode=ad.res_mode(),
@@ -90,23 +104,27 @@ class GHOSTSpect(GHOST):
 
             if arc_before is None:
                 # arc = arc_after
+                arc_after = astrodata.open(arc_after)
                 wfit = gs.evaluate_poly(arc_after[0].WFIT)
             elif arc_after is None:
                 # arc = arc_before
+                arc_before = astrodata.open(arc_before)
                 wfit = gs.evaluate_poly(arc_before[0].WFIT)
             else:
                 # Need to weighted-average the wavelength fits from the arcs
                 # Determine the weights (basically, the inverse time between
                 # the observation and the arc)
+                arc_after = astrodata.open(arc_after)
+                arc_before = astrodata.open(arc_before)
                 wfit_b = gs.evaluate_poly(arc_before[0].WFIT)
                 wfit_a = gs.evaluate_poly(arc_after[0].WFIT)
-                weight_b = abs((arc_before.ut_datetime() -
-                                ad.ut_datetime()).total_seconds)
-                weight_a = abs((arc_after.ut_datetime() -
-                                ad.ut_datetime()).total_seconds)
+                weight_b = np.abs((arc_before.ut_datetime() -
+                                   ad.ut_datetime()).total_seconds())
+                weight_a = np.abs((arc_after.ut_datetime() -
+                                   ad.ut_datetime()).total_seconds())
                 weight_a, weight_b = 1. / weight_a, 1 / weight_b
                 log.stdinfo('Cominbing wavelength solutions with weights '
-                            '%.1f, %.1f' %
+                            '%.3f, %.3f' %
                             (weight_a / (weight_a + weight_b),
                              weight_b / (weight_a + weight_b),
                              ))
@@ -114,7 +132,7 @@ class GHOSTSpect(GHOST):
                 wfit = wfit_a * weight_a + wfit_b * weight_b
                 wfit /= (weight_a + weight_b)
 
-            ad[0].WFIT = wfit
+            ad[0].WAVL = wfit
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -246,7 +264,7 @@ class GHOSTSpect(GHOST):
 
             # Multiply the wavelength scale by the correction factor
             log.stdinfo('Applying barycentric correction factor of %f' % cf)
-            ad[0].WFIT *= cf
+            ad[0].WAVL *= cf
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
