@@ -57,6 +57,9 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
+        # No attempt to check if this primitive has already been run -
+        # new arcs may be available which we wish to apply.
+
         # CJS: Heavily edited because of the new AD way
         # Get processed slits, slitFlats, and flats (for xmod)
         # slits and slitFlats may be provided as parameters
@@ -68,6 +71,7 @@ class GHOSTSpect(GHOST):
             # This then gets those filenames
             arc_list = [self._get_cal(ad, 'processed_arc')
                          for ad in adinputs]
+            log.stdinfo(arc_list)
 
         for ad, arcs in zip(
                 *gt.make_lists(adinputs, arc_list, force_ad=True)):
@@ -140,6 +144,10 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+
+        # No attempt to check if this primitive has already been run -
+        # re-applying a flat BPM should have no adverse effects, and the
+        # primitive simply skips if no flat is found.
 
         # CJS: extractProfile() contains comments explaining what's going on here
         flat_list = params["flat"]
@@ -220,6 +228,12 @@ class GHOSTSpect(GHOST):
 
         for ad in adinputs:
 
+            if ad.phu.get(timestamp_key):
+                log.warning("No changes will be made to {}, since it has "
+                            "already been processed by barycentricCorrect".
+                            format(ad.filename))
+                continue
+
             # TODO: Insert actual correction factor
             # Will the correction factor:
             # - Be allowed to be passed by the user?
@@ -263,6 +277,13 @@ class GHOSTSpect(GHOST):
         bpm_value = params["bpm_value"]
 
         for ad in adinputs:
+
+            if ad.phu.get(timestamp_key):
+                log.warning("No changes will be made to {}, since it has "
+                            "already been processed by clipSigmaBPM".
+                            format(ad.filename))
+                continue
+
             for ext in ad:
                 extver = ext.hdr['EXTVER']
                 if ext.mask is not None:
