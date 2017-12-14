@@ -104,7 +104,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
 
         # This produces an arc frame
         ghost.simulate_observation(
-            duration=duration, output_prefix='arc_a'+str(duration)+'_'+res+'_',
+            duration=duration, output_prefix='arcBefore'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=thar, add_sky=False, res=res,
             flatlamp=True, obstype='ARC', binmode=target_binmode,
             utstart=start_dt)
@@ -149,7 +149,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         # Now need to take the 'after' arcs
         # This produces an arc frame
         ghost.simulate_observation(
-            duration=duration, output_prefix='arc_b'+str(duration)+'_'+res+'_',
+            duration=duration, output_prefix='arcAfter'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=thar, add_sky=False, res=res,
             flatlamp=True, obstype='ARC', binmode=target_binmode,
             utstart=start_dt)
