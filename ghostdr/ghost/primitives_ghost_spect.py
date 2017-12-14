@@ -58,7 +58,8 @@ class GHOSTSpect(GHOST):
         timestamp_key = self.timestamp_keys[self.myself()]
 
         # No attempt to check if this primitive has already been run -
-        # new arcs may be available which we wish to apply.
+        # new arcs may be available which we wish to apply. Any old WAVL
+        # extensions will simply be removed.
 
         # CJS: Heavily edited because of the new AD way
         # Get processed slits, slitFlats, and flats (for xmod)
@@ -368,6 +369,12 @@ class GHOSTSpect(GHOST):
             raise IOError('Your input list of files contains a mix of '
                           'different binning modes')
 
+        # TODO: How to check for the primitive having already been applied
+        # where the calibrations are bulk-fetched?
+        # This is an issue, because if a dark has already been applied to the
+        # file, it may no longer have an associated matching dark, which may
+        # bomb the system.
+
         if params.get('dark', None):
             pass
         else:
@@ -475,6 +482,9 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+
+        # Make no attempt to check if primitive has already been run - may
+        # have new calibrators we wish to apply.
 
         # CJS: Heavily edited because of the new AD way
         # Get processed slits, slitFlats, and flats (for xmod)
@@ -590,6 +600,9 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
+        # Make no attempt to check if primitive has already been run - may
+        # have new calibrators we wish to apply.
+
         # CJS: See comment in extractProfile() for handling of calibrations
         flat_list = params["slitflat"]
         if flat_list is None:
@@ -652,6 +665,9 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+
+        # Make no attempt to check if primitive has already been run - may
+        # have new calibrators we wish to apply.
 
         self.getProcessedFlat(adinputs)
         flat_list = [self._get_cal(ad, 'processed_flat') for ad in adinputs]
@@ -781,6 +797,12 @@ class GHOSTSpect(GHOST):
         for ad, slit, slitflat, flat, in zip(adinputs, slitflat_list,
                                         flat_list, flat_list):
             log.info(ad.info())
+
+            if ad.phu.get(timestamp_key):
+                log.warning("No changes will be made to {}, since it has "
+                            "already been processed by flatCorrect".
+                            format(ad.filename))
+                continue
 
             # CJS: failure to find a suitable auxiliary file (either because
             # there's no calibration, or it's missing) places a None in the
@@ -1089,6 +1111,12 @@ class GHOSTSpect(GHOST):
         timestamp_key = self.timestamp_keys[self.myself()]
 
         for ad in adinputs:
+
+            if ad.phu.get(timestamp_key):
+                log.warning("No changes will be made to {}, since it has "
+                            "already been processed by responseCorrect".
+                            format(ad.filename))
+                continue
 
             # Timestamp; DO NOT update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
