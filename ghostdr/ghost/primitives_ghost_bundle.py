@@ -12,6 +12,7 @@ from recipe_system.utils.decorators import parameter_override
 import astrodata
 import copy
 import itertools
+from astropy.io.fits import PrimaryHDU, Header
 # ------------------------------------------------------------------------------
 @parameter_override
 class GHOSTBundle(GHOST):
@@ -55,22 +56,19 @@ class GHOSTBundle(GHOST):
 
             log.stdinfo("Unbundling {}:".format(ad.filename))
 
-            # BEWARE: this doesn't preserve prior behaviour of putting all SV
-            # exposures into a single file: test further with reduction system
-            key = lambda x: (x.hdr['CAMERA'], x.hdr['EXPID'])
-            extns = sorted(ad, key=key)
+            # as a special case, write all slitv extns to a single file
+            # TODO: may need to make multiple SV files, not one per SV exposure
+            # but one per RED/BLUE exposure which contains all SV exposures that
+            # overlap with the RED/BLUE one in time (check with Jon)
+            extns = [x for x in ad if x.hdr['CAMERA'].lower() == 'slit']
+            _write_newfile(extns, '_slit', ad, log)
+
+            # now do non-slitv extensions
+            extns = [x for x in ad if x.hdr['CAMERA'].lower() != 'slit']
+            key = lambda x: '_'+x.hdr['CAMERA'].lower()+str(x.hdr['EXPID'])
+            extns = sorted(extns, key=key)
             for k, g in itertools.groupby(extns, key=key):
-                n = astrodata.create(copy.deepcopy(ad.header[0]))
-                for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:
-                    del n.phu[kw]
-                for x in g: n.append(x)
-                for kw in ['CAMERA', 'CCDNAME']:
-                    n.phu[kw] = n[0].hdr[kw]
-                n.filename = ad.filename
-                binning = 'x'.join(n[0].hdr['CCDSUM'].split())
-                n.update_filename(suffix='_'+binning+'_'+k[0].lower()+str(k[1]))
-                log.stdinfo("   Writing {}".format(n.filename))
-                n.write(clobber=True)  # should we always overwrite?
+                _write_newfile(list(g), k, ad, log)
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -79,4 +77,21 @@ class GHOSTBundle(GHOST):
         # returning [] avoids writing copy of bundle out to CWD, which then begs
         # the question: why then bother updating the timestamp & filename?
         return []#adinputs
+
+##############################################################################
+# Below are the helper functions for the primitives in this module           #
+##############################################################################
+def _write_newfile(extns, suffix, base, log):
+    assert extns and len(extns) > 0
+    n = astrodata.create(copy.deepcopy(base.header[0]))
+    for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:
+        del n.phu[kw]
+    for x in extns: n.append(x)
+    for kw in ['CAMERA', 'CCDNAME']:
+        n.phu[kw] = n[0].hdr[kw]
+    n.filename = base.filename
+    binning = '_' + 'x'.join(n[0].hdr['CCDSUM'].split())
+    n.update_filename(suffix=binning+suffix)
+    log.stdinfo("   Writing {}".format(n.filename))
+    n.write(clobber=True)  # should we always overwrite?
 

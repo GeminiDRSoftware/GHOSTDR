@@ -1,146 +1,113 @@
 #!/bin/bash -e
 set -o pipefail
+linger="$1"
 
 # make it so CTRL-C kills *all* subprocesses (doesn't require the user to press CTRL-C multiple times)
-trap 'kill -s KILL -- -$$ 2>/dev/null' EXIT
+trap 'rm -rf /tmp/$$.fifo /tmp/$$.mark; kill -s KILL -- -$$ 2>/dev/null' EXIT
 trap 'exit' INT QUIT TERM
 
 #Script to reduce all GHOST data using the recipe system.
-#This must be ran from within where the GHOST data are kept, with default variables indicating where the various types of files are
-
-# Start by setting up all the locations for the files. Change this for each case.
-COREDIR=$PWD
-
-CHECK=false
+#This must be ran from within where the GHOST data are kept
 
 BINNING='2x4'
+
+###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
 SEEING=0.5
 
 # Now we define the context. For Quality Assessment, use '--qa', for Quick Look
 # use '--ql', for Science Quality, leave blank
 QUALITY=''
 
-###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
+mkfifo /tmp/$$.fifo  # IPC between main script and tee'd subprocesses
 
-#Now you have the option of pointing to different directories for each file type.
-#All in the same place is the way forward.
-BIASDIR=$COREDIR
-DARKDIR=$COREDIR
-FLATDIR=$COREDIR
-ARCDIR=$COREDIR
-OBJDIR=$COREDIR
-
-#This line is for cleaning up your directory of all the stuff the reduction creates.
-#rm *stack* *forStack* adc* *.log *.list tmp* *_dark.fits *_bias.fits GHOST* *_arc.fits *_flat.fits *slit* *slit* *darkCorrected*
-
+# change 'false' to 'true' below if you want to inspect outputs between 'reduce' invocations
 allow_inspection() {
-    if $CHECK; then
-        echo 'You can now check the reduction at this step.'
-        read -p "Press any key to continue... " -n1 -s
-    fi
+	if false; then
+		builtin echo 'You can now check the reduction at this step.'
+		read -p "Press any key to continue... " -n1 -s
+	fi
 }
 
-add_to_calib_mgr() {
-    grep 'Calibration stored as' - | awk '{print $4}' | {
-        read calib
-        caldb add -v $calib
-    }
+# "post-process": call immediately following 'reduce' (must also tee 'reduce' output to
+# 'send_cal_to_postp'); this waits on tee'd processes, ingests calibs into calmgr, allows
+# inspections, and deletes debris files created by 'reduce'
+postp() {
+	read calib </tmp/$$.fifo || true
+	[ -n "$calib" ] && caldb add -v $calib
+	allow_inspection
+	find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" -exec rm -rvf '{}' + 2>/dev/null || true
 }
 
-rm -rf calibrations .reducecache  # prepare_data.py outputs not needed because
-caldb init -v -w  # we're using the local calibration manager instead
+# strip calibrator path (if any) from 'reduce' output and send to 'postp' via fifo
+send_cal_to_postp() {
+	grep 'Calibration stored as' - | awk '{print $4}' >/tmp/$$.fifo
+}
 
-echo 'Splitting MEFs'
-#typewalk --tags BUNDLE -n -o bundle
-#reduce --drpkg ghostdr @bundle
+# "pre-process": call before 'reduce'; records timestamp (used later to delete debris
+# files), prints large, more obvious header to separate 'reduce' invocations from one another
+# (relies on tab indentation so entire script has been converted)
+prep() {
+	sleep ${linger:=0}
+	[[ "$@" =~ BUNDLE ]] || touch /tmp/$$.mark
+	cat <<-HERE  # print the banner/header
+		
+		
+		
+		
+		
+		
+		
+		    > --------------------------------------------------------------------------
+		    >
+		    >   $1
+		    >
+		    > --------------------------------------------------------------------------
+		
+	HERE
+}
 
-echo 'Doing slits now'
+# generate the list of files in 'list'; also sets 'msg'
+mklist() {
+	msg="$1"; shift
+	list=`typewalk --tags GHOST UNPREPARED $@ -n -o /dev/fd/2 2>&1 1>/dev/null | grep -v '^#' || true`
+	[ -n "$list" ]
+}
 
-typewalk --tags GHOST SLITV BIAS UNPREPARED --dir $BIASDIR/ -n -o bias.list
-reduce --drpkg ghostdr $QUALITY @bias.list 2>&1 | tee >(add_to_calib_mgr)
-allow_inspection
+# process all matching files together (as a whole / in a batch)
+reduce_list() {
+	mklist "$@" || return 0
+	prep "$@"
+	reduce --drpkg ghostdr $QUALITY @/dev/fd/0 2>&1 <<<"$list" | tee >(send_cal_to_postp)
+	postp
+}
 
-typewalk --tags GHOST SLITV DARK UNPREPARED --dir $DARKDIR/ -n -o dark.list
-reduce --drpkg ghostdr $QUALITY @dark.list 2>&1 | tee >(add_to_calib_mgr)
-allow_inspection
+# process each matching file individually (by itself)
+reduce_each() {
+	mklist "$@" || return 0
+	while read THING <&3; do
+		[[ "${THING}" =~ .*/(.*) ]] && prep "$msg: ${BASH_REMATCH[1]}"
+		reduce --drpkg ghostdr $QUALITY $THING 2>&1 | tee >(send_cal_to_postp)
+		postp
+	done 3<<<"$list"
+}
 
-for MODE in HIGH STD; do
-    typewalk --tags GHOST SLITV FLAT UNPREPARED $MODE --dir $FLATDIR/ -n -o flat.list
-    reduce --drpkg ghostdr $QUALITY @flat.list 2>&1 | tee >(add_to_calib_mgr)
-    allow_inspection
-    
-    while read ARC <&3; do
-        echo Reducing slit arc $ARC
-        reduce --drpkg ghostdr $QUALITY $ARC 2>&1 | tee >(add_to_calib_mgr)
-        allow_inspection
-    done 3< <( typewalk --tags GHOST SLITV ARC UNPREPARED $MODE --dir $ARCDIR/ -n -o /dev/fd/2 2>&1 1>/dev/null | grep -v '^#' )
+rm -rf calibrations .reducecache reduce.log  # start with a fresh local cache and logfile
+caldb init -v -w  # start with a fresh local calibration manager
 
-    
-    while read STAND <&3; do
-        echo Reducing slit standard $STAND
-        reduce --drpkg ghostdr $QUALITY $STAND 2>&1 | tee >(add_to_calib_mgr)
-        allow_inspection
-    done 3< <(
-        typewalk --tags GHOST SLITV IMAGE UNPREPARED $MODE --dir $OBJDIR/ --filemask "standard.*\.(fits|FITS)" -n -o /dev/fd/2 2>&1 1>/dev/null \
-        | grep -v '^#'
-    )
+reduce_list "Splitting MEFs" BUNDLE  # no need to comment out: noop's on -split simulator outputs
+for CAM in SLITV RED BLUE; do
+	# process biases (populate a hash with keys for each necessary binning mode, and run 'reduce' for each)
+	unset bins; declare -A bins  # 'bins' is the hash
+	if [ $CAM = SLITV ]; then bins[2x2]=; else bins[1x1]=; bins[$BINNING]=; fi  # populate
+	for bin in "${!bins[@]}"; do reduce_list "Reducing $CAM biases" $CAM BIAS $bin; done  # iterate
 
-    while read OBJECT <&3; do
-        echo Reducing slit object $OBJECT
-        reduce --drpkg ghostdr $QUALITY $OBJECT 2>&1 | tee >(add_to_calib_mgr)
-        allow_inspection
-    done 3< <(
-        typewalk --tags GHOST SLITV IMAGE UNPREPARED $MODE --dir $OBJDIR/ --filemask "obj.*$SEEING.*\.(fits|FITS)" -n -o /dev/fd/2 2>&1 1>/dev/null \
-        | grep -v '^#'
-    )
-done
-
-echo 'Now the spectrograph data'
-
-for CAM in RED BLUE; do
-    echo "Doing $CAM images now"
-
-    typewalk --tags GHOST BIAS UNPREPARED 1x1 $CAM --dir $BIASDIR/ -n -o bias.list
-    reduce --drpkg ghostdr $QUALITY @bias.list 2>&1 | tee >(add_to_calib_mgr)
-    allow_inspection
-    
-    if [ $BINNING != '1x1' ]; then
-        typewalk --tags GHOST BIAS UNPREPARED $BINNING $CAM --dir $BIASDIR/ -n -o bias.list
-        reduce --drpkg ghostdr $QUALITY @bias.list 2>&1 | tee >(add_to_calib_mgr)
-        allow_inspection
-    fi
-    
-    typewalk --tags GHOST DARK UNPREPARED $CAM --dir $DARKDIR/ -n -o dark.list
-    reduce --drpkg ghostdr $QUALITY @dark.list 2>&1 | tee >(add_to_calib_mgr)
-    allow_inspection
-    
-    for MODE in HIGH STD; do
-        typewalk --tags GHOST FLAT UNPREPARED $CAM $MODE --dir $FLATDIR/ -n -o flat.list
-        reduce --drpkg ghostdr $QUALITY @flat.list 2>&1 | tee >(add_to_calib_mgr)
-        allow_inspection
-
-        while read ARC <&3; do
-            echo Reducing arc $ARC
-            reduce --drpkg ghostdr $QUALITY $ARC 2>&1 | tee >(add_to_calib_mgr)
-            allow_inspection
-        done 3< <( typewalk --tags GHOST ARC UNPREPARED $CAM $MODE --dir $ARCDIR/ -n -o /dev/fd/2 2>&1 1>/dev/null | grep -v '^#' )
-
-        while read STAND <&3; do
-            echo Reducing standard $STAND
-            reduce --drpkg ghostdr $QUALITY $STAND
-            allow_inspection
-        done 3< <(
-            typewalk --tags GHOST UNPREPARED $BINNING $CAM $MODE --dir $OBJDIR/ --filemask "standard.*\.(fits|FITS)" -n -o /dev/fd/2 2>&1 1>/dev/null \
-            | grep -v '^#'
-        )
-
-        while read OBJECT <&3; do
-            echo Reducing object $OBJECT
-            reduce --drpkg ghostdr $QUALITY $OBJECT
-            allow_inspection
-        done 3< <(
-            typewalk --tags GHOST UNPREPARED $BINNING $CAM $MODE --dir $OBJDIR/ --filemask "obj.*$SEEING.*\.(fits|FITS)" -n -o /dev/fd/2 2>&1 1>/dev/null \
-            | grep -v '^#'
-        )
-    done
+	# process everything else
+	bin=$BINNING; [ $CAM = SLITV ] && bin=  # binning modes for objects and standards
+	reduce_list "Reducing $CAM darks" $CAM DARK
+	for MODE in HIGH STD; do
+		reduce_list "Reducing $CAM $MODE flats" $CAM $MODE FLAT
+		reduce_each "Reducing $CAM $MODE arc" $CAM $MODE ARC
+		reduce_each "Reducing $CAM $MODE standard" $CAM $MODE $bin --filemask "standard.*\.(fits|FITS)" 
+		reduce_each "Reducing $CAM $MODE object" $CAM $MODE $bin --filemask "obj.*$SEEING.*\.(fits|FITS)" 
+	done
 done
