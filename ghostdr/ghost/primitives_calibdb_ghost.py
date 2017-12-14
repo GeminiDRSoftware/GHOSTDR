@@ -24,6 +24,13 @@ class CalibDBGHOST(CalibDB):
         self.inst_lookups = 'ghostdr.ghost.lookups'
         self.parameters = ParametersCalibDBGHOST
 
+    def getProcessedArc(self, adinputs=None, **params):
+        caltype = "processed_arc"
+        self.getCalibration(adinputs, caltype=caltype,
+                            refresh=params["refresh"], howmany=2)
+        self._assert_calibrations(adinputs, caltype)
+        return adinputs
+
     def getProcessedSlit(self, adinputs=None, **params):
         caltype = "processed_slit"
         self.getCalibration(adinputs, caltype=caltype)

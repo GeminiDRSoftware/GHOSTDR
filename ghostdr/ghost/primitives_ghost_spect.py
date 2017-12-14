@@ -86,9 +86,9 @@ class GHOSTSpect(GHOST):
                 except (TypeError, ValueError):
                     pass
 
+            self.getProcessedArc(ad)
             if found_arcs == False:
                 try:
-                    self.getProcessedArc(ad)
                     arc_before, arc_after = self._get_cal(ad, 'processed_arc',)
                 except (TypeError, ValueError):
                     # Triggers if only one arc, or more than two
