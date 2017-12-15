@@ -8,8 +8,12 @@ import numpy as np
 from copy import deepcopy
 import scipy
 import functools
-from datetime import datetime
+from datetime import datetime, date, time, timedelta
 import re
+import astropy.coordinates as astrocoord
+from astropy.time import Time
+from astropy import units as u
+from astropy import constants as const
 
 import astrodata
 
@@ -28,6 +32,11 @@ from .lookups import polyfit_dict, line_list
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
+
+GEMINI_SOUTH_LOC = astrocoord.EarthLocation.from_geodetic((-70, 44, 12.096),
+                                                          (-30, 14, 26.700),
+                                                          height=2722.,
+                                                          ellipsoid='WGS84')
 
 @parameter_override
 class GHOSTSpect(GHOST):
@@ -237,7 +246,7 @@ class GHOSTSpect(GHOST):
         ----------
         suffix: str
             suffix to be added to output files
-        correction_factor: int
+        correction_factor: float
             Barycentric correction factor to be applied. Defaults to None, at
             which point a default value will be applied.
         """
@@ -259,13 +268,15 @@ class GHOSTSpect(GHOST):
             # - Be taken from the file header?
             # - Be computed here from the observing time of the image?
             if params.get('correction_factor') is None:
-                cf = 1.0
+                cf = self._compute_barycentric_correction(ad, return_wavl=True)
             else:
                 cf = params.get('correction_factor')
 
             # Multiply the wavelength scale by the correction factor
-            log.stdinfo('Applying barycentric correction factor of %f' % cf)
-            ad[0].WAVL *= cf
+            for i, ext in enumerate(ad):
+                log.stdinfo('Applying barycentric correction factor of '
+                            '{} to ext {} of {}'.format(cf[i], i, ad.filename))
+                ext.WAVL *= float(cf[i])
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -1238,3 +1249,78 @@ class GHOSTSpect(GHOST):
         return polyfit_file if polyfit_file.startswith(os.path.sep) else \
             os.path.join(polyfit_dir, polyfit_file)
 
+    def _compute_barycentric_correction(self, ad, return_wavl=True,
+                                        loc=GEMINI_SOUTH_LOC):
+        """
+        Compute the baycentric correction factor for a given observation and
+        location on the Earth.
+
+        The barycentric correction compensates for (a) the motion of the Earth
+        around the Sun, and (b) the motion of the Earth's surface due to
+        planetary rotation. It can be returned as a line velocity correction,
+        or a multiplicative factor with which to correct the wavelength scale;
+        the default is the latter.
+
+        The correction will be computed for all extensions of the input
+        AstroData object.
+
+        This method is built using astropy v2, and is developed from:
+        https://github.com/janerigby/jrr/blob/master/barycen.py
+
+
+        Parameters
+        ----------
+        ad : astrodata.AstroData
+            The astrodata object from which to extract time and
+            location information. If the ad is multi-extension, a correction
+            factor will be returned for each extension.
+        return_wavl : bool
+            Denotes whether to return the correction as a wavelength
+            correction factor (True) or a velocity (False). Defaults to True.
+
+        Returns
+        -------
+        corr_facts: list of float
+            The barycentric correction values, one per extension of the input
+            ad.
+        """
+
+        # Set up a SkyCoord for this ad
+        sc = astrocoord.SkyCoord(ad.phu.get('RA'), ad.phu.get('DEC'),
+                                 unit=(u.deg, u.deg, ))
+
+        # Compute central time of observation
+        dt_start = datetime.combine(
+            datetime.strptime(ad.phu.get('DATE-OBS'), '%Y-%m-%d').date(),
+            datetime.strptime(ad.phu.get('UTSTART'), '%H:%M:%S.%f').time(),
+        )
+
+        corr_facts = []
+        for ext in ad:
+            dt_midp = dt_start + timedelta(
+                seconds=ext.hdr.get('EXPTIME')/2.0
+            )
+            dt_midp = Time(dt_midp)
+            # ICRS position & vel of Earth geocenter
+            ep, ev = astrocoord.solar_system.get_body_barycentric_posvel(
+                'earth', dt_midp
+            )
+            # GCRS position & vel of observatory (loc)
+            op, ov = loc.get_gcrs_posvel(dt_midp)
+            # Velocities can be simply added (are axes-aligned)
+            vel = ev + ov
+
+            # Get unit ICRS vector in direction of observation
+            sc_cart = sc.icrs.represent_as(
+                astrocoord.UnitSphericalRepresentation
+            ).represent_as(
+                astrocoord.CartesianRepresentation
+            )
+
+            corr_fact = sc_cart.dot(vel).to(u.km/u.s)
+            if return_wavl:
+                corr_fact = 1.0 + (corr_fact / const.c)
+
+            corr_facts.append(corr_fact)
+
+        return corr_facts
