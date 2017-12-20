@@ -450,16 +450,9 @@ class SlitViewer(object):
         self.images = np.zeros(
             (self.nexp, self.slitcam_ysz, self.slitcam_xsz), dtype=int)
         if self.cosmics:
-            saturation = np.iinfo(np.uint16).max
-            self.cosims = []  # clear it if not already
-            for expid, image in enumerate(self.images):
-                cosim = cosmic.cosmic(
-                    image.shape, duration, 10, 2.0, False, [4.54, 4.54, 10])
-                cosim[cosim < 0] = 0
-                cosim[cosim > saturation] = saturation
-                cosim = cosim.astype(np.uint16)
-                self.images[expid] += cosim
-                self.cosims.append(cosim)
+            self.cosims = [
+                cosmic.cosmic(tuple(self.binning*x for x in im.shape), duration,
+                10, 2.0, False, [4.54, 4.54, 10]) for im in self.images]
 
     def save(self, fname, obstype, res, bias=1000, readnoise=8.0, gain=1.0,
              data_label=1):
@@ -544,6 +537,10 @@ class SlitViewer(object):
             # Construct a new header
             hdr = pf.Header()
 
+            cosim = self.cosims[expid]
+            cosim = apply_binning(cosim, (self.binning, self.binning))
+            image += to_ushort(cosim)
+
             # Grab the image data
             data = image / gain
 
@@ -592,7 +589,8 @@ class SlitViewer(object):
                     crhdr = pf.Header()
                     crhdr['DETSIZE'] = (detsz, 'Detector size')
                     crhdr['DETSEC'] = (secstr, 'Detector section(s)')
-                    crhdu.append(pf.ImageHDU(data=cosim, header=crhdr))
+                    crhdu.append(
+                        pf.ImageHDU(data=to_ushort(cosim), header=crhdr))
 
             hdulist.append(pf.ImageHDU(data=data, header=hdr))
 
