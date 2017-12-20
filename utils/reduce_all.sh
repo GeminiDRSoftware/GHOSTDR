@@ -1,53 +1,35 @@
 #!/bin/bash -e
+# Script to reduce all GHOST data using the recipe system.
+# This must be ran from within where the GHOST data are kept
+
 set -o pipefail
-linger="$1"
+exec 6<&0
 
 # make it so CTRL-C kills *all* subprocesses (doesn't require the user to press CTRL-C multiple times)
-trap 'rm -rf /tmp/$$.fifo /tmp/$$.mark; kill -s KILL -- -$$ 2>/dev/null' EXIT
+trap 'rm -rf /tmp/$$.mark; kill -s KILL -- -$$ 2>/dev/null' EXIT
 trap 'exit' INT QUIT TERM
 
-#Script to reduce all GHOST data using the recipe system.
-#This must be ran from within where the GHOST data are kept
+BINNING=2x4
+SEEING=0.5  # Note that the single seeing is being used here instead of both
+QUALITY=  # Quality Assessment = --qa, Quick Look = --ql, Science Quality = leave blank
+CHECK=false  # pause (true) or not (false) after each 'reduce' call to inspect results
+LINGER="${1:-0}"  # how many secs to pause between 'reduce' calls; 1st script arg or 0 default
 
-BINNING='2x4'
-
-###### NOTE THAT THE SINGLE SEEING IS BEING USED HERE INSTEAD OF BOTH ########
-SEEING=0.5
-
-# Now we define the context. For Quality Assessment, use '--qa', for Quick Look
-# use '--ql', for Science Quality, leave blank
-QUALITY=''
-
-mkfifo /tmp/$$.fifo  # IPC between main script and tee'd subprocesses
-
-# change 'false' to 'true' below if you want to inspect outputs between 'reduce' invocations
 allow_inspection() {
-	if false; then
-		builtin echo 'You can now check the reduction at this step.'
-		read -p "Press any key to continue... " -n1 -s
-	fi
+	builtin echo 'You can now check the reduction at this step.'
+	read -p "Press any key to continue... " -n1 -s -u6
 }
 
-# "post-process": call immediately following 'reduce' (must also tee 'reduce' output to
-# 'send_cal_to_postp'); this waits on tee'd processes, ingests calibs into calmgr, allows
-# inspections, and deletes debris files created by 'reduce'
+# do things after 'reduce': ingest calibs into calmgr, allow inspections, delete debris files
 postp() {
-	read calib </tmp/$$.fifo || true
-	[ -n "$calib" ] && caldb add -v $calib
-	allow_inspection
-	find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" -exec rm -rvf '{}' + 2>/dev/null || true
+	read calib && { [ -f "$calib" ] && caldb add -v $calib; }
+	$CHECK && allow_inspection
+	find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" -exec rm -rvf '{}' + 2>/dev/null
+	$CHECK || sleep $LINGER
 }
 
-# strip calibrator path (if any) from 'reduce' output and send to 'postp' via fifo
-send_cal_to_postp() {
-	grep 'Calibration stored as' - | awk '{print $4}' >/tmp/$$.fifo
-}
-
-# "pre-process": call before 'reduce'; records timestamp (used later to delete debris
-# files), prints large, more obvious header to separate 'reduce' invocations from one another
-# (relies on tab indentation so entire script has been converted)
+# do things before 'reduce': save timestamp (used to delete debris files), print a visually obvious banner
 prep() {
-	sleep ${linger:=0}
 	[[ "$@" =~ BUNDLE ]] || touch /tmp/$$.mark
 	cat <<-HERE  # print the banner/header
 		
@@ -69,26 +51,29 @@ prep() {
 # generate the list of files in 'list'; also sets 'msg'
 mklist() {
 	msg="$1"; shift
-	list=`typewalk --tags GHOST UNPREPARED $@ -n -o /dev/fd/2 2>&1 1>/dev/null | grep -v '^#' || true`
+	list=`typewalk --tags GHOST UNPREPARED $@ -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#'`
 	[ -n "$list" ]
+}
+
+# perform the reduction; return any calibrator produced
+doreduce() {
+	reduce --drpkg ghostdr $QUALITY "$@" 2>&1 | tee /dev/tty | { grep 'Calibration stored as' || true; } | awk '{print $4}'
 }
 
 # process all matching files together (as a whole / in a batch)
 reduce_list() {
 	mklist "$@" || return 0
 	prep "$@"
-	reduce --drpkg ghostdr $QUALITY @/dev/fd/0 2>&1 <<<"$list" | tee >(send_cal_to_postp)
-	postp
+	doreduce @/dev/stdin <<<"$list" | postp
 }
 
 # process each matching file individually (by itself)
 reduce_each() {
 	mklist "$@" || return 0
-	while read THING <&3; do
+	while read THING; do
 		[[ "${THING}" =~ .*/(.*) ]] && prep "$msg: ${BASH_REMATCH[1]}"
-		reduce --drpkg ghostdr $QUALITY $THING 2>&1 | tee >(send_cal_to_postp)
-		postp
-	done 3<<<"$list"
+		doreduce $THING | postp
+	done <<<"$list"
 }
 
 rm -rf calibrations .reducecache reduce.log  # start with a fresh local cache and logfile
