@@ -24,7 +24,7 @@ allow_inspection() {
 postp() {
 	read calib && { [ -f "$calib" ] && caldb add -v $calib; }
 	$CHECK && allow_inspection
-	find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" -exec rm -rvf '{}' + 2>/dev/null
+	find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" -exec rm -rvf '{}' + 2>/dev/null || true
 	$CHECK || sleep $LINGER
 }
 
