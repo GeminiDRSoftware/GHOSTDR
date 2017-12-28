@@ -598,10 +598,10 @@ class SlitViewer(object):
             return hdulist
 
         print('Writing ' + fname + 'SLIT.fits')
-        hdulist.writeto(fname + 'SLIT.fits', clobber=True)
+        hdulist.writeto(fname + 'SLIT.fits', overwrite=True)
         if self.cosmics and self.crplane:
             print('Writing ' + fname + 'SLIT_CR.fits')
-            crhdu.writeto(fname + 'SLIT_CR.fits', clobber=True)
+            crhdu.writeto(fname + 'SLIT_CR.fits', overwrite=True)
 
     def create_slitview_frames(self, im_slit, spectrum, slitview_wave,
                                slitview_frac, slitview_offset, mode='high'):
@@ -1682,7 +1682,7 @@ class Arm(object):
             hpims = [to_ushort(i) for i in hpims]
             for hpim in hpims:
                 hphdu.append(pf.ImageHDU(data=hpim, header=pf.Header()))
-            hphdu.writeto(self.arm + '_HP.fits', clobber=True)
+            hphdu.writeto(self.arm + '_HP.fits', overwrite=True)
             self.hpplane = False
 
         # Add hot pixels to the dark current image
@@ -1730,12 +1730,12 @@ class Arm(object):
                 crhdu.append(pf.ImageHDU(data=cosim, header=crhdr, name='SCI'))
 
             print('Writing ' + output_prefix + self.arm + '_CR.fits')
-            crhdu.writeto(output_prefix + self.arm + '_CR.fits', clobber=True)
+            crhdu.writeto(output_prefix + self.arm + '_CR.fits', overwrite=True)
 
         # Write the check frame if required
         if self.split and self.check and obstype != 'BIAS' and obstype != 'DARK':
             chkhdu = pf.HDUList(pf.PrimaryHDU(data=check_image))
-            chkhdu.writeto(output_prefix + self.arm + '_chk.fits', clobber=True)
+            chkhdu.writeto(output_prefix + self.arm + '_chk.fits', overwrite=True)
 
         # some datetimes for use in creating the header below
         ltnow = utstart.replace(tzinfo=tz.tzutc())
@@ -1954,7 +1954,7 @@ class Arm(object):
                 bins = 'x'.join(map(str, binmode))
                 newfilename = output_prefix + bins + '_' + self.arm + '.fits'
                 print('Writing ' + newfilename)
-                hdulist.writeto(newfilename, clobber=True)
+                hdulist.writeto(newfilename, overwrite=True)
                 # clear hdulist in preparation for next binning mode
                 hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
                 continue
@@ -2189,4 +2189,4 @@ class Ghost(object):
 
         print('Writing observation MEF to ' + output_prefix + 'MEF.fits')
         hdulist[0].header['EXTEND'] = True  # this works
-        hdulist.writeto(output_prefix + 'MEF.fits', clobber=True)
+        hdulist.writeto(output_prefix + 'MEF.fits', overwrite=True)
