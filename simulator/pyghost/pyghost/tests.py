@@ -72,7 +72,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split,
         check=check)
 
-    target_binmode = (1, 1)  # (1, 2)
+    target_binmode = (2, 4)  # (1, 2)
 
     # This produces a bias with the above noise
     for i in range(1, nbias+1):
@@ -87,7 +87,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         ghost.simulate_observation(
             duration=duration, output_prefix='dark'+str(duration)+'_'+str(i)+'_',
             use_thar=False, spectrum_in=blank, add_sky=False,
-            obstype='DARK', data_label=i, binmode=target_binmode,
+            obstype='DARK', data_label=i, binmode=(1, 1),
             utstart=start_dt)
         start_dt += datetime.timedelta(seconds=duration)
 
@@ -98,7 +98,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
                 duration=duration, output_prefix='flat'+str(duration)+'_'+res +
                 '_'+str(i)+'_', use_thar=False, spectrum_in=flat,
                 add_sky=False, res=res, flatlamp=True, obstype='FLAT',
-                data_label=i, binmode=target_binmode,
+                data_label=i, binmode=(1, 1),
                 utstart=start_dt)
             start_dt += datetime.timedelta(seconds=duration)
 
@@ -106,7 +106,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         ghost.simulate_observation(
             duration=duration, output_prefix='arcBefore'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=thar, add_sky=False, res=res,
-            flatlamp=True, obstype='ARC', binmode=target_binmode,
+            flatlamp=True, obstype='ARC', binmode=(1, 1),
             utstart=start_dt)
         start_dt += datetime.timedelta(seconds=duration)
 
@@ -151,7 +151,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         ghost.simulate_observation(
             duration=duration, output_prefix='arcAfter'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=thar, add_sky=False, res=res,
-            flatlamp=True, obstype='ARC', binmode=target_binmode,
+            flatlamp=True, obstype='ARC', binmode=(1, 1),
             utstart=start_dt)
         start_dt += datetime.timedelta(seconds=duration)
 
