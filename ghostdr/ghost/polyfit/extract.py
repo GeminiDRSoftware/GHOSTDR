@@ -359,7 +359,7 @@ class Extractor():
                                                    spat_conv_weights, axis=0)
         
         if self.badpixmask is not None:
-            pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
+            pixel_inv_var[self.badpixmask.astype(bool)] = 0.1
             
         # Loop through all orders then through all y pixels.
         for i in range(nm):
