@@ -9,10 +9,10 @@ exec 6<&0
 trap 'rm -rf /tmp/$$.mark; kill -s KILL -- -$$ 2>/dev/null' EXIT
 trap 'exit' INT QUIT TERM
 
-BINNING=2x4
+BINNING=1x1
 SEEING=0.5  # Note that the single seeing is being used here instead of both
 QUALITY=  # Quality Assessment = --qa, Quick Look = --ql, Science Quality = leave blank
-CHECK=false  # pause (true) or not (false) after each 'reduce' call to inspect results
+CHECK=true  # pause (true) or not (false) after each 'reduce' call to inspect results
 LINGER="${1:-0}"  # how many secs to pause between 'reduce' calls; 1st script arg or 0 default
 
 allow_inspection() {
@@ -24,7 +24,10 @@ allow_inspection() {
 postp() {
 	read calib && { [ -f "$calib" ] && caldb add -v $calib; }
 	$CHECK && allow_inspection
-	find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" -exec rm -rvf '{}' + 2>/dev/null || true
+	# TODO: This is a useful line, but it gets rid of all fits files created after
+	# reducing anything. These include the desired pipeline products too, so those should remain or
+	# be copied into a 'reduced' directory.
+	#find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" -exec rm -rvf '{}' + 2>/dev/null || true
 	$CHECK || sleep $LINGER
 }
 

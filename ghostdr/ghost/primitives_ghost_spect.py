@@ -102,7 +102,7 @@ class GHOSTSpect(GHOST):
                     arc_before, arc_after = self._get_cal(ad, 'processed_arc',)
                 except (TypeError, ValueError):
                     # Triggers if only one arc, or more than two
-                    arc_before = self._get_cal(ad, 'processed_arc',)
+                    arc_before = self._get_cal(ad, 'processed_arc',)[0]
                     arc_after = None
 
             log.stdinfo('Arcs for {}: {}, {}'.format(ad, arc_before, arc_after))
