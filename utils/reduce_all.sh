@@ -9,10 +9,10 @@ exec 6<&0
 trap 'rm -rf /tmp/$$.mark; kill -s KILL -- -$$ 2>/dev/null' EXIT
 trap 'exit' INT QUIT TERM
 
-BINNING=1x1
+BINNING=2x4
 SEEING=0.5  # Note that the single seeing is being used here instead of both
 QUALITY=  # Quality Assessment = --qa, Quick Look = --ql, Science Quality = leave blank
-CHECK=true  # pause (true) or not (false) after each 'reduce' call to inspect results
+CHECK=false  # pause (true) or not (false) after each 'reduce' call to inspect results
 LINGER="${1:-0}"  # how many secs to pause between 'reduce' calls; 1st script arg or 0 default
 
 allow_inspection() {
@@ -24,17 +24,16 @@ allow_inspection() {
 postp() {
 	read calib && { [ -f "$calib" ] && caldb add -v $calib; }
 	$CHECK && allow_inspection
-	# TODO: This is a useful line, but it gets rid of all fits files created after
-	# reducing anything. These include the desired pipeline products too, so those should remain or
-	# be copied into a 'reduced' directory.
-	#find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" -exec rm -rvf '{}' + 2>/dev/null || true
+	[[ "$@" =~ BUNDLE || "$@" =~ object ]] || {
+		find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" -exec rm -rvf '{}' + 2>/dev/null || true
+	}
 	$CHECK || sleep $LINGER
 }
 
 # do things before 'reduce': save timestamp (used to delete debris files), print a visually obvious banner
 prep() {
-	[[ "$@" =~ BUNDLE ]] || touch /tmp/$$.mark
-	cat <<-HERE  # print the banner/header
+	touch /tmp/$$.mark
+	cat <<-HERE
 		
 		
 		
@@ -60,14 +59,15 @@ mklist() {
 
 # perform the reduction; return any calibrator produced
 doreduce() {
-	reduce --drpkg ghostdr $QUALITY "$@" 2>&1 | tee /dev/tty | { grep 'Calibration stored as' || true; } | awk '{print $4}'
+	stdbuf -o 0 reduce --drpkg ghostdr $QUALITY "$@" 2>&1 | stdbuf -o 0 grep -v stdbuf | tee /dev/tty \
+		| { grep 'Calibration stored as' || true; } | awk '{print $4}'
 }
 
 # process all matching files together (as a whole / in a batch)
 reduce_list() {
 	mklist "$@" || return 0
 	prep "$@"
-	doreduce @/dev/stdin <<<"$list" | postp
+	doreduce @/dev/stdin <<<"$list" | postp "$@"
 }
 
 # process each matching file individually (by itself)
@@ -75,7 +75,7 @@ reduce_each() {
 	mklist "$@" || return 0
 	while read THING; do
 		[[ "${THING}" =~ .*/(.*) ]] && prep "$msg: ${BASH_REMATCH[1]}"
-		doreduce $THING | postp
+		doreduce $THING | postp "$@"
 	done <<<"$list"
 }
 
