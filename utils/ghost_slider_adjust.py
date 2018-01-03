@@ -15,7 +15,7 @@ import os
 import pdb
 import sys
 import numpy as np
-from ghostdr import polyfit
+from ghostdr.ghost import polyfit
 import astropy.io.fits as pyfits
 # plt.ion()
 
