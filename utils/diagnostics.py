@@ -9,13 +9,12 @@ reduction files (extracted profiles/barycentric corrected)
 
 from __future__ import division, print_function
 import numpy as np
-from ghostdr import polyfit
+from ghostdr.ghost import polyfit
 import glob, os, sys
 import astropy.io.fits as pyfits
 import ghostdr.ghost.lookups as lookups
+import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
 
-# Start by finding where the lookups are and save that location as a variable
-lookups_path = os.path.dirname( os.path.abspath(lookups.__file__) )
 
 
 def thar_spectrum(linefile):
@@ -50,6 +49,13 @@ def thar_spectrum(linefile):
     return np.array([thar_wave, thar_flux])
 
 
+# Start by finding where the lookups are and save that location as a variable
+lookups_path = os.path.dirname( os.path.abspath(lookups.__file__) )
+arclinefile = lookups_path + '/' + lookups.line_list
+thar_spec = thar_spectrum(arclinefile)
+
+polyfit_lookups_path = lookups_path +'/Polyfit/'
+
 
 # Let's start by checking the fits. We use the same method as the slider adjust
 # and let the user check things individually.
@@ -63,4 +69,64 @@ arc_list = glob.glob('calibrations/processed_arc/*arc.fits')
 for mode in ['high', 'std']:
     for cam in ['blue', 'red']:
         ghost = polyfit.ghost.GhostArm(cam, mode=mode)
+        print('Inspecting flat and arc fits from the %s camera in %s mode' %
+              (cam, mode))
+        # Find the default models for things not inspected
+        rotmod_location = [value for key, value in
+                           polyfit_dict.rotmod_dict.items()
+                           if cam in key.lower() and mode in key.lower()][0]
+        rotparams = pyfits.getdata(polyfit_lookups_path + rotmod_location)
+
+        specmod_location = [value for key, value in
+                           polyfit_dict.specmod_dict.items()
+                           if cam in key.lower() and mode in key.lower()][0]
+        specparams = pyfits.getdata(polyfit_lookups_path + specmod_location)
+        
+        spatmod_location = [value for key, value in
+                           polyfit_dict.spatmod_dict.items()
+                           if cam in key.lower() and mode in key.lower()][0]
+        spatparams = pyfits.getdata(polyfit_lookups_path + spatmod_location)
+
+        wavemod_location = [value for key, value in
+                           polyfit_dict.wavemod_dict.items()
+                           if cam in key.lower() and mode in key.lower()][0]
+        wparams = pyfits.getdata(polyfit_lookups_path + wavemod_location)
+        
+        # Now find the correct flat and arc frames
+        flat_file_location = [value for value in flat_list if cam in value
+                              and mode in value][0]
+        flat_file = pyfits.open(flat_file_location)
+        print('Inspecting file %s' % (flat_file_location) )
+        xparams = flat_file['XMOD'].data
+
+        dummy = ghost.spectral_format_with_matrix(xparams, wparams,
+                                                  spatparams, specparams,
+                                                  rotparams)
+
+        flat_conv = ghost.slit_flat_convolve(flat_file['SCI'].data)
+        adjusted_params = ghost.manual_model_adjust(flat_conv,
+                                                    model='position',
+                                                    xparams=xparams,
+                                                    percentage_variation=10)
+
+        adjusted_params = ghost.manual_model_adjust(flat_file['SCI'].data,
+                                                    model='position',
+                                                    xparams=xparams,
+                                                    percentage_variation=10)
+        
+        # Now the arcs
+        arcs_list = [value for value in arc_list if cam in value and mode in value]
+        for arc in arcs_list:
+            print('Inspecting file %s' % (arc) )
+            arc_file = pyfits.open(arc)
+            wparams = arc_file['WFIT'].data
+            arc_data = arc_file['SCI'].data
+            adjusted_params = ghost.manual_model_adjust(arc_data,
+                                                        model='wavelength',
+                                                        wparams=wparams,
+                                                        xparams=xparams,
+                                                        thar_spectrum=thar_spec,
+                                                        percentage_variation=5)
+
+        
         
