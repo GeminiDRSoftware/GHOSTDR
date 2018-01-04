@@ -248,7 +248,8 @@ class GHOSTSpect(GHOST):
             suffix to be added to output files
         correction_factor: float
             Barycentric correction factor to be applied. Defaults to None, at
-            which point a default value will be applied.
+            which point a computed value will be applied. The computed value
+            is based on the recorded position of the Gemini South observatory.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -594,6 +595,28 @@ class GHOSTSpect(GHOST):
             ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
                 ad.write(clobber=True)
+
+        return adinputs
+
+    def interpolateAndCombine(self, adinputs=None, **params):
+        """
+        Perform a sigma-clipping on the input data frame, such that any pixels
+        outside the sigma threshold have their BPM value updated
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        for ad in adinputs:
+
+            if ad.phu.get(timestamp_key):
+                log.warning("No changes will be made to {}, since it has "
+                            "already been processed by interpolateAndCombine".
+                            format(ad.filename))
+                continue
+
+            # Timestamp; DO NOT update filename
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
 
         return adinputs
 
