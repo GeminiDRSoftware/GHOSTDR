@@ -10,6 +10,7 @@ timestamp_keys = {
     "clipSigmaBPM": "CLIPSIGB",
     "CRCorrect": "FXSLITCR",
     "extractProfile": "EXTRPROF",
+    "interpolateAndCombine": "INTERCOM",
     "findApertures": "FINDAPER",
     "fitWavelength": "FITWAVLN",
     "flatCorrect": "FLATCORR",

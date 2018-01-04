@@ -30,6 +30,9 @@ class ParametersGHOSTSpect(ParametersGHOST):
         "slitflat"          : None,
         "write_result"      : True,
     }
+    interpolateAndCombine = {
+        "suffix": "_interpdAndCombined",
+    }
     findApertures = {
         "slitflat"          : None,
         "suffix"            : "_findAper",
