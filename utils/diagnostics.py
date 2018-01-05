@@ -14,8 +14,8 @@ import glob, os, sys
 import astropy.io.fits as pyfits
 import ghostdr.ghost.lookups as lookups
 import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
-
-
+import pylab as pl
+from cycler import cycler
 
 def thar_spectrum(linefile):
     """Calculates a ThAr spectrum. Note that the flux scaling here is roughly
@@ -48,6 +48,23 @@ def thar_spectrum(linefile):
     thar_flux /= np.max(thar_flux) / 3e5
     return np.array([thar_wave, thar_flux])
 
+
+def plot_arcs(arc_data, thar_spec, w_map):
+    """ Function used to plot two panels, one containing the extracted arc 
+    with the ThAr lamp spectrum superimposed, and one containing the difference
+    between the two, to look for particularly bad regions of the fit.
+    """
+    pl.rc('axes',prop_cycle=(cycler('color', ['b', 'r'])))
+    f, axes = pl.subplots(3,1,sharex='all')
+    # We always have 3 objects
+    for obj in range(3):
+        axes[obj].plot(w_map.T, arc_data[:,:,obj].T)
+        thar_range = np.where( (thar_spec[0] > w_map.min())
+                               & (thar_spec[0] < w_map.max()))
+        axes[obj].plot(thar_spec[0][thar_range],thar_spec[1][thar_range], 'green')
+
+    pl.show()
+    
 
 # Start by finding where the lookups are and save that location as a variable
 lookups_path = os.path.dirname( os.path.abspath(lookups.__file__) )
@@ -104,15 +121,15 @@ for mode in ['high', 'std']:
                                                   rotparams)
 
         flat_conv = ghost.slit_flat_convolve(flat_file['SCI'].data)
-        adjusted_params = ghost.manual_model_adjust(flat_conv,
-                                                    model='position',
-                                                    xparams=xparams,
-                                                    percentage_variation=10)
+        # adjusted_params = ghost.manual_model_adjust(flat_conv,
+        #                                             model='position',
+        #                                             xparams=xparams,
+        #                                             percentage_variation=10)
 
-        adjusted_params = ghost.manual_model_adjust(flat_file['SCI'].data,
-                                                    model='position',
-                                                    xparams=xparams,
-                                                    percentage_variation=10)
+        # adjusted_params = ghost.manual_model_adjust(flat_file['SCI'].data,
+        #                                             model='position',
+        #                                             xparams=xparams,
+        #                                             percentage_variation=10)
         
         # Now the arcs
         arcs_list = [value for value in arc_list if cam in value and mode in value]
@@ -121,12 +138,10 @@ for mode in ['high', 'std']:
             arc_file = pyfits.open(arc)
             wparams = arc_file['WFIT'].data
             arc_data = arc_file['SCI'].data
-            adjusted_params = ghost.manual_model_adjust(arc_data,
-                                                        model='wavelength',
-                                                        wparams=wparams,
-                                                        xparams=xparams,
-                                                        thar_spectrum=thar_spec,
-                                                        percentage_variation=5)
-
-        
+            dummy = ghost.spectral_format_with_matrix(xparams, wparams,
+                                                  spatparams, specparams,
+                                                  rotparams)
+            plot_arcs(arc_data, thar_spec, ghost.w_map)
+            
+            
         
