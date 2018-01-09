@@ -208,7 +208,7 @@ class GHOSTSpect(GHOST):
                                                  suffix='_rebin%dx%d' %
                                                         (xb, yb,),
                                                  strip=True)
-                flat.write(clobber=True)
+                flat.write(overwrite=True)
 
             # CJS: Edited here to require that the science and flat frames'
             # extensions are the same shape. The original code would no-op
@@ -233,7 +233,7 @@ class GHOSTSpect(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
-                ad.write(clobber=True)
+                ad.write(overwrite=True)
 
         return adinputs
 
@@ -435,7 +435,7 @@ class GHOSTSpect(GHOST):
                                                  suffix='_rebin%dx%d' %
                                                         (xb, yb, ),
                                                  strip=True)
-                dark.write(clobber=True)
+                dark.write(overwrite=True)
                 dark_processing_done[
                     (dark_filename_orig, xb, yb)] = dark.filename
                 dark_list_out.append(dark.filename)
@@ -594,7 +594,7 @@ class GHOSTSpect(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
-                ad.write(clobber=True)
+                ad.write(overwrite=True)
 
         return adinputs
 
@@ -887,7 +887,7 @@ class GHOSTSpect(GHOST):
             flatprof_ad[0].reset(extracted_flux, mask=None,
                                  variance=extracted_var)
             if params["write_result"]:
-                flatprof_ad.write(clobber=True)
+                flatprof_ad.write(overwrite=True)
 
             # Divide the flat field through the science data
             # Arithmetic propagates VAR correctly
@@ -1220,7 +1220,7 @@ class GHOSTSpect(GHOST):
                                    strip=True)
             adoutputs.append(ad_mos)
 
-            # ad_mos.write(clobber=True)
+            # ad_mos.write(overwrite=True)
 
         return adoutputs
 

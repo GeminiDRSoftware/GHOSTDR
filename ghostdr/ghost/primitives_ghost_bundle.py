@@ -93,5 +93,5 @@ def _write_newfile(extns, suffix, base, log):
     binning = '_' + 'x'.join(n[0].hdr['CCDSUM'].split())
     n.update_filename(suffix=binning+suffix)
     log.stdinfo("   Writing {}".format(n.filename))
-    n.write(clobber=True)  # should we always overwrite?
+    n.write(overwrite=True)  # should we always overwrite?
 
