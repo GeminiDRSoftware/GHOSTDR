@@ -17,6 +17,7 @@ import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
 import pylab as pl
 from cycler import cycler
 
+
 def thar_spectrum(linefile):
     """Calculates a ThAr spectrum. Note that the flux scaling here is roughly
     correct for the lamp with no neutral density. From the simulator.
@@ -81,10 +82,26 @@ polyfit_lookups_path = lookups_path +'/Polyfit/'
 flat_list = glob.glob('calibrations/processed_flat/*flat.fits')
 arc_list = glob.glob('calibrations/processed_arc/*arc.fits')
 
-# Now cycle through available modes.
+modes = ['high', 'std']
+cams = ['blue', 'red']
 
-for mode in ['high', 'std']:
-    for cam in ['blue', 'red']:
+# Now cycle through available modes. or just the ones required
+# by detecting particular keywords in the sys arguments. 
+if len(sys.argv) > 1:
+    if 'high' in sys.argv:
+        modes = ['high']
+    elif 'std' in sys.argv:
+        modes = ['std']
+    if 'red' in sys.argv:
+        cams = ['red']
+    elif 'blue' in sys.argv:
+        cams = ['blue']
+    else:
+        print('Invalid argument.')
+        sys.exit()
+
+for mode in modes:
+    for cam in cams:
         ghost = polyfit.ghost.GhostArm(cam, mode=mode)
         print('Inspecting flat and arc fits from the %s camera in %s mode' %
               (cam, mode))
@@ -121,15 +138,15 @@ for mode in ['high', 'std']:
                                                   rotparams)
 
         flat_conv = ghost.slit_flat_convolve(flat_file['SCI'].data)
-        # adjusted_params = ghost.manual_model_adjust(flat_conv,
-        #                                             model='position',
-        #                                             xparams=xparams,
-        #                                             percentage_variation=10)
+        adjusted_params = ghost.manual_model_adjust(flat_conv,
+                                                    model='position',
+                                                    xparams=xparams,
+                                                    percentage_variation=10)
 
-        # adjusted_params = ghost.manual_model_adjust(flat_file['SCI'].data,
-        #                                             model='position',
-        #                                             xparams=xparams,
-        #                                             percentage_variation=10)
+        adjusted_params = ghost.manual_model_adjust(flat_file['SCI'].data,
+                                                    model='position',
+                                                    xparams=xparams,
+                                                    percentage_variation=10)
         
         # Now the arcs
         arcs_list = [value for value in arc_list if cam in value and mode in value]
