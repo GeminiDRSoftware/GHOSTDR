@@ -442,7 +442,7 @@ class Polyspect(object):
         new_x = old_x + the_shift
         return new_x
 
-    def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=20,
+    def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=5,
                        inspect=False):
         """
         Fit a "tramline" map.
