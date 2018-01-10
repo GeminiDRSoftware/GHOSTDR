@@ -148,8 +148,8 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
 
         # Now need to take the 'after' arcs
         # This produces an arc frame
-        # I'm introducing a 5 nm shift to test the wavelength fit
-        thar[0] += 0.005
+        # I'm introducing a 1 Angstrom shift to test the wavelength fit
+        thar[0] += 0.0001
         ghost.simulate_observation(
             duration=duration, output_prefix='arcAfter'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=thar, add_sky=False, res=res,
