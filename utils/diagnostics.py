@@ -96,15 +96,13 @@ cams = ['blue', 'red']
 if len(sys.argv) > 1:
     if 'high' in sys.argv:
         modes = ['high']
-    elif 'std' in sys.argv:
+    if 'std' in sys.argv:
         modes = ['std']
     if 'red' in sys.argv:
         cams = ['red']
-    elif 'blue' in sys.argv:
+    if 'blue' in sys.argv:
         cams = ['blue']
-    else:
-        print('Invalid argument.')
-        sys.exit()
+
 
 for mode in modes:
     for cam in cams:
@@ -144,19 +142,19 @@ for mode in modes:
                                                   rotparams)
 
         flat_conv = ghost.slit_flat_convolve(flat_file['SCI'].data)
-        # plot_title = 'Convolution plot for camera %s in %s mode.' % (cam, mode))
-        # adjusted_params = ghost.manual_model_adjust(flat_conv,
-        #                                             model='position',
-        #                                             xparams=xparams,
-        #                                             percentage_variation=10
-        #                                             title = plot_title)
+        plot_title = 'Convolution plot for camera %s in %s mode.' % (cam, mode))
+        adjusted_params = ghost.manual_model_adjust(flat_conv,
+                                                    model='position',
+                                                    xparams=xparams,
+                                                    percentage_variation=10
+                                                    title = plot_title)
 
-        # plot_title = 'Regular flat for camera %s in %s mode.' % (cam, mode))
-        # adjusted_params = ghost.manual_model_adjust(flat_file['SCI'].data,
-        #                                             model='position',
-        #                                             xparams=xparams,
-        #                                             percentage_variation=10,
-        #                                             title = plot_title)
+        plot_title = 'Regular flat for camera %s in %s mode.' % (cam, mode))
+        adjusted_params = ghost.manual_model_adjust(flat_file['SCI'].data,
+                                                    model='position',
+                                                    xparams=xparams,
+                                                    percentage_variation=10,
+                                                    title = plot_title)
         
         # Now the arcs
         arcs_list = [value for value in arc_list if cam in value and mode in value]
