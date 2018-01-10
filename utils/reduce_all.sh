@@ -9,7 +9,7 @@ exec 6<&0
 trap 'rm -rf /tmp/$$.mark; kill -s KILL -- -$$ 2>/dev/null' EXIT
 trap 'exit' INT QUIT TERM
 
-BINNING=2x4
+BINNING=1x1
 SEEING=0.5  # Note that the single seeing is being used here instead of both
 QUALITY=  # Quality Assessment = --qa, Quick Look = --ql, Science Quality = leave blank
 CHECK=false  # pause (true) or not (false) after each 'reduce' call to inspect results
