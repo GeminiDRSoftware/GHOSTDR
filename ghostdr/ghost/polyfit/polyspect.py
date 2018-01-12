@@ -442,7 +442,7 @@ class Polyspect(object):
         new_x = old_x + the_shift
         return new_x
 
-    def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=20,
+    def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=10,
                        inspect=False):
         """
         Fit a "tramline" map.
@@ -820,7 +820,7 @@ class Polyspect(object):
     def manual_model_adjust(self, data, xparams, model='position', wparams=None,
                             spatparams=None, rotparams=None,
                             thar_spectrum=None, percentage_variation=10,
-                            vary_wrt_max=True):
+                            vary_wrt_max=True, title=None):
         """
         Interactive manual adjustment for a :module:`polyspect` module
 
@@ -868,6 +868,9 @@ class Polyspect(object):
         vary_wrt_max: bool, optional
             Vary all parameters intelligently with a scaling of the maximum
             variation, rather than just a percentage of each.
+        title: str, optional
+            Figure title for visualisation purposes. Optional and defaults to
+            None
 
         Returns
         -------
@@ -939,6 +942,8 @@ class Polyspect(object):
         nxbase = data.shape[0]
         # Start by setting up the graphical part
         fig, axx = plt.subplots()
+        if title is not None:
+            axx.set_title(title)
         axcolor = 'lightgoldenrodyellow'
 
         ygrid = np.meshgrid(np.arange(data.shape[1]),

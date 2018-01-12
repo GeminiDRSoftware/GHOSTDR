@@ -441,12 +441,17 @@ class Extractor():
                 # leading to the impossibility of inverting the matrix.
                 # currently the pixel weights are unmodified and those used are
                 # whatever the last iteration calculation was.
-                # Naturally, if this happens on iteration one, this will crash
-                # on the next loop.
+                # FIXME: The above problem is made more complicated by the fact
+                # that due to the different slit magnifications,
+                # the previous weights may not have the same shape, so
+                # we make copies of b_mat for pixel weights when
+                # determinant is zero and shape is different.
                 try: pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
                 except:
                     try:
                         pixel_weights
+                        if pixel_weights.shape != b_mat.shape:
+                            pixel_weights = b_mat.copy()
                     except:
                         pixel_weights = b_mat.copy()
                     else:
@@ -463,7 +468,7 @@ class Extractor():
                 #    import pdb; pdb.set_trace()
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
-                #orders
+                #order:
                 for ii, ew_one  in enumerate(extraction_weights):
                     ew_one[x_ix, j] += pixel_weights[:,ii]
 

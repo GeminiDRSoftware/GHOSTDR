@@ -72,7 +72,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
         cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split,
         check=check)
 
-    target_binmode = (2, 4)  # (1, 2)
+    target_binmode = (1, 1)  # (1, 2)
 
     # This produces a bias with the above noise
     for i in range(1, nbias+1):
@@ -148,6 +148,8 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
 
         # Now need to take the 'after' arcs
         # This produces an arc frame
+        # I'm introducing a 1 Angstrom shift to test the wavelength fit
+        thar[0] += 0.0001
         ghost.simulate_observation(
             duration=duration, output_prefix='arcAfter'+str(duration)+'_'+res+'_',
             use_thar=False, spectrum_in=thar, add_sky=False, res=res,
