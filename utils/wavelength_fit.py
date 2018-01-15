@@ -7,7 +7,9 @@ but instead for debugging and development purposes.
 """
 
 from __future__ import division, print_function
-from ghostdr import polyfit
+from ghostdr.ghost import polyfit
+import ghostdr.ghost.lookups as lookups
+import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
 import astropy.io.fits as pyfits
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +19,7 @@ import matplotlib.cm as cm
 import astropy.io.fits as pyfits
 #plt.ion()
 
-refit_x_pars=True
+refit_x_pars=False
 user = 'Joao'
 
 if user=='Mike':
@@ -44,13 +46,14 @@ if user=='Mike':
     arc_image_array -= np.median(arc_image_array)
 
 elif user=='Joao':
-    fitsdir='/priv/mulga1/jbento/ghost/standard/calibrations/storedcals/'
-    arclinefile= '/home/jbento/code/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+    fitsdir='/home/jbento/code/GHOSTDR/simulator/pyghost/output/reduction'
+    arclinefile = lookups_path + '/' + lookups.line_list
     #arclinefile= '/home/jbento/code/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
-    test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
+    #test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
+
     #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-    arc_file  = fitsdir+"arc95_std_red_arc.fits"
-    flat_file = fitsdir+"flat95_std_2_red_flat.fits"
+    arc_file  = fitsdir+"arcAfter95_std_MEF_1x1_blue1_tiled.fits"
+    #flat_file = fitsdir+"flat95_std_2_red_flat.fits"
 
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
@@ -69,7 +72,7 @@ elif user=='Joao':
 
 
 #Get the data
-flat_data = pyfits.getdata(flat_file)
+#flat_data = pyfits.getdata(flat_file)
 arc_data = pyfits.getdata(arc_file)
 arcwaves, arcfluxes= np.loadtxt(arclinefile,usecols=[1,2]).T
 

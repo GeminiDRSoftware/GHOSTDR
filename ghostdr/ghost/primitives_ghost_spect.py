@@ -1220,7 +1220,7 @@ class GHOSTSpect(GHOST):
                                    strip=True)
             adoutputs.append(ad_mos)
 
-            # ad_mos.write(clobber=True)
+            ad_mos.write(clobber=True)
 
         return adoutputs
 
