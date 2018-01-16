@@ -7,6 +7,7 @@ import os
 import numpy as np
 from copy import deepcopy
 import scipy
+import scipy.signal as signal
 import functools
 from datetime import datetime, date, time, timedelta
 import re
@@ -670,6 +671,18 @@ class GHOSTSpect(GHOST):
             slitview = SlitView(slit_flat[0].data, slit_flat[0].data,
                                 mode=res_mode)
 
+            #import pdb;pdb.set_trace()
+            # This is an attempt to remove the worse cosmic rays
+            # in the hope that the convolution is not affected by them.
+            # Start by performing a median filter 
+            medfilt = signal.medfilt2d(ad[0].data, (5,5))
+            # Now find which pixels have a percentage difference larger than
+            # 300% between the data and median filter, and replace those in the
+            # data with the median filter values.
+            data = ad[0].data.copy()
+            condit = np.abs((medfilt-data)/(medfilt+1)) > 200
+            
+            
             # Convolve the flat field with the slit profile
             flat_conv = ghost_arm.slit_flat_convolve(ad[0].data,
                 slit_profile=slitview.slit_profile(arm=arm),
@@ -680,7 +693,7 @@ class GHOSTSpect(GHOST):
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
                                                      xparams=xpars[0].data,
                                                      decrease_dim=8,
-                                                     inspect=False)
+                                                     inspect=True)
 
             # CJS: Append the XMOD as an extension. It will inherit the
             # header from the science plane (including irrelevant/wrong

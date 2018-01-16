@@ -80,9 +80,9 @@ if user == 'Joao':
     fitsdir = '/home/jbento/code/GHOSTDR/simulator/pyghost/output/reduction/'
     # test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     test_files_dir = '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/'+ cam + '/' + mode + '/161120/'
+    lookups_path = os.path.dirname(os.path.abspath(lookups.__file__))
+    polyfit_lookups_path = lookups_path + '/Polyfit/'
     if model == 'W':
-        lookups_path = os.path.dirname(os.path.abspath(lookups.__file__))
-        polyfit_lookups_path = lookups_path + '/Polyfit/'
         arclinefile = lookups_path + '/' + lookups.line_list
         # Define the files in use (NB xmod.txt and wavemod.txt should be
         # correct)

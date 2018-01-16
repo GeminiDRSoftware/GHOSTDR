@@ -442,7 +442,7 @@ class Polyspect(object):
         new_x = old_x + the_shift
         return new_x
 
-    def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=10,
+    def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=15,
                        inspect=False):
         """
         Fit a "tramline" map.
@@ -489,6 +489,8 @@ class Polyspect(object):
             image = data.T
         else:
             image = data
+
+        import pdb;pdb.set_trace()
         # Now use the adjust function to figure out a global shift in
         # the spatial direction
         x_values = self.adjust_x(xbase, image)
@@ -533,12 +535,17 @@ class Polyspect(object):
                 # Put a sigma for weighted fit purposes
                 sigma[i, j] = 1. / np.max(peakpix)
         # Down weight any regions where the flux peak was less than 0.
-        sigma[sigma < 0] = 1E30
+        sigma[sigma < 0] = 1E5
+
         # The inspect flag is used if a display of the results is desired.
         if inspect:
             plt.clf()
             plt.imshow(data)
-            plt.plot(y_values, x_values + self.szx // 2, '.')
+            point_sizes = 36*np.median(sigma)/sigma
+            plt.scatter(y_values.T, x_values.T + self.szx // 2,
+                        marker = '.',
+                        s = point_sizes.T.flatten(),
+                        color = 'red')
             plt.show()
 
         fitted_params = self.fit_to_x(x_values, xparams, y_values=y_values,
@@ -940,8 +947,10 @@ class Polyspect(object):
                 raise UserWarning('invalid model type for plot_data')
 
         nxbase = data.shape[0]
+
         # Start by setting up the graphical part
         fig, axx = plt.subplots()
+        plt.subplots_adjust(left=0.15, bottom=0.25)
         if title is not None:
             axx.set_title(title)
         axcolor = 'lightgoldenrodyellow'
@@ -956,9 +965,26 @@ class Polyspect(object):
                           color='green', linestyle='None', marker='.')
 
         # Now over plot the image.
+        image_min = data.min()
+        image_max = data.max()
+        image_diff = image_max - image_min
+        init_contrast = 0.5
+        contrastSlider_ax  = fig.add_axes([0.15, 0.1, 0.7, 0.05])
+        contrastSlider = Slider(contrastSlider_ax, 'value', 0, 1,
+                                valinit=init_contrast)
         #axx.imshow((data - np.median(data)) / 1e2)
-        axx.imshow(data,vmax=1000)
+        
+        image = axx.imshow(data,
+                           vmin = image_min + init_contrast*image_diff//8,
+                           vmax = image_max - init_contrast*image_diff//2)
+        
 
+        def update_imshow(val):
+            """ Function used to trigger update on the contrast slider """
+            image.set_clim(vmin = image_min + contrastSlider.val*image_diff//8,
+                           vmax = image_max - contrastSlider.val*image_diff//2)
+
+        contrastSlider.on_changed(update_imshow)
         # Create a second window for sliders.
         slide_fig = plt.figure()
 
