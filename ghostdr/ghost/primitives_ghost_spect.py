@@ -671,24 +671,28 @@ class GHOSTSpect(GHOST):
             slitview = SlitView(slit_flat[0].data, slit_flat[0].data,
                                 mode=res_mode)
 
-            #import pdb;pdb.set_trace()
             # This is an attempt to remove the worse cosmic rays
             # in the hope that the convolution is not affected by them.
             # Start by performing a median filter 
             medfilt = signal.medfilt2d(ad[0].data, (5,5))
             # Now find which pixels have a percentage difference larger than
-            # 300% between the data and median filter, and replace those in the
-            # data with the median filter values.
+            # a defined value between the data and median filter, and replace
+            # those in the data with the median filter values. Also, only
+            # replace values above the data average, so as not to replace low
+            # S/N values at the edges. 
             data = ad[0].data.copy()
-            condit = np.abs((medfilt-data)/(medfilt+1)) > 200
-            
+            condit = np.where(np.abs((medfilt - data)/(medfilt+1)) > 200) and\
+                     np.where(data > np.average(data))
+            data[condit] = medfilt[condit]
             
             # Convolve the flat field with the slit profile
-            flat_conv = ghost_arm.slit_flat_convolve(ad[0].data,
+            flat_conv = ghost_arm.slit_flat_convolve(data,
                 slit_profile=slitview.slit_profile(arm=arm),
                 spatpars=spatpars[0].data, microns_pix=slitview.microns_pix,
                 xpars=xpars[0].data)
 
+            flat_conv = signal.medfilt2d(flat_conv, (5,5))
+            
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
                                                      xparams=xpars[0].data,

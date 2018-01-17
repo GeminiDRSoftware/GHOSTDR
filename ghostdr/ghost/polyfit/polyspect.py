@@ -490,7 +490,6 @@ class Polyspect(object):
         else:
             image = data
 
-        import pdb;pdb.set_trace()
         # Now use the adjust function to figure out a global shift in
         # the spatial direction
         x_values = self.adjust_x(xbase, image)
@@ -970,7 +969,7 @@ class Polyspect(object):
         image_diff = image_max - image_min
         init_contrast = 0.5
         contrastSlider_ax  = fig.add_axes([0.15, 0.1, 0.7, 0.05])
-        contrastSlider = Slider(contrastSlider_ax, 'value', 0, 1,
+        contrastSlider = Slider(contrastSlider_ax, 'contrast', 0, 1,
                                 valinit=init_contrast)
         #axx.imshow((data - np.median(data)) / 1e2)
         
