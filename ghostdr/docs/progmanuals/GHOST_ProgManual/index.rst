@@ -18,6 +18,7 @@ GHOST Programmer's Manual
    primitives
    tests
    config
+   polynomial
 
 
 Indices and tables

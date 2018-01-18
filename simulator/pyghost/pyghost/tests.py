@@ -6,7 +6,7 @@ import pyghost
 import datetime
 
 def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
-        split=True, check=False,
+        split=False, check=False,
         # This should be 8pm in Chile local time
         start_dt=datetime.datetime(2017, 12, 1, 23, 0, 0)):
     """ The function that runs the test. """

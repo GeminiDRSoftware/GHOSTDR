@@ -35,7 +35,7 @@ Usage follows::
   import astropy.io.fits as pyfits
   ghost = polyfit.ghost.Arm('red',mode='high')
 
-At this stage it is important to an initial guess
+At this stage it is important to have an initial guess
 array for the polynomial model.
 
 At this point a location must be defined and the data imported (e.g.)::
@@ -86,3 +86,6 @@ be used as the input to the flux extraction code. This new 2D array should overw
 current default xmod file for this arm/mode in the correct location. At this point it is
 important to also place it in whatever location has been agreed so that the pipeline uses
 whichever model is appropriate for any date.
+
+
+

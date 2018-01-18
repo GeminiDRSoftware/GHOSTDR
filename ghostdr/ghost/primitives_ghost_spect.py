@@ -697,7 +697,7 @@ class GHOSTSpect(GHOST):
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
                                                      xparams=xpars[0].data,
                                                      decrease_dim=8,
-                                                     inspect=True)
+                                                     inspect=False)
 
             # CJS: Append the XMOD as an extension. It will inherit the
             # header from the science plane (including irrelevant/wrong
