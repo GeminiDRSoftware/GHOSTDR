@@ -1848,9 +1848,7 @@ class Arm(object):
         hdulist = pf.HDUList(pf.PrimaryHDU(header=hdr))
 
         binmodes = [binning]
-        if obstype not in ['BIAS', 'OBJECT', 'STANDARD']:
-            binmodes = [(1, 1)]
-        elif self.split:
+        if self.split:
             binmodes = [(1, 1), (1, 2), (1, 8), (2, 4), (2, 8)]
         elif obstype == 'BIAS' and binning != (1, 1):
             binmodes.insert(0, (1, 1))
