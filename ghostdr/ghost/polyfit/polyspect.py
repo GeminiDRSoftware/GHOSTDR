@@ -505,10 +505,8 @@ class Polyspect(object):
         image_med = image.reshape((image.shape[0] // decrease_dim,
                                    decrease_dim, image.shape[1]))
         image_med = np.median(image_med, axis=1)
-        order_y = np.meshgrid(np.arange(xbase.shape[1]),
-                              # pylint: disable=maybe-no-member
-                              np.arange(xbase.shape[
-                                            0]) + self.m_min)  # pylint: disable=maybe-no-member
+        order_y = np.meshgrid(np.arange(xbase.shape[1]), # pylint: disable=maybe-no-member
+                              np.arange(xbase.shape[0]) + self.m_min)  # pylint: disable=maybe-no-member
         y_values = order_y[0]
         y_values = np.average(y_values.reshape(x_values.shape[0],
                                                x_values.shape[1] //
@@ -525,7 +523,7 @@ class Polyspect(object):
         # order for search_pix on either side of the initial
         # model pixels in the spatial direction.
         for i in range(x_values.shape[0]):  # Go through each order...
-            for j in range(x_values.shape[1]):  # pylint: disable=maybe-no-member
+            for j in range(x_values.shape[1]): # pylint: disable=maybe-no-member
                 xind = int(np.round(x_values[i, j]))
                 peakpix = image_med[j, self.szx // 2 + xind -
                                        search_pix:self.szx // 2 +
@@ -824,7 +822,6 @@ class Polyspect(object):
         return flat
 
     def manual_model_adjust(self, data, xparams, model='position', wparams=None,
-                            spatparams=None, rotparams=None,
                             thar_spectrum=None, percentage_variation=10,
                             vary_wrt_max=True, title=None):
         """
@@ -857,17 +854,9 @@ class Polyspect(object):
             model parameters.
         xparams: :obj:`numpy.ndarray`
             2D array containing the initial order location model parameters.
-        spatparams: :obj:`numpy.ndarray` array (optional)
-            2D array containing the initial spatial direction magnification
-            model parameters.
-        rotparams: :obj:`numpy.ndarray`, optional
-            2D array containing the initial rotation model parameters.
         thar_spectrum: :obj:`numpy.ndarray`, optional
             2D array containing the thar spectrum (from the simulator code) as a
             function of wavelength.
-        slitclass: class, optional
-            This is the polyfit.SlitView class. Optional input required for
-            spatmod and rotmod adjustments
         percentage_variation: int, optional
             How much should the percentage adjustment in each bin as a function
             of the parameter.
@@ -935,7 +924,7 @@ class Polyspect(object):
                 thar_spectrum[1][-1] = 0.0
                 interp_thar = interp1d(thar_spectrum[0], thar_spectrum[1])
                 flux = interp_thar(wave)
-                # Now remove anything that is below 100 times the average sigma.
+                # Now remove anything that is below 10 times the average sigma.
                 # This means only the very brightest lines are displayed.
                 thar_threshold = np.average(flux) * 10.
                 ygrid_filtered = ygrid[np.where(flux > thar_threshold)]
@@ -947,7 +936,7 @@ class Polyspect(object):
 
         nxbase = data.shape[0]
 
-        # Start by setting up the graphical part
+        # Start by setting up the graphical part for the image
         fig, axx = plt.subplots()
         plt.subplots_adjust(left=0.15, bottom=0.25)
         if title is not None:
@@ -956,14 +945,14 @@ class Polyspect(object):
 
         ygrid = np.meshgrid(np.arange(data.shape[1]),
                             np.arange(x_int.shape[0]))[0]
-        # The data must be flattened for the sliders to work.
+        # The model data must be flattened for the sliders to work.
         # Then plot it!
         to_plot = plot_data(model, xparams, wparams, nxbase, ygrid,
                             thar_spectrum)
         lplot, = plt.plot(to_plot[0], to_plot[1],
                           color='green', linestyle='None', marker='.')
 
-        # Now over plot the image.
+        # Now over plot the image and add a contrast adjustment slider.
         image_min = data.min()
         image_max = data.max()
         image_diff = image_max - image_min
@@ -971,7 +960,6 @@ class Polyspect(object):
         contrastSlider_ax  = fig.add_axes([0.15, 0.1, 0.7, 0.05])
         contrastSlider = Slider(contrastSlider_ax, 'contrast', 0, 1,
                                 valinit=init_contrast)
-        #axx.imshow((data - np.median(data)) / 1e2)
         
         image = axx.imshow(data,
                            vmin = image_min + init_contrast*image_diff//8,
@@ -984,6 +972,7 @@ class Polyspect(object):
                            vmax = image_max - contrastSlider.val*image_diff//2)
 
         contrastSlider.on_changed(update_imshow)
+        
         # Create a second window for sliders.
         slide_fig = plt.figure()
 
@@ -1009,6 +998,8 @@ class Polyspect(object):
         elif model == 'wavelength':
             params = wparams
 
+        # The locations of the sliders on the window depend on the number of
+        # parameters
         polyorder = params.shape[1]
         npolys = params.shape[0]
         # Now we start putting sliders in depending on number of parameters
@@ -1024,7 +1015,9 @@ class Polyspect(object):
         axq = [[0 for x in range(polyorder)] for y in range(npolys)]
         sliders = [[0 for x in range(polyorder)] for y in range(npolys)]
         # Now put all the sliders in the new figure based on position in the
-        # array
+        # array.
+        # This double loop looks complicated, but is really a method to
+        # place the right sliders in the right positions on the window
         for i in range(npolys):
             for j in range(polyorder):
                 left = j * width * 2

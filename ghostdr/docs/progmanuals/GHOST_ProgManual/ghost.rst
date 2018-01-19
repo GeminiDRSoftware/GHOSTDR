@@ -91,3 +91,19 @@ It then proceeds to create a linear space for which orders to be evaluated::
 
   orders = np.linspace(self.m_min, self.m_max, num_conv).astype(int)
 
+Then a convolution is done in 2D by interpolating the magnified slit profile
+with the slit coordinates, normalising it and inverse Fourier transforming the
+product between the flat transform and the shifted slit profile::
+
+  #Create the slit model.
+  mod_slit = np.interp(profilex*spat_scale[i], slit_coord, slit_profile)
+  
+  # Normalise the slit model and Fourier transform for convolution
+  mod_slit /= np.sum(mod_slit)
+  mod_slit_ft = np.fft.rfft(np.fft.fftshift(mod_slit))
+
+  flat_conv_cube[j, :, i] = np.fft.irfft((im_fft[:, i] * mod_slit_ft)/num_conv)
+
+Now, we have the convolution at ``num_conv`` locations, and the final result is
+an interpolation between these.
+
