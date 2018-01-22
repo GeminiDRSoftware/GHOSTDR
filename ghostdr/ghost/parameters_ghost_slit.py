@@ -20,4 +20,7 @@ class ParametersGHOSTSlit(ParametersGHOST):
         "reject_method"     : "none",
         "apply_dq"          : True,
         "zero"              : False,
+        "scale"             : False,
+        "separate_ext"      : True,
+        "statsec"           : None,
     }
