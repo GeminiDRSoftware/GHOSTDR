@@ -72,7 +72,7 @@ class AstroDataGhost(AstroDataGemini):
     def _status_processed_ghost_cals(self):
         kwords = set(['PRSLITIM', 'PRSLITBI', 'PRSLITDA', 'PRSLITFL',
                       'PRWAVLFT', 'PRPOLYFT'])
-        if set(self.phu.keywords) & kwords:
+        if set(self.phu) & kwords:
             return TagSet(['PROCESSED'])
 
     @astro_data_tag
