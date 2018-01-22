@@ -209,7 +209,7 @@ class GHOSTSpect(GHOST):
                                                  suffix='_rebin%dx%d' %
                                                         (xb, yb,),
                                                  strip=True)
-                flat.write(clobber=True)
+                flat.write(overwrite=True)
 
             # CJS: Edited here to require that the science and flat frames'
             # extensions are the same shape. The original code would no-op
@@ -234,7 +234,7 @@ class GHOSTSpect(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
-                ad.write(clobber=True)
+                ad.write(overwrite=True)
 
         return adinputs
 
@@ -436,7 +436,7 @@ class GHOSTSpect(GHOST):
                                                  suffix='_rebin%dx%d' %
                                                         (xb, yb, ),
                                                  strip=True)
-                dark.write(clobber=True)
+                dark.write(overwrite=True)
                 dark_processing_done[
                     (dark_filename_orig, xb, yb)] = dark.filename
                 dark_list_out.append(dark.filename)
@@ -595,7 +595,7 @@ class GHOSTSpect(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
-                ad.write(clobber=True)
+                ad.write(overwrite=True)
 
         return adinputs
 
@@ -673,18 +673,18 @@ class GHOSTSpect(GHOST):
 
             # This is an attempt to remove the worse cosmic rays
             # in the hope that the convolution is not affected by them.
-            # Start by performing a median filter 
+            # Start by performing a median filter
             medfilt = signal.medfilt2d(ad[0].data, (5,5))
             # Now find which pixels have a percentage difference larger than
             # a defined value between the data and median filter, and replace
             # those in the data with the median filter values. Also, only
             # replace values above the data average, so as not to replace low
-            # S/N values at the edges. 
+            # S/N values at the edges.
             data = ad[0].data.copy()
             condit = np.where(np.abs((medfilt - data)/(medfilt+1)) > 200) and\
                      np.where(data > np.average(data))
             data[condit] = medfilt[condit]
-            
+
             # Convolve the flat field with the slit profile
             flat_conv = ghost_arm.slit_flat_convolve(data,
                 slit_profile=slitview.slit_profile(arm=arm),
@@ -692,7 +692,7 @@ class GHOSTSpect(GHOST):
                 xpars=xpars[0].data)
 
             flat_conv = signal.medfilt2d(flat_conv, (5,5))
-            
+
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
                                                      xparams=xpars[0].data,
@@ -904,7 +904,7 @@ class GHOSTSpect(GHOST):
             flatprof_ad[0].reset(extracted_flux, mask=None,
                                  variance=extracted_var)
             if params["write_result"]:
-                flatprof_ad.write(clobber=True)
+                flatprof_ad.write(overwrite=True)
 
             # Divide the flat field through the science data
             # Arithmetic propagates VAR correctly
@@ -1237,7 +1237,8 @@ class GHOSTSpect(GHOST):
                                    strip=True)
             adoutputs.append(ad_mos)
 
-            ad_mos.write(clobber=True)
+            ad_mos.write(overwrite=True)
+            # ad_mos.write(overwrite=True)
 
         return adoutputs
 

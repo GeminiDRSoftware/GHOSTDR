@@ -108,4 +108,4 @@ if args.save:
         zlist = pf.HDUList(pf.PrimaryHDU())
         zlist.append(pf.ImageHDU(data=im))
         path = parts[0] + arm + parts[1]
-        zlist.writeto(path, clobber=True)
+        zlist.writeto(path, overwrite=True)
