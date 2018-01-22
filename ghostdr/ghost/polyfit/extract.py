@@ -720,16 +720,16 @@ class Extractor():
             for i, ix in enumerate(w_ix):
                 # This ensures that lines too close together are not used in the
                 # fit, whilst avoiding looking at indeces that don't exist.
-                if (np.abs(ix-w_ix[i-1])<1.3*hw):
-                    continue
-                elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.3*hw):
-                    continue
+                #if (np.abs(ix-w_ix[i-1])<1.3*hw):
+                #    continue
+                #elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.3*hw):
+                #    continue
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
                 # Any line with peak S/N under a value is not considered.
                 # And reject any saturated lines.
-                if (np.max(y) < 6 * noise_level) or (np.max(y) > 6E4):
-                    continue
+                #if (np.max(y) < 6 * noise_level):# or (np.max(y) > 6E4):
+                #    continue
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
                 with warnings.catch_warnings():
