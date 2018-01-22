@@ -232,7 +232,8 @@ class GhostArm(Polyspect):
             
             #Now inverse transform.
             flat_conv = np.fft.irfft(flat_conv, axis=0)
-            
+
+        # If a profile is given, do this instead.
         else:
             flat_conv = np.zeros_like(flat)
             flat_conv_cube = np.zeros( (num_conv, flat.shape[0], flat.shape[1]) )

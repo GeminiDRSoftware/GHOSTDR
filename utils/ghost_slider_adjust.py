@@ -17,6 +17,8 @@ import sys
 import numpy as np
 from ghostdr.ghost import polyfit
 import astropy.io.fits as pyfits
+import ghostdr.ghost.lookups as lookups
+import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
 # plt.ion()
 
 # pylint: disable=maybe-no-member, invalid-name
@@ -75,35 +77,38 @@ ghost = polyfit.ghost.GhostArm(cam, mode=mode)
 
 if user == 'Joao':
     # fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
-    fitsdir = '/home/jbento/code/ghostdr/simulator/pyghost/standard/calibrations/storedcals/'
+    fitsdir = '/home/jbento/code/GHOSTDR/simulator/pyghost/output/reduction/'
     # test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     test_files_dir = '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/'+ cam + '/' + mode + '/161120/'
+    lookups_path = os.path.dirname(os.path.abspath(lookups.__file__))
+    polyfit_lookups_path = lookups_path + '/Polyfit/'
     if model == 'W':
-        arclinefile = '/home/jbento/code/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
+        arclinefile = lookups_path + '/' + lookups.line_list
         # Define the files in use (NB xmod.txt and wavemod.txt should be
         # correct)
-        arc_file = fitsdir + "arc95_" + mode + "_" + cam + "_arc.fits"
+        arc_file = fitsdir + "arcAfter95_std_MEF_1x1_red1_tiled.fits"
         arc_data = pyfits.getdata(arc_file)
         thar_spec = thar_spectrum(arclinefile)
 
-    flat_file_name = 'flat95_' + mode + '*' + cam + '*.fits'
-    flat_file = fitsdir + fnmatch.filter(os.listdir(fitsdir),
-                                         flat_file_name)[0]
+    flat_file = fitsdir + 'calibrations/processed_flat/flat95_std_1_MEF_1x1_red1_flat.fits'
+    #flat_file = fnmatch.filter(os.listdir(fitsdir),
+       #                                  flat_file_name)[0]
 
     # Where is the default location for the model? By default it is a parameter
     # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file = fitsdir + 'GHOST_1_1_' + cam + \
-        '_' + mode + '_161120_xmodPolyfit.fits'
-    xmod_file = test_files_dir + 'xmod.fits'
-    wmodel_file = fitsdir + 'GHOST_1_1_' + cam + \
-        '_' + mode + '_161120_wmodPolyfit.fits'
+    #xmodel_file = fitsdir + 'GHOST_1_1_' + cam + \
+    #    '_' + mode + '_161120_xmodPolyfit.fits'
+    #xmod_file = test_files_dir + 'xmod.fits'
+    #wmodel_file = fitsdir + 'GHOST_1_1_' + cam + \
+    #    '_' + mode + '_161120_wmodPolyfit.fits'
     # xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'
     # All the other models... which are currently in the "test" directory.
     # wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/wmod.txt'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/fitted_wmod.fits'
-    wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
+    xmodel_file = flat_file
+    wmodel_file = fitsdir + 'calibrations/processed_arc/arcBefore95_std_MEF_1x1_red1_arc.fits'
     spatmod_file = test_files_dir + 'spatmod.fits'
     specmod_file = test_files_dir + 'specmod.fits'
     rotmod_file = test_files_dir + 'rotmod.fits'
@@ -113,11 +118,25 @@ if user == 'Joao':
 flat_data = pyfits.getdata(flat_file)
 
 # Load all the parameter files, even if they are dummy
-xparams = pyfits.getdata(xmodel_file)
-wparams = pyfits.getdata(wmodel_file)
-spatparams = pyfits.getdata(spatmod_file)
-specparams = pyfits.getdata(specmod_file)
-rotparams = pyfits.getdata(rotmod_file)
+xparams = pyfits.open(xmodel_file)['XMOD'].data
+
+wparams = pyfits.open(wmodel_file)['WFIT'].data
+
+rotmod_location = [value for key, value in
+                   polyfit_dict.rotmod_dict.items()
+                   if cam in key.lower() and mode in key.lower()][0]
+rotparams = pyfits.getdata(polyfit_lookups_path + rotmod_location)
+
+specmod_location = [value for key, value in
+                   polyfit_dict.specmod_dict.items()
+                   if cam in key.lower() and mode in key.lower()][0]
+specparams = pyfits.getdata(polyfit_lookups_path + specmod_location)
+
+spatmod_location = [value for key, value in
+                   polyfit_dict.spatmod_dict.items()
+                   if cam in key.lower() and mode in key.lower()][0]
+spatparams = pyfits.getdata(polyfit_lookups_path + spatmod_location)
+
 
 # Create an initial model of the spectrograph.
 dummy = ghost.spectral_format_with_matrix(xparams, wparams, spatparams, specparams,
