@@ -731,7 +731,7 @@ class GHOSTSpect(GHOST):
                             " files - skipping {}".format(ad.filename))
                 continue
 
-            if self.timestamp_keys["extractProfile"] not in ad.phu.keywords:
+            if self.timestamp_keys["extractProfile"] not in ad.phu.keys():
                 log.warning("extractProfile has not been run on {} - "
                             "skipping".format(ad.filename))
                 continue
@@ -768,7 +768,6 @@ class GHOSTSpect(GHOST):
                                             rotpars[0].data)
 
             extractor = Extractor(arm, None)  # slitview=None for this usage
-            import pdb;pdb.set_trace()
             lines_out = extractor.find_lines(ad[0].data, arcwaves, inspect=False)
 
             fitted_params, wave_and_resid = arm.read_lines_and_fit(
