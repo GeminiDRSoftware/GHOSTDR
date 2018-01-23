@@ -66,8 +66,8 @@ if (model != 'W') and (model != 'X'):
     sys.exit()
 
 # Regardless, need to initialise a few things.
-mode = 'std' # The spectrograph resolution mode.
-cam = 'red'  # The camera
+mode = 'high' # The spectrograph resolution mode.
+cam = 'blue'  # The camera
 # This variable makes it easy for each user (currently only Joao) to
 # have all file locations defined without overwriting.
 user = 'Joao'
@@ -77,7 +77,7 @@ ghost = polyfit.ghost.GhostArm(cam, mode=mode)
 
 if user == 'Joao':
     # fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
-    fitsdir = '/home/jbento/code/GHOSTDR/simulator/pyghost/output/reduction/'
+    fitsdir = '/home/jbento/code/GHOSTDR/simulator/pyghost/output/mefs/'
     # test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
     test_files_dir = '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/'+ cam + '/' + mode + '/161120/'
     lookups_path = os.path.dirname(os.path.abspath(lookups.__file__))
@@ -86,11 +86,11 @@ if user == 'Joao':
         arclinefile = lookups_path + '/' + lookups.line_list
         # Define the files in use (NB xmod.txt and wavemod.txt should be
         # correct)
-        arc_file = fitsdir + "arcAfter95_std_MEF_1x1_red1_tiled.fits"
+        arc_file = fitsdir + "arcBefore95_high_MEF_1x1_blue1_tiled.fits"
         arc_data = pyfits.getdata(arc_file)
         thar_spec = thar_spectrum(arclinefile)
 
-    flat_file = fitsdir + 'calibrations/processed_flat/flat95_std_1_MEF_1x1_red1_flat.fits'
+    flat_file = fitsdir + 'calibrations/processed_flat/flat95_high_1_MEF_1x1_blue1_flat.fits'
     #flat_file = fnmatch.filter(os.listdir(fitsdir),
        #                                  flat_file_name)[0]
 
@@ -108,7 +108,7 @@ if user == 'Joao':
     #wmodel_file = '/home/jbento/code/ghostdr/utils/wmod.txt'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/fitted_wmod.fits'
     xmodel_file = flat_file
-    wmodel_file = fitsdir + 'calibrations/processed_arc/arcBefore95_std_MEF_1x1_red1_arc.fits'
+    wmodel_file = fitsdir + 'calibrations/processed_arc/arcBefore95_high_MEF_1x1_blue1_arc.fits'
     spatmod_file = test_files_dir + 'spatmod.fits'
     specmod_file = test_files_dir + 'specmod.fits'
     rotmod_file = test_files_dir + 'rotmod.fits'
@@ -169,7 +169,7 @@ elif model == 'W':
                                                 wparams=wparams,
                                                 xparams=xparams,
                                                 thar_spectrum=thar_spec,
-                                                percentage_variation=5)
+                                                percentage_variation=1)
 
 
 q = raw_input(

@@ -768,9 +768,9 @@ class GHOSTSpect(GHOST):
                                             rotpars[0].data)
 
             extractor = Extractor(arm, None)  # slitview=None for this usage
+            import pdb;pdb.set_trace()
             lines_out = extractor.find_lines(ad[0].data, arcwaves, inspect=False)
 
-            #import pdb; pdb.set_trace()
             fitted_params, wave_and_resid = arm.read_lines_and_fit(
                 wpars[0].data, lines_out)
 
