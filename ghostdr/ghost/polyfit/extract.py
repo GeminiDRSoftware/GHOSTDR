@@ -707,9 +707,15 @@ class Extractor():
 
 
         for m_ix in range(nm):
-            filtered_arclines=arclines[(arclines >=  self.arm.w_map[m_ix, :].min())
+            # Select only arc lines that should be in this order.
+            filtered_arclines = arclines[(arclines >= self.arm.w_map[m_ix, :].min())
                                        & (arclines <= self.arm.w_map[m_ix, :].max())]
-            w_ix = np.interp(filtered_arclines, self.arm.w_map[m_ix, :], np.arange(ny))
+            # This line interpolates between filtered lines and w_map on a
+            # linear array, to find the expected pixel locations of the lines.
+            w_ix = np.interp(filtered_arclines, self.arm.w_map[m_ix, :],
+                             np.arange(ny))
+            # Ensure that lines close to the edges of the chip are not
+            # considered
             ww = np.where((w_ix >= hw) & (w_ix < ny - hw))[0]
             w_ix = w_ix[ww]
             arclines_to_fit = filtered_arclines[ww]
@@ -717,16 +723,16 @@ class Extractor():
             for i, ix in enumerate(w_ix):
                 # This ensures that lines too close together are not used in the
                 # fit, whilst avoiding looking at indeces that don't exist.
-                #if (np.abs(ix-w_ix[i-1])<1.3*hw):
-                #    continue
-                #elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.3*hw):
-                #    continue
+                if (np.abs(ix-w_ix[i-1])<1.3*hw):
+                    continue
+                elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.3*hw):
+                    continue
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
                 # Any line with peak S/N under a value is not considered.
                 # And reject any saturated lines.
-                #if (np.max(y) < 6 * noise_level):# or (np.max(y) > 6E4):
-                #    continue
+                if (np.max(y) < 6 * noise_level):# or (np.max(y) > 6E4):
+                    continue
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
                 with warnings.catch_warnings():
@@ -742,9 +748,13 @@ class Extractor():
                     plt.plot(xpos, ypos, 'rx')
                     plt.text(xpos + 10, ypos,
                              str(arclines_to_fit[i]), color='green', fontsize=10)
-                lines_out.append([arclines_to_fit[i], ypos, xpos, m_ix +
+                line_to_append = [arclines_to_fit[i], ypos, xpos, m_ix +
                                   self.arm.m_min, g.amplitude.value,
-                                  g.stddev.value * 2.3548])
+                                  g.stddev.value * 2.3548]
+                # If any of the values to append are nans, don't do it.
+                if np.isnan(line_to_append).any():
+                    continue
+                lines_out.append(line_to_append)
         if inspect:
             plt.axis([0, nx, ny, 0])
             plt.show()
