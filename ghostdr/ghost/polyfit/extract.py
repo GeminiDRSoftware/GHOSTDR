@@ -5,7 +5,6 @@ from __future__ import division, print_function
 import numpy as np
 import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
-import pdb
 from astropy.modeling import models, fitting
 import matplotlib.cm as cm
 import warnings
@@ -465,7 +464,6 @@ class Extractor():
                 #DEBUG
                 #if (np.max(pixel_weights) > 2) and (j > 0.1*ny):
                 #if (j==2000):
-                #    import pdb; pdb.set_trace()
                 
                 #FIXME: Search here for weights that are non-zero for overlapping
                 #order:
@@ -612,7 +610,6 @@ class Extractor():
                         
                 #DEBUG
                 #if (np.max(col_data) > 1e3): 
-                #    import pdb; pdb.set_trace()
 
                 # Next, add the contribution of the centroid in the slit viewing camera.
                 # The [1,1] component of the matrix is slit_microns_per_det_pix_y 
