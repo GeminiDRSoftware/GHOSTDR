@@ -769,7 +769,7 @@ class GHOSTSpect(GHOST):
 
             extractor = Extractor(arm, None)  # slitview=None for this usage
             lines_out = extractor.find_lines(ad[0].data, arcwaves, inspect=False)
-
+            
             fitted_params, wave_and_resid = arm.read_lines_and_fit(
                 wpars[0].data, lines_out)
 

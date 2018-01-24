@@ -653,7 +653,7 @@ class Extractor():
         return extracted_flux, extracted_var     
 
     def find_lines(self, flux, arclines, hw=10, arcfile=None,
-                   inspect=False):
+                   inspect=False, plots=False):
         """Find lines near the locations of input arc lines. 
         
         This is done with Gaussian fits near the location of where lines are
@@ -700,11 +700,10 @@ class Extractor():
         if (inspect == True) and (arcfile is None):
             print('Must provide an arc image for the inpection')
             raise UserWarning
+        if inspect or plots:
+            image= np.arcsinh((arcfile - np.median(arcfile)) / 1e2)
         if inspect:
-            plt.imshow(np.arcsinh((arcfile - np.median(arcfile)) /
-                                  1e2),
-                       interpolation='nearest', aspect='auto', cmap=cm.gray)
-
+            plt.imshow(image,interpolation='nearest', aspect='auto', cmap=cm.gray)
 
         for m_ix in range(nm):
             # Select only arc lines that should be in this order.
@@ -731,7 +730,7 @@ class Extractor():
                 y = flux[m_ix, x]
                 # Any line with peak S/N under a value is not considered.
                 # And reject any saturated lines.
-                if (np.max(y) < 6 * noise_level):# or (np.max(y) > 6E4):
+                if (np.max(y) < 3 * noise_level) or (np.max(y) > 6E4):
                     continue
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
@@ -743,17 +742,25 @@ class Extractor():
                 xpos = nx // 2 + \
                     np.interp(g.mean.value, np.arange(ny), self.arm.x_map[m_ix])
                 ypos = g.mean.value
-                if inspect:
-                    plt.plot(xpos, ix, 'bx')
-                    plt.plot(xpos, ypos, 'rx')
-                    plt.text(xpos + 10, ypos,
-                             str(arclines_to_fit[i]), color='green', fontsize=10)
+                
                 line_to_append = [arclines_to_fit[i], ypos, xpos, m_ix +
                                   self.arm.m_min, g.amplitude.value,
                                   g.stddev.value * 2.3548]
                 # If any of the values to append are nans, don't do it.
                 if np.isnan(line_to_append).any():
                     continue
+                if plots:
+                    f,sub=plt.subplots(1,2)
+                    sub[0].plot(x,y)
+                    sub[0].plot(x,g(x))
+                    snapshot = image[int(ypos-hw*4):int(ypos+hw*4),int(xpos-40):int(xpos+40)]
+                    sub[1].imshow(snapshot,interpolation='nearest', aspect='auto', cmap=cm.gray)
+                    plt.show()
+                if inspect:
+                    plt.plot(xpos, ix, 'bx')
+                    plt.plot(xpos, ypos, 'rx')
+                    plt.text(xpos + 10, ypos,
+                             str(arclines_to_fit[i]), color='green', fontsize=10)
                 lines_out.append(line_to_append)
         if inspect:
             plt.axis([0, nx, ny, 0])

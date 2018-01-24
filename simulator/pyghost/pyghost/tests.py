@@ -26,6 +26,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
 
     # Create a ThAr spectrum (used for the arc)
     thar = pyghost.thar_spectrum()
+    import pdb;pdb.set_trace()
 
     # We read out through 4 amps
     namps = [2, 2]
@@ -148,7 +149,7 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
 
         # Now need to take the 'after' arcs
         # This produces an arc frame
-        # I'm introducing a 1 Angstrom shift to test the wavelength fit
+        # I'm introducing a 0.2 Angstrom shift to test the wavelength fit
         thar[0] += 0.00002
         ghost.simulate_observation(
             duration=duration, output_prefix='arcAfter'+str(duration)+'_'+res+'_',
