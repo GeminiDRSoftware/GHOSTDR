@@ -15,6 +15,7 @@ import astropy.coordinates as astrocoord
 from astropy.time import Time
 from astropy import units as u
 from astropy import constants as const
+from scipy import interpolate
 
 import astrodata
 
@@ -199,7 +200,7 @@ class GHOSTSpect(GHOST):
             # We only need the mask, but it's best to use the full rebin
             # helper function in case the mask rebin code needs to change
             if flat.detector_x_bin() != ad.detector_x_bin(
-            ) or flat.detector_y_bin != ad.detector_y_bin():
+            ) or flat.detector_y_bin() != ad.detector_y_bin():
                 xb = ad.detector_x_bin()
                 yb = ad.detector_y_bin()
                 flat = self._rebin_ghost_ad(flat, xb, yb)
@@ -1152,14 +1153,45 @@ class GHOSTSpect(GHOST):
         ----------
         skip: bool
             If True, this primitive will just return the adinputs immediately
+        std : str, giving a relative or absolute file path
+            The name of the reduced standard star observation. Defaults to
+            None, at which point a ValueError is thrown.
+        std_spec: str, giving a relative or absolute file path
+            The name of the file where the standard star spectrum (the
+            reference, not the observed one) is stored. Defaults to None,
+            at which point the system will attempt to fetch a reference
+            spectrum from the Internet. If this too fails, a fatal error will
+            be thrown.
         """
         if params.get('skip'):
-            log.stdinfo('Skipping the response correct stage')
+            log.stdinfo('Skipping the response (standard star) correction '
+                        'step')
             return adinputs
 
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+
+        if params['std'] is None:
+            raise ValueError('No standard star provided')
+
+        # Let the astrodata routine handle any issues with actually opening
+        # the FITS file
+        std = astrodata.open(params['std'])
+
+        # Need to find the reference standard star spectrum
+        # Use the one passed by the user in the first instance, otherwise
+        # attempt to locate a remote one
+        # Throw an error if none found
+        if params['std_spec']:
+            std_spec = astrodata.open(params['std_spec'])
+        else:
+            std_spec = None
+
+        if std_spec is None:
+            raise ValueError('No standard reference spectrum found/supplied')
+
+        # TODO Re-grid std reference onto wavelength grid of observed std
 
         for ad in adinputs:
 
@@ -1169,8 +1201,35 @@ class GHOSTSpect(GHOST):
                             format(ad.filename))
                 continue
 
-            # Timestamp; DO NOT update filename
+            # Check that the ad matches the standard
+            if ad.res_mode() != std.res_mode():
+                raise ValueError('Resolution modes do not match for '
+                                 '{} and {}'.format(ad.filename, std.filename))
+            if ad.arm() != std.arm():
+                raise ValueError('Spectrograph arms do not match for '
+                                 '{} and {}'.format(ad.filename, std.filename))
+            if ad.detector_y_bin() != std.detector_y_bin() or \
+                    ad.detector_x_bin() != std.detector_x_bin():
+                raise ValueError('Binning does not match for '
+                                 '{} and {}'.format(ad.filename, std.filename))
+
+            # For each order and object of the standard observation, form
+            # an interp1d function, and re-grid to the wavelength scale
+            # of the science object
+            std_regrid = np.zeros(ad[0].science.data.shape)
+            for o in range(ad[0].science.data.shape[-1]):
+                for order in range(ad[0].science.data.shape[0]):
+                    interp_func = interpolate.interp1d(std[0].WAVL.data[order],
+                                                       std[0].science.data[
+                                                       order, :, o
+                                                       ])
+                    std_regrid[order, :, o] = interp_func(
+                        ad[0].WAVL.data[order]
+                    )
+
+            # Timestamp
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=params["suffix"], strip=True)
 
         return adinputs
 
