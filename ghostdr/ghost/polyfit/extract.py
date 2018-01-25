@@ -695,7 +695,7 @@ class Extractor():
         lines_out = []
         # Let's try the median absolute deviation as a measure of background
         # noise.
-        noise_level = np.median(np.abs(flux-np.median(flux)))
+        #noise_level = np.median(np.abs(flux-np.median(flux)))
 
         if (inspect == True) and (arcfile is None):
             print('Must provide an arc image for the inpection')
@@ -720,18 +720,22 @@ class Extractor():
             arclines_to_fit = filtered_arclines[ww]
             print('order ', m_ix)
             for i, ix in enumerate(w_ix):
+                init_message = 'Good to start with. '
+                message = ''
                 # This ensures that lines too close together are not used in the
                 # fit, whilst avoiding looking at indeces that don't exist.
                 if (np.abs(ix-w_ix[i-1])<1.3*hw):
-                    continue
+                    message += 'Too close to a line. '
                 elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.3*hw):
-                    continue
+                    message += 'Too close to another line. '
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
+                # Try median absolute deviation for noise characteristics.
+                noise_level = np.median(np.abs(y-np.median(y)))
                 # Any line with peak S/N under a value is not considered.
                 # And reject any saturated lines.
-                if (np.max(y) < 3 * noise_level) or (np.max(y) > 6E4):
-                    continue
+                if (np.max(y) < 20 * noise_level):# or (np.max(y) > 6E4):
+                    message += 'Low S/N. '
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
                 with warnings.catch_warnings():
@@ -748,20 +752,25 @@ class Extractor():
                                   g.stddev.value * 2.3548]
                 # If any of the values to append are nans, don't do it.
                 if np.isnan(line_to_append).any():
-                    continue
-                if plots:
+                    message = 'Nan encountered.'
+                if plots and message=='':
                     f,sub=plt.subplots(1,2)
                     sub[0].plot(x,y)
                     sub[0].plot(x,g(x))
-                    snapshot = image[int(ypos-hw*4):int(ypos+hw*4),int(xpos-40):int(xpos+40)]
-                    sub[1].imshow(snapshot,interpolation='nearest', aspect='auto', cmap=cm.gray)
+                    sub[0].axvline(ix)
+                    snapshot = image[int(ix-hw*4):int(ix+hw*4),int(xpos-40):int(xpos+40)]
+                    sub[1].imshow(np.arcsinh((snapshot - np.median(snapshot)) / 1e2))
+                    if message=='':
+                        message = 'Good'
+                    f.suptitle(message)
                     plt.show()
                 if inspect:
                     plt.plot(xpos, ix, 'bx')
                     plt.plot(xpos, ypos, 'rx')
                     plt.text(xpos + 10, ypos,
                              str(arclines_to_fit[i]), color='green', fontsize=10)
-                lines_out.append(line_to_append)
+                if message == init_message:
+                    lines_out.append(line_to_append)
         if inspect:
             plt.axis([0, nx, ny, 0])
             plt.show()
