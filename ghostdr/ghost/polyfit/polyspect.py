@@ -374,8 +374,8 @@ class Polyspect(object):
             if not isinstance(img, np.ndarray):
                 raise UserWarning('img must be numpy array')
             if img.ndim != 2:
-                raise UserWarning('Image array provided is not a 2 dimensional\
-                array')
+                raise UserWarning('Image array provided is not a 2 dimensional '
+                                  'array')
             if not self.transpose:
                 img = img.T
             plt.clf()
