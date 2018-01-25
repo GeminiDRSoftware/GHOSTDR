@@ -33,6 +33,7 @@ def reducePCal(p):
     p.extractProfile()
     p.flatCorrect() # Need to write our own, NOT USE GMOS - extract the flat profile,
                     # then simple division
+    p.addWavelengthSolution()
     return
 
 default = reduce
