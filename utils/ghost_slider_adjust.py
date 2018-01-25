@@ -67,7 +67,7 @@ if (model != 'W') and (model != 'X'):
 
 # Regardless, need to initialise a few things.
 mode = 'high' # The spectrograph resolution mode.
-cam = 'blue'  # The camera
+cam = 'red'  # The camera
 # This variable makes it easy for each user (currently only Joao) to
 # have all file locations defined without overwriting.
 user = 'Joao'
@@ -83,14 +83,15 @@ if user == 'Joao':
     lookups_path = os.path.dirname(os.path.abspath(lookups.__file__))
     polyfit_lookups_path = lookups_path + '/Polyfit/'
     if model == 'W':
-        arclinefile = lookups_path + '/' + lookups.line_list
+        #arclinefile = lookups_path + '/' + lookups.line_list
+        arclinefile = '/home/jbento/code/GHOSTDR/simulator/pyghost/pyghost/data/mnras_ar_only.txt'
         # Define the files in use (NB xmod.txt and wavemod.txt should be
         # correct)
-        arc_file = fitsdir + "arcBefore95_high_MEF_1x1_blue1_tiled.fits"
+        arc_file = fitsdir + "arc_ar_only95_high_MEF_1x1_red1_tiled.fits"
         arc_data = pyfits.getdata(arc_file)
         thar_spec = thar_spectrum(arclinefile)
 
-    flat_file = fitsdir + 'calibrations/processed_flat/flat95_high_1_MEF_1x1_blue1_flat.fits'
+    flat_file = fitsdir + 'calibrations/processed_flat/flat95_high_1_MEF_1x1_red1_flat.fits'
     #flat_file = fnmatch.filter(os.listdir(fitsdir),
        #                                  flat_file_name)[0]
 
@@ -108,7 +109,7 @@ if user == 'Joao':
     #wmodel_file = '/home/jbento/code/ghostdr/utils/wmod.txt'
     #wmodel_file = '/home/jbento/code/ghostdr/utils/fitted_wmod.fits'
     xmodel_file = flat_file
-    wmodel_file = fitsdir + 'calibrations/processed_arc/arcBefore95_high_MEF_1x1_blue1_arc.fits'
+    wmodel_file = fitsdir + 'calibrations/processed_arc/arc_ar_only95_high_MEF_1x1_red1_arc.fits'
     spatmod_file = test_files_dir + 'spatmod.fits'
     specmod_file = test_files_dir + 'specmod.fits'
     rotmod_file = test_files_dir + 'rotmod.fits'

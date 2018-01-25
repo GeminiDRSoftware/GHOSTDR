@@ -26,7 +26,6 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
 
     # Create a ThAr spectrum (used for the arc)
     thar = pyghost.thar_spectrum()
-    import pdb;pdb.set_trace()
 
     # We read out through 4 amps
     namps = [2, 2]

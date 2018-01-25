@@ -720,7 +720,6 @@ class Extractor():
             arclines_to_fit = filtered_arclines[ww]
             print('order ', m_ix)
             for i, ix in enumerate(w_ix):
-                init_message = 'Good to start with. '
                 message = ''
                 # This ensures that lines too close together are not used in the
                 # fit, whilst avoiding looking at indeces that don't exist.
@@ -761,15 +760,14 @@ class Extractor():
                     snapshot = image[int(ix-hw*4):int(ix+hw*4),int(xpos-40):int(xpos+40)]
                     sub[1].imshow(np.arcsinh((snapshot - np.median(snapshot)) / 1e2))
                     if message=='':
-                        message = 'Good'
-                    f.suptitle(message)
+                        f.suptitle('Good')
                     plt.show()
                 if inspect:
                     plt.plot(xpos, ix, 'bx')
                     plt.plot(xpos, ypos, 'rx')
                     plt.text(xpos + 10, ypos,
                              str(arclines_to_fit[i]), color='green', fontsize=10)
-                if message == init_message:
+                if message == '':
                     lines_out.append(line_to_append)
         if inspect:
             plt.axis([0, nx, ny, 0])
