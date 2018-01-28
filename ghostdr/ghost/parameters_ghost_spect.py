@@ -66,6 +66,8 @@ class ParametersGHOSTSpect(ParametersGHOST):
     responseCorrect = {
         "suffix"            : "_responseCorrected",
         "skip"              : False,
+        "std"               : None,
+        "std_spec"          : None,
     }
     tileAmplifiers = {
         "suffix"            : "_ampsTiled",

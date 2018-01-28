@@ -383,11 +383,16 @@ class GHOSTSpect(GHOST):
             raise IOError('Your input list of files contains a mix of '
                           'different binning modes')
 
-        # TODO: How to check for the primitive having already been applied
-        # where the calibrations are bulk-fetched?
-        # This is an issue, because if a dark has already been applied to the
-        # file, it may no longer have an associated matching dark, which may
-        # bomb the system.
+        adinputs_orig = list(adinputs)
+        if isinstance(params.get('dark', None), list):
+            params['dark'] = [params['dark'][i] for i in range(len(adinputs))
+                              if not adinputs[i].phu.get(timestamp_key)]
+        adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
+        if len(adinputs) != len(adinputs_orig):
+            log.stdinfo('The following files have already been processed by '
+                        'darkCorrect and will not be further modified: '
+                        '{}'.format(', '.join([_.filename for _ in adinputs_orig
+                                               if _ not in adinputs])))
 
         if params.get('dark', None):
             pass
@@ -466,7 +471,7 @@ class GHOSTSpect(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=sfx, strip=True)
 
-        return adinputs
+        return adinputs_orig
 
     def extractProfile(self, adinputs=None, **params):
         """
@@ -1189,7 +1194,8 @@ class GHOSTSpect(GHOST):
             std_spec = None
 
         if std_spec is None:
-            raise ValueError('No standard reference spectrum found/supplied')
+            pass
+            # raise ValueError('No standard reference spectrum found/supplied')
 
         # TODO Re-grid std reference onto wavelength grid of observed std
 
@@ -1216,11 +1222,13 @@ class GHOSTSpect(GHOST):
             # For each order and object of the standard observation, form
             # an interp1d function, and re-grid to the wavelength scale
             # of the science object
-            std_regrid = np.zeros(ad[0].science.data.shape)
-            for o in range(ad[0].science.data.shape[-1]):
-                for order in range(ad[0].science.data.shape[0]):
+            std_regrid = np.zeros(ad[0].SCI.data.shape)
+            for o in range(ad[0].SCI.data.shape[-1]):
+                for order in range(ad[0].SCI.data.shape[0]):
+                    log.stdinfo('Re-gridding order {} for obj {}'.format(
+                        order + 1, o + 1))
                     interp_func = interpolate.interp1d(std[0].WAVL.data[order],
-                                                       std[0].science.data[
+                                                       std[0].SCI.data[
                                                        order, :, o
                                                        ])
                     std_regrid[order, :, o] = interp_func(
@@ -1287,6 +1295,12 @@ class GHOSTSpect(GHOST):
 
         adoutputs = []
         for ad in adinputs:
+            if ad.phu.get(timestamp_key):
+                log.warning("No changes will be made to {}, since it has "
+                            "already been processed by tileArrays".
+                            format(ad.filename))
+                continue
+
             mo = MosaicAD(ad, mosaic_ad_function=simple_mosaic_function)
             ad_mos = mo.as_astrodata(tile=True)
 
