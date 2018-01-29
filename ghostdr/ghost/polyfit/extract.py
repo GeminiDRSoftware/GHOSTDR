@@ -753,7 +753,22 @@ class Extractor():
                 if np.isnan(line_to_append).any():
                     message = 'Nan encountered.'
                 if plots and message=='':
+                    def next(self, event):
+                        f.close()
+                    def close(self, event):
+                        f.close()
+                        plots=False
+                    
                     f,sub=plt.subplots(1,2)
+                    
+                    callback = Index()
+                    axprev = plt.axes([0.7, 0.05, 0.1, 0.075])
+                    axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
+                    bnext = Button(axnext, 'Next')
+                    bnext.on_clicked(callback.next)
+                    bprev = Button(axprev, 'Quit')
+                    bprev.on_clicked(callback.close)
+
                     sub[0].plot(x,y)
                     sub[0].plot(x,g(x))
                     sub[0].axvline(ix)
@@ -762,6 +777,7 @@ class Extractor():
                     if message=='':
                         f.suptitle('Good')
                     plt.show()
+                    
                 if inspect:
                     plt.plot(xpos, ix, 'bx')
                     plt.plot(xpos, ypos, 'rx')

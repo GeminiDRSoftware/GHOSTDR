@@ -110,7 +110,15 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
             utstart=start_dt)
         start_dt += datetime.timedelta(seconds=duration)
 
-
+        # This produces an arc frame with the Argon lines only
+        # Use only for test purposes.
+        # ghost.simulate_observation(
+        #     duration=duration, output_prefix='arc_ar_only'+str(duration)+'_'+res+'_',
+        #     use_thar=False, spectrum_in=pyghost.thar_spectrum(ar_only=True),
+        #     add_sky=False, res=res,
+        #     flatlamp=True, obstype='ARC', binmode=(1, 1),
+        #     utstart=start_dt)
+        
         # This produces a sky frame
         ghost.simulate_observation(
             duration=duration, output_prefix='sky'+str(duration)+'_'+res+'_',
