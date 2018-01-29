@@ -1147,6 +1147,7 @@ class GHOSTSpect(GHOST):
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
+
         return adinputs
 
     def responseCorrect(self, adinputs=None, **params):
@@ -1168,14 +1169,17 @@ class GHOSTSpect(GHOST):
             spectrum from the Internet. If this too fails, a fatal error will
             be thrown.
         """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        log.stdinfo('Inside responseCorrect for {}'.format(
+            ', '.join(['a' for _ in adinputs])))
+
         if params.get('skip'):
             log.stdinfo('Skipping the response (standard star) correction '
                         'step')
             return adinputs
-
-        log = self.log
-        log.debug(gt.log_message("primitive", self.myself(), "starting"))
-        timestamp_key = self.timestamp_keys[self.myself()]
 
         if params['std'] is None:
             raise ValueError('No standard star provided')
@@ -1222,13 +1226,13 @@ class GHOSTSpect(GHOST):
             # For each order and object of the standard observation, form
             # an interp1d function, and re-grid to the wavelength scale
             # of the science object
-            std_regrid = np.zeros(ad[0].SCI.data.shape)
-            for o in range(ad[0].SCI.data.shape[-1]):
-                for order in range(ad[0].SCI.data.shape[0]):
+            std_regrid = np.zeros(ad[0].data.shape)
+            for o in range(ad[0].data.shape[-1]):
+                for order in range(ad[0].data.shape[0]):
                     log.stdinfo('Re-gridding order {} for obj {}'.format(
                         order + 1, o + 1))
                     interp_func = interpolate.interp1d(std[0].WAVL.data[order],
-                                                       std[0].SCI.data[
+                                                       std[0].data[
                                                        order, :, o
                                                        ])
                     std_regrid[order, :, o] = interp_func(
@@ -1299,6 +1303,7 @@ class GHOSTSpect(GHOST):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by tileArrays".
                             format(ad.filename))
+                adoutputs.append(ad)
                 continue
 
             mo = MosaicAD(ad, mosaic_ad_function=simple_mosaic_function)
