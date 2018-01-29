@@ -98,16 +98,21 @@ class GHOSTSpect(GHOST):
                 except (TypeError, ValueError):
                     pass
 
-            self.getProcessedArc(ad)
-            if found_arcs == False:
+            self.getProcessedArc(ad, howmany=2)
+            if not found_arcs:
                 try:
+                    arcs_calib = self._get_cal(ad, 'processed_arc',)
+                    log.stdinfo('Found following arcs: {}'.format(
+                        ', '.join([_ for _ in arcs_calib])
+                    ))
                     arc_before, arc_after = self._get_cal(ad, 'processed_arc',)
                 except (TypeError, ValueError):
                     # Triggers if only one arc, or more than two
                     arc_before = self._get_cal(ad, 'processed_arc',)[0]
                     arc_after = None
 
-            log.stdinfo('Arcs for {}: {}, {}'.format(ad, arc_before, arc_after))
+            log.stdinfo('Arcs for {}: {}, {}'.format(ad.filename,
+                                                     arc_before, arc_after))
 
             # Stand up a GhostArm instance for this ad
             gs = GhostArm(arm=ad.arm(), mode=ad.res_mode(),
@@ -1496,7 +1501,8 @@ class GHOSTSpect(GHOST):
                     interp_func = interpolate.interp1d(grid_ad[i].WAVL[order],
                                                        grid_ad[i].data[
                                                        order, :, o
-                                                       ])
+                                                       ],
+                                                       fill_value='extrapolate')
                     regridded[order, :, o] = interp_func(
                         target_ad[i].WAVL[order]
                     )
