@@ -502,13 +502,24 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        # Make no attempt to check if primitive has already been run - may
-        # have new calibrators we wish to apply.
+        # This primitive modifies the input AD structure, so it must now
+        # check if the primitive has already been applied. If so, it must be
+        # skipped.
+        adinputs_orig = list(adinputs)
+        adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
+        if len(adinputs) != len(adinputs_orig):
+            log.stdinfo('extractProfile is skipping the following files, which '
+                        'already have extracted profiles: '
+                        '{}'.format(','.join([_.filename for _ in adinputs_orig
+                                              if _ not in adinputs])))
 
         # CJS: Heavily edited because of the new AD way
         # Get processed slits, slitFlats, and flats (for xmod)
         # slits and slitFlats may be provided as parameters
         slit_list = params["slit"]
+        if slit_list is not None and isinstance(slit_list, list):
+            slit_list = [slit_list[i] for i in range(len(slit_list))
+                         if adinputs_orig[i] in adinputs]
         if slit_list is None:
             # CJS: This populates the calibrations cache (dictionary) with
             # "processed_slit" filenames for each input AD
@@ -518,10 +529,13 @@ class GHOSTSpect(GHOST):
                          for ad in adinputs]
 
         slitflat_list = params["slitflat"]
+        if slitflat_list is not None and isinstance(slitflat_list, list):
+            slitflat_list = [slitflat_list[i] for i in range(len(slitflat_list))
+                             if adinputs_orig[i] in adinputs]
         if slitflat_list is None:
             self.getProcessedSlitFlat(adinputs)
             slitflat_list = [self._get_cal(ad, 'processed_slitflat')
-                         for ad in adinputs]
+                             for ad in adinputs]
 
         self.getProcessedFlat(adinputs)
         flat_list = [self._get_cal(ad, 'processed_flat') for ad in adinputs]
@@ -603,7 +617,7 @@ class GHOSTSpect(GHOST):
             if params["write_result"]:
                 ad.write(overwrite=True)
 
-        return adinputs
+        return adinputs_orig
 
     def interpolateAndCombine(self, adinputs=None, **params):
         """
@@ -825,8 +839,19 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
+        adinputs_orig = list(adinputs)
+        adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
+        if len(adinputs) != len(adinputs_orig):
+            log.stdinfo('flatCorrect is skipping the following files, '
+                        'which are already flat corrected: '
+                        '{}'.format(','.join([_ for _ in adinputs_orig
+                                              if _ not in adinputs])))
+
         # CJS: See extractProfile() refactoring for explanation of changes
         slit_list = params["slit"]
+        if slit_list is not None and isinstance(slit_list, list):
+            slit_list = [slit_list[i] for i in range(len(slit_list))
+                         if adinputs_orig[i] in adinputs]
         if slit_list is None:
             self.getProcessedSlit(adinputs)
             slit_list = [self._get_cal(ad, 'processed_slit')
@@ -835,12 +860,18 @@ class GHOSTSpect(GHOST):
         # CJS: I've renamed flat -> slitflat and obj_flat -> flat because
         # that's what the things are called! Sorry if I've overstepped.
         slitflat_list = params["slitflat"]
+        if slitflat_list is not None and isinstance(slitflat_list, list):
+            slitflat_list = [slitflat_list[i] for i in range(len(slitflat_list))
+                         if adinputs_orig[i] in adinputs]
         if slitflat_list is None:
             self.getProcessedSlitFlat(adinputs)
             slitflat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
         flat_list = params["flat"]
+        if flat_list is not None and isinstance(flat_list, list):
+            flat_list = [flat_list[i] for i in range(len(flat_list))
+                         if adinputs_orig[i] in adinputs]
         if flat_list is None:
             self.getProcessedFlat(adinputs)
             flat_list = [self._get_cal(ad, 'processed_flat')
@@ -916,7 +947,7 @@ class GHOSTSpect(GHOST):
             # Arithmetic propagates VAR correctly
             ad /= flatprof_ad
 
-        return adinputs
+        return adinputs_orig
 
     def rejectCosmicRays(self, adinputs=None, **params):
         """
@@ -1173,9 +1204,6 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        log.stdinfo('Inside responseCorrect for {}'.format(
-            ', '.join(['a' for _ in adinputs])))
-
         if params.get('skip'):
             log.stdinfo('Skipping the response (standard star) correction '
                         'step')
@@ -1231,12 +1259,12 @@ class GHOSTSpect(GHOST):
                 for order in range(ad[0].data.shape[0]):
                     log.stdinfo('Re-gridding order {} for obj {}'.format(
                         order + 1, o + 1))
-                    interp_func = interpolate.interp1d(std[0].WAVL.data[order],
+                    interp_func = interpolate.interp1d(std[0].WAVL[order],
                                                        std[0].data[
                                                        order, :, o
                                                        ])
                     std_regrid[order, :, o] = interp_func(
-                        ad[0].WAVL.data[order]
+                        ad[0].WAVL[order]
                     )
 
             # Timestamp
