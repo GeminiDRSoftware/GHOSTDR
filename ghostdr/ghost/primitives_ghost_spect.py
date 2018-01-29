@@ -1254,18 +1254,9 @@ class GHOSTSpect(GHOST):
             # For each order and object of the standard observation, form
             # an interp1d function, and re-grid to the wavelength scale
             # of the science object
-            std_regrid = np.zeros(ad[0].data.shape)
-            for o in range(ad[0].data.shape[-1]):
-                for order in range(ad[0].data.shape[0]):
-                    log.stdinfo('Re-gridding order {} for obj {}'.format(
-                        order + 1, o + 1))
-                    interp_func = interpolate.interp1d(std[0].WAVL[order],
-                                                       std[0].data[
-                                                       order, :, o
-                                                       ])
-                    std_regrid[order, :, o] = interp_func(
-                        ad[0].WAVL[order]
-                    )
+            std_regrid = self._regrid_wavelengths(ad, std, log=log)[0]
+
+
 
             # Timestamp
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -1471,3 +1462,44 @@ class GHOSTSpect(GHOST):
             corr_facts.append(corr_fact)
 
         return corr_facts
+
+    def _regrid_wavelengths(self, grid_ad, target_ad, log=None):
+        """
+        Regrids the data of the target_ad onto the same wavelength scale as the
+        grid_ad.
+
+        Parameters
+        ----------
+        grid_ad, target_ad : astrodata.AstroData
+            The astrodata objects for re-gridding.
+
+        Returns
+        -------
+        data_regrid : list of numpy array
+            The re-gridded data of target_ad, which matches the wavelength grid
+            of grid_ad. One element per data extension.
+        """
+
+        data_regrid = []
+
+        for i in range(len(target_ad)):
+            if log is not None:
+                log.stdinfo('RE-GRID EXTENSION {:2d}'.format(i))
+
+            regridded = np.zeros(target_ad[i].data.shape)
+            for o in range(target_ad[i].data.shape[-1]):
+                for order in range(target_ad[i].data.shape[0]):
+                    if log is not None:
+                        log.stdinfo('Re-gridding order '
+                                    '{:2d} for obj {:1d}'.format(
+                                        order + 1, o + 1))
+                    interp_func = interpolate.interp1d(grid_ad[i].WAVL[order],
+                                                       grid_ad[i].data[
+                                                       order, :, o
+                                                       ])
+                    regridded[order, :, o] = interp_func(
+                        target_ad[i].WAVL[order]
+                    )
+            data_regrid.append(regridded)
+
+        return data_regrid
