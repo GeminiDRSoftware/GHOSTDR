@@ -15,6 +15,7 @@ import astropy.coordinates as astrocoord
 from astropy.time import Time
 from astropy import units as u
 from astropy import constants as const
+from scipy import interpolate
 
 import astrodata
 
@@ -97,16 +98,21 @@ class GHOSTSpect(GHOST):
                 except (TypeError, ValueError):
                     pass
 
-            self.getProcessedArc(ad)
-            if found_arcs == False:
+            self.getProcessedArc(ad, howmany=2)
+            if not found_arcs:
                 try:
+                    arcs_calib = self._get_cal(ad, 'processed_arc',)
+                    log.stdinfo('Found following arcs: {}'.format(
+                        ', '.join([_ for _ in arcs_calib])
+                    ))
                     arc_before, arc_after = self._get_cal(ad, 'processed_arc',)
                 except (TypeError, ValueError):
                     # Triggers if only one arc, or more than two
                     arc_before = self._get_cal(ad, 'processed_arc',)[0]
                     arc_after = None
 
-            log.stdinfo('Arcs for {}: {}, {}'.format(ad, arc_before, arc_after))
+            log.stdinfo('Arcs for {}: {}, {}'.format(ad.filename,
+                                                     arc_before, arc_after))
 
             # Stand up a GhostArm instance for this ad
             gs = GhostArm(arm=ad.arm(), mode=ad.res_mode(),
@@ -199,7 +205,7 @@ class GHOSTSpect(GHOST):
             # We only need the mask, but it's best to use the full rebin
             # helper function in case the mask rebin code needs to change
             if flat.detector_x_bin() != ad.detector_x_bin(
-            ) or flat.detector_y_bin != ad.detector_y_bin():
+            ) or flat.detector_y_bin() != ad.detector_y_bin():
                 xb = ad.detector_x_bin()
                 yb = ad.detector_y_bin()
                 flat = self._rebin_ghost_ad(flat, xb, yb)
@@ -382,11 +388,16 @@ class GHOSTSpect(GHOST):
             raise IOError('Your input list of files contains a mix of '
                           'different binning modes')
 
-        # TODO: How to check for the primitive having already been applied
-        # where the calibrations are bulk-fetched?
-        # This is an issue, because if a dark has already been applied to the
-        # file, it may no longer have an associated matching dark, which may
-        # bomb the system.
+        adinputs_orig = list(adinputs)
+        if isinstance(params.get('dark', None), list):
+            params['dark'] = [params['dark'][i] for i in range(len(adinputs))
+                              if not adinputs[i].phu.get(timestamp_key)]
+        adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
+        if len(adinputs) != len(adinputs_orig):
+            log.stdinfo('The following files have already been processed by '
+                        'darkCorrect and will not be further modified: '
+                        '{}'.format(', '.join([_.filename for _ in adinputs_orig
+                                               if _ not in adinputs])))
 
         if params.get('dark', None):
             pass
@@ -465,7 +476,7 @@ class GHOSTSpect(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=sfx, strip=True)
 
-        return adinputs
+        return adinputs_orig
 
     def extractProfile(self, adinputs=None, **params):
         """
@@ -496,13 +507,24 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        # Make no attempt to check if primitive has already been run - may
-        # have new calibrators we wish to apply.
+        # This primitive modifies the input AD structure, so it must now
+        # check if the primitive has already been applied. If so, it must be
+        # skipped.
+        adinputs_orig = list(adinputs)
+        adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
+        if len(adinputs) != len(adinputs_orig):
+            log.stdinfo('extractProfile is skipping the following files, which '
+                        'already have extracted profiles: '
+                        '{}'.format(','.join([_.filename for _ in adinputs_orig
+                                              if _ not in adinputs])))
 
         # CJS: Heavily edited because of the new AD way
         # Get processed slits, slitFlats, and flats (for xmod)
         # slits and slitFlats may be provided as parameters
         slit_list = params["slit"]
+        if slit_list is not None and isinstance(slit_list, list):
+            slit_list = [slit_list[i] for i in range(len(slit_list))
+                         if adinputs_orig[i] in adinputs]
         if slit_list is None:
             # CJS: This populates the calibrations cache (dictionary) with
             # "processed_slit" filenames for each input AD
@@ -512,10 +534,13 @@ class GHOSTSpect(GHOST):
                          for ad in adinputs]
 
         slitflat_list = params["slitflat"]
+        if slitflat_list is not None and isinstance(slitflat_list, list):
+            slitflat_list = [slitflat_list[i] for i in range(len(slitflat_list))
+                             if adinputs_orig[i] in adinputs]
         if slitflat_list is None:
             self.getProcessedSlitFlat(adinputs)
             slitflat_list = [self._get_cal(ad, 'processed_slitflat')
-                         for ad in adinputs]
+                             for ad in adinputs]
 
         self.getProcessedFlat(adinputs)
         flat_list = [self._get_cal(ad, 'processed_flat') for ad in adinputs]
@@ -597,7 +622,7 @@ class GHOSTSpect(GHOST):
             if params["write_result"]:
                 ad.write(overwrite=True)
 
-        return adinputs
+        return adinputs_orig
 
     def interpolateAndCombine(self, adinputs=None, **params):
         """
@@ -819,8 +844,19 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
+        adinputs_orig = list(adinputs)
+        adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
+        if len(adinputs) != len(adinputs_orig):
+            log.stdinfo('flatCorrect is skipping the following files, '
+                        'which are already flat corrected: '
+                        '{}'.format(','.join([_ for _ in adinputs_orig
+                                              if _ not in adinputs])))
+
         # CJS: See extractProfile() refactoring for explanation of changes
         slit_list = params["slit"]
+        if slit_list is not None and isinstance(slit_list, list):
+            slit_list = [slit_list[i] for i in range(len(slit_list))
+                         if adinputs_orig[i] in adinputs]
         if slit_list is None:
             self.getProcessedSlit(adinputs)
             slit_list = [self._get_cal(ad, 'processed_slit')
@@ -829,12 +865,18 @@ class GHOSTSpect(GHOST):
         # CJS: I've renamed flat -> slitflat and obj_flat -> flat because
         # that's what the things are called! Sorry if I've overstepped.
         slitflat_list = params["slitflat"]
+        if slitflat_list is not None and isinstance(slitflat_list, list):
+            slitflat_list = [slitflat_list[i] for i in range(len(slitflat_list))
+                         if adinputs_orig[i] in adinputs]
         if slitflat_list is None:
             self.getProcessedSlitFlat(adinputs)
             slitflat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
         flat_list = params["flat"]
+        if flat_list is not None and isinstance(flat_list, list):
+            flat_list = [flat_list[i] for i in range(len(flat_list))
+                         if adinputs_orig[i] in adinputs]
         if flat_list is None:
             self.getProcessedFlat(adinputs)
             flat_list = [self._get_cal(ad, 'processed_flat')
@@ -910,7 +952,7 @@ class GHOSTSpect(GHOST):
             # Arithmetic propagates VAR correctly
             ad /= flatprof_ad
 
-        return adinputs
+        return adinputs_orig
 
     def rejectCosmicRays(self, adinputs=None, **params):
         """
@@ -1141,6 +1183,7 @@ class GHOSTSpect(GHOST):
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
+
         return adinputs
 
     def responseCorrect(self, adinputs=None, **params):
@@ -1152,14 +1195,46 @@ class GHOSTSpect(GHOST):
         ----------
         skip: bool
             If True, this primitive will just return the adinputs immediately
+        std : str, giving a relative or absolute file path
+            The name of the reduced standard star observation. Defaults to
+            None, at which point a ValueError is thrown.
+        std_spec: str, giving a relative or absolute file path
+            The name of the file where the standard star spectrum (the
+            reference, not the observed one) is stored. Defaults to None,
+            at which point the system will attempt to fetch a reference
+            spectrum from the Internet. If this too fails, a fatal error will
+            be thrown.
         """
-        if params.get('skip'):
-            log.stdinfo('Skipping the response correct stage')
-            return adinputs
-
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+
+        if params.get('skip'):
+            log.stdinfo('Skipping the response (standard star) correction '
+                        'step')
+            return adinputs
+
+        if params['std'] is None:
+            raise ValueError('No standard star provided')
+
+        # Let the astrodata routine handle any issues with actually opening
+        # the FITS file
+        std = astrodata.open(params['std'])
+
+        # Need to find the reference standard star spectrum
+        # Use the one passed by the user in the first instance, otherwise
+        # attempt to locate a remote one
+        # Throw an error if none found
+        if params['std_spec']:
+            std_spec = astrodata.open(params['std_spec'])
+        else:
+            std_spec = None
+
+        if std_spec is None:
+            pass
+            # raise ValueError('No standard reference spectrum found/supplied')
+
+        # TODO Re-grid std reference onto wavelength grid of observed std
 
         for ad in adinputs:
 
@@ -1169,8 +1244,28 @@ class GHOSTSpect(GHOST):
                             format(ad.filename))
                 continue
 
-            # Timestamp; DO NOT update filename
+            # Check that the ad matches the standard
+            if ad.res_mode() != std.res_mode():
+                raise ValueError('Resolution modes do not match for '
+                                 '{} and {}'.format(ad.filename, std.filename))
+            if ad.arm() != std.arm():
+                raise ValueError('Spectrograph arms do not match for '
+                                 '{} and {}'.format(ad.filename, std.filename))
+            if ad.detector_y_bin() != std.detector_y_bin() or \
+                    ad.detector_x_bin() != std.detector_x_bin():
+                raise ValueError('Binning does not match for '
+                                 '{} and {}'.format(ad.filename, std.filename))
+
+            # For each order and object of the standard observation, form
+            # an interp1d function, and re-grid to the wavelength scale
+            # of the science object
+            std_regrid = self._regrid_wavelengths(ad, std, log=log)[0]
+
+
+
+            # Timestamp
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=params["suffix"], strip=True)
 
         return adinputs
 
@@ -1228,6 +1323,13 @@ class GHOSTSpect(GHOST):
 
         adoutputs = []
         for ad in adinputs:
+            if ad.phu.get(timestamp_key):
+                log.warning("No changes will be made to {}, since it has "
+                            "already been processed by tileArrays".
+                            format(ad.filename))
+                adoutputs.append(ad)
+                continue
+
             mo = MosaicAD(ad, mosaic_ad_function=simple_mosaic_function)
             ad_mos = mo.as_astrodata(tile=True)
 
@@ -1365,3 +1467,45 @@ class GHOSTSpect(GHOST):
             corr_facts.append(corr_fact)
 
         return corr_facts
+
+    def _regrid_wavelengths(self, grid_ad, target_ad, log=None):
+        """
+        Regrids the data of the target_ad onto the same wavelength scale as the
+        grid_ad.
+
+        Parameters
+        ----------
+        grid_ad, target_ad : astrodata.AstroData
+            The astrodata objects for re-gridding.
+
+        Returns
+        -------
+        data_regrid : list of numpy array
+            The re-gridded data of target_ad, which matches the wavelength grid
+            of grid_ad. One element per data extension.
+        """
+
+        data_regrid = []
+
+        for i in range(len(target_ad)):
+            if log is not None:
+                log.stdinfo('RE-GRID EXTENSION {:2d}'.format(i))
+
+            regridded = np.zeros(target_ad[i].data.shape)
+            for o in range(target_ad[i].data.shape[-1]):
+                for order in range(target_ad[i].data.shape[0]):
+                    if log is not None:
+                        log.stdinfo('Re-gridding order '
+                                    '{:2d} for obj {:1d}'.format(
+                                        order + 1, o + 1))
+                    interp_func = interpolate.interp1d(grid_ad[i].WAVL[order],
+                                                       grid_ad[i].data[
+                                                       order, :, o
+                                                       ],
+                                                       fill_value='extrapolate')
+                    regridded[order, :, o] = interp_func(
+                        target_ad[i].WAVL[order]
+                    )
+            data_regrid.append(regridded)
+
+        return data_regrid
