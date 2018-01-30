@@ -694,8 +694,10 @@ class Extractor():
         nx = self.arm.szx
         lines_out = []
         # Let's try the median absolute deviation as a measure of background
-        # noise.
-        #noise_level = np.median(np.abs(flux-np.median(flux)))
+        # noise if the search region is not large enough for robust median
+        # determination.
+        if hw < 7:
+            noise_level = np.median(np.abs(flux-np.median(flux)))
 
         if (inspect == True) and (arcfile is None):
             print('Must provide an arc image for the inpection')
@@ -720,21 +722,22 @@ class Extractor():
             arclines_to_fit = filtered_arclines[ww]
             print('order ', m_ix)
             for i, ix in enumerate(w_ix):
-                message = ''
                 # This ensures that lines too close together are not used in the
                 # fit, whilst avoiding looking at indeces that don't exist.
-                if (np.abs(ix-w_ix[i-1])<1.3*hw):
-                    message += 'Too close to a line. '
-                elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.3*hw):
-                    message += 'Too close to another line. '
+                if (np.abs(ix-w_ix[i-1])<1.5*hw):
+                    continue
+                elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.5*hw):
+                    continue
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
-                # Try median absolute deviation for noise characteristics.
-                noise_level = np.median(np.abs(y-np.median(y)))
+                # Try median absolute deviation for noise characteristics if
+                # Enough pixels are available per cut.
+                if hw >= 7:
+                    noise_level = np.median(np.abs(y-np.median(y)))
                 # Any line with peak S/N under a value is not considered.
-                # And reject any saturated lines.
-                if (np.max(y) < 20 * noise_level):# or (np.max(y) > 6E4):
-                    message += 'Low S/N. '
+                if (np.max(y) < 20 * noise_level):
+                    continue
+                
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
                 with warnings.catch_warnings():
@@ -749,42 +752,33 @@ class Extractor():
                 line_to_append = [arclines_to_fit[i], ypos, xpos, m_ix +
                                   self.arm.m_min, g.amplitude.value,
                                   g.stddev.value * 2.3548]
-                # If any of the values to append are nans, don't do it.
-                if np.isnan(line_to_append).any():
-                    message = 'Nan encountered.'
-                if plots and message=='':
-                    def next(self, event):
-                        f.close()
-                    def close(self, event):
-                        f.close()
-                        plots=False
-                    
-                    f,sub=plt.subplots(1,2)
-                    
-                    callback = Index()
-                    axprev = plt.axes([0.7, 0.05, 0.1, 0.075])
-                    axnext = plt.axes([0.81, 0.05, 0.1, 0.075])
-                    bnext = Button(axnext, 'Next')
-                    bnext.on_clicked(callback.next)
-                    bprev = Button(axprev, 'Quit')
-                    bprev.on_clicked(callback.close)
 
+                # If any of the values to append are nans, don't do it and
+                # just go on to the next line.
+                if np.isnan(line_to_append).any():
+                    message += '4'
+
+                # This option is here to allow the user to inspect individual
+                # gaussian fits. Useful to test whether the method is working.
+                if plots:
+                    f,sub=plt.subplots(1,2)
                     sub[0].plot(x,y)
                     sub[0].plot(x,g(x))
                     sub[0].axvline(ix)
                     snapshot = image[int(ix-hw*4):int(ix+hw*4),int(xpos-40):int(xpos+40)]
                     sub[1].imshow(np.arcsinh((snapshot - np.median(snapshot)) / 1e2))
-                    if message=='':
-                        f.suptitle('Good')
                     plt.show()
-                    
+
+                # This part allows the user to inspect the global fit and
+                # position finding. 
                 if inspect:
                     plt.plot(xpos, ix, 'bx')
                     plt.plot(xpos, ypos, 'rx')
                     plt.text(xpos + 10, ypos,
                              str(arclines_to_fit[i]), color='green', fontsize=10)
-                if message == '':
-                    lines_out.append(line_to_append)
+
+                lines_out.append(line_to_append)
+                
         if inspect:
             plt.axis([0, nx, ny, 0])
             plt.show()
