@@ -653,7 +653,7 @@ class Extractor():
         return extracted_flux, extracted_var     
 
     def find_lines(self, flux, arclines, hw=10, arcfile=None,
-                   inspect=False):
+                   inspect=False, plots=False):
         """Find lines near the locations of input arc lines. 
         
         This is done with Gaussian fits near the location of where lines are
@@ -694,22 +694,29 @@ class Extractor():
         nx = self.arm.szx
         lines_out = []
         # Let's try the median absolute deviation as a measure of background
-        # noise.
-        noise_level = np.median(np.abs(flux-np.median(flux)))
+        # noise if the search region is not large enough for robust median
+        # determination.
+        if hw < 7:
+            noise_level = np.median(np.abs(flux-np.median(flux)))
 
         if (inspect == True) and (arcfile is None):
             print('Must provide an arc image for the inpection')
             raise UserWarning
+        if inspect or plots:
+            image= np.arcsinh((arcfile - np.median(arcfile)) / 1e2)
         if inspect:
-            plt.imshow(np.arcsinh((arcfile - np.median(arcfile)) /
-                                  1e2),
-                       interpolation='nearest', aspect='auto', cmap=cm.gray)
-
+            plt.imshow(image,interpolation='nearest', aspect='auto', cmap=cm.gray)
 
         for m_ix in range(nm):
-            filtered_arclines=arclines[(arclines >=  self.arm.w_map[m_ix, :].min())
+            # Select only arc lines that should be in this order.
+            filtered_arclines = arclines[(arclines >= self.arm.w_map[m_ix, :].min())
                                        & (arclines <= self.arm.w_map[m_ix, :].max())]
-            w_ix = np.interp(filtered_arclines, self.arm.w_map[m_ix, :], np.arange(ny))
+            # This line interpolates between filtered lines and w_map on a
+            # linear array, to find the expected pixel locations of the lines.
+            w_ix = np.interp(filtered_arclines, self.arm.w_map[m_ix, :],
+                             np.arange(ny))
+            # Ensure that lines close to the edges of the chip are not
+            # considered
             ww = np.where((w_ix >= hw) & (w_ix < ny - hw))[0]
             w_ix = w_ix[ww]
             arclines_to_fit = filtered_arclines[ww]
@@ -717,16 +724,20 @@ class Extractor():
             for i, ix in enumerate(w_ix):
                 # This ensures that lines too close together are not used in the
                 # fit, whilst avoiding looking at indeces that don't exist.
-                #if (np.abs(ix-w_ix[i-1])<1.3*hw):
-                #    continue
-                #elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.3*hw):
-                #    continue
+                if (np.abs(ix-w_ix[i-1])<1.5*hw):
+                    continue
+                elif i!=(len(w_ix)-1) and (np.abs(ix-w_ix[i+1])<1.5*hw):
+                    continue
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
+                # Try median absolute deviation for noise characteristics if
+                # Enough pixels are available per cut.
+                if hw >= 7:
+                    noise_level = np.median(np.abs(y-np.median(y)))
                 # Any line with peak S/N under a value is not considered.
-                # And reject any saturated lines.
-                #if (np.max(y) < 6 * noise_level):# or (np.max(y) > 6E4):
-                #    continue
+                if (np.max(y) < 20 * noise_level):
+                    continue
+                
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[
                                            np.argmax(y)], stddev=1.5)
                 with warnings.catch_warnings():
@@ -737,14 +748,37 @@ class Extractor():
                 xpos = nx // 2 + \
                     np.interp(g.mean.value, np.arange(ny), self.arm.x_map[m_ix])
                 ypos = g.mean.value
+                
+                line_to_append = [arclines_to_fit[i], ypos, xpos, m_ix +
+                                  self.arm.m_min, g.amplitude.value,
+                                  g.stddev.value * 2.3548]
+
+                # If any of the values to append are nans, don't do it and
+                # just go on to the next line.
+                if np.isnan(line_to_append).any():
+                    message += '4'
+
+                # This option is here to allow the user to inspect individual
+                # gaussian fits. Useful to test whether the method is working.
+                if plots:
+                    f,sub=plt.subplots(1,2)
+                    sub[0].plot(x,y)
+                    sub[0].plot(x,g(x))
+                    sub[0].axvline(ix)
+                    snapshot = image[int(ix-hw*4):int(ix+hw*4),int(xpos-40):int(xpos+40)]
+                    sub[1].imshow(np.arcsinh((snapshot - np.median(snapshot)) / 1e2))
+                    plt.show()
+
+                # This part allows the user to inspect the global fit and
+                # position finding. 
                 if inspect:
                     plt.plot(xpos, ix, 'bx')
                     plt.plot(xpos, ypos, 'rx')
                     plt.text(xpos + 10, ypos,
                              str(arclines_to_fit[i]), color='green', fontsize=10)
-                lines_out.append([arclines_to_fit[i], ypos, xpos, m_ix +
-                                  self.arm.m_min, g.amplitude.value,
-                                  g.stddev.value * 2.3548])
+
+                lines_out.append(line_to_append)
+                
         if inspect:
             plt.axis([0, nx, ny, 0])
             plt.show()

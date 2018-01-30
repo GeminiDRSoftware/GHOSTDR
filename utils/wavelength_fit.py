@@ -99,7 +99,6 @@ if refit_x_pars:
     conv_flat = arm.slit_flat_convolve(flat_data,slit_profile=slitview.slit_profile(arm='red'),spatpars=spatpars,microns_pix=slitview.microns_pix,xpars=xpars)
     fitted_xpars = arm.fit_x_to_image(conv_flat, xpars,inspect=True)
 
-pdb.set_trace()
 arm.spectral_format_with_matrix(fitted_xpars,wpars,spatpars,specpars,rotpars)
 
 # The extractor is given the polyfit "arm" object, and a slitview object which has
