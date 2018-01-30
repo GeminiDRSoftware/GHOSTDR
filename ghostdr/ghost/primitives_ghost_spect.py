@@ -1261,7 +1261,14 @@ class GHOSTSpect(GHOST):
             # of the science object
             std_regrid = self._regrid_wavelengths(ad, std, log=log)[0]
 
+            log.stdinfo('Result of re-grid:')
+            log.stdinfo('Shape: {}'.format(std_regrid.shape))
+            log.stdinfo(std_regrid)
 
+            # Push the re-gridded values to the object file so that they
+            # can be manually investigated
+            ad.append(ad[0])
+            ad[1].reset(std_regrid, mask=None, variance=None)
 
             # Timestamp
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -1476,13 +1483,16 @@ class GHOSTSpect(GHOST):
         Parameters
         ----------
         grid_ad, target_ad : astrodata.AstroData
-            The astrodata objects for re-gridding.
+            The astrodata objects for re-gridding. An interpolation function
+            will be formed based on the data and wavelength scale of
+            ``target_ad``, which will then be used to regenerate the
+            ``target_ad`` data on the wavelength scale of ``grid_ad``.
 
         Returns
         -------
         data_regrid : list of numpy array
             The re-gridded data of target_ad, which matches the wavelength grid
-            of grid_ad. One element per data extension.
+            of grid_ad. One list element per data extension.
         """
 
         data_regrid = []
@@ -1498,13 +1508,15 @@ class GHOSTSpect(GHOST):
                         log.stdinfo('Re-gridding order '
                                     '{:2d} for obj {:1d}'.format(
                                         order + 1, o + 1))
-                    interp_func = interpolate.interp1d(grid_ad[i].WAVL[order],
-                                                       grid_ad[i].data[
+                    interp_func = interpolate.interp1d(target_ad[i].WAVL[order],
+                                                       target_ad[i].data[
                                                        order, :, o
                                                        ],
+                                                       kind='linear',
+                                                       bounds_error=False,
                                                        fill_value='extrapolate')
                     regridded[order, :, o] = interp_func(
-                        target_ad[i].WAVL[order]
+                        grid_ad[i].WAVL[order]
                     )
             data_regrid.append(regridded)
 
