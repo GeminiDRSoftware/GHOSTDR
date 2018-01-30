@@ -86,27 +86,26 @@ elif user=='Joao':
     arclinefile = lookups_path + '/' + lookups.line_list
     #arclinefile = '/home/jbento/code/GHOSTDR/simulator/pyghost/pyghost/data/mnras_ar_only.txt'
     polyfit_lookups_path = lookups_path + '/Polyfit/'
-    #arclinefile= '/home/jbento/code/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnrasBefore.txt'
     test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
 
     #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-    arc_file  = fitsdir+"arcBefore95_"+mode+"_MEF_1x1_"+cam+"1_tiled.fits"
+    arc_file  = fitsdir+"arcAfter95_"+mode+"_MEF_1x1_"+cam+"1_tiled.fits"
     #flat_file = fitsdir+"flat95_std_2_red_flat.fits"
     flat_file = fitsdir + 'calibrations/processed_flat/flat95_'+mode+'_1_MEF_1x1_'+cam+'1_flat.fits'
     # Where is the default location for the model? By default it is a parameter 
     # in the ghost class. If this needs to be overwritten, go ahead.
     xmodel_file = flat_file
-    wmodel_file = fitsdir + 'calibrations/processed_arc/arcBefore95_'+mode+'_MEF_1x1_'+cam+'1_arc.fits'
+    wmodel_file = fitsdir + 'calibrations/processed_arc/arcAfter95_'+mode+'_MEF_1x1_'+cam+'1_arc.fits'
     # All the other models... which are currently in the "test" directory.
     
 
 # Load all the parameter files, even if they are dummy
 xparams = pyfits.open(xmodel_file)['XMOD'].data
 
-#wavemod_location = [value for key, value in
-#                   polyfit_dict.wavemod_dict.items()
-#                   if cam in key.lower() and mode in key.lower()][0]
-#wparams = pyfits.getdata(cam+'_'+mode+'_init.fits')
+wavemod_location = [value for key, value in
+                   polyfit_dict.wavemod_dict.items()
+                   if cam in key.lower() and mode in key.lower()][0]
+wparams = pyfits.getdata(polyfit_lookups_path + wavemod_location)
 
 wparams = pyfits.open(wmodel_file)['WFIT'].data
 
@@ -139,7 +138,7 @@ arm.spectral_format_with_matrix(xparams,wparams,spatparams,specparams,rotparams)
 extractor = polyfit.Extractor(arm, None)
 
 #flat_flux, flat_var = pickle.load( open( "flat", "rb" ) )
-arc_flux = pyfits.open('arcBefore95_'+mode+'_MEF_1x1_'+cam+'1_extractedProfile.fits')['SCI'].data
+arc_flux = pyfits.open('arcAfter95_'+mode+'_MEF_1x1_'+cam+'1_extractedProfile.fits')['SCI'].data
 
 thar_spec = thar_spectrum(arclinefile)
 adjusted_params = arm.manual_model_adjust(arc_data, model='wavelength',
