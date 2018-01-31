@@ -1251,8 +1251,9 @@ class GHOSTSpect(GHOST):
                 )
 
         # Compute the sensitivity function
-        sens_func = std[0].data / regrid_std_ref
-        sens_func_var = std[0].variance / regrid_std_ref**2
+        sens_func = (std[0].data / std[0].hdr['EXPTIME']) / regrid_std_ref
+        sens_func_var = (std[0].variance / std[0].hdr['EXPTIME']**2) / \
+                        regrid_std_ref**2
 
         for ad in adinputs:
 
@@ -1291,8 +1292,9 @@ class GHOSTSpect(GHOST):
                     )
 
             # Perform the response correction
-            ad[0].reset(ad[0].data / sens_func_regrid,
-                        variance=ad[0].variance / sens_func_var**2)
+            ad[0].reset((ad[0].data / ad[0].hdr['EXPTIME']) / sens_func_regrid,
+                        variance=(ad[0].variance / ad[0].hdr['EXPTIME']) /
+                                 sens_func_var**2)
             # Make the relevany header update
             # FIXME Will need to detect the unit from the standard ref spectrum
             ad.hdr.set('BUNIT', 'FLAM')
