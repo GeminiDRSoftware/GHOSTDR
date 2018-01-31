@@ -12,10 +12,12 @@ import functools
 from datetime import datetime, date, time, timedelta
 import re
 import astropy.coordinates as astrocoord
+import astropy.io.fits as astropyio
 from astropy.time import Time
 from astropy import units as u
 from astropy import constants as const
 from scipy import interpolate
+from pysynphot import observation, spectrum
 
 import astrodata
 
@@ -1226,15 +1228,31 @@ class GHOSTSpect(GHOST):
         # attempt to locate a remote one
         # Throw an error if none found
         if params['std_spec']:
-            std_spec = astrodata.open(params['std_spec'])
+            # FIXME Find a generic file format that can be opened by
+            # astrodata, without resorting to astropy
+            std_spec = astropyio.open(params['std_spec'])
         else:
             std_spec = None
 
         if std_spec is None:
-            pass
-            # raise ValueError('No standard reference spectrum found/supplied')
+            # pass
+            raise ValueError('No standard reference spectrum found/supplied')
 
-        # TODO Re-grid std reference onto wavelength grid of observed std
+        # Re-grid the standard reference spectrum onto the wavelength grid of
+        # the observed standard
+        regrid_std_ref = np.zeros(std[0].data.shape, dtype=np.float32)
+        for ob in range(std[0].data.shape[-1]):
+            for od in range(std[0].data.shape[0]):
+                regrid_std_ref[od, :, ob] = self._regrid_spect(
+                    std_spec[1].data['FLUX'],
+                    std_spec[1].data['WAVELENGTH'],
+                    std[0].WAVL[od, :],
+                    waveunits='angstrom'
+                )
+
+        # Compute the sensitivity function
+        sens_func = std[0].data / regrid_std_ref
+        sens_func_var = std[0].variance / regrid_std_ref**2
 
         for ad in adinputs:
 
@@ -1256,19 +1274,33 @@ class GHOSTSpect(GHOST):
                 raise ValueError('Binning does not match for '
                                  '{} and {}'.format(ad.filename, std.filename))
 
-            # For each order and object of the standard observation, form
-            # an interp1d function, and re-grid to the wavelength scale
-            # of the science object
-            std_regrid = self._regrid_wavelengths(ad, std, log=log)[0]
+            # Interpolate the sensitivity function onto the wavelength
+            # grid of this ad
+            # Note that we can get away with this instead of a more
+            # in-depth, flux-conserving regrid because:
+            # (a) The sensitivity curve units do not depend on wavelength;
+            # (b) The wavelength shifts involved are very small
+            sens_func_regrid = np.zeros(ad[0].data.shape, dtype=np.float32)
+            for ob in range(ad[0].data.shape[-1]):
+                for od in range(ad[0].data.shape[0]):
+                    sens_func_regrid[od, :, ob] = self._interp_spect(
+                        sens_func[od, :, ob],
+                        std[0].WAVL[od, :],
+                        ad[0].WAVL[od, :],
+                        interp='linear',
+                    )
 
-            log.stdinfo('Result of re-grid:')
-            log.stdinfo('Shape: {}'.format(std_regrid.shape))
-            log.stdinfo(std_regrid)
+            # Perform the response correction
+            ad[0].reset(ad[0].data / sens_func_regrid,
+                        variance=ad[0].variance / sens_func_var**2)
+            # Make the relevany header update
+            # FIXME Will need to detect the unit from the standard ref spectrum
+            ad.hdr.set('BUNIT', 'FLAM')
 
             # Push the re-gridded values to the object file so that they
             # can be manually investigated
             ad.append(ad[0])
-            ad[1].reset(std_regrid, mask=None, variance=None)
+            ad[1].reset(sens_func_regrid, mask=None, variance=None)
 
             # Timestamp
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -1352,6 +1384,10 @@ class GHOSTSpect(GHOST):
         return adoutputs
 
     # validateData() removed since inherited Standardize method will handle it
+
+##############################################################################
+# Below are the helper functions for the user level functions in this module #
+##############################################################################
 
     def _get_polyfit_filename(self, ad, caltype):
         """
@@ -1475,49 +1511,84 @@ class GHOSTSpect(GHOST):
 
         return corr_facts
 
-    def _regrid_wavelengths(self, grid_ad, target_ad, log=None):
+    def _interp_spect(self, orig_data, orig_wavl, new_wavl,
+                      interp='linear'):
         """
-        Regrids the data of the target_ad onto the same wavelength scale as the
-        grid_ad.
+        'Re-grid' a one-dimensional input spectrum by performing simple
+        interpolation on the data
 
         Parameters
         ----------
-        grid_ad, target_ad : astrodata.AstroData
-            The astrodata objects for re-gridding. An interpolation function
-            will be formed based on the data and wavelength scale of
-            ``target_ad``, which will then be used to regenerate the
-            ``target_ad`` data on the wavelength scale of ``grid_ad``.
+        orig_data : 1D numpy array or list
+            The original spectrum data
+        orig_wavl : 1D numpy array or list
+            The corresponding wavelength values for the original spectrum data
+        new_wavl : 1D numpy array or list
+            The new wavelength values to re-grid the spectrum data to
+        interp : str
+            The interpolation method to be used. Defaults to 'linear'. Will
+            accept any valid value of the ``kind`` argument to
+            :any:`scipy.interpolate.interp1d`.
 
         Returns
         -------
-        data_regrid : list of numpy array
-            The re-gridded data of target_ad, which matches the wavelength grid
-            of grid_ad. One list element per data extension.
+        regrid_data : 1D numpy array
+            The spectrum re-gridded onto the new_wavl wavelength points.
+            Will have the same shape as new_wavl.
+        """
+        # Input checking
+        orig_data = np.asarray(orig_data, dtype=orig_data.dtype)
+        orig_wavl = np.asarray(orig_data, dtype=orig_wavl.dtype)
+        new_wavl = np.asarray(orig_data, dtype=new_wavl.dtype)
+
+        if orig_data.shape != orig_wavl.shape:
+            raise ValueError('_interp_spect received data and wavelength '
+                             'arrays of different shapes')
+
+        # interp_func = interpolate.interp1d(
+        #     orig_wavl,
+        #     orig_data,
+        #     kind=interp,
+        #     fill_value=np.nan,
+        #     bounds_error=False,
+        # )
+        # regrid_data = interp_func(new_wavl)
+        regrid_data = np.interp(new_wavl, orig_wavl, orig_data, )
+        return regrid_data
+
+    def _regrid_spect(self, orig_data, orig_wavl, new_wavl,
+                      waveunits='angstrom'):
+        """
+        Re-grid a one-dimensional input spectrum so as to conserve total flux
+
+        This is a more robust procedure than :meth:`_interp_spect`, and is
+        designed for data with a wavelength dependence in the data units
+        (e.g. erg/cm^2/s/A or similar).
+
+        This function has been adapted from:
+        http://www.astrobetter.com/blog/2013/08/12/python-tip-re-sampling-spectra-with-pysynphot/
+
+        Parameters
+        ----------
+        orig_data : 1D numpy array or list
+            The original spectrum data
+        orig_wavl : 1D numpy array or list
+            The corresponding wavelength values for the original spectrum data
+        new_wavl : 1D numpy array or list
+            The new wavelength values to re-grid the spectrum data to
+        waveunits : str
+            The units of the wavelength scale. Defaults to 'angstrom'.
+
+        Returns
+        -------
+        egrid_data : 1D numpy array
+            The spectrum re-gridded onto the new_wavl wavelength points.
+            Will have the same shape as new_wavl.
         """
 
-        data_regrid = []
-
-        for i in range(len(target_ad)):
-            if log is not None:
-                log.stdinfo('RE-GRID EXTENSION {:2d}'.format(i))
-
-            regridded = np.zeros(target_ad[i].data.shape)
-            for o in range(target_ad[i].data.shape[-1]):
-                for order in range(target_ad[i].data.shape[0]):
-                    if log is not None:
-                        log.stdinfo('Re-gridding order '
-                                    '{:2d} for obj {:1d}'.format(
-                                        order + 1, o + 1))
-                    interp_func = interpolate.interp1d(target_ad[i].WAVL[order],
-                                                       target_ad[i].data[
-                                                       order, :, o
-                                                       ],
-                                                       kind='linear',
-                                                       bounds_error=False,
-                                                       fill_value='extrapolate')
-                    regridded[order, :, o] = interp_func(
-                        grid_ad[i].WAVL[order]
-                    )
-            data_regrid.append(regridded)
-
-        return data_regrid
+        spec = spectrum.ArraySourceSpectrum(wave=orig_wavl, flux=orig_data)
+        f = np.ones(orig_wavl.shape)
+        filt = spectrum.ArraySpectralElement(orig_wavl, f, waveunits=waveunits)
+        obs = observation.Observation(spec, filt, binset=new_wavl,
+                                      force='taper')
+        return obs.binflux
