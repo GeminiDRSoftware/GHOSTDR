@@ -679,6 +679,9 @@ class Extractor():
         inspect: boolean, optional
             If true, show display of lines and where they are predicted to fall
 
+        plots: boolean, optional
+            If true, plot every gaussian fit along the way for visual inspection 
+
         Returns
         -------
 
@@ -756,7 +759,7 @@ class Extractor():
                 # If any of the values to append are nans, don't do it and
                 # just go on to the next line.
                 if np.isnan(line_to_append).any():
-                    message += '4'
+                    continue
 
                 # This option is here to allow the user to inspect individual
                 # gaussian fits. Useful to test whether the method is working.
