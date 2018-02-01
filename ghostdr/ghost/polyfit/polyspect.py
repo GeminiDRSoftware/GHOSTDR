@@ -277,8 +277,8 @@ class Polyspect(object):
         # We provide the fit_resid function as the minimization function
         # and the initial model. All required arguments are also provided.
         bestp = op.leastsq(self.fit_resid, init_mod, args=(orders, y_values,
-                                                           waves, ydeg, xdeg,
-                                                           sigma))
+                                                           waves, ydeg, xdeg))
+                                                           #sigma))
         final_resid = self.fit_resid(bestp[0], orders, y_values, waves,
                                      ydeg=ydeg, xdeg=xdeg)
         # Output the fit residuals.
