@@ -1308,6 +1308,9 @@ class GHOSTSpect(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
 
+            # import pdb;
+            # pdb.set_trace()
+
         return adinputs
 
     def standardizeStructure(self, adinputs=None, **params):
@@ -1513,7 +1516,8 @@ class GHOSTSpect(GHOST):
 
         return corr_facts
 
-    def _interp_spect(self, orig_data, orig_wavl, new_wavl,
+    @staticmethod
+    def _interp_spect(orig_data, orig_wavl, new_wavl,
                       interp='linear'):
         """
         'Re-grid' a one-dimensional input spectrum by performing simple
@@ -1547,18 +1551,19 @@ class GHOSTSpect(GHOST):
             raise ValueError('_interp_spect received data and wavelength '
                              'arrays of different shapes')
 
-        # interp_func = interpolate.interp1d(
-        #     orig_wavl,
-        #     orig_data,
-        #     kind=interp,
-        #     fill_value=np.nan,
-        #     bounds_error=False,
-        # )
-        # regrid_data = interp_func(new_wavl)
-        regrid_data = np.interp(new_wavl, orig_wavl, orig_data, )
+        interp_func = interpolate.interp1d(
+            orig_wavl,
+            orig_data,
+            kind=interp,
+            fill_value=np.nan,
+            bounds_error=False,
+        )
+        regrid_data = interp_func(new_wavl)
+        # regrid_data = np.interp(new_wavl, orig_wavl, orig_data, )
         return regrid_data
 
-    def _regrid_spect(self, orig_data, orig_wavl, new_wavl,
+    @staticmethod
+    def _regrid_spect(orig_data, orig_wavl, new_wavl,
                       waveunits='angstrom'):
         """
         Re-grid a one-dimensional input spectrum so as to conserve total flux
