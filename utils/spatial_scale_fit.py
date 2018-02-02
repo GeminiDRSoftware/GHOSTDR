@@ -10,7 +10,9 @@ from __future__ import division, print_function
 import fnmatch
 import os
 import pdb
-from ghostdr import polyfit
+from ghostdr.ghost import polyfit
+import ghostdr.ghost.lookups as lookups
+import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
 import astropy.io.fits as pyfits
 from astropy.modeling import fitting
 import numpy as np
@@ -22,52 +24,54 @@ arm = 'red'
 mode = 'std'
 write_to_file = True
 extract = False
-
+lookups_path = os.path.dirname(os.path.abspath(lookups.__file__))
+polyfit_lookups_path = lookups_path + '/Polyfit/'
 # Firstly, let's find all the needed files
-fitsdir = '/priv/mulga1/jbento/ghost/tilted/'
-test_files_dir = '/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
+fitsdir='/home/jbento/code/GHOSTDR/simulator/pyghost/output/mefs/'
 
-flat_slit_image_name = 'flat95_' + mode + '*' + 'SLIT*'
-flat_slit_image = fitsdir + fnmatch.filter(os.listdir(fitsdir),
-                                           flat_slit_image_name)[0]
-
-flat_image_name = 'flat95_' + mode + '*' + arm + '*flat.fits'
-flat_image = fitsdir + fnmatch.filter(os.listdir(fitsdir),
-                                      flat_image_name)[0]
-
+flat_file = fitsdir + 'calibrations/processed_flat/flat95_'+mode+'_1_MEF_1x1_'+arm+'1_flat.fits'
+flat_slit_file = fitsdir + 'calibrations/processed_slitflat/flat95_'+mode+'_2_MEF_2x2_slit_slitflat.fits'
 correct_for_sky = False
 
 
 # Where is the default location for the model? By default it is a parameter
 # in the ghost class. If this needs to be overwritten, go ahead.
 # This is the xmod file. Wherever it is saved from the flat reduction.
-xmodel_file = fitsdir + 'GHOST_1_1_' + arm + \
-    '_' + mode + '_161120_xmodPolyfit.fits'
-wmodel_file = fitsdir + 'GHOST_1_1_' + arm + \
-    '_' + mode + '_161120_wmodPolyfit.fits'
+xmodel_file = flat_file
+wmodel_file = fitsdir + 'calibrations/processed_arc/arcBefore95_'+mode+'_MEF_1x1_'+arm+'1_arc.fits'
+xparams = pyfits.open(xmodel_file)['XMOD'].data
+wparams = pyfits.open(wmodel_file)['WFIT'].data
 
-# All the other models... which are currently in the "test" directory.
-spatmod_file = test_files_dir + 'spatmod.fits'
-specmod_file = test_files_dir + 'specmod.fits'
-rotmod_file = test_files_dir + 'rotmod.fits'
+rotmod_location = [value for key, value in
+                   polyfit_dict.rotmod_dict.items()
+                   if arm in key.lower() and mode in key.lower()][0]
+rotparams = pyfits.getdata(polyfit_lookups_path + rotmod_location)
+
+specmod_location = [value for key, value in
+                   polyfit_dict.specmod_dict.items()
+                   if arm in key.lower() and mode in key.lower()][0]
+specparams = pyfits.getdata(polyfit_lookups_path + specmod_location)
+
+spatmod_location = [value for key, value in
+                   polyfit_dict.spatmod_dict.items()
+                   if arm in key.lower() and mode in key.lower()][0]
+spatparams = pyfits.getdata(polyfit_lookups_path + spatmod_location)
+
 
 # Input the slit arrays.
-slit_array = pyfits.getdata(flat_slit_image).astype(float)
+slit_array = pyfits.getdata(flat_slit_file).astype(float)
 
 # Get the data
-flat_data = pyfits.getdata(flat_image)
-flat_slit_array = pyfits.getdata(flat_slit_image).astype(float)
+flat_data = pyfits.getdata(flat_file)
+
 
 
 # instantiate the ghostsim arm
 ghost = polyfit.GhostArm(arm, mode=mode)
 
 
-# Get the initial default model from the lookup location
-xpars = pyfits.getdata(xmodel_file)
-wpars = pyfits.getdata(wmodel_file)
 # Grab the default values for spatial scale
-# Thsi is the number of microns per pixel to be
+# This is the number of microns per pixel to be
 # used in the middle of the test range.
 # This may be adjusted depending on the spectrograph scale.
 # The crucial number is the microns_pix_spatial, which is the
@@ -80,17 +84,13 @@ test_microns = np.linspace(microns_pix_spatial - (microns_step *
                            microns_pix_spatial +
                            (microns_step * (num_steps / 2.)),
                            num_steps)
-# Perhaps this last bit may need some work. Using a default is probably
-# not great
-spatpars = pyfits.getdata(spatmod_file)
-specpars = pyfits.getdata(specmod_file)
-rotpars = pyfits.getdata(rotmod_file)
+
 # Creating a 3x3 parameter for fitting. Assume quadractic variation in both
 # order index and along order. If 1D model remains, this will fail.
-spatpars = np.vstack((np.zeros(3), np.zeros(3), spatpars))
+spatpars = np.vstack((np.zeros(3), np.zeros(3), spatparams))
 
-slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
-ghost.spectral_format_with_matrix(xpars, wpars, spatpars, specpars, rotpars)
+slitview = polyfit.SlitView(slit_array, slit_array, mode=mode)
+ghost.spectral_format_with_matrix(xparams, wparams, spatparams, specparams, rotparams)
 
 
 # This is the number of separate sections of each order that will be looked at.
@@ -121,7 +121,7 @@ for mic, microns in enumerate(test_microns):
                                          slit_profile=slitview.slit_profile(),
                                          spatpars=np.array([0, 0, microns]),
                                          microns_pix=slitview.microns_pix,
-                                         xpars=xpars)
+                                         xpars=xparams)
     # Now cut the convolution result into a small section in the middle for
     # median and maximum determination
     for order_index, order in enumerate(orders):
@@ -156,8 +156,8 @@ collapsed_y_values = np.meshgrid(
 scales = scales.flatten()
 sigma = sigma.flatten()
 
-ydeg = spatpars.shape[0] - 1
-xdeg = spatpars.shape[1] - 1
+ydeg = spatparams.shape[0] - 1
+xdeg = spatparams.shape[1] - 1
 # Do the fit!
 print("Fitting")
 init_resid = ghost.fit_resid(spatpars, orders, collapsed_y_values, scales,
