@@ -83,7 +83,7 @@ rm -rf calibrations .reducecache reduce.log  # start with a fresh local cache an
 caldb init -v -w  # start with a fresh local calibration manager
 
 reduce_list "Splitting MEFs" BUNDLE  # no need to comment out: noop's on -split simulator outputs
-for CAM in SLITV BLUE; do
+for CAM in SLITV BLUE RED; do
 	# process biases (populate an array with each necessary binning mode, and run 'reduce' for each)
 	bins=()  # 'bins' is the array
 	if [ $CAM = SLITV ]; then bins+=(2x2); else bins+=($BINNING); [[ "${bins[@]}" =~ 1x1 ]] || bins+=(1x1); fi  # populate
