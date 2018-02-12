@@ -31,7 +31,9 @@ class ParametersGHOSTSpect(ParametersGHOST):
         "write_result"      : True,
     }
     interpolateAndCombine = {
-        "suffix": "_interpdAndCombined",
+        "suffix"            : "_interpdAndCombined",
+        "scale"             : "loglinear",
+        "oversample"        : 2,
     }
     findApertures = {
         "slitflat"          : None,

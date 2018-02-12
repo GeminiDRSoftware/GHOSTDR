@@ -5,6 +5,7 @@
 # ------------------------------------------------------------------------------
 import os
 import numpy as np
+import math
 from copy import deepcopy
 import scipy
 import scipy.signal as signal
@@ -103,7 +104,7 @@ class GHOSTSpect(GHOST):
             self.getProcessedArc(ad, howmany=2)
             if not found_arcs:
                 try:
-                    arcs_calib = self._get_cal(ad, 'processed_arc',)
+                    arcs_calib = self._get_cal(ad, 'processed_arc', )
                     log.stdinfo('Found following arcs: {}'.format(
                         ', '.join([_ for _ in arcs_calib])
                     ))
@@ -272,11 +273,7 @@ class GHOSTSpect(GHOST):
                             format(ad.filename))
                 continue
 
-            # TODO: Insert actual correction factor
-            # Will the correction factor:
-            # - Be allowed to be passed by the user?
-            # - Be taken from the file header?
-            # - Be computed here from the observing time of the image?
+            # Get or compute the correction factor
             if params.get('correction_factor') is None:
                 cf = self._compute_barycentric_correction(ad, return_wavl=True)
             else:
@@ -628,8 +625,20 @@ class GHOSTSpect(GHOST):
 
     def interpolateAndCombine(self, adinputs=None, **params):
         """
-        Perform a sigma-clipping on the input data frame, such that any pixels
-        outside the sigma threshold have their BPM value updated
+        Combine the independent orders from the input ADs into a single,
+        over-sampled spectrum
+
+        Parameters
+        ----------
+        scale : str
+            Denotes what scale to generate for the final spectrum. Currently
+            available are:
+            ``'loglinear'``
+            ``'log'``
+            Default is ``'loglinear'``.
+        oversample : int or float
+            The factor by which to oversample the final output spectrum, as
+            compared to the input spectral orders. Defaults to 2.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -643,8 +652,58 @@ class GHOSTSpect(GHOST):
                             format(ad.filename))
                 continue
 
-            # Timestamp; DO NOT update filename
+            # Determine the wavelength bounds of the file
+            min_wavl, max_wavl = np.min(ad[0].WAVL), np.max(ad[0].WAVL)
+            # Form a new wavelength scale based on these extremes
+            # TODO Have this respond to the scale and oversample options
+            wavl_grid = np.exp(
+                np.linspace(np.log(min_wavl), np.log(max_wavl),
+                            num=int(math.ceil((max_wavl-min_wavl)/(0.75/3e5))))
+            )
+            # Create a final spectrum and (inverse) variance to match
+            # (One plane per object)
+            spec_final = np.zeros(wavl_grid.shape + (3, ))
+            var_final = np.inf * np.ones(wavl_grid.shape + (3, ))
+
+            # import pdb; pdb.set_trace()
+
+            # Loop over each input order, making the output spectrum the
+            # result of the weighted average of itself and the order
+            # spectrum
+            for order in range(ad[0].data.shape[0]):
+                for ob in range(ad[0].data.shape[-1]):
+                    log.stdinfo('Re-gridding order {:2d}, obj {:1d}'.format(
+                        order, ob,
+                    ))
+                    flux_for_adding = np.interp(wavl_grid,
+                                                ad[0].WAVL[order],
+                                                ad[0].data[order, :, ob],
+                                                left=0, right=0)
+                    ivar_for_adding = np.interp(wavl_grid,
+                                                ad[0].WAVL[order],
+                                                1.0 /
+                                                ad[0].variance[order, :, ob],
+                                                left=0, right=0)
+                    spec_comp, ivar_comp = np.ma.average(
+                        np.asarray([spec_final[:, ob], flux_for_adding]),
+                        weights=np.asarray([1.0 / var_final[:, ob],
+                                            ivar_for_adding]),
+                        returned=True, axis=0,
+                    )
+                    spec_final[:, ob] = deepcopy(spec_comp)
+                    var_final[:, ob] = deepcopy(1.0 / ivar_comp)
+
+            # import pdb;
+            # pdb.set_trace()
+
+            # Can't use .reset without looping through extensions
+            ad[0].data = spec_final
+            ad[0].variance = var_final
+            ad[0].WAVL = wavl_grid
+
+            # Timestamp & update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=params["suffix"], strip=True)
 
         return adinputs
 
@@ -936,6 +995,9 @@ class GHOSTSpect(GHOST):
             extractor = Extractor(arm, sview)
             extracted_flux, extracted_var = extractor.two_d_extract(
                 arm.bin_data(flat[0].data), extraction_weights=ad[0].WGT)
+
+            # import pdb
+            # pdb.set_trace()
 
             # Normalised extracted flat profile
             med = np.median(extracted_flux)
