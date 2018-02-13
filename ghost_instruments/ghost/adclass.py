@@ -261,3 +261,19 @@ class AstroDataGhost(AstroDataGemini):
     def read_speed_setting(self):
         return None
 
+    @astro_data_descriptor
+    def want_before_arc(self):
+        """
+        This is a special descriptor which is being used as a calibration
+        system work-around. Outside of active reduction, this descriptor
+        should always return None, as the relevant header keyword should only
+        exist very briefly during the fetching of bracketed arc files.
+        """
+        want_before = self.phu.get('ARCBEFOR', None)
+        if want_before:
+            return True
+        elif want_before is None:
+            return None
+        else:
+            return False
+

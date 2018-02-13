@@ -27,7 +27,8 @@ class CalibDBGHOST(CalibDB):
     def getProcessedArc(self, adinputs=None, **params):
         caltype = "processed_arc"
         self.getCalibration(adinputs, caltype=caltype,
-                            refresh=params["refresh"], howmany=2)
+                            refresh=params["refresh"],
+                            howmany=params["howmany"], )
         self._assert_calibrations(adinputs, caltype)
         return adinputs
 

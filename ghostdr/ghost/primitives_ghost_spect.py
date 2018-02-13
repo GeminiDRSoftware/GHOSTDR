@@ -101,21 +101,28 @@ class GHOSTSpect(GHOST):
                 except (TypeError, ValueError):
                     pass
 
-            self.getProcessedArc(ad, howmany=2)
-            if not found_arcs:
-                try:
-                    arcs_calib = self._get_cal(ad, 'processed_arc', )
-                    log.stdinfo('Found following arcs: {}'.format(
-                        ', '.join([_ for _ in arcs_calib])
-                    ))
-                    arc_before, arc_after = self._get_cal(ad, 'processed_arc',)
-                except (TypeError, ValueError):
-                    # Triggers if only one arc, or more than two
-                    arc_before = self._get_cal(ad, 'processed_arc',)[0]
-                    arc_after = None
+            # self.getProcessedArc(ad, howmany=2)
+            # if not found_arcs:
+            #     try:
+            #         arcs_calib = self._get_cal(ad, 'processed_arc', )
+            #         log.stdinfo('Found following arcs: {}'.format(
+            #             ', '.join([_ for _ in arcs_calib])
+            #         ))
+            #         arc_before, arc_after = self._get_cal(ad, 'processed_arc',)
+            #     except (TypeError, ValueError):
+            #         # Triggers if only one arc, or more than two
+            #         arc_before = self._get_cal(ad, 'processed_arc',)[0]
+            #         arc_after = None
 
-            log.stdinfo('Arcs for {}: {}, {}'.format(ad.filename,
-                                                     arc_before, arc_after))
+            if not found_arcs:
+                # Fetch the arc_before and arc_after in sequence
+                arc_before = self._request_bracket_arc(ad, before=True)
+                arc_after = self._request_bracket_arc(ad, before=False)
+
+            log.stdinfo('Arcs for {}: \n'
+                        '   before: {}\n'
+                        '    after: {}'.format(ad.filename,
+                                               arc_before, arc_after))
 
             # Stand up a GhostArm instance for this ad
             gs = GhostArm(arm=ad.arm(), mode=ad.res_mode(),
@@ -1577,6 +1584,45 @@ class GHOSTSpect(GHOST):
             corr_facts.append(corr_fact)
 
         return corr_facts
+
+    def _request_bracket_arc(self, ad, before=None):
+        """
+        Request the 'before' or 'after' arc for the passed ad object.
+
+        This helper function works by doing the following:
+        - Append a special header keyword, 'ARCBEFOR', to the PHU. This keyword
+          will be True if a before arc is requested, or False if an after arc
+          is wanted.
+        - getProcessedArc is the invoked, followed by the _get_cal call. The
+          arc calibration association rules will see the special descriptor
+          related to the 'ARCBEFOR' header keyword, and fetch an arc
+          accordingly.
+        - The header keyword is then deleted from the ad object, returning it
+          to its original state.
+
+        Parameters
+        ----------
+        before : bool
+            Denotes whether to ask for the most recent arc before (True) or
+            after (False) the input AD was taken. Defaults to None, at which
+            point an error will be thrown.
+
+        Returns
+        -------
+        arc_ad : astrodata.AstroData instance (or None)
+            The requested arc. Will return None if no suitable arc is found.
+        """
+        if before is None:
+            raise ValueError('_request_bracket_arc requires that the before '
+                             'kwarg is either True or False. If you wish to '
+                             'do a "standard" arc calibration fetch, simply '
+                             'use getProcessedArc directly.')
+
+        ad.phu['ARCBEFOR'] = before
+        self.getProcessedArc(ad, howmany=None, refresh=True)
+        arc_ad = self._get_cal(ad, 'processed_arc', )
+        del ad.phu['ARCBEFOR']
+        return arc_ad
 
     @staticmethod
     def _interp_spect(orig_data, orig_wavl, new_wavl,
