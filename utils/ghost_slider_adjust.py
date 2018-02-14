@@ -19,42 +19,11 @@ from ghostdr.ghost import polyfit
 import astropy.io.fits as pyfits
 import ghostdr.ghost.lookups as lookups
 import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
+import input_locations
 # plt.ion()
 
 # pylint: disable=maybe-no-member, invalid-name
 
-# This function is a close clone of the thar_spectrum from the simulator
-# It's used to generate lines to be displayed in the visual part of this tool.
-def thar_spectrum(linefile):
-    """Calculates a ThAr spectrum. Note that the flux scaling here is roughly
-    correct for the lamp with no neutral density. From the simulator.
-
-    Parameters
-    ----------
-
-    linefile: string
-        Path to the arcline file
-
-
-    Returns
-    -------
-    wave, flux: ThAr spectrum (wavelength in um, flux in photons/s?)
-    """
-
-    thar = np.loadtxt(linefile, usecols=[0, 1, 2])
-    # Create a fixed wavelength scale evenly spaced in log.
-    thar_wave = 3600 * np.exp(np.arange(5e5) / 5e5)
-    thar_flux = np.zeros(int(5e5))
-    # NB This is *not* perfect: we just find the nearest index of the
-    # wavelength scale corresponding to each Th/Ar line.
-    wave_ix = (np.log(thar[:, 1] / 3600) * 5e5).astype(int)                     
-    wave_ix = np.minimum(np.maximum(wave_ix, 0), 5e5 - 1).astype(int)           
-    thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))                        
-    thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
-                            mode='same')
-
-    thar_flux /= np.max(thar_flux) / 3e5
-    return np.array([thar_wave, thar_flux])
 
 # Ask user what they want to adjust.
 model = raw_input('What would you like to adjust? The (X) position model or \
@@ -70,73 +39,36 @@ mode = 'high' # The spectrograph resolution mode.
 cam = 'red'  # The camera
 # This variable makes it easy for each user (currently only Joao) to
 # have all file locations defined without overwriting.
-user = 'Joao'
+user = 'joao'
 
+files = input_locations.Files(user=user, mode=mode, cam=cam)
 # instantiate the ghostsim arm
 ghost = polyfit.ghost.GhostArm(cam, mode=mode)
 
-if user == 'Joao':
-    # fitsdir='/home/jbento/code/ghostdr/frames/calibrations/storedcals/'
-    fitsdir = '/home/jbento/code/GHOSTDR/simulator/pyghost/output/mefs/'
-    # test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
-    test_files_dir = '/home/jbento/code/ghostdr/astrodata_GHOST/ADCONFIG_GHOST/lookups/GHOST/Polyfit/'+ cam + '/' + mode + '/161120/'
-    lookups_path = os.path.dirname(os.path.abspath(lookups.__file__))
-    polyfit_lookups_path = lookups_path + '/Polyfit/'
-    if model == 'W':
-        #arclinefile = lookups_path + '/' + lookups.line_list
-        arclinefile = '/home/jbento/code/GHOSTDR/simulator/pyghost/pyghost/data/mnras_ar_only.txt'
-        # Define the files in use (NB xmod.txt and wavemod.txt should be
-        # correct)
-        arc_file = fitsdir + "arc_ar_only95_high_MEF_1x1_red1_tiled.fits"
-        arc_data = pyfits.getdata(arc_file)
-        thar_spec = thar_spectrum(arclinefile)
 
-    flat_file = fitsdir + 'calibrations/processed_flat/flat95_high_1_MEF_1x1_red1_flat.fits'
-    #flat_file = fnmatch.filter(os.listdir(fitsdir),
-       #                                  flat_file_name)[0]
+if model == 'W':
+    #arclinefile = lookups_path + '/' + lookups.line_list
+    arclinefile = files.arclinefile
+    
+    # Define the files in use (NB xmod.txt and wavemod.txt should be
+    # correct)
+    arc_file = files.arc_image_file
+    arc_data = pyfits.getdata(arc_file)
+    thar_spec = files.thar_spectrum(arclinefile)
 
-    # Where is the default location for the model? By default it is a parameter
-    # in the ghost class. If this needs to be overwritten, go ahead.
-    #xmodel_file = fitsdir + 'GHOST_1_1_' + cam + \
-    #    '_' + mode + '_161120_xmodPolyfit.fits'
-    #xmod_file = test_files_dir + 'xmod.fits'
-    #wmodel_file = fitsdir + 'GHOST_1_1_' + cam + \
-    #    '_' + mode + '_161120_wmodPolyfit.fits'
-    # xmodel_file='/home/jbento/code/ghostdr/utils/new_Xmod.fits'
-    # All the other models... which are currently in the "test" directory.
-    # wmodel_file=test_files_dir+'wparams_'+cam+'_'+mode+'.fits'
-    #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
-    #wmodel_file = '/home/jbento/code/ghostdr/utils/wmod.txt'
-    #wmodel_file = '/home/jbento/code/ghostdr/utils/fitted_wmod.fits'
-    xmodel_file = flat_file
-    wmodel_file = fitsdir + 'calibrations/processed_arc/arc_ar_only95_high_MEF_1x1_red1_arc.fits'
-    spatmod_file = test_files_dir + 'spatmod.fits'
-    specmod_file = test_files_dir + 'specmod.fits'
-    rotmod_file = test_files_dir + 'rotmod.fits'
-
+flat_file = files.flat_image_file
 
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 flat_data = pyfits.getdata(flat_file)
 
 # Load all the parameter files, even if they are dummy
-xparams = pyfits.open(xmodel_file)['XMOD'].data
+xparams = pyfits.open(flat_file)['XMOD'].data
 
-wparams = pyfits.open(wmodel_file)['WFIT'].data
+wparams = pyfits.open(files.arc_reduced_file)['WFIT'].data
 
-rotmod_location = [value for key, value in
-                   polyfit_dict.rotmod_dict.items()
-                   if cam in key.lower() and mode in key.lower()][0]
-rotparams = pyfits.getdata(polyfit_lookups_path + rotmod_location)
-
-specmod_location = [value for key, value in
-                   polyfit_dict.specmod_dict.items()
-                   if cam in key.lower() and mode in key.lower()][0]
-specparams = pyfits.getdata(polyfit_lookups_path + specmod_location)
-
-spatmod_location = [value for key, value in
-                   polyfit_dict.spatmod_dict.items()
-                   if cam in key.lower() and mode in key.lower()][0]
-spatparams = pyfits.getdata(polyfit_lookups_path + spatmod_location)
+rotparams = files.rotparams
+specparams = files.specparams
+spatparams = files.spatparams
 
 
 # Create an initial model of the spectrograph.

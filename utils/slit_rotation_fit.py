@@ -14,11 +14,16 @@ from astropy.modeling import models, fitting
 import astropy.io.fits as pyfits
 from ghostdr import polyfit
 import numpy as np
+import input_locations
 
 # pylint: disable=maybe-no-member, invalid-name
 
 arm = 'red'
 mode = 'high'
+user='joao'
+
+files = input_locations.Files(user=user, mode=mode, cam=cam)
+
 write_to_file = True
 extract = True
 # This is to make sure that profiles with good flux always get used

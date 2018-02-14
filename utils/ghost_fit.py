@@ -12,24 +12,26 @@ import pdb
 import shutil
 import matplotlib.cm as cm
 import astropy.io.fits as pyfits
-#plt.ion()
+import input_locations
 
+user='joao'
+mode='high'
+cam='red'
 
+files = input_locations.Files(user=user, mode=mode, cam=cam)
 
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 #arc_file  = "/home/jbento/code/pymfe/data/ghost/blue/std/arcstd_blue.fits"
-flat_file = "flathigh_red.fits"
+flat_file = files.flat_image_file
 #Get the data
 flat_data = pyfits.getdata(flat_file)
 
 #instantiate the ghostsim arm
 ghost = polyfit.ghost.GhostArm('red',mode='high')
 
-# Where is the default location for the model? By default it is a parameter 
-# in the ghost class. If this needs to be overwritten, go ahead.
-model_file='/home/jbento/.local/lib/python2.7/site-packages/ghostdr-0.1.0-py2.7.egg/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/red/161120/high/xmod.fits'
+
 #Get the initial default model from the lookup location
-xparams=pyfits.getdata(model_file)
+xparams=files.xparams
 
 #Create an initial model of the spectrograph.
 xx, wave, blaze= ghost.spectral_format(xparams=xparams)
