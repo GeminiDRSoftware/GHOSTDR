@@ -37,13 +37,13 @@ def reduce(p):
                                # arcs, e.g. from start and end of night,
                                # and interpolate in time
     p.barycentricCorrect() # trivial - multiply wavelength scale
-    p.responseCorrect() # canned standard star correction to the point of
+    # p.responseCorrect() # canned standard star correction to the point of
                      # flatCorrect, plus a model flux
                      # User should be able to turn off this step
                      # Possible option for telluric correction (so
                      # option to override canned file used)
     # TODO: define reduce() and reduce_nostack() maybe?
-    #p.interpolateAndCombine() # Should factor this step into separate recipe
+    p.interpolateAndCombine() # Should factor this step into separate recipe
     return
 
 default = reduce

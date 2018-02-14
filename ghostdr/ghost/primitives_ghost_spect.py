@@ -641,7 +641,6 @@ class GHOSTSpect(GHOST):
             Denotes what scale to generate for the final spectrum. Currently
             available are:
             ``'loglinear'``
-            ``'log'``
             Default is ``'loglinear'``.
         oversample : int or float
             The factor by which to oversample the final output spectrum, as
@@ -661,18 +660,26 @@ class GHOSTSpect(GHOST):
 
             # Determine the wavelength bounds of the file
             min_wavl, max_wavl = np.min(ad[0].WAVL), np.max(ad[0].WAVL)
-            # Form a new wavelength scale based on these extremes
-            # TODO Have this respond to the scale and oversample options
-            wavl_grid = np.exp(
-                np.linspace(np.log(min_wavl), np.log(max_wavl),
-                            num=int(math.ceil((max_wavl-min_wavl)/(0.75/3e5))))
+            logspacing = np.median(
+                np.log(ad[0].WAVL[:, 1:]) - np.log(ad[0].WAVL[:, :-1])
             )
+            # Form a new wavelength scale based on these extremes
+            if params['scale'] == 'loglinear':
+                wavl_grid = np.exp(
+                    np.linspace(np.log(min_wavl), np.log(max_wavl),
+                                num=int(
+                                    (np.log(max_wavl) - np.log(min_wavl)) /
+                                    (logspacing / float(params['oversample']))
+                                ))
+                )
+            else:
+                raise ValueError('interpolateAndCombine does not understand '
+                                 'the scale {}'.format(params['scale']))
+
             # Create a final spectrum and (inverse) variance to match
             # (One plane per object)
             spec_final = np.zeros(wavl_grid.shape + (3, ))
             var_final = np.inf * np.ones(wavl_grid.shape + (3, ))
-
-            # import pdb; pdb.set_trace()
 
             # Loop over each input order, making the output spectrum the
             # result of the weighted average of itself and the order
