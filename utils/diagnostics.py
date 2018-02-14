@@ -18,39 +18,9 @@ import ghostdr.ghost.lookups as lookups
 import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
 import pylab as pl
 from cycler import cycler
+import input_locations
 
-
-def thar_spectrum(linefile):
-    """Calculates a ThAr spectrum. Note that the flux scaling here is roughly
-    correct for the lamp with no neutral density. From the simulator.
-
-    Parameters
-    ----------
-
-    linefile: string
-        Path to the arcline file
-
-
-    Returns
-    -------
-    wave, flux: ThAr spectrum (wavelength in um, flux in photons/s?)
-    """
-
-    thar = np.loadtxt(linefile, usecols=[0, 1, 2])
-    # Create a fixed wavelength scale evenly spaced in log.
-    thar_wave = 3600 * np.exp(np.arange(5e5) / 5e5)
-    thar_flux = np.zeros(int(5e5))
-    # NB This is *not* perfect: we just find the nearest index of the
-    # wavelength scale corresponding to each Th/Ar line.
-    wave_ix = (np.log(thar[:, 1] / 3600) * 5e5).astype(int)
-    wave_ix = np.minimum(np.maximum(wave_ix, 0), 5e5 - 1).astype(int)
-    thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))
-    thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
-                            mode='same')
-
-    thar_flux /= np.max(thar_flux) / 3e5
-    return np.array([thar_wave, thar_flux])
-
+user='joao'
 
 def plot_arcs(arc_data, thar_spec, w_map, title):
     """ Function used to plot two panels, one containing the extracted arc
@@ -80,14 +50,6 @@ def plot_arcs(arc_data, thar_spec, w_map, title):
     pl.show()
 
 
-# Start by finding where the lookups are and save that location as a variable
-lookups_path = os.path.dirname(os.path.abspath(lookups.__file__))
-arclinefile = lookups_path + '/' + lookups.line_list
-thar_spec = thar_spectrum(arclinefile)
-
-polyfit_lookups_path = lookups_path + '/Polyfit/'
-
-
 # Let's start by checking the fits. We use the same method as the slider adjust
 # and let the user check things individually.
 
@@ -113,31 +75,16 @@ if len(sys.argv) > 1:
 
 for mode in modes:
     for cam in cams:
+        files = input_locations.Files(user=user, mode=mode, cam=cam)
         ghost = polyfit.ghost.GhostArm(cam, mode=mode)
         print('Inspecting flat and arc fits from the %s camera in %s mode' %
               (cam, mode))
         # Find the default models for things not inspected
-        rotmod_location = [value for key, value in
-                           polyfit_dict.rotmod_dict.items()
-                           if cam in key.lower() and mode in key.lower()][0]
-        rotparams = pyfits.getdata(polyfit_lookups_path + rotmod_location)
+        rotparams = files.rotparams
+        specparams = files.specparams
+        spatparams = files.spatparams
+        wparams = files.waveparams
 
-        specmod_location = [value for key, value in
-                           polyfit_dict.specmod_dict.items()
-                           if cam in key.lower() and mode in key.lower()][0]
-        specparams = pyfits.getdata(polyfit_lookups_path + specmod_location)
-
-        spatmod_location = [value for key, value in
-                           polyfit_dict.spatmod_dict.items()
-                           if cam in key.lower() and mode in key.lower()][0]
-        spatparams = pyfits.getdata(polyfit_lookups_path + spatmod_location)
-
-        wavemod_location = [value for key, value in
-                           polyfit_dict.wavemod_dict.items()
-                           if cam in key.lower() and mode in key.lower()][0]
-        wparams = pyfits.getdata(polyfit_lookups_path + wavemod_location)
-
-        # Now find the correct flat and arc frames
         flat_file_location = [value for value in flat_list if cam in value
                               and mode in value][0]
         flat_file = pyfits.open(flat_file_location)
@@ -175,4 +122,5 @@ for mode in modes:
                                                   spatparams, specparams,
                                                   rotparams)
             plot_title='Arc %s with superimposed template in green.' % (arc)
+            thar_spec = files.thar_spectrum(files.arclinefile)
             plot_arcs(arc_data, thar_spec, ghost.w_map, title=plot_title)

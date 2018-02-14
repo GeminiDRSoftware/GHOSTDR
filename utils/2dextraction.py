@@ -7,29 +7,31 @@ import numpy as np
 import fnmatch, os
 import pdb
 import pickle
+import input_locations
 
 arm='blue'
 mode='std'
+user='joao'
+
+files = input_locations.Files(user=user, mode=mode, cam = arm)
+
 ftype='arc'
 write_to_file = False
 flat_correct = True
 extract_1d_first = True #Set this to false to test multiple times.
 
 # Firstly, let's find all the needed files
-fitsdir='/priv/mulga1/jbento/ghost/calibrations/storedcals/'
-test_files_dir='/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
-fitsdir='/Users/mireland/data/ghost/tilted/'
-test_files_dir='/Users/mireland/python/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/blue/std/161120/'
+basedir = files.basedir
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 # For this example just use arcs. Proper science frame reduction is still not
 # available. 
-science_file  = fitsdir + ftype + '95_'+mode+'_'+arm+'_'+ftype+'.fits'
-slit_image = fitsdir + ftype+ '95_'+mode+'_SLIT_'+ftype+'.fits'
-flat_file  = fitsdir + 'flat95_'+mode+'_2_'+arm+'_flat.fits'
+science_file  = basedir + ftype + '95_'+mode+'_'+arm+'_'+ftype+'.fits'
+slit_image = basedir + ftype+ '95_'+mode+'_SLIT_'+ftype+'.fits'
+flat_file  = basedir + 'flat95_'+mode+'_2_'+arm+'_flat.fits'
 
 # Use these files and flat_correct=False to test flat extraction.
-# science_file  = fitsdir + 'flat95_std_2_blue_flat.fits'
-# slit_image = fitsdir + 'flat95_std_2_SLIT_stack_slitFlat.fits'
+# science_file  = basedir + 'flat95_std_2_blue_flat.fits'
+# slit_image = basedir + 'flat95_std_2_SLIT_stack_slitFlat.fits'
 
 #If the 'science' data is an arc or a flat, no sky correction needed.
 #Otherwise we need to.
@@ -38,19 +40,8 @@ correct_for_sky=False
 # Searching the correct flat slit is harder because the default names have
 # different numbers on them. Need to use a wildcard.
 flat_slit_image_name = 'flat95_'+mode+'*'+'SLIT*'
-flat_slit_image = fitsdir + fnmatch.filter( os.listdir(fitsdir),
+flat_slit_image = basedir + fnmatch.filter( os.listdir(basedir),
                                             flat_slit_image_name)[0]
-
-# Where is the default location for the model? By default it is a parameter 
-# in the ghost class. If this needs to be overwritten, go ahead.
-# This is the xmod file. Wherever it is saved from the flat reduction.
-xmodel_file=fitsdir+'GHOST_1_1_'+arm+'_'+mode+'_161120_xmodPolyfit.fits'
-wmodel_file=fitsdir+'GHOST_1_1_'+arm+'_'+mode+'_161120_wmodPolyfit.fits'
-
-# All the other models... which were  in the "test" directory.
-spatmod_file=test_files_dir+'spatmod.fits'
-specmod_file=test_files_dir+'specmod.fits'
-rotmod_file=test_files_dir+'rotmod.fits'
 
 #Input the slit arrays.
 slit_array = pyfits.getdata(slit_image).astype(float)
@@ -65,11 +56,11 @@ arm = polyfit.GhostArm(arm,mode=mode)
 
 
 #Get the initial default model from the lookup location
-xpars=pyfits.getdata(xmodel_file)
-wpars=pyfits.getdata(wmodel_file)
-spatpars=pyfits.getdata(spatmod_file)
-specpars=pyfits.getdata(specmod_file)
-rotpars=pyfits.getdata(rotmod_file)
+xpars = files.xparams
+wpars = files.waveparams
+spatpars = files.spatparams
+specpars = files.specparams
+rotpars = files.rotparams
 
 
 slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
