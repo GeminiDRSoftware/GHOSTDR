@@ -22,41 +22,30 @@ import scipy.optimize as op
 
 arm = 'red'
 mode = 'std'
+user='joao'
+
+iles = input_locations.Files(user=user, mode=mode, cam=cam)
+
 write_to_file = True
 extract = False
-lookups_path = os.path.dirname(os.path.abspath(lookups.__file__))
-polyfit_lookups_path = lookups_path + '/Polyfit/'
-# Firstly, let's find all the needed files
-fitsdir='/home/jbento/code/GHOSTDR/simulator/pyghost/output/mefs/'
+fitsdir= files.basedir
 
-flat_file = fitsdir + 'calibrations/processed_flat/flat95_'+mode+'_1_MEF_1x1_'+arm+'1_flat.fits'
-flat_slit_file = fitsdir + 'calibrations/processed_slitflat/flat95_'+mode+'_2_MEF_2x2_slit_slitflat.fits'
+flat_file = files.flat_image_file
+flat_slit_file = files.slit_flat_image
 correct_for_sky = False
 
 
 # Where is the default location for the model? By default it is a parameter
 # in the ghost class. If this needs to be overwritten, go ahead.
 # This is the xmod file. Wherever it is saved from the flat reduction.
-xmodel_file = flat_file
-wmodel_file = fitsdir + 'calibrations/processed_arc/arcBefore95_'+mode+'_MEF_1x1_'+arm+'1_arc.fits'
+xmodel_file = files.flat_image_file
+wmodel_file = files.arc_reduced_file
 xparams = pyfits.open(xmodel_file)['XMOD'].data
 wparams = pyfits.open(wmodel_file)['WFIT'].data
 
-rotmod_location = [value for key, value in
-                   polyfit_dict.rotmod_dict.items()
-                   if arm in key.lower() and mode in key.lower()][0]
-rotparams = pyfits.getdata(polyfit_lookups_path + rotmod_location)
-
-specmod_location = [value for key, value in
-                   polyfit_dict.specmod_dict.items()
-                   if arm in key.lower() and mode in key.lower()][0]
-specparams = pyfits.getdata(polyfit_lookups_path + specmod_location)
-
-spatmod_location = [value for key, value in
-                   polyfit_dict.spatmod_dict.items()
-                   if arm in key.lower() and mode in key.lower()][0]
-spatparams = pyfits.getdata(polyfit_lookups_path + spatmod_location)
-
+spatpars = files.spatparams
+specpars = files.specparams
+rotpars = files.rotparams
 
 # Input the slit arrays.
 slit_array = pyfits.getdata(flat_slit_file).astype(float)

@@ -35,37 +35,21 @@ else:
     print('Invalid mode')
     exit()
 # Firstly, let's find all the needed files
-fitsdir = '/priv/mulga1/jbento/ghost/standard/calibrations/storedcals/'
-test_files_dir = '/priv/mulga1/jbento/ghost/parameter_files_for_testing/'
-# fitsdir='/Users/mireland/data/ghost/storedcals/'
-# test_files_dir='/Users/mireland/data/ghost/parameter_files_for_testing/'
+fitsdir = files.basedir
+
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 # For this example just use arcs. Proper science frame reduction is still not
 # available.
-arc_file = fitsdir + 'arc95_' + mode + '_' + arm + '_arc.fits'
-slit_arc = fitsdir + 'arc95_' + mode + '_SLIT_arc.fits'
+arc_file = files.arc_image_file
+# THis will need to change, because it's not set up in the input_locations by default
+slit_arc = fitsdir + 'calibrations/processed_slit/arcBefore95_high_MEF_2x2_slit_slit.fits'
 # If the data is an arc or a flat, no sky correction needed.
 # Otherwise we need to.
 correct_for_sky = False
 
 # Searching the correct flat slit is harder because the default names have
 # different numbers on them. Need to use a wildcard.
-flat_slit_image_name = 'flat95_' + mode + '*' + 'SLIT*'
-flat_slit_image = fitsdir + fnmatch.filter(os.listdir(fitsdir),
-                                           flat_slit_image_name)[0]
-
-# Where is the default location for the model? By default it is a parameter
-# in the ghost class. If this needs to be overwritten, go ahead.
-# This is the xmod file. Wherever it is saved from the flat reduction.
-xmodel_file = fitsdir + 'GHOST_1_1_' + arm + \
-    '_' + mode + '_161120_xmodPolyfit.fits'
-wmodel_file = fitsdir + 'GHOST_1_1_' + arm + \
-    '_' + mode + '_161120_wmodPolyfit.fits'
-
-# All the other models... which are currently in the "test" directory.
-spatmod_file = test_files_dir + 'spatmod.fits'
-specmod_file = test_files_dir + 'specmod.fits'
-rotmod_file = test_files_dir + 'rotmod.fits'
+flat_slit_image = files.slit_flat_image
 
 # Input the slit arrays.
 slit_array = pyfits.getdata(slit_arc).astype(float)
@@ -80,12 +64,11 @@ ghost = polyfit.GhostArm(arm, mode=mode)
 
 
 # Get the initial default model from the lookup location
-xpars = pyfits.getdata(xmodel_file)
-wpars = pyfits.getdata(wmodel_file)
-spatpars = pyfits.getdata(spatmod_file)
-specpars = pyfits.getdata(specmod_file)
-# rotpars=pyfits.getdata(rotmod_file)
-rotpars = np.zeros((3, 3))
+xpars = files.xparams
+wpars = files.waveparams
+spatpars = files.spatparams
+specpars = files.specparams
+rotpars = files.rotparams
 
 slitview = polyfit.SlitView(slit_array, flat_slit_array, mode=mode)
 ghost.spectral_format_with_matrix(xpars, wpars, spatpars, specpars, rotpars)

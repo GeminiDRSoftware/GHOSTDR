@@ -8,8 +8,6 @@ but instead for debugging and development purposes.
 
 from __future__ import division, print_function
 from ghostdr.ghost import polyfit
-import ghostdr.ghost.lookups as lookups
-import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
 import astropy.io.fits as pyfits
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,55 +18,21 @@ import astropy.io.fits as pyfits
 #plt.ion()
 
 refit_x_pars=False
-user = 'Joao'
+user = 'joao'
+mode='high'
+cam='red'
 
-if user=='Mike':
-    fitsdir='/Users/mireland/data/ghost/cal_frames/'
-    arclinefile= '/Users/mireland/python/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras0378-0221-SD1.txt'
-    test_files_dir='/Users/mireland/data/ghost/cal_frames/testmodels/'
+files = input_locations.Files(user=user, mode=mode, cam=cam)
 
-    #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-    arc_file  = fitsdir+"arc95_std_red.fits"
-    flat_file = fitsdir+"flat95_std_2_red_flat.fits"
+fitsdir=files.basedir
+arclinefile = files.arclinefile
 
-    # Where is the default location for the model? By default it is a parameter 
-    # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_red_std_xmodPolyfit.fits'
+#Define the files in use (NB xmod.txt and wavemod.txt should be correct)
+arc_file  = files.arc_image_file
 
-    # All the other models... which are currently in the "test" directory.
-    wmodel_file=test_files_dir+'wparams_red_std.fits'
-    spatmod_file=test_files_dir+'spatmod.fits'
-    specmod_file=test_files_dir+'specmod.fits'
-    rotmod_file=test_files_dir+'rotmod2.fits'
-
-    #Input the slit arrays.
-    arc_image_array = pyfits.getdata(fitsdir + 'arc95_std_SLIT.fits').astype(float)
-    arc_image_array -= np.median(arc_image_array)
-
-elif user=='Joao':
-    fitsdir='/home/jbento/code/GHOSTDR/simulator/pyghost/output/reduction'
-    arclinefile = lookups_path + '/' + lookups.line_list
-    #arclinefile= '/home/jbento/code/ghostdr/ghostdr/ADCONFIG_GHOST/lookups/GHOST/Polyfit/mnras_ar_only.txt'
-    #test_files_dir='/home/jbento/code/ghostdr/parameter_files_for_testing/'
-
-    #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
-    arc_file  = fitsdir+"arcAfter95_std_MEF_1x1_blue1_tiled.fits"
-    #flat_file = fitsdir+"flat95_std_2_red_flat.fits"
-
-    # Where is the default location for the model? By default it is a parameter 
-    # in the ghost class. If this needs to be overwritten, go ahead.
-    xmodel_file=fitsdir+'GHOST_1_1_red_std_161120_xmodPolyfit.fits'
-    wmodel_file=fitsdir+'GHOST_1_1_red_std_161120_wmodPolyfit.fits'
-    # All the other models... which are currently in the "test" directory.
-    #wmodel_file=test_files_dir+'wparams_blue_high.fits'
-    #wmodel_file = '/home/jbento/code/ghostdr/utils/new_Wmod.fits'
-    spatmod_file=test_files_dir+'spatmod.fits'
-    specmod_file=test_files_dir+'specmod.fits'
-    rotmod_file=test_files_dir+'rotmod2.fits'
-
-    #Input the slit arrays.
-    arc_image_array = pyfits.getdata(fitsdir + 'arc95_std_SLIT_arc.fits').astype(float)
-    arc_image_array -= np.median(arc_image_array)
+#Input the slit arrays.
+arc_image_array = pyfits.getdata(fitsdir + 'arc95_std_SLIT_arc.fits').astype(float)
+arc_image_array -= np.median(arc_image_array)
 
 
 #Get the data
@@ -81,11 +45,11 @@ arm = polyfit.GhostArm('red',mode='std')
 
 
 #Get the initial default model from the lookup location
-xpars=pyfits.getdata(xmodel_file)
-wpars=pyfits.getdata(wmodel_file)
-spatpars=pyfits.getdata(spatmod_file)
-specpars=pyfits.getdata(specmod_file)
-rotpars=pyfits.getdata(rotmod_file)
+xpars=files.xparams
+wpars=files.waveparams
+spatpars = files.spatparams
+specpars = files.specparams
+rotpars = files.rotparams
 
 flat_image_array = arc_image_array.copy()
 
