@@ -1266,8 +1266,8 @@ class GHOSTSpect(GHOST):
 
     def responseCorrect(self, adinputs=None, **params):
         """
-        Perform a sigma-clipping on the input data frame, such that any pixels
-        outside the sigma threshold have their BPM value updated
+        Use a standard star observation and reference spectrum to provide
+        absolute flux calibration
 
         Parameters
         ----------
@@ -1279,9 +1279,11 @@ class GHOSTSpect(GHOST):
         std_spec: str, giving a relative or absolute file path
             The name of the file where the standard star spectrum (the
             reference, not the observed one) is stored. Defaults to None,
-            at which point the system will attempt to fetch a reference
-            spectrum from the Internet. If this too fails, a fatal error will
-            be thrown.
+            at which point a fatal error will be thrown.
+
+            Spectral standard references should be in the format provided
+            by Space Telescope Science Institute, e.g., from
+            ftp://ftp.stsci.edu/cdbs/current_calspec/
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -1307,29 +1309,34 @@ class GHOSTSpect(GHOST):
             # FIXME Find a generic file format that can be opened by
             # astrodata, without resorting to astropy
             std_spec = astropyio.open(params['std_spec'])
+            bunit = std_spec[1].header['TUNIT2']
         else:
-            std_spec = None
-
-        if std_spec is None:
-            # pass
             raise ValueError('No standard reference spectrum found/supplied')
+
+
 
         # Re-grid the standard reference spectrum onto the wavelength grid of
         # the observed standard
-        regrid_std_ref = np.zeros(std[0].data.shape, dtype=np.float32)
-        for ob in range(std[0].data.shape[-1]):
-            for od in range(std[0].data.shape[0]):
-                regrid_std_ref[od, :, ob] = self._regrid_spect(
-                    std_spec[1].data['FLUX'],
-                    std_spec[1].data['WAVELENGTH'],
-                    std[0].WAVL[od, :],
-                    waveunits='angstrom'
-                )
+        regrid_std_ref = np.zeros(std[0].data.shape[:-1], dtype=np.float32)
+        for od in range(std[0].data.shape[0]):
+            regrid_std_ref = self._regrid_spect(
+                std_spec[1].data['FLUX'],
+                std_spec[1].data['WAVELENGTH'],
+                std[0].WAVL[od, :],
+                waveunits='angstrom'
+            )
+
+        # TODO: Figure out which object is actually the standard observation
+        # (i.e. of the dimensions [order, wavl, object], figure which of the
+        # three objects is actually the spectrum (another will be sky, and
+        # the third probably empty)
+        # For now, we will assume that the standard star observation is object 0
 
         # Compute the sensitivity function
-        sens_func = (std[0].data / std[0].hdr['EXPTIME']) / regrid_std_ref
-        sens_func_var = (std[0].variance / std[0].hdr['EXPTIME']**2) / \
-                        regrid_std_ref**2
+        sens_func = (std[0].data[:, :, 0] /
+                     std[0].hdr['EXPTIME']) / regrid_std_ref
+        sens_func_var = (std[0].variance[:, :, 0] /
+                         std[0].hdr['EXPTIME']**2) / regrid_std_ref**2
 
         for ad in adinputs:
 
@@ -1358,22 +1365,48 @@ class GHOSTSpect(GHOST):
             # (a) The sensitivity curve units do not depend on wavelength;
             # (b) The wavelength shifts involved are very small
             sens_func_regrid = np.zeros(ad[0].data.shape, dtype=np.float32)
+            sens_func_regrid_var = np.inf * np.ones(ad[0].data.shape,
+                                                    dtype=np.float32)
             for ob in range(ad[0].data.shape[-1]):
                 for od in range(ad[0].data.shape[0]):
-                    sens_func_regrid[od, :, ob] = self._interp_spect(
-                        sens_func[od, :, ob],
-                        std[0].WAVL[od, :],
+                    # sens_func_regrid[od, :, ob] = self._interp_spect(
+                    #     sens_func[od, :],
+                    #     std[0].WAVL[od, :],
+                    #     ad[0].WAVL[od, :],
+                    #     interp='linear',
+                    # )
+                    sens_func_regrid[od, :, ob] = np.interp(
                         ad[0].WAVL[od, :],
-                        interp='linear',
+                        std[0].WAVL[od, :],
+                        sens_func[od, :],
+                        left=0, right=0,
+                    )
+                    sens_func_regrid_var[od, :, ob] = np.interp(
+                        ad[0].WAVL[od, :],
+                        std[0].WAVL[od, :],
+                        sens_func_var[od, :],
+                        left=0, right=0,
                     )
 
+            # Easiest way to response correct is to stand up a new AstroData
+            # instance containing the sensitivity function - this will
+            # automatically handle, e.g., the VAR re-calculation
+            sens_func_ad = deepcopy(ad)
+            sens_func_ad.update_filename(suffix='_sensFunc', strip=True)
+            sens_func_ad[0].data = sens_func_regrid
+            sens_func_ad[0].variance = sens_func_regrid_var
+            if params['write_result']:
+                sens_func_ad.write(overwrite=True)
+            # sens_func_ad.reset(sens_func_regrid, variance=sens_func_regrid_var)
+
             # Perform the response correction
-            ad[0].reset((ad[0].data / ad[0].hdr['EXPTIME']) / sens_func_regrid,
-                        variance=(ad[0].variance / ad[0].hdr['EXPTIME']) /
-                                 sens_func_var**2)
+            # ad[0].reset((ad[0].data / ad[0].hdr['EXPTIME']) / sens_func_regrid,
+            #             variance=(ad[0].variance / ad[0].hdr['EXPTIME']) /
+            #                      sens_func_var**2)
+            ad /= ad[0].hdr['EXPTIME']
+            ad /= sens_func_ad
             # Make the relevany header update
-            # FIXME Will need to detect the unit from the standard ref spectrum
-            ad.hdr.set('BUNIT', 'FLAM')
+            ad.hdr['BUNIT'] = bunit
 
             # Push the re-gridded values to the object file so that they
             # can be manually investigated
