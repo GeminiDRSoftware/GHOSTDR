@@ -17,14 +17,15 @@ import astropy.io.fits as pyfits
 from astropy.modeling import fitting
 import numpy as np
 import scipy.optimize as op
+import input_locations
 
 # pylint: disable=maybe-no-member, invalid-name
 
-arm = 'red'
+arm = 'blue'
 mode = 'std'
 user='joao'
 
-iles = input_locations.Files(user=user, mode=mode, cam=cam)
+files = input_locations.Files(user=user, mode=mode, cam=arm)
 
 write_to_file = True
 extract = False
@@ -43,9 +44,9 @@ wmodel_file = files.arc_reduced_file
 xparams = pyfits.open(xmodel_file)['XMOD'].data
 wparams = pyfits.open(wmodel_file)['WFIT'].data
 
-spatpars = files.spatparams
-specpars = files.specparams
-rotpars = files.rotparams
+spatparams = files.spatparams
+specparams = files.specparams
+rotparams = files.rotparams
 
 # Input the slit arrays.
 slit_array = pyfits.getdata(flat_slit_file).astype(float)
@@ -66,7 +67,7 @@ ghost = polyfit.GhostArm(arm, mode=mode)
 # The crucial number is the microns_pix_spatial, which is the
 # number of slitviewer microns per spectrograph CCD pixel.
 microns_pix_spatial = 47.2
-microns_step = 0.1
+microns_step = 0.2
 num_steps = 16
 test_microns = np.linspace(microns_pix_spatial - (microns_step *
                                                   (num_steps / 2.)),
@@ -76,10 +77,10 @@ test_microns = np.linspace(microns_pix_spatial - (microns_step *
 
 # Creating a 3x3 parameter for fitting. Assume quadractic variation in both
 # order index and along order. If 1D model remains, this will fail.
-spatpars = np.vstack((np.zeros(3), np.zeros(3), spatparams))
+spatpars = np.vstack((np.zeros(3), np.zeros(3), np.array([0, 0, microns_pix_spatial])))
 
 slitview = polyfit.SlitView(slit_array, slit_array, mode=mode)
-ghost.spectral_format_with_matrix(xparams, wparams, spatparams, specparams, rotparams)
+ghost.spectral_format_with_matrix(xparams, wparams, spatpars, specparams, rotparams)
 
 
 # This is the number of separate sections of each order that will be looked at.

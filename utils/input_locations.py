@@ -13,7 +13,6 @@ import os
 import numpy as np
 
 
-
 class Files():
     """ class that must be ran by each script to define file locations"""
 
