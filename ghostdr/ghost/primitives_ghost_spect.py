@@ -33,7 +33,7 @@ from .polyfit.ghost import GhostArm
 from .primitives_ghost import GHOST, filename_updater
 from .parameters_ghost_spect import ParametersGHOSTSpect
 
-from .lookups import polyfit_dict, line_list
+from .lookups import polyfit_dict, line_list, keyword_comments
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
@@ -55,6 +55,7 @@ class GHOSTSpect(GHOST):
     def __init__(self, adinputs, **kwargs):
         super(GHOSTSpect, self).__init__(adinputs, **kwargs)
         self.parameters = ParametersGHOSTSpect
+        self.keyword_comments.update(keyword_comments.keyword_comments)
 
     def addWavelengthSolution(self, adinputs=None, **params):
         """
@@ -133,10 +134,14 @@ class GHOSTSpect(GHOST):
                 # arc = arc_after
                 arc_after = astrodata.open(arc_after)
                 wfit = gs.evaluate_poly(arc_after[0].WFIT)
+                ad.phu.set('ARCIM_A', os.path.abspath(arc_after.path),
+                           "'After' arc image")
             elif arc_after is None:
                 # arc = arc_before
                 arc_before = astrodata.open(arc_before)
                 wfit = gs.evaluate_poly(arc_before[0].WFIT)
+                ad.phu.set('ARCIM_B', os.path.abspath(arc_before.path),
+                           "'Before' arc image")
             else:
                 # Need to weighted-average the wavelength fits from the arcs
                 # Determine the weights (basically, the inverse time between
@@ -158,6 +163,14 @@ class GHOSTSpect(GHOST):
                 # Compute weighted mean fit
                 wfit = wfit_a * weight_a + wfit_b * weight_b
                 wfit /= (weight_a + weight_b)
+                ad.phu.set('ARCIM_A', os.path.abspath(arc_after.path),
+                           self.keyword_comments['ARCIM_A'])
+                ad.phu.set('ARCIM_B', os.path.abspath(arc_before.path),
+                           self.keyword_comments['ARCIM_B'])
+                ad.phu.set('ARCWT_A', weight_a,
+                           self.keyword_comments['ARCWT_A'])
+                ad.phu.set('ARCWT_B', weight_b,
+                           self.keyword_comments['ARCWT_B'])
 
             ad[0].WAVL = wfit
 
@@ -246,11 +259,15 @@ class GHOSTSpect(GHOST):
                 else:
                     ext.mask |= flat_ext.mask
 
+
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
                 ad.write(overwrite=True)
+                # Record which flat was used
+                ad.phu.set('FLATBPM', os.path.abspath(flat.path),
+                           self.keyword_comments['FLATBPM'])
 
         return adinputs
 
@@ -478,7 +495,8 @@ class GHOSTSpect(GHOST):
             ad.subtract(dark)
 
             # Record dark used, timestamp, and update filename
-            ad.phu.set('DARKIM', dark.filename, self.keyword_comments["DARKIM"])
+            ad.phu.set('DARKIM', os.path.abspath(dark.path),
+                       self.keyword_comments["DARKIM"])
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=sfx, strip=True)
 
@@ -918,6 +936,7 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        sfx = params["suffix"]
 
         adinputs_orig = list(adinputs)
         adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
@@ -1025,10 +1044,16 @@ class GHOSTSpect(GHOST):
                                  variance=extracted_var)
             if params["write_result"]:
                 flatprof_ad.write(overwrite=True)
+                # Record this as the flat profile used
+                ad.phu.set('FLATIM', os.path.abspath(flatprof_ad.path),
+                           self.keyword_comments['FLATIM'])
 
             # Divide the flat field through the science data
             # Arithmetic propagates VAR correctly
             ad /= flatprof_ad
+
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=sfx, strip=True)
 
         return adinputs_orig
 
