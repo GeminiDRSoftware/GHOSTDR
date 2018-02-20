@@ -59,8 +59,33 @@ class GHOSTSpect(GHOST):
 
     def addWavelengthSolution(self, adinputs=None, **params):
         """
-        Apply the wavelength solution from an arc file (or set of arc files)
-        to the data.
+        Compute and append a wavelength solution for the data.
+
+        The GHOST instrument is designed to be very stable over a long period
+        of time, so it is not strictly necessary to take arcs for every
+        observation. The alternative is use the arcs taken most recently
+        before and after the observation of interest, and compute an
+        average of their wavelength solutions.
+
+        The average is weighted by
+        the inverse of the time between each arc observation and science
+        observation. E.g., if the 'before' arc is taken 12 days before the
+        science observation, and the 'after' arc is taken 3 days after the
+        science observation, then the 'after' arc will have a weight of 80%
+        in the final wavelength solution (12/15), and the 'before' arc 20%
+        (3/15).
+
+        In the event that either a 'before' arc can't be found but an 'after'
+        arc can, or vice versa, the wavelength solution from the arc that was
+        found will be applied as-is. If neither a 'before' nor 'after' arc can
+        be found, an IOError will be raised.
+
+        It is possible to explicitly pass which arc files to use as
+        the ``arc`` parameter. This should be a list of two-tuples, with each
+        tuple being of the form
+        ``('before_arc_filepath', 'after_arc_filepath')``. This list must be
+        the same length as the list of ``adinputs``, with a one-to-one
+        correspondence between the two lists.
 
         Parameters
         ----------
@@ -119,6 +144,9 @@ class GHOSTSpect(GHOST):
                 # Fetch the arc_before and arc_after in sequence
                 arc_before = self._request_bracket_arc(ad, before=True)
                 arc_after = self._request_bracket_arc(ad, before=False)
+
+            if arc_before is None and arc_after is None:
+                raise IOError('No valid arcs found for {}'.format(ad.filename))
 
             log.stdinfo('Arcs for {}: \n'
                         '   before: {}\n'
@@ -184,6 +212,12 @@ class GHOSTSpect(GHOST):
         """
         Find the flat relevant to the file(s) being processed, and merge the
         flat's BPM into the target file's.
+
+        GHOST does not use flat subtraction in the traditional sense; instead,
+        the extracted flat profile is subtracted from the extracted object
+        profile. This means that the BPM from the flat needs to be applied to
+        the object file before profile extraction, and hence well before actual
+        flat correction is performed.
 
         Parameters
         ----------
@@ -317,15 +351,14 @@ class GHOSTSpect(GHOST):
 
     def clipSigmaBPM(self, adinputs=None, **params):
         """
-        Perform a sigma-clipping on the input data frame, such that any pixels
-        outside the sigma threshold have their BPM value updated
+        Perform a sigma-clipping on the input data frame.
 
         Parameters
         ----------
         sigma: float/None
-            suffix to be added to output files
+            The sigma value to be used for clipping.
         bpm_value: int/None
-            he integer value to be applied to the data BPM where the sigma
+            The integer value to be applied to the data BPM where the sigma
             threshold is exceeded. Defaults to 1 (which is the generic bad
             pixel flag). Note that the final output BPM is made using a
             bitwise_or operation.
@@ -368,7 +401,7 @@ class GHOSTSpect(GHOST):
 
     def darkCorrect(self, adinputs=None, **params):
         """
-        GHOST-specific darkCorrect primitive
+        Dark-correct GHOST observations.
 
         This primitive, at it's core, simply copies the standard
         DRAGONS darkCorrect (part of :any:`Preprocess`). However, it has
@@ -661,8 +694,8 @@ class GHOSTSpect(GHOST):
             ``'loglinear'``
             Default is ``'loglinear'``.
         oversample : int or float
-            The factor by which to oversample the final output spectrum, as
-            compared to the input spectral orders. Defaults to 2.
+            The factor by which to (approximately) oversample the final output
+            spectrum, as compared to the input spectral orders. Defaults to 2.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -741,8 +774,12 @@ class GHOSTSpect(GHOST):
 
     def findApertures(self, adinputs=None, **params):
         """
-        Locate the apertures within a GHOST frame, and insert a :any:`polyfit`
-        model into a new extension on each data frame
+        Locate the slit aperture, parametrized by a :any:`polyfit` model.
+
+        The primitive locates the slit apertures within a GHOST frame,
+        and inserts a :any:`polyfit` model into a new extension on each data
+        frame. This model is placed into a new ``.XMOD`` attribute on the
+        extension.
         
         Parameters
         ----------
@@ -829,7 +866,15 @@ class GHOSTSpect(GHOST):
 
     def fitWavelength(self, adinputs=None, **params):
         """
-        Fit wavelength solution to a GHOST ARC frame
+        Fit wavelength solution to a GHOST ARC frame.
+
+        This primitive should only be applied to a reduce GHOST ARC frame. Any
+        other files passed through this primitive will be skipped.
+
+        The primitive will use the arc line files stored in the same location
+        as the initial :any:`polyfit` models kept in the ``lookups`` system.
+
+        This primitive uses no special parameters.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -903,9 +948,11 @@ class GHOSTSpect(GHOST):
 
     def flatCorrect(self, adinputs=None, **params):
         """
-        Flat-correct an extracted GHOST object profile by extracting the
+        Flat-correct an extracted GHOST profile using a flat profile.
+
+        This primitive works by extracting the
         profile from the relevant flat field using the object's extracted
-        weights, and then perform simple division.
+        weights, and then performs simple division.
 
         Parameters
         ----------
@@ -1060,6 +1107,10 @@ class GHOSTSpect(GHOST):
     def rejectCosmicRays(self, adinputs=None, **params):
         """
         Reject cosmic rays from GHOST data.
+
+        .. warning::
+            This primitive is now deprecated - cosmic ray rejection is now
+            handled as part of the profile extraction process.
         
         Parameters
         ----------
@@ -1074,9 +1125,13 @@ class GHOSTSpect(GHOST):
         f_lim: float
             The clipping limit for the fine-structure image.
         """
+        raise DeprecationWarning('Cosmic ray rejections is now handled '
+                                 'as part of the profile extraction process.')
+
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+
 
         n_steps = params["n_steps"]
         subsampling = params["subsampling"]
@@ -1292,7 +1347,21 @@ class GHOSTSpect(GHOST):
     def responseCorrect(self, adinputs=None, **params):
         """
         Use a standard star observation and reference spectrum to provide
-        absolute flux calibration
+        absolute flux calibration.
+
+        This primitive follows the basic pattern for determining absolute flux
+        from an observed standard with a relative flux scale (e.g. counts) and
+        an absolute flux-calibrated reference spectrum:
+
+        - Dividing the standard star observation (in counts or electrons per
+          pixel) by
+          the exposure time (in s), and then by the standard star reference
+          spectrum (in some unit of flux, e.g. erg/cm^2/s/A) gives a
+          sensitivity curve in units of, in this example, counts / erg.
+        - Divinding the object spectrum divided by exposure time (i.e.
+          counts or electrons per pixel per second) by the sensitivity curve
+          (counts / erg) yields the object spectrum in the original flux
+          units of the standard star reference spectrum.
 
         Parameters
         ----------
@@ -1308,7 +1377,17 @@ class GHOSTSpect(GHOST):
 
             Spectral standard references should be in the format provided
             by Space Telescope Science Institute, e.g., from
-            ftp://ftp.stsci.edu/cdbs/current_calspec/
+            ftp://ftp.stsci.edu/cdbs/current_calspec/. If the standard reference
+            is taken from elsewhere, it needs to obey the following
+            format rules:
+
+            - The reference data is in the first science extension of the FITS
+              file;
+            - The data must be in FITS table format, with columns named
+              ``'FLUX'`` and ``'WAVELENGTH'``;
+            - The first science extension must have a header card named
+              ``'TUNIT2'``, which should contain the FITS-compatible
+              flux unit name corresponding to the data in the ``'FLUX'`` column.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -1430,7 +1509,7 @@ class GHOSTSpect(GHOST):
             #                      sens_func_var**2)
             ad /= ad[0].hdr['EXPTIME']
             ad /= sens_func_ad
-            # Make the relevany header update
+            # Make the relevant header update
             ad.hdr['BUNIT'] = bunit
 
             # Push the re-gridded values to the object file so that they
@@ -1464,6 +1543,8 @@ class GHOSTSpect(GHOST):
     # so this shouldn't need any extra information.
     def tileArrays(self, adinputs=None, **params):
         """
+        Tile GHOST data into a single frame.
+
         This primitive will tile the SCI frames of the input images, along
         with the VAR and DQ frames if they exist.
         """
@@ -1739,7 +1820,7 @@ class GHOSTSpect(GHOST):
     def _regrid_spect(orig_data, orig_wavl, new_wavl,
                       waveunits='angstrom'):
         """
-        Re-grid a one-dimensional input spectrum so as to conserve total flux
+        Re-grid a one-dimensional input spectrum so as to conserve total flux.
 
         This is a more robust procedure than :meth:`_interp_spect`, and is
         designed for data with a wavelength dependence in the data units
