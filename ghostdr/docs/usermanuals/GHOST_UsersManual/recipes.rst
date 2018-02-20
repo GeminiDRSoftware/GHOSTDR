@@ -170,13 +170,16 @@ take note of for development GHOST reduction::
 
 The option ``--drpkg ghostdr`` tells ``reduce`` to import the ``ghostdr``
 data reduction package, in addition to the standard :any:`DRAGONS` packages.
-This
-will not be required in production, as ``ghostdr`` will be incorporated
+This will not be required in production, as ``ghostdr`` will be incorporated
 into :any:`DRAGONS` by Gemini.
 
 The ``@`` modifier tells ``reduce`` that the input file is, in fact, a list,
 and should be broken apart for reduction. If you were only passing a single
 FITS file to ``reduce``, you would leave the ``@`` modifier off.
+
+The last option (which is used below in
+:ref:`reduce-object-frame`) is the ``-p`` tag. This allows you
+to override the default parameters for a given reduction primitive.
 
 ``caldb``
 ++++++++++++++++
@@ -433,14 +436,6 @@ two arcs are then interpolated in time to provide the wavelength solution for
 the science frame. This is done via a simple weighted average, such that the
 arc frame taken close in time to the science frame is more heavily weighted.
 
-.. note::
-    The ``addWavelengthSolution`` primitive that is called during
-    science/standard frame reduction can handle forming this interpolated
-    wavelength fit (although it's not been tested yet),
-    but the calibration system can't return multiple arcs
-    per frame. For the moment, the wavelength solution is just taken from
-    whichever arc frame happens to be returned.
-
 The result of all this is that it isn't correct to blindly make a file
 reduction list based on file types as we have been doing previously. Instead,
 you need to do one of two things:
@@ -463,11 +458,20 @@ you need to do one of two things:
   filename. Then, reduce the file lists as above, remembering to use the ``@``
   symbol in front of the file list names.
 
-This recipe reduces the arc frame(s), then uses the ``polyfit`` module to extract the
+This recipe reduces the arc frame(s),
+then uses the ``polyfit`` module to extract the
 flux profiles of the object/sky fibres in the input image. It then uses this
 fit, and a line set stored in the RecipeSystem lookups system, to make a
 wavelength fit to the arc image. This fit is also stored in the calibrations
 directory/system.
+
+.. _reduce-object-frame:
+
+Generating a Standard Observation Frame
+---------------------------------------
+
+.. note::
+    This step is only required if you need absolute flux calibration.
 
 Reducing an Object frame (Spectra)
 ----------------------------------
@@ -482,24 +486,99 @@ tag ``SPECT``, but none of the further tags we've encountered already (e.g.
     typewalk --dir <path_to>/data_folder
 
 This informs the reduction framework to run the ``reduce`` GHOST recipe on
-them. which should run to at least the ``flatCorrect`` step now that you
-have dark and bias calibration frames (for the moment, we have commented the
-remaining steps out of the ``reduce`` recipe so it will complete
-successfully)::
+them. which will now run all the way through to the final
+``interpolateAndCombine`` primitive, producing a single, wavelength-calibrated
+spectrum for each object in the input file::
 
     reduce --drpkg ghostdr <path_to>/data_folder/obj95_1.0_std_1x1_red.fits
 
-This produces a ``obj95_1.0_std_1x1_red_flatCorrected.fits`` (or similar) file,
-a bias, dark and flat corrected GHOST spectrum frame.
-
-.. warning:: The primitive ``rejectCosmicRays`` would normally be called as
-             part of ``reduce``, after the ``darkCorrect`` step. It is
-             currently commented out - the underlying LACosmic algorithm is
-             working, but aperture removal/re-instatement is required to avoid
-             accidentally flagging spectral peaks and the edges of orders as
-             cosmic rays, and this has yet to be implemented.
-
+This produces a ``obj95_1.0_std_1x1_red_interpAndCombined.fits``
+(or similar) file, a fully processed data frame.
 
 Other Processing Flows
 ======================
-include scientific flow charts, include associated recipes
+
+Using a Standard Star Observation
+---------------------------------
+
+.. note::
+    Standard star observations are only required when you need absolute flux
+    calibration.
+
+To use a standard star observation, there are a few small changes that
+need to be made to the above reduction process:
+
+Reduce a Standard Star Observation
+++++++++++++++++++++++++++++++++++
+
+The first step is to reduce your standard star observation. This will be sent
+back from Gemini with the tag ``PARTNER_CAL``, which (along with their ``SPECT``
+tag) tells the RecipeSystem to run the ``reducePCal`` recipe. This recipe is
+identical to that used to reduce the object frame, but it stops after the
+``addWavelengthSolution`` step. Therefore, in this example::
+
+    reduce --drpkg ghostdr <path_to>/data_folder/standard95_hd123456_std_1x1_red.fits
+
+the resulting reduced file will be
+``standard95_hd123456_std_1x1_red_wavelengthAdded.fits``.
+
+.. note::
+    The standard observation will *not* be added to the calibrations database
+    system. This is for two reasons:
+
+    1. The standard star observation is more akin to a science observation
+       than a true calibration;
+    2. There is nothing intrinsic about each standard star observation that ties
+       it to a particular GHOST object observation, nor is there a requirement
+       for each object observation to be paired with a standard observation.
+
+    This means that the user will need to manually specify the (reduced)
+    star observation (and related reference spectrum) manually; see below for
+    further details.
+
+Download a Standard Star Reference Spectrum
++++++++++++++++++++++++++++++++++++++++++++
+
+In order to use the observed standard star spectrum to provide absolute flux
+correction, a flux-calibrated reference spectrum of the standard star spectrum
+is required.
+
+We have chosen to utilize the standard star spectrum database
+`CALSPEC <ftp://ftp.stsci.edu/cdbs/current_calspec>`_, provided
+by the Space Telescope Science Institute (STScI). You will need to download
+the reference spectrum for your standard star from there, if possible.
+
+If you need to source your standard star reference spectrum from elsewhere,
+you will need to make sure that it is stored in a FITS file conforming to the
+following requirements:
+
+1. The spectrum data must be in the first data extension of the FITS file, as
+   a FITS table;
+2. The table must have columns ``'WAVELENGTH'`` and ``'FLUX'``;
+3. The header of the data extension must have a card named ``'TUNIT2'``, which
+   contains the FITS-compliant name of the flux units recorded in the ``'FLUX'``
+   table column (usually ``FLAM``).
+
+Pass Special Options to Object Reduction
+++++++++++++++++++++++++++++++++++++++++
+
+We now need to use the ``-p`` argument to ``reduce`` to tell the RecipeSystem
+that we'd like to use the ``responseCorrect`` primitive, and where to find
+the necessary standard star files. The three options that need to be set are:
+
+- ``skip=False`` - the ``skip`` parameter is turned on (i.e. ``True``) by
+  default;
+- ``std=<reduced_standard.fits>`` - this tells the recipe system which reduced
+  standard to use;
+- ``std_spec=<standard_reference_spectrum.fits>`` - this is the standard
+  reference spectrum to use.
+
+Therefore, in the example we've been following, the correct call to ``reduce``
+would be::
+
+    reduce --drpkg ghostdr -p responseCorrect:skip=False responseCorrect:std=standard95_hd123456_std_1x1_red_wavelengthAdded.fits responseCorrect:std_spect=hd123456.fits <path_to>/data_folder/obj95_1.0_std_1x1_red.fits
+
+The ``responseCorrect`` qualifier is only *required* for the ``skip``
+parameter, as other primitives may also have a ``skip`` parameter that we do
+not wish to alter. However, the qualification is shown for all primitive
+options here for clarity.
