@@ -88,13 +88,13 @@ class Files():
         if self.user=='joao':
             # This is the directory containing the raw (and recently reduced)
             # files.
-            self.basedir = '/home/jbento/code/GHOSTDR/simulator/pyghost/output/mefs/'
+            self.basedir = '/home/jbento/code/GHOSTDR/simulator/pyghost/output/full_reduction/'
             
             self.arclinefile_ar_only = '/home/jbento/code/GHOSTDR/simulator/pyghost/pyghost/data/mnras_ar_only.txt'
 
             # Now define locations of actual images for fitting or visualisation.
             # correct)
-            self.arc_image_file = self.basedir + "arc_ar_only95_"+self.mode+"_MEF_1x1_"+self.cam+"1_tiled.fits"
+            self.arc_image_file = self.basedir + "intermediates.Et18qyON6m/arcBefore95_"+self.mode+"_MEF_1x1_"+self.cam+"1_tiled.fits"
 
             self.arc_reduced_file = self.basedir + 'calibrations/processed_arc/arcBefore95_'+self.mode+'_MEF_1x1_'+self.cam+'1_arc.fits'
             self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
@@ -102,6 +102,7 @@ class Files():
             self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
             
             self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/flat95_'+self.mode+'_2_MEF_2x2_slit_slitflat.fits'
+            self.slit_arc_image = self.basedir + 'calibrations/processed_slit/arcBefore95_'+self.mode+'_MEF_2x2_slit_slit.fits'
         else:
             print('Invalid user, try again.')
         

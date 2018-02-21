@@ -73,6 +73,8 @@ adjusted_params = arm.manual_model_adjust(arc_data, model='wavelength',
 
 
 #Now find the other lines, after first re-loading into the extractor.
+# The plots=True option will show individual plots for each fline finding fit. This will take time
+# but is useful to check what is going on.
 lines_out=extractor.find_lines(arc_flux, arcwaves, hw=10,arcfile=arc_data.T,inspect=True,plots=False)
 
 

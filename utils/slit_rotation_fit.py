@@ -12,19 +12,19 @@ from scipy.interpolate import interp1d
 import scipy.optimize as op
 from astropy.modeling import models, fitting
 import astropy.io.fits as pyfits
-from ghostdr import polyfit
+from ghostdr.ghost import polyfit
 import numpy as np
 import input_locations
 
 # pylint: disable=maybe-no-member, invalid-name
 
-arm = 'red'
+arm = 'blue'
 mode = 'high'
 user='joao'
 
-files = input_locations.Files(user=user, mode=mode, cam=cam)
+files = input_locations.Files(user=user, mode=mode, cam=arm)
 
-write_to_file = True
+write_to_file = False
 extract = True
 # This is to make sure that profiles with good flux always get used
 if mode == 'std':
@@ -41,8 +41,8 @@ fitsdir = files.basedir
 # For this example just use arcs. Proper science frame reduction is still not
 # available.
 arc_file = files.arc_image_file
-# THis will need to change, because it's not set up in the input_locations by default
-slit_arc = fitsdir + 'calibrations/processed_slit/arcBefore95_high_MEF_2x2_slit_slit.fits'
+# This will need to change, because it's not set up in the input_locations by default
+slit_arc = files.slit_arc_image
 # If the data is an arc or a flat, no sky correction needed.
 # Otherwise we need to.
 correct_for_sky = False
