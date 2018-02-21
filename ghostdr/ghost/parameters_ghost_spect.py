@@ -29,6 +29,7 @@ class ParametersGHOSTSpect(ParametersGHOST):
         "slit"              : None,
         "slitflat"          : None,
         "write_result"      : True,
+        "sky_correct"       : True,
     }
     interpolateAndCombine = {
         "suffix"            : "_interpdAndCombined",

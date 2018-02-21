@@ -555,6 +555,10 @@ class GHOSTSpect(GHOST):
             will attempt to pull a slit flat from the calibrations system (or,
             if specified, the --user_cal processed_slitflat command-line
             option)
+        sky_correct: bool
+            Denotes whether or not to correct for the sky profile during the
+            object extraction. Defaults to True, although it should be altered
+            to False when processing flats or arcs.
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
@@ -663,7 +667,8 @@ class GHOSTSpect(GHOST):
                                   vararray=ad[0].variance)
             # CJS: Makes it clearer that you're throwing the first two
             # returned objects away (get replaced in the two_d_extract call)
-            _, _, extracted_weights = extractor.one_d_extract(ad[0].data)
+            _, _, extracted_weights = extractor.one_d_extract(
+                ad[0].data, correct_for_sky=params['sky_correct'])
             extracted_flux, extracted_var = extractor.two_d_extract(ad[0].data,
                                     extraction_weights=extracted_weights)
 
