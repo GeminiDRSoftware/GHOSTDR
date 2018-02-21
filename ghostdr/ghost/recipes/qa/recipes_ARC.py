@@ -31,7 +31,7 @@ def makeProcessedArc(p):
     #p.rejectCosmicRays(
     # )
     p.tileArrays()
-    p.extractProfile()
+    p.extractProfile(sky_correct=False)
     p.fitWavelength()
     p.storeProcessedArc()
     return

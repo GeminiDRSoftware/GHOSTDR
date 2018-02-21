@@ -33,7 +33,7 @@ from .polyfit.ghost import GhostArm
 from .primitives_ghost import GHOST, filename_updater
 from .parameters_ghost_spect import ParametersGHOSTSpect
 
-from .lookups import polyfit_dict, line_list
+from .lookups import polyfit_dict, line_list, keyword_comments
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
@@ -55,11 +55,37 @@ class GHOSTSpect(GHOST):
     def __init__(self, adinputs, **kwargs):
         super(GHOSTSpect, self).__init__(adinputs, **kwargs)
         self.parameters = ParametersGHOSTSpect
+        self.keyword_comments.update(keyword_comments.keyword_comments)
 
     def addWavelengthSolution(self, adinputs=None, **params):
         """
-        Apply the wavelength solution from an arc file (or set of arc files)
-        to the data.
+        Compute and append a wavelength solution for the data.
+
+        The GHOST instrument is designed to be very stable over a long period
+        of time, so it is not strictly necessary to take arcs for every
+        observation. The alternative is use the arcs taken most recently
+        before and after the observation of interest, and compute an
+        average of their wavelength solutions.
+
+        The average is weighted by
+        the inverse of the time between each arc observation and science
+        observation. E.g., if the 'before' arc is taken 12 days before the
+        science observation, and the 'after' arc is taken 3 days after the
+        science observation, then the 'after' arc will have a weight of 80%
+        in the final wavelength solution (12/15), and the 'before' arc 20%
+        (3/15).
+
+        In the event that either a 'before' arc can't be found but an 'after'
+        arc can, or vice versa, the wavelength solution from the arc that was
+        found will be applied as-is. If neither a 'before' nor 'after' arc can
+        be found, an IOError will be raised.
+
+        It is possible to explicitly pass which arc files to use as
+        the ``arc`` parameter. This should be a list of two-tuples, with each
+        tuple being of the form
+        ``('before_arc_filepath', 'after_arc_filepath')``. This list must be
+        the same length as the list of ``adinputs``, with a one-to-one
+        correspondence between the two lists.
 
         Parameters
         ----------
@@ -119,6 +145,9 @@ class GHOSTSpect(GHOST):
                 arc_before = self._request_bracket_arc(ad, before=True)
                 arc_after = self._request_bracket_arc(ad, before=False)
 
+            if arc_before is None and arc_after is None:
+                raise IOError('No valid arcs found for {}'.format(ad.filename))
+
             log.stdinfo('Arcs for {}: \n'
                         '   before: {}\n'
                         '    after: {}'.format(ad.filename,
@@ -133,10 +162,14 @@ class GHOSTSpect(GHOST):
                 # arc = arc_after
                 arc_after = astrodata.open(arc_after)
                 wfit = gs.evaluate_poly(arc_after[0].WFIT)
+                ad.phu.set('ARCIM_A', os.path.abspath(arc_after.path),
+                           "'After' arc image")
             elif arc_after is None:
                 # arc = arc_before
                 arc_before = astrodata.open(arc_before)
                 wfit = gs.evaluate_poly(arc_before[0].WFIT)
+                ad.phu.set('ARCIM_B', os.path.abspath(arc_before.path),
+                           "'Before' arc image")
             else:
                 # Need to weighted-average the wavelength fits from the arcs
                 # Determine the weights (basically, the inverse time between
@@ -158,6 +191,14 @@ class GHOSTSpect(GHOST):
                 # Compute weighted mean fit
                 wfit = wfit_a * weight_a + wfit_b * weight_b
                 wfit /= (weight_a + weight_b)
+                ad.phu.set('ARCIM_A', os.path.abspath(arc_after.path),
+                           self.keyword_comments['ARCIM_A'])
+                ad.phu.set('ARCIM_B', os.path.abspath(arc_before.path),
+                           self.keyword_comments['ARCIM_B'])
+                ad.phu.set('ARCWT_A', weight_a,
+                           self.keyword_comments['ARCWT_A'])
+                ad.phu.set('ARCWT_B', weight_b,
+                           self.keyword_comments['ARCWT_B'])
 
             ad[0].WAVL = wfit
 
@@ -171,6 +212,12 @@ class GHOSTSpect(GHOST):
         """
         Find the flat relevant to the file(s) being processed, and merge the
         flat's BPM into the target file's.
+
+        GHOST does not use flat subtraction in the traditional sense; instead,
+        the extracted flat profile is subtracted from the extracted object
+        profile. This means that the BPM from the flat needs to be applied to
+        the object file before profile extraction, and hence well before actual
+        flat correction is performed.
 
         Parameters
         ----------
@@ -246,11 +293,15 @@ class GHOSTSpect(GHOST):
                 else:
                     ext.mask |= flat_ext.mask
 
+
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
             if params["write_result"]:
                 ad.write(overwrite=True)
+                # Record which flat was used
+                ad.phu.set('FLATBPM', os.path.abspath(flat.path),
+                           self.keyword_comments['FLATBPM'])
 
         return adinputs
 
@@ -300,15 +351,14 @@ class GHOSTSpect(GHOST):
 
     def clipSigmaBPM(self, adinputs=None, **params):
         """
-        Perform a sigma-clipping on the input data frame, such that any pixels
-        outside the sigma threshold have their BPM value updated
+        Perform a sigma-clipping on the input data frame.
 
         Parameters
         ----------
         sigma: float/None
-            suffix to be added to output files
+            The sigma value to be used for clipping.
         bpm_value: int/None
-            he integer value to be applied to the data BPM where the sigma
+            The integer value to be applied to the data BPM where the sigma
             threshold is exceeded. Defaults to 1 (which is the generic bad
             pixel flag). Note that the final output BPM is made using a
             bitwise_or operation.
@@ -351,7 +401,7 @@ class GHOSTSpect(GHOST):
 
     def darkCorrect(self, adinputs=None, **params):
         """
-        GHOST-specific darkCorrect primitive
+        Dark-correct GHOST observations.
 
         This primitive, at it's core, simply copies the standard
         DRAGONS darkCorrect (part of :any:`Preprocess`). However, it has
@@ -478,7 +528,8 @@ class GHOSTSpect(GHOST):
             ad.subtract(dark)
 
             # Record dark used, timestamp, and update filename
-            ad.phu.set('DARKIM', dark.filename, self.keyword_comments["DARKIM"])
+            ad.phu.set('DARKIM', os.path.abspath(dark.path),
+                       self.keyword_comments["DARKIM"])
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=sfx, strip=True)
 
@@ -504,6 +555,10 @@ class GHOSTSpect(GHOST):
             will attempt to pull a slit flat from the calibrations system (or,
             if specified, the --user_cal processed_slitflat command-line
             option)
+        sky_correct: bool
+            Denotes whether or not to correct for the sky profile during the
+            object extraction. Defaults to True, although it should be altered
+            to False when processing flats or arcs.
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
@@ -612,7 +667,8 @@ class GHOSTSpect(GHOST):
                                   vararray=ad[0].variance)
             # CJS: Makes it clearer that you're throwing the first two
             # returned objects away (get replaced in the two_d_extract call)
-            _, _, extracted_weights = extractor.one_d_extract(ad[0].data)
+            _, _, extracted_weights = extractor.one_d_extract(
+                ad[0].data, correct_for_sky=params['sky_correct'])
             extracted_flux, extracted_var = extractor.two_d_extract(ad[0].data,
                                     extraction_weights=extracted_weights)
 
@@ -643,8 +699,8 @@ class GHOSTSpect(GHOST):
             ``'loglinear'``
             Default is ``'loglinear'``.
         oversample : int or float
-            The factor by which to oversample the final output spectrum, as
-            compared to the input spectral orders. Defaults to 2.
+            The factor by which to (approximately) oversample the final output
+            spectrum, as compared to the input spectral orders. Defaults to 2.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -723,8 +779,12 @@ class GHOSTSpect(GHOST):
 
     def findApertures(self, adinputs=None, **params):
         """
-        Locate the apertures within a GHOST frame, and insert a :any:`polyfit`
-        model into a new extension on each data frame
+        Locate the slit aperture, parametrized by a :any:`polyfit` model.
+
+        The primitive locates the slit apertures within a GHOST frame,
+        and inserts a :any:`polyfit` model into a new extension on each data
+        frame. This model is placed into a new ``.XMOD`` attribute on the
+        extension.
         
         Parameters
         ----------
@@ -811,7 +871,15 @@ class GHOSTSpect(GHOST):
 
     def fitWavelength(self, adinputs=None, **params):
         """
-        Fit wavelength solution to a GHOST ARC frame
+        Fit wavelength solution to a GHOST ARC frame.
+
+        This primitive should only be applied to a reduce GHOST ARC frame. Any
+        other files passed through this primitive will be skipped.
+
+        The primitive will use the arc line files stored in the same location
+        as the initial :any:`polyfit` models kept in the ``lookups`` system.
+
+        This primitive uses no special parameters.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -885,9 +953,11 @@ class GHOSTSpect(GHOST):
 
     def flatCorrect(self, adinputs=None, **params):
         """
-        Flat-correct an extracted GHOST object profile by extracting the
+        Flat-correct an extracted GHOST profile using a flat profile.
+
+        This primitive works by extracting the
         profile from the relevant flat field using the object's extracted
-        weights, and then perform simple division.
+        weights, and then performs simple division.
 
         Parameters
         ----------
@@ -918,6 +988,7 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        sfx = params["suffix"]
 
         adinputs_orig = list(adinputs)
         adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
@@ -1025,16 +1096,26 @@ class GHOSTSpect(GHOST):
                                  variance=extracted_var)
             if params["write_result"]:
                 flatprof_ad.write(overwrite=True)
+                # Record this as the flat profile used
+                ad.phu.set('FLATIM', os.path.abspath(flatprof_ad.path),
+                           self.keyword_comments['FLATIM'])
 
             # Divide the flat field through the science data
             # Arithmetic propagates VAR correctly
             ad /= flatprof_ad
+
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=sfx, strip=True)
 
         return adinputs_orig
 
     def rejectCosmicRays(self, adinputs=None, **params):
         """
         Reject cosmic rays from GHOST data.
+
+        .. warning::
+            This primitive is now deprecated - cosmic ray rejection is now
+            handled as part of the profile extraction process.
         
         Parameters
         ----------
@@ -1049,9 +1130,13 @@ class GHOSTSpect(GHOST):
         f_lim: float
             The clipping limit for the fine-structure image.
         """
+        raise DeprecationWarning('Cosmic ray rejections is now handled '
+                                 'as part of the profile extraction process.')
+
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+
 
         n_steps = params["n_steps"]
         subsampling = params["subsampling"]
@@ -1266,8 +1351,22 @@ class GHOSTSpect(GHOST):
 
     def responseCorrect(self, adinputs=None, **params):
         """
-        Perform a sigma-clipping on the input data frame, such that any pixels
-        outside the sigma threshold have their BPM value updated
+        Use a standard star observation and reference spectrum to provide
+        absolute flux calibration.
+
+        This primitive follows the basic pattern for determining absolute flux
+        from an observed standard with a relative flux scale (e.g. counts) and
+        an absolute flux-calibrated reference spectrum:
+
+        - Dividing the standard star observation (in counts or electrons per
+          pixel) by
+          the exposure time (in s), and then by the standard star reference
+          spectrum (in some unit of flux, e.g. erg/cm^2/s/A) gives a
+          sensitivity curve in units of, in this example, counts / erg.
+        - Divinding the object spectrum divided by exposure time (i.e.
+          counts or electrons per pixel per second) by the sensitivity curve
+          (counts / erg) yields the object spectrum in the original flux
+          units of the standard star reference spectrum.
 
         Parameters
         ----------
@@ -1279,9 +1378,21 @@ class GHOSTSpect(GHOST):
         std_spec: str, giving a relative or absolute file path
             The name of the file where the standard star spectrum (the
             reference, not the observed one) is stored. Defaults to None,
-            at which point the system will attempt to fetch a reference
-            spectrum from the Internet. If this too fails, a fatal error will
-            be thrown.
+            at which point a fatal error will be thrown.
+
+            Spectral standard references should be in the format provided
+            by Space Telescope Science Institute, e.g., from
+            ftp://ftp.stsci.edu/cdbs/current_calspec/. If the standard reference
+            is taken from elsewhere, it needs to obey the following
+            format rules:
+
+            - The reference data is in the first science extension of the FITS
+              file;
+            - The data must be in FITS table format, with columns named
+              ``'FLUX'`` and ``'WAVELENGTH'``;
+            - The first science extension must have a header card named
+              ``'TUNIT2'``, which should contain the FITS-compatible
+              flux unit name corresponding to the data in the ``'FLUX'`` column.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -1307,29 +1418,34 @@ class GHOSTSpect(GHOST):
             # FIXME Find a generic file format that can be opened by
             # astrodata, without resorting to astropy
             std_spec = astropyio.open(params['std_spec'])
+            bunit = std_spec[1].header['TUNIT2']
         else:
-            std_spec = None
-
-        if std_spec is None:
-            # pass
             raise ValueError('No standard reference spectrum found/supplied')
+
+
 
         # Re-grid the standard reference spectrum onto the wavelength grid of
         # the observed standard
-        regrid_std_ref = np.zeros(std[0].data.shape, dtype=np.float32)
-        for ob in range(std[0].data.shape[-1]):
-            for od in range(std[0].data.shape[0]):
-                regrid_std_ref[od, :, ob] = self._regrid_spect(
-                    std_spec[1].data['FLUX'],
-                    std_spec[1].data['WAVELENGTH'],
-                    std[0].WAVL[od, :],
-                    waveunits='angstrom'
-                )
+        regrid_std_ref = np.zeros(std[0].data.shape[:-1], dtype=np.float32)
+        for od in range(std[0].data.shape[0]):
+            regrid_std_ref = self._regrid_spect(
+                std_spec[1].data['FLUX'],
+                std_spec[1].data['WAVELENGTH'],
+                std[0].WAVL[od, :],
+                waveunits='angstrom'
+            )
+
+        # TODO: Figure out which object is actually the standard observation
+        # (i.e. of the dimensions [order, wavl, object], figure which of the
+        # three objects is actually the spectrum (another will be sky, and
+        # the third probably empty)
+        # For now, we will assume that the standard star observation is object 0
 
         # Compute the sensitivity function
-        sens_func = (std[0].data / std[0].hdr['EXPTIME']) / regrid_std_ref
-        sens_func_var = (std[0].variance / std[0].hdr['EXPTIME']**2) / \
-                        regrid_std_ref**2
+        sens_func = (std[0].data[:, :, 0] /
+                     std[0].hdr['EXPTIME']) / regrid_std_ref
+        sens_func_var = (std[0].variance[:, :, 0] /
+                         std[0].hdr['EXPTIME']**2) / regrid_std_ref**2
 
         for ad in adinputs:
 
@@ -1358,22 +1474,48 @@ class GHOSTSpect(GHOST):
             # (a) The sensitivity curve units do not depend on wavelength;
             # (b) The wavelength shifts involved are very small
             sens_func_regrid = np.zeros(ad[0].data.shape, dtype=np.float32)
+            sens_func_regrid_var = np.inf * np.ones(ad[0].data.shape,
+                                                    dtype=np.float32)
             for ob in range(ad[0].data.shape[-1]):
                 for od in range(ad[0].data.shape[0]):
-                    sens_func_regrid[od, :, ob] = self._interp_spect(
-                        sens_func[od, :, ob],
-                        std[0].WAVL[od, :],
+                    # sens_func_regrid[od, :, ob] = self._interp_spect(
+                    #     sens_func[od, :],
+                    #     std[0].WAVL[od, :],
+                    #     ad[0].WAVL[od, :],
+                    #     interp='linear',
+                    # )
+                    sens_func_regrid[od, :, ob] = np.interp(
                         ad[0].WAVL[od, :],
-                        interp='linear',
+                        std[0].WAVL[od, :],
+                        sens_func[od, :],
+                        left=0, right=0,
+                    )
+                    sens_func_regrid_var[od, :, ob] = np.interp(
+                        ad[0].WAVL[od, :],
+                        std[0].WAVL[od, :],
+                        sens_func_var[od, :],
+                        left=0, right=0,
                     )
 
+            # Easiest way to response correct is to stand up a new AstroData
+            # instance containing the sensitivity function - this will
+            # automatically handle, e.g., the VAR re-calculation
+            sens_func_ad = deepcopy(ad)
+            sens_func_ad.update_filename(suffix='_sensFunc', strip=True)
+            sens_func_ad[0].data = sens_func_regrid
+            sens_func_ad[0].variance = sens_func_regrid_var
+            if params['write_result']:
+                sens_func_ad.write(overwrite=True)
+            # sens_func_ad.reset(sens_func_regrid, variance=sens_func_regrid_var)
+
             # Perform the response correction
-            ad[0].reset((ad[0].data / ad[0].hdr['EXPTIME']) / sens_func_regrid,
-                        variance=(ad[0].variance / ad[0].hdr['EXPTIME']) /
-                                 sens_func_var**2)
-            # Make the relevany header update
-            # FIXME Will need to detect the unit from the standard ref spectrum
-            ad.hdr.set('BUNIT', 'FLAM')
+            # ad[0].reset((ad[0].data / ad[0].hdr['EXPTIME']) / sens_func_regrid,
+            #             variance=(ad[0].variance / ad[0].hdr['EXPTIME']) /
+            #                      sens_func_var**2)
+            ad /= ad[0].hdr['EXPTIME']
+            ad /= sens_func_ad
+            # Make the relevant header update
+            ad.hdr['BUNIT'] = bunit
 
             # Push the re-gridded values to the object file so that they
             # can be manually investigated
@@ -1406,6 +1548,8 @@ class GHOSTSpect(GHOST):
     # so this shouldn't need any extra information.
     def tileArrays(self, adinputs=None, **params):
         """
+        Tile GHOST data into a single frame.
+
         This primitive will tile the SCI frames of the input images, along
         with the VAR and DQ frames if they exist.
         """
@@ -1681,7 +1825,7 @@ class GHOSTSpect(GHOST):
     def _regrid_spect(orig_data, orig_wavl, new_wavl,
                       waveunits='angstrom'):
         """
-        Re-grid a one-dimensional input spectrum so as to conserve total flux
+        Re-grid a one-dimensional input spectrum so as to conserve total flux.
 
         This is a more robust procedure than :meth:`_interp_spect`, and is
         designed for data with a wavelength dependence in the data units
