@@ -17,6 +17,10 @@ LINGER="${1:-0}"  # how many secs to pause between 'reduce' calls; 1st script ar
 DELINT=false  # delete intermediate files (true) or move them into parallel folder (false)
 $DELINT || INTERMED=`mktemp -d intermediates.XXXXXXXXXX`
 
+SHORTSPEC=hd200654
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+LONGSPEC=$DIR/../simulator/pyghost/pyghost/data/standards/${SHORTSPEC}.fits
+
 allow_inspection() {
 	builtin echo 'You can now check the reduction at this step.'
 	read -p "Press any key to continue... " -n1 -s -u6
@@ -63,7 +67,7 @@ mklist() {
 
 # perform the reduction; return any calibrator produced
 doreduce() {
-	stdbuf -o 0 reduce --drpkg ghostdr $QUALITY "$@" 2>&1 | stdbuf -o 0 grep -v stdbuf | tee /dev/tty \
+	stdbuf -o 0 reduce --drpkg ghostdr $STANDARD $QUALITY "$@" 2>&1 | stdbuf -o 0 grep -v stdbuf | tee /dev/tty \
 		| { grep 'Calibration stored as' || true; } | awk '{print $4}'
 }
 
@@ -81,6 +85,7 @@ reduce_each() {
 		[[ "${THING}" =~ .*/(.*) ]] && prep "$msg: ${BASH_REMATCH[1]}"
 		doreduce $THING | postp "$@"
 	done <<<"$list"
+	STANDARD=
 }
 
 rm -rf calibrations .reducecache reduce.log  # start with a fresh local cache and logfile
@@ -91,15 +96,17 @@ for CAM in SLITV BLUE RED; do
 	# process biases (populate an array with each necessary binning mode, and run 'reduce' for each)
 	bins=()  # 'bins' is the array
 	if [ $CAM = SLITV ]; then bins+=(2x2); else bins+=($BINNING); [[ "${bins[@]}" =~ 1x1 ]] || bins+=(1x1); fi  # populate
-	for bin in "${bins[@]}"; do reduce_list "Reducing $CAM biases" $CAM BIAS $bin; done  # iterate
+	for BIN in "${bins[@]}"; do reduce_list "Reducing $CAM biases" $CAM BIAS $BIN; done  # iterate
 
 	# process everything else
-	bin=$BINNING; [ $CAM = SLITV ] && bin=  # binning modes for objects and standards
+	BIN=$BINNING; [ $CAM = SLITV ] && BIN=  # binning modes for objects and standards
 	reduce_list "Reducing $CAM darks" $CAM DARK
 	for MODE in HIGH STD; do
 		reduce_list "Reducing $CAM $MODE flats" $CAM $MODE FLAT
 		reduce_each "Reducing $CAM $MODE arc" $CAM $MODE ARC
-		reduce_each "Reducing $CAM $MODE standard" $CAM $MODE $bin --filemask "standard.*\.(fits|FITS)" 
-		reduce_each "Reducing $CAM $MODE object" $CAM $MODE $bin --filemask "obj.*$SEEING.*\.(fits|FITS)" 
+		reduce_each "Reducing $CAM $MODE standard" $CAM $MODE $BIN --filemask "standard.*\.(fits|FITS)" 
+		STANDARD=`typewalk --tags GHOST $CAM $MODE $BIN -d $INTERMED --filemask "standard.*${SHORTSPEC}.*wavelengthAdded\.(fits|FITS)" -n -o /dev/stderr 2>&1 1>/dev/null | { grep -v '^#' || true; }`
+		STANDARD=${STANDARD:+-p std=$STANDARD std_spec=$LONGSPEC}
+		reduce_each "Reducing $CAM $MODE object" $CAM $MODE $BIN --filemask "obj.*$SEEING.*\.(fits|FITS)" 
 	done
 done
