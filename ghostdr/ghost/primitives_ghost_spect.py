@@ -17,6 +17,7 @@ import astropy.io.fits as astropyio
 from astropy.time import Time
 from astropy import units as u
 from astropy import constants as const
+from astropy.stats import sigma_clip
 from scipy import interpolate
 from pysynphot import observation, spectrum
 
@@ -362,6 +363,10 @@ class GHOSTSpect(GHOST):
             threshold is exceeded. Defaults to 1 (which is the generic bad
             pixel flag). Note that the final output BPM is made using a
             bitwise_or operation.
+        iters : int/None
+            Number of sigma clipping iterations to perform. Default is None,
+            which will continue sigma clipping until no further points are
+            masked.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -369,6 +374,7 @@ class GHOSTSpect(GHOST):
 
         sigma = params["sigma"]
         bpm_value = params["bpm_value"]
+        iters = params["iters"]
 
         for ad in adinputs:
 
@@ -381,15 +387,26 @@ class GHOSTSpect(GHOST):
             for ext in ad:
                 extver = ext.hdr['EXTVER']
                 if ext.mask is not None:
-                    # TODO: Use astropy.stats.sigma_clip()
-                    mean_data = np.mean(ext.data)
-                    sigma_data = np.std(ext.data)
-                    mask_map = (np.abs(ext.data-mean_data) > sigma*sigma_data)
-                    if bpm_value:  # might call with None for diagnosis
-                        ext.mask[mask_map] |= bpm_value
+                    # Perform the sigma clip
+                    clipd = sigma_clip(ext.data, sigma=sigma,
+                                       iters=iters, copy=True)
+                    # Convert the mask from the return into 0s and 1s and
+                    # bitwise OR into the ext BPM
+                    clipd_mask = clipd.mask.astype(ext.mask.dtype)
+                    ext.mask |= clipd_mask * bpm_value
 
                     log.stdinfo('   {}:{}: nPixMasked: {:9d} / {:9d}'.format(
-                        ad.filename, extver, np.sum(mask_map), ext.data.size))
+                        ad.filename, extver, np.sum(clipd_mask), ext.data.size))
+
+                    # Original implementaion
+                    # mean_data = np.mean(ext.data)
+                    # sigma_data = np.std(ext.data)
+                    # mask_map = (np.abs(ext.data-mean_data) > sigma*sigma_data)
+                    # if bpm_value:  # might call with None for diagnosis
+                    #     ext.mask[mask_map] |= bpm_value
+                    #
+                    # log.stdinfo('   {}:{}: nPixMasked: {:9d} / {:9d}'.format(
+                    #     ad.filename, extver, np.sum(mask_map), ext.data.size))
                 else:
                     log.warning('No DQ plane in {}:{}'.format(ad.filename,
                                                               extver))

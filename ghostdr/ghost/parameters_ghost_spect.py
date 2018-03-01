@@ -22,6 +22,7 @@ class ParametersGHOSTSpect(ParametersGHOST):
     clipSigmaBPM = {
 #        "suffix"            : "_clipSigmaBPMApplied",
         "sigma"             : 3.0,
+        "iters"             : None,
         "bpm_value"         : 1,
     }
     extractProfile = {
