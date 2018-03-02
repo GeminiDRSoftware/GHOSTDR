@@ -66,7 +66,8 @@ class AstroDataGhost(AstroDataGemini):
     def _tag_spect(self):
         # Also returns BLUE or RED if the CAMERA keyword is set thus
         if 'CAMERA' in self.phu:
-            return TagSet(({self.phu['CAMERA']} & {'BLUE', 'RED'}) | {'SPECT'}, blocks=['BUNDLE'])
+            return TagSet(({self.phu['CAMERA']} & {'BLUE', 'RED'}) | {'SPECT'},
+                          blocks=['BUNDLE'])
 
     @astro_data_tag
     def _status_processed_ghost_cals(self):

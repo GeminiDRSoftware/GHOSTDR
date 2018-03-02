@@ -233,8 +233,8 @@ class Extractor():
         return x_map, w_map, blaze, matrices    
 
             
-    def one_d_extract(self, data=None, file=None, correct_for_sky=True,\
-        debug_crs=False):
+    def one_d_extract(self, data=None, file=None, correct_for_sky=True,
+                      debug_crs=False):
         """ Extract flux by integrating down columns (the "y" direction),
         using an optimal extraction method.
 
