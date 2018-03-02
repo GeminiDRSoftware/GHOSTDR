@@ -13,7 +13,7 @@ GHOST Programmer's Manual
 
    intro
    flows
-   ADtypes
+   ADtags
    recipes
    primitives
    tests
