@@ -28,7 +28,7 @@ allow_inspection() {
 
 # do things after 'reduce': ingest calibs into calmgr, allow inspections, delete debris files
 postp() {
-	read calib && { [ -f "$calib" ] && caldb add -v $calib; }
+	read calib && { [ -f "$calib" ] && { echo caldb add -v $calib >>commands && caldb add -v $calib; }; }
 	$CHECK && allow_inspection
 	[[ "$@" =~ BUNDLE || ( "$@" =~ object && ! "$@" =~ SLIT ) ]] || {
 		{ find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" 2>/dev/null || true; } | {
@@ -60,27 +60,31 @@ prep() {
 
 # generate the list of files in 'list'; also sets 'msg'
 mklist() {
-	msg="$1"; shift
-	list=`typewalk --tags GHOST UNPREPARED $@ -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#'`
-	[ -n "$list" ]
+	flag="$1"; shift
+	if [[ $flag == silent ]]; then msg="$1"; shift; else msg=$flag; fi
+	UUID=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1 || true`
+	[[ $flag == silent ]] || echo typewalk --tags GHOST UNPREPARED $@ -n -o $UUID >>commands
+	list=`typewalk --tags GHOST UNPREPARED $@ -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#' || true`
 }
 
 # perform the reduction; return any calibrator produced
 doreduce() {
+	if [[ "$1" == @* ]]; then TARGET=@$UUID; else TARGET=$1; fi
+	echo PYSYN_CDBS=. reduce --drpkg ghostdr $STANDARD $QUALITY $TARGET >>commands
 	stdbuf -o 0 reduce --drpkg ghostdr $STANDARD $QUALITY "$@" 2>&1 | stdbuf -o 0 grep -v stdbuf | tee /dev/tty \
 		| { grep 'Calibration stored as' || true; } | awk '{print $4}'
 }
 
 # process all matching files together (as a whole / in a batch)
 reduce_list() {
-	mklist "$@" || return 0
+	mklist "$@"
 	prep "$@"
 	doreduce @/dev/stdin <<<"$list" | postp "$@"
 }
 
 # process each matching file individually (by itself)
 reduce_each() {
-	mklist "$@" || return 0
+	mklist silent "$@"
 	while read THING; do
 		[[ "${THING}" =~ .*/(.*) ]] && prep "$msg: ${BASH_REMATCH[1]}"
 		doreduce $THING | postp "$@"
@@ -90,6 +94,7 @@ reduce_each() {
 
 rm -rf calibrations .reducecache reduce.log  # start with a fresh local cache and logfile
 caldb init -v -w  # start with a fresh local calibration manager
+echo caldb init -v -w >>commands
 
 reduce_list "Splitting MEFs" BUNDLE  # no need to comment out: noop's on -split simulator outputs
 for CAM in SLITV BLUE RED; do
@@ -105,7 +110,7 @@ for CAM in SLITV BLUE RED; do
 		reduce_list "Reducing $CAM $MODE flats" $CAM $MODE FLAT
 		reduce_each "Reducing $CAM $MODE arc" $CAM $MODE ARC
 		reduce_each "Reducing $CAM $MODE standard" $CAM $MODE $BIN --filemask "standard.*\.(fits|FITS)" 
-		STANDARD=`typewalk --tags GHOST $CAM $MODE $BIN -d $INTERMED --filemask "standard.*${SHORTSPEC}.*wavelengthAdded\.(fits|FITS)" -n -o /dev/stderr 2>&1 1>/dev/null | { grep -v '^#' || true; }`
+		STANDARD=`typewalk --tags GHOST $CAM $MODE $BIN -d $INTERMED --filemask "standard.*${SHORTSPEC}.*wavelengthAdded\.(fits|FITS)" -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#' || true`
 		STANDARD=${STANDARD:+-p std=$STANDARD std_spec=$LONGSPEC}
 		reduce_each "Reducing $CAM $MODE object" $CAM $MODE $BIN --filemask "obj.*$SEEING.*\.(fits|FITS)" 
 	done
