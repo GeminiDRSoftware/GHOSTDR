@@ -201,6 +201,8 @@ class GHOSTSpect(GHOST):
                 ad.phu.set('ARCWT_B', weight_b,
                            self.keyword_comments['ARCWT_B'])
 
+            for _ in range(int(math.log(ad.detector_x_bin(), 2))):
+                wfit = wfit[:, ::2] + wfit[:, 1::2]
             ad[0].WAVL = wfit
 
             # Timestamp and update filename
@@ -637,8 +639,6 @@ class GHOSTSpect(GHOST):
 
         for ad, slit, slitflat, flat in zip(adinputs, slit_list,
                                         slitflat_list, flat_list):
-            log.info(ad.info())
-
             # CJS: failure to find a suitable auxiliary file (either because
             # there's no calibration, or it's missing) places a None in the
             # list, allowing a graceful continuation.
@@ -1052,8 +1052,6 @@ class GHOSTSpect(GHOST):
 
         for ad, slit, slitflat, flat, in zip(adinputs, slitflat_list,
                                         flat_list, flat_list):
-            log.info(ad.info())
-
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by flatCorrect".
@@ -1445,7 +1443,7 @@ class GHOSTSpect(GHOST):
         # the observed standard
         regrid_std_ref = np.zeros(std[0].data.shape[:-1], dtype=np.float32)
         for od in range(std[0].data.shape[0]):
-            regrid_std_ref = self._regrid_spect(
+            regrid_std_ref[od] = self._regrid_spect(
                 std_spec[1].data['FLUX'],
                 std_spec[1].data['WAVELENGTH'],
                 std[0].WAVL[od, :],
