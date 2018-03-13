@@ -203,6 +203,8 @@ class GHOSTSpect(GHOST):
 
             for _ in range(int(math.log(ad.detector_x_bin(), 2))):
                 wfit = wfit[:, ::2] + wfit[:, 1::2]
+                wfit /= 2.0
+
             ad[0].WAVL = wfit
 
             # Timestamp and update filename
