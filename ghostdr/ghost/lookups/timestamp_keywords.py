@@ -14,6 +14,7 @@ timestamp_keys = {
     "findApertures": "FINDAPER",
     "fitWavelength": "FITWAVLN",
     "flatCorrect": "FLATCORR",
+    "formatOutput": "FMTOUTPT",
     "processSlits": "PROCSLIT",
     "splitBundle": "SPLTBNDL",
     "responseCorrect": "RESPCORR",

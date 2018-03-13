@@ -51,6 +51,10 @@ class ParametersGHOSTSpect(ParametersGHOST):
         "slitflat"          : None,
         "write_result"      : True,
     }
+    formatOutput = {
+        "suffix"            : "_formattedOutput",
+        "detail"            : "defaut",
+    }
     overscanCorrect = {
         "suffix"            : "_overscanCorrected",
         "niterate"          : 2,

@@ -1126,6 +1126,80 @@ class GHOSTSpect(GHOST):
 
         return adinputs_orig
 
+    def formatOutput(self, adinputs=None, **params):
+        """
+        Generate an output FITS file containing the data requested by the user.
+
+        This primitive should not be called until *all* required
+        processing steps have been performed on the data. THe resulting FITS
+        file cannot be safely passed through to other primitives.
+
+        Parameters
+        ----------
+        detail: str
+            The level of detail the user would like in their final output file.
+
+            Note that, in order to preserve the ordering of FITS file
+            extensions, the options are sequential; each option will
+            provide all the data of less-verbose options.
+
+            Valid options are:
+
+            ``default``
+                Only returns the extracted, fully-processed object(s) and sky
+                spectra. In effect, this causes ``formatOutput`` to do nothing.
+                This includes computed variance data for each plane.
+
+            ``processed_raw``
+                The option returns the data that have been bias and dark
+                corrected (i.e. the next step would be flat-fielding).
+
+            ``flat_profile``
+                This options includes the extracted flat profile used for
+                flat-fielding the data.
+
+                ..note :
+                    This option can also be switched on if ``write_output`` was
+                    set to ``True`` when the ``flatCorrect`` primitive was
+                    called. If this was set to ``False``, and you attempt to
+                    use the ``flat_profile`` ``detail`` option, an error will
+                    be raised.
+
+        """
+
+        # This should be the list of allowed detail descriptors in order of
+        # increasing verbosity
+        ALLOWED_DETAILS = ['default', 'processed_raw', 'flat_profile',]
+
+        timestamp_key = self.timestamp_keys[self.myself()]
+        sfx = params['suffix']
+
+        if params['detail'] not in ALLOWED_DETAILS:
+            raise ValueError('formatOutput: detail option {} not known. '
+                             'Please use one of: {}'.format(
+                params['detail'],
+                ', '.join(ALLOWED_DETAILS),
+            ))
+
+        detail_index = ALLOWED_DETAILS.index(params['detail'])
+
+        for ad in adinputs:
+            # Move sequentially through the various levels of detail, adding
+            # them as we go along
+            if ALLOWED_DETAILS.index('processed_raw') <= detail_index:
+                # Add the processed_raw data
+                pass
+
+            if ALLOWED_DETAILS.index('flat_profile') <= detail_index:
+                # Append the flat profile
+                pass
+
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=sfx, strip=True)
+            ad.write(overwrite=True)
+
+        return adinputs
+
     def rejectCosmicRays(self, adinputs=None, **params):
         """
         Reject cosmic rays from GHOST data.
