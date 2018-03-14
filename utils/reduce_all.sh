@@ -30,7 +30,7 @@ allow_inspection() {
 postp() {
 	read calib && { [ -f "$calib" ] && { echo caldb add -v $calib >>commands && caldb add -v $calib; }; }
 	$CHECK && allow_inspection
-	[[ "$@" =~ BUNDLE || ( "$@" =~ object && ! "$@" =~ SLIT ) ]] || {
+	[[ "$@" =~ BUNDLE || ( ( "$@" =~ object || "$@" =~ standard ) && ! "$@" =~ SLIT ) ]] || {
 		{ find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" 2>/dev/null || true; } | {
 			if $DELINT; then xargs rm -vf; else xargs -I {} mv -v {} $INTERMED; fi
 		}
@@ -110,7 +110,7 @@ for CAM in SLITV BLUE RED; do
 		reduce_list "Reducing $CAM $MODE flats" $CAM $MODE FLAT
 		reduce_each "Reducing $CAM $MODE arc" $CAM $MODE ARC
 		reduce_each "Reducing $CAM $MODE standard" $CAM $MODE $BIN --filemask "standard.*\.(fits|FITS)" 
-		STANDARD=`typewalk --tags GHOST $CAM $MODE $BIN -d $INTERMED --filemask "standard.*${SHORTSPEC}.*wavelengthAdded\.(fits|FITS)" -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#' || true`
+		STANDARD=`typewalk --tags GHOST $CAM $MODE $BIN --filemask "standard.*${SHORTSPEC}.*wavelengthAdded\.(fits|FITS)" -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#' || true`
 		STANDARD=${STANDARD:+-p std=$STANDARD std_spec=$LONGSPEC}
 		reduce_each "Reducing $CAM $MODE object" $CAM $MODE $BIN --filemask "obj.*$SEEING.*\.(fits|FITS)" 
 	done
