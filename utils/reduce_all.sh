@@ -32,7 +32,7 @@ postp() {
 	$CHECK && allow_inspection
 	[[ "$@" =~ BUNDLE || ( "$@" =~ object && ! "$@" =~ SLIT ) ]] || {
 		{ find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" 2>/dev/null || true; } | {
-			if $DELINT; then xargs rm -vf; else xargs echo mv -v | sed "s,$, $INTERMED," | sh; fi
+			if $DELINT; then xargs rm -vf; else xargs -I {} mv -v {} $INTERMED; fi
 		}
 	}
 	$CHECK || sleep $LINGER
