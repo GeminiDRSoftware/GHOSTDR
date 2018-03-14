@@ -31,7 +31,7 @@ postp() {
 	read calib && { [ -f "$calib" ] && { echo caldb add -v $calib >>commands && caldb add -v $calib; }; }
 	$CHECK && allow_inspection
 	[[ "$@" =~ BUNDLE || ( ( "$@" =~ object || "$@" =~ standard ) && ! "$@" =~ SLIT ) ]] || {
-		{ find -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" 2>/dev/null || true; } | {
+		{ find . -maxdepth 1 -newer /tmp/$$.mark -type f -name "*.fits" 2>/dev/null || true; } | {
 			if $DELINT; then xargs rm -vf; else xargs -I {} mv -v {} $INTERMED; fi
 		}
 	}
