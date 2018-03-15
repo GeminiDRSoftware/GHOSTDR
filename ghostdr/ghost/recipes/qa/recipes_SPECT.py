@@ -45,6 +45,7 @@ def reduce(p):
                                  # option to override canned file used)
     # TODO: define reduce() and reduce_nostack() maybe?
     p.interpolateAndCombine() # Should factor this step into separate recipe
+    p.formatOutput(detail='sensitivity_curve')
     return
 
 default = reduce

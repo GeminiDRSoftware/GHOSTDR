@@ -233,7 +233,7 @@ class GHOSTSpect(GHOST):
         flatstream: str/None
             Name of the stream containing the flatfield as the first
             item in the stream. If None, the calibration service is used
-        writeResult: bool
+        write_result: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
             quality assurance.
@@ -298,15 +298,17 @@ class GHOSTSpect(GHOST):
                 else:
                     ext.mask |= flat_ext.mask
 
+            ad.phu.set('FLATBPM', os.path.abspath(flat.path),
+                       self.keyword_comments['FLATBPM'])
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
-            if params["write_result"]:
+            if params["write_result"] or params.get('processed_image', False):
+                ad.phu.set('PROCIMG', os.path.abspath(ad.path),
+                           keyword_comments.keyword_comments['PROCIMG'])
                 ad.write(overwrite=True)
-                # Record which flat was used
-                ad.phu.set('FLATBPM', os.path.abspath(flat.path),
-                           self.keyword_comments['FLATBPM'])
+
 
         return adinputs
 
@@ -717,6 +719,8 @@ class GHOSTSpect(GHOST):
             available are:
             ``'loglinear'``
             Default is ``'loglinear'``.
+        skip : bool
+            Set to ``True`` to skip this primitive. Defaults to ``False``.
         oversample : int or float
             The factor by which to (approximately) oversample the final output
             spectrum, as compared to the input spectral orders. Defaults to 2.
@@ -1111,11 +1115,11 @@ class GHOSTSpect(GHOST):
                                         strip=True)
             flatprof_ad[0].reset(extracted_flux, mask=None,
                                  variance=extracted_var)
-            if params["write_result"]:
+            if params["write_result"] or params.get('processed_image', False):
                 flatprof_ad.write(overwrite=True)
                 # Record this as the flat profile used
-                ad.phu.set('FLATIM', os.path.abspath(flatprof_ad.path),
-                           self.keyword_comments['FLATIM'])
+                ad.phu.set('FLATPROF', os.path.abspath(flatprof_ad.path),
+                           self.keyword_comments['FLATPROF'])
 
             # Divide the flat field through the science data
             # Arithmetic propagates VAR correctly
@@ -1134,6 +1138,13 @@ class GHOSTSpect(GHOST):
         processing steps have been performed on the data. THe resulting FITS
         file cannot be safely passed through to other primitives.
 
+        .. note::
+            All of the extra data packaged up by this primitive can also be
+            obtained by using the ``write_result=True`` flag on selected
+            other primitives. ``formatOutput`` goes and finds those output
+            files, and then packages them into the main output file for
+            convenience.
+
         Parameters
         ----------
         detail: str
@@ -1150,26 +1161,22 @@ class GHOSTSpect(GHOST):
                 spectra. In effect, this causes ``formatOutput`` to do nothing.
                 This includes computed variance data for each plane.
 
-            ``processed_raw``
+            ``processed_image``
                 The option returns the data that have been bias and dark
-                corrected (i.e. the next step would be flat-fielding).
+                corrected, and has the flat BPM applied (i.e. the state the
+                data are in immediately prior to profile extraction).
 
             ``flat_profile``
                 This options includes the extracted flat profile used for
                 flat-fielding the data.
-
-                ..note :
-                    This option can also be switched on if ``write_output`` was
-                    set to ``True`` when the ``flatCorrect`` primitive was
-                    called. If this was set to ``False``, and you attempt to
-                    use the ``flat_profile`` ``detail`` option, an error will
-                    be raised.
-
         """
 
         # This should be the list of allowed detail descriptors in order of
         # increasing verbosity
-        ALLOWED_DETAILS = ['default', 'processed_raw', 'flat_profile',]
+        ALLOWED_DETAILS = ['default', 'processed_image', 'flat_profile',
+                           'sensitivity_curve', ]
+
+        log = self.log
 
         timestamp_key = self.timestamp_keys[self.myself()]
         sfx = params['suffix']
@@ -1186,13 +1193,64 @@ class GHOSTSpect(GHOST):
         for ad in adinputs:
             # Move sequentially through the various levels of detail, adding
             # them as we go along
-            if ALLOWED_DETAILS.index('processed_raw') <= detail_index:
-                # Add the processed_raw data
-                pass
+            ad[0].hdr['DATADESC'] = ('Fully-reduced data',
+                                     self.keyword_comments['DATADESC'], )
+
+            if ALLOWED_DETAILS.index('processed_image') <= detail_index:
+                # Locate the processed image data
+                fn = ad.phu.get('PROCIMG', None)
+                if fn is None:
+                    raise RuntimeError('The processed image file name for {} '
+                                       'has not been '
+                                       'recorded'.format(ad.filename))
+                try:
+                    proc_image = astrodata.open(fn)
+                except astrodata.AstroDataError:
+                    raise RuntimeError('You appear not to have written out '
+                                       'the result of image processing to '
+                                       'disk.')
+
+                log.stdinfo('Opened processed image file {}'.format(fn))
+                ad.append(proc_image[0])
+                ad[-1].hdr['DATADESC'] = ('Processed image',
+                                          self.keyword_comments['DATADESC'])
 
             if ALLOWED_DETAILS.index('flat_profile') <= detail_index:
-                # Append the flat profile
-                pass
+                # Locate the flat profile data
+                fn = ad.phu.get('FLATPROF', None)
+                if fn is None:
+                    raise RuntimeError('The flat profile file name for {} '
+                                       'has not been '
+                                       'recorded'.format(ad.filename))
+                try:
+                    proc_image = astrodata.open(fn)
+                except astrodata.AstroDataError:
+                    raise RuntimeError('You appear not to have written out '
+                                       'the result of flat profiling to '
+                                       'disk.')
+
+                log.stdinfo('Opened flat profile file {}'.format(fn))
+                ad.append(proc_image[0])
+                ad[-1].hdr['DATADESC'] = ('Flat profile',
+                                          self.keyword_comments['DATADESC'])
+
+            if ALLOWED_DETAILS.index('sensitivity_curve') <= detail_index:
+                fn = ad.phu.get('FLATPROF', None)
+                if fn is None:
+                    raise RuntimeError('The sensitivity curve file name for {} '
+                                       'has not been '
+                                       'recorded'.format(ad.filename))
+                try:
+                    proc_image = astrodata.open(fn)
+                except astrodata.AstroDataError:
+                    raise RuntimeError('You appear not to have written out '
+                                       'the result of sensitivity calcs to '
+                                       'disk.')
+
+                log.stdinfo('Opened sensitivity curve file {}'.format(fn))
+                ad.append(proc_image[0])
+                ad[-1].hdr['DATADESC'] = ('Sensitivity curve (blaze func.)',
+                                          self.keyword_comments['DATADESC'])
 
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=sfx, strip=True)
@@ -1506,8 +1564,7 @@ class GHOSTSpect(GHOST):
         # attempt to locate a remote one
         # Throw an error if none found
         if params['std_spec']:
-            # FIXME Find a generic file format that can be opened by
-            # astrodata, without resorting to astropy
+            # TODO Will need to be modified to use Gemini service
             std_spec = astropyio.open(params['std_spec'])
             bunit = std_spec[1].header['TUNIT2']
         else:
@@ -1595,9 +1652,13 @@ class GHOSTSpect(GHOST):
             sens_func_ad.update_filename(suffix='_sensFunc', strip=True)
             sens_func_ad[0].data = sens_func_regrid
             sens_func_ad[0].variance = sens_func_regrid_var
-            if params['write_result']:
+
+            if params['write_result'] or params.get('processed_image', False):
                 sens_func_ad.write(overwrite=True)
-            # sens_func_ad.reset(sens_func_regrid, variance=sens_func_regrid_var)
+                ad.phu.set("SENSFUNC", os.path.abspath(sens_func_ad.path),
+                           self.keyword_comments['SENSFUNC'])
+            # sens_func_ad.reset(sens_func_regrid,
+            # variance=sens_func_regrid_var)
 
             # Perform the response correction
             # ad[0].reset((ad[0].data / ad[0].hdr['EXPTIME']) / sens_func_regrid,
@@ -1610,8 +1671,8 @@ class GHOSTSpect(GHOST):
 
             # Push the re-gridded values to the object file so that they
             # can be manually investigated
-            ad.append(ad[0])
-            ad[1].reset(sens_func_regrid, mask=None, variance=None)
+            # ad.append(ad[0])
+            # ad[1].reset(sens_func_regrid, mask=None, variance=None)
 
             # Timestamp
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)

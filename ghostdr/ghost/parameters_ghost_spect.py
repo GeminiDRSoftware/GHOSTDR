@@ -29,12 +29,13 @@ class ParametersGHOSTSpect(ParametersGHOST):
         "suffix"            : "_extractedProfile",
         "slit"              : None,
         "slitflat"          : None,
-        "write_result"      : True,
+        "write_result"      : False,
         "sky_correct"       : True,
     }
     interpolateAndCombine = {
         "suffix"            : "_interpdAndCombined",
         "scale"             : "loglinear",
+        "skip"              : False,
         "oversample"        : 2,
     }
     findApertures = {
@@ -53,7 +54,7 @@ class ParametersGHOSTSpect(ParametersGHOST):
     }
     formatOutput = {
         "suffix"            : "_formattedOutput",
-        "detail"            : "defaut",
+        "detail"            : "default",
     }
     overscanCorrect = {
         "suffix"            : "_overscanCorrected",
