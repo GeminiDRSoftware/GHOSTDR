@@ -304,7 +304,7 @@ class GHOSTSpect(GHOST):
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
-            if params["write_result"] or params.get('processed_image', False):
+            if params["write_result"]:
                 ad.phu.set('PROCIMG', os.path.abspath(ad.path),
                            keyword_comments.keyword_comments['PROCIMG'])
                 ad.write(overwrite=True)
@@ -1115,7 +1115,7 @@ class GHOSTSpect(GHOST):
                                         strip=True)
             flatprof_ad[0].reset(extracted_flux, mask=None,
                                  variance=extracted_var)
-            if params["write_result"] or params.get('processed_image', False):
+            if params["write_result"]:
                 flatprof_ad.write(overwrite=True)
                 # Record this as the flat profile used
                 ad.phu.set('FLATPROF', os.path.abspath(flatprof_ad.path),
@@ -1653,7 +1653,7 @@ class GHOSTSpect(GHOST):
             sens_func_ad[0].data = sens_func_regrid
             sens_func_ad[0].variance = sens_func_regrid_var
 
-            if params['write_result'] or params.get('processed_image', False):
+            if params['write_result']:
                 sens_func_ad.write(overwrite=True)
                 ad.phu.set("SENSFUNC", os.path.abspath(sens_func_ad.path),
                            self.keyword_comments['SENSFUNC'])
