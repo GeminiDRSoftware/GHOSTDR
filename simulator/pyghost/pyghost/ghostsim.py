@@ -1538,13 +1538,21 @@ class Arm(object):
         # up our calculations later on
         duration = float(duration)
 
+        # TODO: implement two-target mode instead of the below workaround
+        two_target_mode = False
+
+        hdr = pf.Header()
+        hdr['TARGET1'] = 0  # ifu1 points to nothing in particular to begin with
+        hdr['TARGET2'] = 0  # ifu2 points to nothing in particular to begin with
+
         # WARNING: Logic below can be neatened... (e.g. doubled-up lines of
         # code)
         if res == 'high':
             slit_fluxes = np.ones(N_HR_SCI+N_HR_SKY) if flatlamp else []
             im_slit = self.make_lenslets(
                 fluxes=slit_fluxes, mode=res, seeing=seeing, llet_offset=2)
-
+            if obstype == 'OBJECT' or obstype == 'STANDARD':
+                hdr['TARGET1'] = 2  # ifu1 points to an object
             image, check_image = self.simulate_image(
                 x, wave, blaze, matrices, im_slit, spectrum=spectrum,
                 n_x=self.szx, xshift=xshift, radvel=radvel, return_check=True)
@@ -1587,13 +1595,16 @@ class Arm(object):
                     fluxes=slit_fluxes, mode=res, seeing=seeing, llet_offset=0)
 
             else:
-                # WARNING:
-                im_slit1 = self.make_lenslets(
+                im_slit = self.make_lenslets(
                     fluxes=[], mode=res, seeing=seeing, llet_offset=0, ifu=1)
-                im_slit2 = self.make_lenslets(
-                    fluxes=[], mode=res, seeing=seeing, llet_offset=N_SR_SCI +
-                    N_SR_SKY, ifu=2)
-                im_slit = im_slit1 + im_slit2
+                if obstype == 'OBJECT' or obstype == 'STANDARD':
+                    hdr['TARGET1'] = 2  # ifu1 points to an object
+                if two_target_mode:
+                    im_slit += self.make_lenslets(
+                        fluxes=[], mode=res, seeing=seeing, llet_offset=N_SR_SCI +
+                        N_SR_SKY, ifu=2)
+                    if obstype == 'OBJECT' or obstype == 'STANDARD':
+                        hdr['TARGET2'] = 2  # ifu2 points to an object
 
             image, check_image = self.simulate_image(
                 x, wave, blaze, matrices, im_slit, spectrum=spectrum,
@@ -1618,19 +1629,21 @@ class Arm(object):
         image = np.random.poisson(duration * image).astype(float)
 
         if add_sky and obstype != 'BIAS' and obstype != 'DARK':
-            # Calculate the sky spectrum - the flux we calculate
-            # is per fiber.
+            # Calculate the sky spectrum - the flux we calculate is per fiber.
             sky_spect = self.sky_background(res)
             # Put it into all the fibers equally
             if res == 'high':
                 slit_fluxes = np.ones(N_HR_SCI + N_HR_SKY)
                 im_slit2 = self.make_lenslets(
                     fluxes=slit_fluxes, mode=res, llet_offset=2)
+                hdr['TARGET1'] = 1 if hdr['TARGET1'] == 0 else hdr['TARGET1']
 
             elif res == 'std':
                 slit_fluxes = np.ones(N_SR_TOT)
                 im_slit2 = self.make_lenslets(
                     fluxes=slit_fluxes, mode=res, llet_offset=0)
+                hdr['TARGET1'] = 1 if hdr['TARGET1'] == 0 else hdr['TARGET1']
+                hdr['TARGET2'] = 1 if hdr['TARGET2'] == 0 else hdr['TARGET2']
 
             sky_image = self.simulate_image(
                 x, wave, blaze, matrices, im_slit2, spectrum=sky_spect,
@@ -1744,7 +1757,6 @@ class Arm(object):
         # Now create our fits image!
         # By adding the DETSIZE and DETSEC keywords we can open the
         # raw image in ds9 as an IRAF mosaic.
-        hdr = pf.Header()
         hdr['OBSERVAT'] = (
             'Gemini-South', 'Name of telescope (Gemini-North|Gemini-South)')
         hdr['TELESCOP'] = 'Gemini-South'
@@ -1923,8 +1935,6 @@ class Arm(object):
                 xhdr['DETSEC'] = (detsec, 'Detector section(s)')
                 xhdr['CCDSEC'] = (detsec, 'CCD section(s)')
 
-                # TODO: replace static value below with dynamically determined
-                # value
                 xhdr['CCDSUM'] = (
                     ' '.join(map(str, binmode)), 'CCD pixel summing')
                 # TODO: what's a realistic value for readout time?
