@@ -6,7 +6,7 @@ import numpy as np
 import astropy.io.fits as pf
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
-from ghostdr.polyfit import SlitView as sv
+from ghostdr.ghost.polyfit import SlitView as sv
 
 # pylint: disable=invalid-name
 
