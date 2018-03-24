@@ -702,6 +702,10 @@ class Arm(object):
     check: bool
         Output a fits file containing input spectra interpolated onto
         the pixel grid for each order?
+
+    dual_target: bool
+        Output STD res fits files that contain object spectra in both IFUs
+        (Ignored for HIGH res mode)
     """
 
     ARM_OPTIONS = [
@@ -716,7 +720,7 @@ class Arm(object):
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, arm, slit_viewer=None, cosmics=True, crplane=False,
-                 hpplane=False, split=False, check=False):
+                 hpplane=False, split=False, check=False, dual_target=False):
         if arm.lower() not in self.ARM_OPTIONS:
             raise ValueError('arm must be one of %s' % (
                 ','.join(self.ARM_OPTIONS),
@@ -739,6 +743,7 @@ class Arm(object):
         self.hpplane = hpplane
         self.split = split
         self.check = check
+        self.dual_target=dual_target
         self.slitv = slit_viewer
         # Do we need to re-compute the spectral format?
         self.stale_spectral_format = True
@@ -1538,9 +1543,6 @@ class Arm(object):
         # up our calculations later on
         duration = float(duration)
 
-        # TODO: implement two-target mode instead of the below workaround
-        two_target_mode = False
-
         hdr = pf.Header()
         hdr['TARGET1'] = 0  # ifu1 points to nothing in particular to begin with
         hdr['TARGET2'] = 0  # ifu2 points to nothing in particular to begin with
@@ -1599,12 +1601,13 @@ class Arm(object):
                     fluxes=[], mode=res, seeing=seeing, llet_offset=0, ifu=1)
                 if obstype == 'OBJECT' or obstype == 'STANDARD':
                     hdr['TARGET1'] = 2  # ifu1 points to an object
-                if two_target_mode:
+                if self.dual_target:
                     im_slit += self.make_lenslets(
                         fluxes=[], mode=res, seeing=seeing, llet_offset=N_SR_SCI +
                         N_SR_SKY, ifu=2)
                     if obstype == 'OBJECT' or obstype == 'STANDARD':
-                        hdr['TARGET2'] = 2  # ifu2 points to an object
+                        hdr['TARGET2'] = 2  # ifu2 points to an object: shouldn't
+                                            # really be the same one, but oh well
 
             image, check_image = self.simulate_image(
                 x, wave, blaze, matrices, im_slit, spectrum=spectrum,
@@ -2020,11 +2023,15 @@ class Ghost(object):
     check: bool
         Output a fits file containing input spectra interpolated onto
         the pixel grid for each order?
+
+    dual_target: bool
+        Output STD res fits files that contain object spectra in both IFUs
+        (Ignored for HIGH res mode)
     """
 
     def __init__(self, rnoise, gain, namps, overscan, bias_level,
                  additive_noise, scaling, cosmics=True, crplane=False,
-                 hpplane=False, split=False, check=False):
+                 hpplane=False, split=False, check=False, dual_target=False):
 
         self.rnoise = rnoise
         self.gain = gain
@@ -2042,7 +2049,7 @@ class Ghost(object):
         self.slitv = SlitViewer(cosmics, crplane, split)
         common = dict(
             slit_viewer=self.slitv, cosmics=cosmics, crplane=crplane,
-            hpplane=hpplane, split=split, check=check)
+            hpplane=hpplane, split=split, check=check, dual_target=dual_target)
         # pylint: disable=star-args
         self.blue = Arm('blue', **common)
         self.red = Arm('red', **common)

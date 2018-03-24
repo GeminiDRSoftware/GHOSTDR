@@ -201,6 +201,7 @@ class GHOSTSpect(GHOST):
                 ad.phu.set('ARCWT_B', weight_b,
                            self.keyword_comments['ARCWT_B'])
 
+            # rebin the wavelength fit to match the rest of the extensions
             for _ in range(int(math.log(ad.detector_x_bin(), 2))):
                 wfit = wfit[:, ::2] + wfit[:, 1::2]
                 wfit /= 2.0
@@ -1583,16 +1584,20 @@ class GHOSTSpect(GHOST):
                 waveunits='angstrom'
             )
 
-        # TODO: Figure out which object is actually the standard observation
+        # Figure out which object is actually the standard observation
         # (i.e. of the dimensions [order, wavl, object], figure which of the
         # three objects is actually the spectrum (another will be sky, and
         # the third probably empty)
-        # For now, we will assume that the standard star observation is object 0
+        target = -1
+        if std.phu['TARGET1'] == 2: target = 0
+        if std.phu['TARGET2'] == 2: target = 1
+        if target < 0: raise ValueError(
+            'Cannot determine which IFU contains standard star spectrum')
 
         # Compute the sensitivity function
-        sens_func = (std[0].data[:, :, 0] /
+        sens_func = (std[0].data[:, :, target] /
                      std[0].hdr['EXPTIME']) / regrid_std_ref
-        sens_func_var = (std[0].variance[:, :, 0] /
+        sens_func_var = (std[0].variance[:, :, target] /
                          std[0].hdr['EXPTIME']**2) / regrid_std_ref**2
 
         for ad in adinputs:

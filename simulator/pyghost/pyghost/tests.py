@@ -6,16 +6,16 @@ import pyghost
 import datetime
 
 def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
-        split=False, check=False,
+        split=False, check=False, dual_target=False,
         # This should be 8pm in Chile local time
         start_dt=datetime.datetime(2017, 12, 1, 23, 0, 0)):
     """ The function that runs the test. """
 
     # Create the two arms
-    blue = pyghost.Arm('blue', cosmics=cosmics, crplane=crplane,
-                       hpplane=hpplane, split=split, check=check)
-    red = pyghost.Arm('red', cosmics=cosmics, crplane=crplane,
-                      hpplane=hpplane, split=split, check=check)
+    common = dict(cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split,
+        check=check, dual_target=dual_target)
+    blue = pyghost.Arm('blue', **common)
+    red = pyghost.Arm('red', **common)
 
     # Create a blank spectrum (used for the bias, dark, and sky)
     blank = np.array([[0.1, 1.2], [0.0, 0.0]])
@@ -69,10 +69,9 @@ def run(nbias=3, ndark=3, nflat=3, cosmics=True, crplane=False, hpplane=False,
     ghost = pyghost.Ghost(
         rnoise=3.0, gain=1.0, namps=namps, overscan=oscan,
         bias_level=bias_level, additive_noise=noise, scaling=scaling,
-        cosmics=cosmics, crplane=crplane, hpplane=hpplane, split=split,
-        check=check)
+        **common)
 
-    target_binmode = (1, 1)  # (1, 2)
+    target_binmode = (1, 1)  # (2, 4)
 
     # This produces a bias with the above noise
     for i in range(1, nbias+1):

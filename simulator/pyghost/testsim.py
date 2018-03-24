@@ -15,6 +15,8 @@ if __name__ == "__main__":
     parser.add_argument('-check', action='store_true', help='output additional'
                         ' check files that contain the input spectrum, interpolated'
                         ' onto the pixel grid for each order')
+    parser.add_argument('-dual_target', action='store_true', help='simulates dual'
+                        ' targets in STD res mode (ignored for HIGH res mode)')
     # will raise if too few/many args or unsupported options used
     args = parser.parse_args()
     pyghost.tests.run(**vars(args))  # pylint: disable=star-args
