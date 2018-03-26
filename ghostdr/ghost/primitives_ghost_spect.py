@@ -34,7 +34,7 @@ from .polyfit.ghost import GhostArm
 from .primitives_ghost import GHOST, filename_updater
 from .parameters_ghost_spect import ParametersGHOSTSpect
 
-from .lookups import polyfit_dict, line_list, keyword_comments
+from .lookups import polyfit_dict, line_list, keyword_comments, targetn_dict
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
@@ -1588,11 +1588,14 @@ class GHOSTSpect(GHOST):
         # (i.e. of the dimensions [order, wavl, object], figure which of the
         # three objects is actually the spectrum (another will be sky, and
         # the third probably empty)
+        objn = targetn_dict.targetn_dict['object']
         target = -1
-        if std.phu['TARGET1'] == 2: target = 0
-        if std.phu['TARGET2'] == 2: target = 1
-        if target < 0: raise ValueError(
-            'Cannot determine which IFU contains standard star spectrum')
+        if std.phu['TARGET1'] == objn: target = 0
+        if std.phu['TARGET2'] == objn: target = 1
+        if target < 0:
+            raise ValueError(
+            'Cannot determine which IFU contains standard star spectrum'
+            )
 
         # Compute the sensitivity function
         sens_func = (std[0].data[:, :, target] /
