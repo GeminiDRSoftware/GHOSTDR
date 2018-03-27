@@ -20,7 +20,7 @@ class ParametersGHOSTSpect(ParametersGHOST):
         "correction_factor": None,
     }
     clipSigmaBPM = {
-#        "suffix"            : "_clipSigmaBPMApplied",
+#       "suffix"            : "_clipSigmaBPMApplied",
         "sigma"             : 3.0,
         "iters"             : None,
         "bpm_value"         : 1,

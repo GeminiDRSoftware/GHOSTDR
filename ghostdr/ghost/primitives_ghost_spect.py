@@ -44,6 +44,7 @@ GEMINI_SOUTH_LOC = astrocoord.EarthLocation.from_geodetic((-70, 44, 12.096),
                                                           height=2722.,
                                                           ellipsoid='WGS84')
 
+
 @parameter_override
 class GHOSTSpect(GHOST):
     """
@@ -309,7 +310,6 @@ class GHOSTSpect(GHOST):
                 ad.phu.set('PROCIMG', os.path.abspath(ad.path),
                            keyword_comments.keyword_comments['PROCIMG'])
                 ad.write(overwrite=True)
-
 
         return adinputs
 
@@ -665,8 +665,8 @@ class GHOSTSpect(GHOST):
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
             # simultaneously.
-            #key = self._get_polyfit_key(ad)
-            #log.stdinfo("Polyfit key selected: {}".format(key))
+            # key = self._get_polyfit_key(ad)
+            # log.stdinfo("Polyfit key selected: {}".format(key))
             try:
                 poly_wave = self._get_polyfit_filename(ad, 'wavemod')
                 poly_spat = self._get_polyfit_filename(ad, 'spatmod')
@@ -690,9 +690,12 @@ class GHOSTSpect(GHOST):
             # CJS: Makes it clearer that you're throwing the first two
             # returned objects away (get replaced in the two_d_extract call)
             _, _, extracted_weights = extractor.one_d_extract(
-                ad[0].data, correct_for_sky=params['sky_correct'])
-            extracted_flux, extracted_var = extractor.two_d_extract(ad[0].data,
-                                    extraction_weights=extracted_weights)
+                ad[0].data, correct_for_sky=params['sky_correct'],
+            )
+            extracted_flux, extracted_var = extractor.two_d_extract(
+                ad[0].data,
+                extraction_weights=extracted_weights,
+            )
 
             # CJS: Since you don't use the input AD any more, I'm going to
             # modify it in place, in line with your comment that you're
@@ -865,17 +868,20 @@ class GHOSTSpect(GHOST):
             # replace values above the data average, so as not to replace low
             # S/N values at the edges.
             data = ad[0].data.copy()
-            condit = np.where(np.abs((medfilt - data)/(medfilt+1)) > 200) and\
-                     np.where(data > np.average(data))
+            condit = np.where(np.abs(
+                (medfilt - data)/(medfilt+1)) > 200
+                              ) and np.where(data > np.average(data))
             data[condit] = medfilt[condit]
 
             # Convolve the flat field with the slit profile
-            flat_conv = ghost_arm.slit_flat_convolve(data,
+            flat_conv = ghost_arm.slit_flat_convolve(
+                data,
                 slit_profile=slitview.slit_profile(arm=arm),
                 spatpars=spatpars[0].data, microns_pix=slitview.microns_pix,
-                xpars=xpars[0].data)
+                xpars=xpars[0].data
+            )
 
-            flat_conv = signal.medfilt2d(flat_conv, (5,5))
+            flat_conv = signal.medfilt2d(flat_conv, (5, 5))
 
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
@@ -961,7 +967,8 @@ class GHOSTSpect(GHOST):
 
             extractor = Extractor(arm, None)  # slitview=None for this usage
             # import pdb;pdb.set_trace()
-            lines_out = extractor.find_lines(ad[0].data, arcwaves, inspect=False)
+            lines_out = extractor.find_lines(ad[0].data, arcwaves,
+                                             inspect=False)
             
             fitted_params, wave_and_resid = arm.read_lines_and_fit(
                 wpars[0].data, lines_out)
@@ -1058,7 +1065,7 @@ class GHOSTSpect(GHOST):
         _, flat_list = gt.make_lists(adinputs, flat_list, force_ad=True)
 
         for ad, slit, slitflat, flat, in zip(adinputs, slitflat_list,
-                                        flat_list, flat_list):
+                                             flat_list, flat_list):
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by flatCorrect".
@@ -1089,22 +1096,21 @@ class GHOSTSpect(GHOST):
 
             res_mode = ad.res_mode()
             arm = GhostArm(arm=ad.arm(), mode=res_mode, 
-                           detector_x_bin = ad.detector_x_bin(),
-                           detector_y_bin = ad.detector_y_bin())
+                           detector_x_bin= ad.detector_x_bin(),
+                           detector_y_bin= ad.detector_y_bin()
+                           )
             arm.spectral_format_with_matrix(flat[0].XMOD,
                                             wpars[0].data,
                                             spatpars[0].data,
                                             specpars[0].data,
-                                            rotpars[0].data)
+                                            rotpars[0].data,
+                                            )
 
             sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
 
             extractor = Extractor(arm, sview)
             extracted_flux, extracted_var = extractor.two_d_extract(
                 arm.bin_data(flat[0].data), extraction_weights=ad[0].WGT)
-
-            # import pdb
-            # pdb.set_trace()
 
             # Normalised extracted flat profile
             med = np.median(extracted_flux)
@@ -1170,6 +1176,10 @@ class GHOSTSpect(GHOST):
             ``flat_profile``
                 This options includes the extracted flat profile used for
                 flat-fielding the data.
+
+            ``sensitivity_curve``
+                This option includes the sensitivity calculated at the
+                ``responseCorrect`` step of reduction.
         """
 
         # This should be the list of allowed detail descriptors in order of
@@ -1363,7 +1373,8 @@ class GHOSTSpect(GHOST):
                         inds = np.argwhere(new_cr_pix)
                         pad_data = np.pad(clean_data, 1, 'constant',
                                           constant_values=(np.nan, ))
-                        # log.stdinfo('Padded array size: %s' % str(pad_data.shape))
+                        # log.stdinfo('Padded array size: %s' %
+                        #             str(pad_data.shape))
                         # log.stdinfo(
                         #     'Data array size: %s' % str(clean_data.shape))
                         # log.stdinfo(
@@ -1409,7 +1420,9 @@ class GHOSTSpect(GHOST):
                     # This is 'curly L' in van Dokkum 2001
                     # ------
                     # Subsample the data
-                    log.stdinfo('Pass {}: Computing Laplacian'.format(no_passes))
+                    log.stdinfo('Pass {}: Computing Laplacian'.format(
+                        no_passes)
+                    )
                     data_shape = ext.data.shape
                     # log.stdinfo(
                     #     'data array size: %s' % str(data_shape))
@@ -1417,16 +1430,12 @@ class GHOSTSpect(GHOST):
                         ext.data, subsampling, axis=1),
                         subsampling, axis=0
                     )
-                    # log.stdinfo(
-                    #     'subsampl_data array size: %s' % str(subsampl_data.shape))
                     # Convolve the subsampled data with the Laplacian kernel,
                     # trimming off the edges this introduces
                     # Bring any negative values up to 0
                     init_conv_data = scipy.signal.convolve2d(
                         subsampl_data, laplace_kernel)[1:-1, 1:-1]
                     init_conv_data[np.nonzero(init_conv_data <= 0.)] = 0.
-                    # log.stdinfo(
-                    #     'init_conv_data array size: %s' % str(init_conv_data.shape))
                     # Reverse the subsampling, returning the
                     # correctly-convolved image
                     conv_data = np.reshape(init_conv_data,
@@ -1438,7 +1447,6 @@ class GHOSTSpect(GHOST):
                                                init_conv_data.shape[1] //
                                                data_shape[1],
                                            )).mean(axis=3).mean(axis=1)
-                    # log.stdinfo('conv_data array size: %s' % str(conv_data.shape))
 
                     # ------
                     # STEP 4
@@ -1446,7 +1454,9 @@ class GHOSTSpect(GHOST):
                     # 'sigma_map' S
                     # This is the equivalent of equation (11) of van Dokkum 2001
                     # ------
-                    log.stdinfo('Pass {}: Constructing sigma map'.format(no_passes))
+                    log.stdinfo('Pass {}: Constructing sigma map'.format(
+                        no_passes
+                    ))
                     gain = ext.gain()
                     read_noise = ext.read_noise()
                     noise = (1.0 / gain) * ((gain * m5_model +
@@ -1467,7 +1477,9 @@ class GHOSTSpect(GHOST):
                     # STEP 5
                     # Identify the potential cosmic rays
                     # ------
-                    log.stdinfo('Pass {}: Flagging cosmic rays'.format(no_passes))
+                    log.stdinfo('Pass {}: Flagging cosmic rays'.format(
+                        no_passes
+                    ))
                     # Construct the fine-structure image
                     # (F, eqn 14 of van Dokkum)
                     m3 = scipy.ndimage.median_filter(subbed_data, size=[3, 3],
@@ -1492,7 +1504,8 @@ class GHOSTSpect(GHOST):
                 log.debug('Flagged pix in BPM: {}'.format(
                     np.count_nonzero(ext.mask)))
 
-            # CJS: Added this because you check for the keyword in this primitive!
+            # CJS: Added this because you check for the keyword in
+            # this primitive!
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
@@ -1571,8 +1584,6 @@ class GHOSTSpect(GHOST):
         else:
             raise ValueError('No standard reference spectrum found/supplied')
 
-
-
         # Re-grid the standard reference spectrum onto the wavelength grid of
         # the observed standard
         regrid_std_ref = np.zeros(std[0].data.shape[:-1], dtype=np.float32)
@@ -1594,7 +1605,7 @@ class GHOSTSpect(GHOST):
         if std.phu['TARGET2'] == objn: target = 1
         if target < 0:
             raise ValueError(
-            'Cannot determine which IFU contains standard star spectrum'
+                'Cannot determine which IFU contains standard star spectrum.'
             )
 
         # Compute the sensitivity function
@@ -1634,12 +1645,6 @@ class GHOSTSpect(GHOST):
                                                     dtype=np.float32)
             for ob in range(ad[0].data.shape[-1]):
                 for od in range(ad[0].data.shape[0]):
-                    # sens_func_regrid[od, :, ob] = self._interp_spect(
-                    #     sens_func[od, :],
-                    #     std[0].WAVL[od, :],
-                    #     ad[0].WAVL[od, :],
-                    #     interp='linear',
-                    # )
                     sens_func_regrid[od, :, ob] = np.interp(
                         ad[0].WAVL[od, :],
                         std[0].WAVL[od, :],
@@ -1669,20 +1674,12 @@ class GHOSTSpect(GHOST):
             # variance=sens_func_regrid_var)
 
             # Perform the response correction
-            # ad[0].reset((ad[0].data / ad[0].hdr['EXPTIME']) / sens_func_regrid,
-            #             variance=(ad[0].variance / ad[0].hdr['EXPTIME']) /
-            #                      sens_func_var**2)
             ad /= ad[0].hdr['EXPTIME']
             ad /= sens_func_ad
             # Make the relevant header update
             ad.hdr['BUNIT'] = bunit
 
-            # Push the re-gridded values to the object file so that they
-            # can be manually investigated
-            # ad.append(ad[0])
-            # ad[1].reset(sens_func_regrid, mask=None, variance=None)
-
-            # Timestamp
+            # Timestamp & suffix updates
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
 
@@ -1713,6 +1710,7 @@ class GHOSTSpect(GHOST):
         This primitive will tile the SCI frames of the input images, along
         with the VAR and DQ frames if they exist.
         """
+
         def simple_mosaic_function(ad):
             """
             This will go into MosaicAD as the default function.
