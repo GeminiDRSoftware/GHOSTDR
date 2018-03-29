@@ -607,6 +607,8 @@ class GHOSTSpect(GHOST):
         # Get processed slits, slitFlats, and flats (for xmod)
         # slits and slitFlats may be provided as parameters
         slit_list = params["slit"]
+        # log.stdinfo('slit_list before processing:')
+        # log.stdinfo('   {}'.format(slit_list))
         if slit_list is not None and isinstance(slit_list, list):
             slit_list = [slit_list[i] for i in range(len(slit_list))
                          if adinputs_orig[i] in adinputs]
@@ -617,6 +619,8 @@ class GHOSTSpect(GHOST):
             # This then gets those filenames
             slit_list = [self._get_cal(ad, 'processed_slit')
                          for ad in adinputs]
+        # log.stdinfo('slit_list after processing:')
+        # log.stdinfo('   {}'.format(slit_list))
 
         slitflat_list = params["slitflat"]
         if slitflat_list is not None and isinstance(slitflat_list, list):
@@ -643,7 +647,7 @@ class GHOSTSpect(GHOST):
         _, flat_list = gt.make_lists(adinputs, flat_list, force_ad=True)
 
         for ad, slit, slitflat, flat in zip(adinputs, slit_list,
-                                        slitflat_list, flat_list):
+                                            slitflat_list, flat_list):
             # CJS: failure to find a suitable auxiliary file (either because
             # there's no calibration, or it's missing) places a None in the
             # list, allowing a graceful continuation.
@@ -1064,8 +1068,8 @@ class GHOSTSpect(GHOST):
         _, slitflat_list = gt.make_lists(adinputs, slitflat_list, force_ad=True)
         _, flat_list = gt.make_lists(adinputs, flat_list, force_ad=True)
 
-        for ad, slit, slitflat, flat, in zip(adinputs, slitflat_list,
-                                             flat_list, flat_list):
+        for ad, slit, slitflat, flat, in zip(adinputs, slit_list,
+                                             slitflat_list, flat_list):
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by flatCorrect".
@@ -1127,6 +1131,12 @@ class GHOSTSpect(GHOST):
                 # Record this as the flat profile used
                 ad.phu.set('FLATPROF', os.path.abspath(flatprof_ad.path),
                            self.keyword_comments['FLATPROF'])
+            ad.phu.set('FLATIMG', os.path.abspath(flat.path),
+                       keyword_comments.keyword_comments['FLATIMG'])
+            ad.phu.set('SLITIMG', os.path.abspath(slit.path),
+                       keyword_comments.keyword_comments['SLITIMG'])
+            ad.phu.set('SLITFLAT', os.path.abspath(slitflat.path),
+                       keyword_comments.keyword_comments['SLITFLAT'])
 
             # Divide the flat field through the science data
             # Arithmetic propagates VAR correctly
