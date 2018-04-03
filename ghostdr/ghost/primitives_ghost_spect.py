@@ -657,9 +657,10 @@ class GHOSTSpect(GHOST):
                 continue
 
             # CJS: Changed to log.debug() and changed the output
-            log.debug("Slit parameters: ")
-            log.debug("   processed_list: {}".format(slit.filename))
-            log.debug("   processed_flat: {}".format(slitflat.filename))
+            log.stdinfo("Slit parameters: ")
+            log.stdinfo("   processed_slit: {}".format(slit.filename))
+            log.stdinfo("   processed_slitflat: {}".format(slitflat.filename))
+            log.stdinfo("   processed_flat: {}".format(flat.filename))
 
             res_mode = ad.res_mode()
             arm = GhostArm(arm = ad.arm(), mode = res_mode,
