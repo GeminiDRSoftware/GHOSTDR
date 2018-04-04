@@ -1,12 +1,15 @@
 #!python
 
-import pytest
 import os
 import shutil
+import re
+import numpy as np
+import pytest
 
-from recipe_system.reduction.coreReduce import Reduce
-from gempy.utils import logutils
 import astrodata
+from gempy.utils import logutils
+from recipe_system.reduction.coreReduce import Reduce
+
 
 # TESTS TO RUN #
 
@@ -51,30 +54,101 @@ class TestOverscanSubtractClass(object):
         return rawfile, corrfile
 
     def test_overscan_headerkw(self, do_overscan_subtract):
+        """
+        Check for header keywords SUBOVER and TRIMOVER in overscan-corrected
+        output
+        """
         rawfile, corrfile = do_overscan_subtract
         corrad = astrodata.open(corrfile)
-        assert corrad.phu.get('SUBOVER') and corrad.phu.get('TRIMOVER')
+        assert corrad.phu.get('SUBOVER') and \
+               corrad.phu.get('TRIMOVER'), "Overscan-corrected file is " \
+                                           "missing header keywords SUBOVER " \
+                                           "and/or TRIMOVER"
 
     def test_overscan_mean(self, do_overscan_subtract):
+        """
+        Check that:
+        mean(all raw data) - mean(raw overscan) = mean(overscan-corrected)
+        to within some threshold value
+        """
+        mean_threshold_value = 0.005 # 0.5%
+
         rawfile, corrfile = do_overscan_subtract
         rawad = astrodata.open(rawfile)
         corrad = astrodata.open(corrfile)
-        for ext in rawad:
-            pass
-        assert True
+        meandiff = []
+
+        for i, ext in enumerate(rawad):
+            corrmean = np.mean(corrad[i].data)
+            rawoversec = ext.overscan_section()
+            rawmeanover = np.mean(
+                ext.data[rawoversec.y1:rawoversec.y2,
+                         rawoversec.x1:rawoversec.x2]
+            )
+            rawmean = np.mean(ext.data) - rawmeanover
+            meandiff.append(np.abs(corrmean - rawmean) <
+                            mean_threshold_value * rawmean)
+
+        assert np.all(np.asarray(meandiff) <
+                      mean_threshold_value), "Difference in means " \
+                                             "between original and " \
+                                             "overscan subtracted data " \
+                                             "greater than allowed " \
+                                             "threshold ({}%)".format(
+            mean_threshold_value * 100.,
+        )
 
     def test_overscan_std(self, do_overscan_subtract):
+        """
+        Check that:
+        std(all raw data) = std(overscan-corrected)
+        to within some threshold value
+        """
+        std_threshold_value = 0.005  # 0.5%
+
         rawfile, corrfile = do_overscan_subtract
         rawad = astrodata.open(rawfile)
         corrad = astrodata.open(corrfile)
-        for ext in rawad:
-            pass
-        assert True
+        stddiff = []
+
+        for i, ext in enumerate(rawad):
+            sd = np.abs(
+                np.std(ext.data) - np.std(corrad[i].data)
+            )
+            stddiff.append(sd < std_threshold_value * np.std(ext.data))
+
+        assert np.all(
+            np.asarray(stddiff)
+        ), "Difference in std. dev. between original and overscan-subtracted " \
+           "data is greater than allowed threshold ({}% of raw value)".format(
+            std_threshold_value*100.,
+        )
 
     def test_overscan_shape(self, do_overscan_subtract):
+        """
+        Check the shape of the overscan-corrected data matches the DATASEC
+        keyword from the original file
+        """
         rawfile, corrfile = do_overscan_subtract
         rawad = astrodata.open(rawfile)
         corrad = astrodata.open(corrfile)
-        for ext in rawad:
-            pass
-        assert True
+        shapes_match = []
+        # Can use RE to match the raw DATASEC keyword if preferred
+        # datasec_re = re.compile(r'^\[(?P<x1>[0-9]*):(?P<x2>[0-9]*),'
+        #                         r'(?P<y1>[0-9]*):(?P<y2>[0-9]*)\]$')
+
+        for i, ext in enumerate(rawad):
+            datasec = ext.data_section()
+            # datasec_match = datasec_re.match(datasec)
+            # if datasec_match:
+            data_shape = corrad[i].data.shape
+            shapes_match.append(data_shape ==
+                                (datasec.y2 - datasec.y1,
+                                 datasec.x2 - datasec.x1,
+                                 ))
+            # else:
+            #     shapes_match.append(False)
+
+        assert np.all(shapes_match), "The shapes of some overscan-subtracted " \
+                                     "extensions do not match the DATASEC " \
+                                     "header value of the original extension"
