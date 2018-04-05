@@ -109,7 +109,7 @@ class TestMasterBias(object):
             rawstd = np.sqrt(
                 np.sum([np.std(_[i].data)**2 for _ in rawads])
             / len(rawfiles)) #/ len(rawfiles)
-            print((corrstd, rawstd, ))
+            # print((corrstd, rawstd, ))
             results.append(np.abs(corrstd - rawstd) < std_tolerance * rawstd or
                            corrstd < rawstd)
 
