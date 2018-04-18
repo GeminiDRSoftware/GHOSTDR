@@ -65,6 +65,7 @@ mklist() {
 	UUID=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1 || true`
 	[[ $flag == silent ]] || echo typewalk --tags GHOST UNPREPARED $@ -n -o $UUID >>commands
 	list=`typewalk --tags GHOST UNPREPARED $@ -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#' || true`
+	[ -n "$list" ]
 }
 
 # perform the reduction; return any calibrator produced
@@ -77,14 +78,14 @@ doreduce() {
 
 # process all matching files together (as a whole / in a batch)
 reduce_list() {
-	mklist "$@"
+	mklist "$@" || return 0
 	prep "$@"
 	doreduce @/dev/stdin <<<"$list" | postp "$@"
 }
 
 # process each matching file individually (by itself)
 reduce_each() {
-	mklist silent "$@"
+	mklist silent "$@" || return 0
 	while read THING; do
 		[[ "${THING}" =~ .*/(.*) ]] && prep "$msg: ${BASH_REMATCH[1]}"
 		doreduce $THING | postp "$@"
