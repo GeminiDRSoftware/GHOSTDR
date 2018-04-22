@@ -14,7 +14,7 @@ SEEING=0.5  # Note that the single seeing is being used here instead of both
 QUALITY=  # Quality Assessment = --qa, Quick Look = --ql, Science Quality = leave blank
 CHECK=false  # pause (true) or not (false) after each 'reduce' call to inspect results
 LINGER="${1:-0}"  # how many secs to pause between 'reduce' calls; 1st script arg or 0 default
-DELINT=false  # delete intermediate files (true) or move them into parallel folder (false)
+DELINT=true  # delete intermediate files (true) or move them into parallel folder (false)
 $DELINT || INTERMED=`mktemp -d intermediates.XXXXXXXXXX`
 
 SHORTSPEC=hd200654

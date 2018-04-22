@@ -750,7 +750,7 @@ class Arm(object):
         # self.set_mode(mode)
         if self.arm == 'red':
             # Additional slit rotation across an order needed to match Zemax.
-            self.extra_rot = 3.0
+            self.extra_rot = 2.0
             self.szx = 6144
             self.szy = 6160
             self.f_cam = 264.0
@@ -769,7 +769,7 @@ class Arm(object):
             self.slitview_offset = [15.0, -1500.0]  # (x,y) plane offset, micron
         elif self.arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
-            self.extra_rot = 4.0
+            self.extra_rot = 2.0
             self.szx = 4096
             self.szy = 4112
             self.f_cam = 264.0
@@ -2066,7 +2066,12 @@ class Ghost(object):
                              equivalencies=u.spectral_density(data['WAVELENGTH'] * u.AA))
         # Now calculate the approximate telescope area in cm**2
         telescope_area = np.pi * (8.1 * 100. / 2.)**2
-        flux = as_flux * telescope_area / 50E3
+        # Compute bandwidth per spectral pixel, assuming a fixed resolving power per
+        # pixel of 200,000 and a total instrument throughput of 10%
+        # FIXME: This is approximately 
+        # applicable to GHOST, but could be more generally applicable and include
+        # instrumental wavelength-dependent throughput.
+        flux = as_flux * telescope_area * (data['WAVELENGTH'] / 2e5) * 0.1
         spectrum = np.array([data['WAVELENGTH'] / 1e4, np.maximum(flux,0)])
         return spectrum
 
