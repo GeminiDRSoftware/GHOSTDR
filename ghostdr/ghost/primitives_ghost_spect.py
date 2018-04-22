@@ -1537,9 +1537,9 @@ class GHOSTSpect(GHOST):
           the exposure time (in s), and then by the standard star reference
           spectrum (in some unit of flux, e.g. erg/cm^2/s/A) gives a
           sensitivity curve in units of, in this example, counts / erg.
-        - Divinding the object spectrum divided by exposure time (i.e.
-          counts or electrons per pixel per second) by the sensitivity curve
-          (counts / erg) yields the object spectrum in the original flux
+        - Dividing the object spectrum by the exposure time (i.e. converting 
+          to counts per pixel per second) by the sensitivity curve
+          (counts / flux unit) yields the object spectrum in the original flux
           units of the standard star reference spectrum.
 
         Parameters
