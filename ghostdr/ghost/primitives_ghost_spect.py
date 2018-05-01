@@ -798,10 +798,16 @@ class GHOSTSpect(GHOST):
             # import pdb;
             # pdb.set_trace()
 
+            # MCW, 180501 - Keep initial data, append interp'd data
+
+            ad_interp = deepcopy(ad)
             # Can't use .reset without looping through extensions
-            ad[0].data = spec_final
-            ad[0].variance = var_final
-            ad[0].WAVL = wavl_grid
+            ad_interp[0].data = spec_final
+            ad_interp[0].variance = var_final
+            ad_interp[0].WAVL = wavl_grid
+            ad_interp[0].hdr['DATADESC'] = ('Interpolated data',
+                                            self.keyword_comments['DATADESC'], )
+            ad.append(ad_interp[0])
 
             # Timestamp & update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -1215,8 +1221,8 @@ class GHOSTSpect(GHOST):
         for ad in adinputs:
             # Move sequentially through the various levels of detail, adding
             # them as we go along
-            ad[0].hdr['DATADESC'] = ('Fully-reduced data',
-                                     self.keyword_comments['DATADESC'], )
+            # ad[0].hdr['DATADESC'] = ('Fully-reduced data',
+            #                          self.keyword_comments['DATADESC'], )
 
             if ALLOWED_DETAILS.index('processed_image') <= detail_index:
                 # Locate the processed image data
