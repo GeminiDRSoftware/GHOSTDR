@@ -48,7 +48,7 @@ class SlitView(object):
             # The sky_pix_boundaries is the boundary in pixels of all pixels
             # contaning some sky contribution (including the object pixels,
             # which are really object + sky)
-            self.sky_pix_boundaries = {'red': [46, 64], 'blue': [46, 64]}
+            self.sky_pix_boundaries = {'red': [3, 107], 'blue': [3, 107]}
         elif mode == 'high':
             self.central_pix = {'red': [78, 95], 'blue': [78, 4]}
             self.extract_half_width = 2
@@ -60,7 +60,7 @@ class SlitView(object):
             # if we really cared.
             self.object_boundaries = {
                 'red': [[11, 81], [4, 9]], 'blue': [[11, 81], [4, 9]]}
-            self.sky_pix_boundaries = {'red': [80, 106], 'blue': [80, 106]}
+            self.sky_pix_boundaries = {'red': [11, 106], 'blue': [11, 106]}
         else:
             raise UserWarning("Invalid Mode")
 
