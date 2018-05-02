@@ -1279,7 +1279,7 @@ class GHOSTSpect(GHOST):
                                           self.keyword_comments['DATADESC'])
 
             if ALLOWED_DETAILS.index('sensitivity_curve') <= detail_index:
-                fn = ad.phu.get('FLATPROF', None)
+                fn = ad.phu.get('SENSFUNC', None)
                 if fn is None:
                     raise RuntimeError('The sensitivity curve file name for {} '
                                        'has not been '
@@ -1658,14 +1658,25 @@ class GHOSTSpect(GHOST):
         # The sensitivity function requires significant smoothing in order to
         # prevent noise from the standard being transmitted into the data
         # The easiest option is to perform a parabolic curve fit to each order
-        fitfunc = lambda p, x: p[0] + p[1] * x + p[2] * x**2
-        errfunc = lambda p, x, y, yerr: (fitfunc(p, x) - y)**2 / yerr
+        # QUADRATIC
+        # fitfunc = lambda p, x: p[0] + p[2] * ((x - p[1])**2)
+        # LINEAR
+        fitfunc = lambda p, x: p[0] + (p[1] * x)
+        errfunc = lambda p, x, y, yerr: np.abs(fitfunc(p, x) - y) / np.sqrt(yerr)
         # import pdb; pdb.set_trace();
         sens_func_fits = [
             p for p, success in [leastsq(errfunc,
-                                         [0,
-                                          -np.average(std[0].WAVL[od, :]),
-                                          -np.median(sens_func[od, :])],
+                                         # QUADRATIC
+                                         # [np.average(sens_func[od],
+                                         #             weights=1./np.sqrt(
+                                         #                 sens_func_var[od])),
+                                         #  np.median(std[0].WAVL[od, :]),
+                                         #  1.0],
+                                         # LINEAR
+                                         [np.average(sens_func[od, :],
+                                          weights=1. / np.sqrt(
+                                              sens_func_var[od])),
+                                          0.],
                                          args=(std[0].WAVL[od, :],
                                                sens_func[od, :],
                                                sens_func_var[od, :])
@@ -1712,6 +1723,8 @@ class GHOSTSpect(GHOST):
                     sens_func_regrid[od, :, ob] = fitfunc(
                         sens_func_fits[od], ad[0].WAVL[od, :]
                     )
+                    # if od == 29:
+                    #     import pdb; pdb.set_trace();
                     # sens_func_regrid[od, :, ob] = np.interp(
                     #     ad[0].WAVL[od, :],
                     #     std[0].WAVL[od, :],
@@ -1735,22 +1748,29 @@ class GHOSTSpect(GHOST):
             # sens_func_ad[0].variance = sens_func_regrid_var
             # sens_func_ad[0].variance = None
             try:
-                del sens_func_ad[0].variance
+                sens_func_ad[0].variance = None
             except AttributeError:
                 pass
-
-            if params['write_result']:
-                sens_func_ad.write(overwrite=True)
-                ad.phu.set("SENSFUNC", os.path.abspath(sens_func_ad.path),
-                           self.keyword_comments['SENSFUNC'])
-            # sens_func_ad.reset(sens_func_regrid,
-            # variance=sens_func_regrid_var)
 
             # Perform the response correction
             ad /= ad[0].hdr['EXPTIME']
             ad /= sens_func_ad
             # Make the relevant header update
             ad.hdr['BUNIT'] = bunit
+
+            # Now that we've made the correction, remove the superfluous
+            # extra dimension from sens_func_ad and write out, if requested
+            if params['write_result']:
+                sens_func_ad[0].data = sens_func_ad[0].data[:, :, 0]
+                try:
+                    del sens_func_ad[0].WGT
+                except AttributeError:
+                    pass
+                sens_func_ad.write(overwrite=True)
+                ad.phu.set("SENSFUNC", os.path.abspath(sens_func_ad.path),
+                           self.keyword_comments['SENSFUNC'])
+            # sens_func_ad.reset(sens_func_regrid,
+            # variance=sens_func_regrid_var)
 
             # Timestamp & suffix updates
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
