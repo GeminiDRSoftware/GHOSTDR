@@ -9,6 +9,7 @@ import math
 from copy import deepcopy
 import scipy
 import scipy.signal as signal
+from scipy.optimize import leastsq
 import functools
 from datetime import datetime, date, time, timedelta
 import re
@@ -746,6 +747,12 @@ class GHOSTSpect(GHOST):
                             format(ad.filename))
                 continue
 
+            if params['skip']:
+                log.warning('Skipping interpolateAndCombine for {}'.format(
+                    ad.filename
+                ))
+                continue
+
             # Determine the wavelength bounds of the file
             min_wavl, max_wavl = np.min(ad[0].WAVL), np.max(ad[0].WAVL)
             logspacing = np.median(
@@ -805,6 +812,10 @@ class GHOSTSpect(GHOST):
             ad_interp[0].data = spec_final
             ad_interp[0].variance = var_final
             ad_interp[0].WAVL = wavl_grid
+            try:
+                del ad_interp[0].WGT
+            except AttributeError:
+                pass
             ad_interp[0].hdr['DATADESC'] = ('Interpolated data',
                                             self.keyword_comments['DATADESC'], )
             ad.append(ad_interp[0])
@@ -1258,6 +1269,11 @@ class GHOSTSpect(GHOST):
                                        'disk.')
 
                 log.stdinfo('Opened flat profile file {}'.format(fn))
+                # proc_image[0].WGT = None
+                try:
+                    del proc_image[0].WGT
+                except AttributeError:
+                    pass
                 ad.append(proc_image[0])
                 ad[-1].hdr['DATADESC'] = ('Flat profile',
                                           self.keyword_comments['DATADESC'])
@@ -1276,9 +1292,16 @@ class GHOSTSpect(GHOST):
                                        'disk.')
 
                 log.stdinfo('Opened sensitivity curve file {}'.format(fn))
+                # proc_image[0].WGT = None
+                try:
+                    del proc_image[0].WGT
+                except AttributeError:
+                    pass
                 ad.append(proc_image[0])
                 ad[-1].hdr['DATADESC'] = ('Sensitivity curve (blaze func.)',
                                           self.keyword_comments['DATADESC'])
+
+            # import pdb; pdb.set_trace();
 
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=sfx, strip=True)
@@ -1631,6 +1654,29 @@ class GHOSTSpect(GHOST):
         sens_func_var = (std[0].variance[:, :, target] /
                          std[0].hdr['EXPTIME']**2) / regrid_std_ref**2
 
+        # MCW 180501
+        # The sensitivity function requires significant smoothing in order to
+        # prevent noise from the standard being transmitted into the data
+        # The easiest option is to perform a parabolic curve fit to each order
+        fitfunc = lambda p, x: p[0] + p[1] * x + p[2] * x**2
+        errfunc = lambda p, x, y, yerr: (fitfunc(p, x) - y)**2 / yerr
+        # import pdb; pdb.set_trace();
+        sens_func_fits = [
+            p for p, success in [leastsq(errfunc,
+                                         [0,
+                                          -np.average(std[0].WAVL[od, :]),
+                                          -np.median(sens_func[od, :])],
+                                         args=(std[0].WAVL[od, :],
+                                               sens_func[od, :],
+                                               sens_func_var[od, :])
+                                         )
+                                 for od in range(sens_func.shape[0])
+                                 ]
+            # if success
+        ]
+
+        # import pdb; pdb.set_trace();
+
         for ad in adinputs:
 
             if ad.phu.get(timestamp_key):
@@ -1658,22 +1704,27 @@ class GHOSTSpect(GHOST):
             # (a) The sensitivity curve units do not depend on wavelength;
             # (b) The wavelength shifts involved are very small
             sens_func_regrid = np.zeros(ad[0].data.shape, dtype=np.float32)
-            sens_func_regrid_var = np.inf * np.ones(ad[0].data.shape,
-                                                    dtype=np.float32)
+            # sens_func_regrid_var = np.inf * np.ones(ad[0].data.shape,
+            #                                         dtype=np.float32)
             for ob in range(ad[0].data.shape[-1]):
                 for od in range(ad[0].data.shape[0]):
-                    sens_func_regrid[od, :, ob] = np.interp(
-                        ad[0].WAVL[od, :],
-                        std[0].WAVL[od, :],
-                        sens_func[od, :],
-                        left=0, right=0,
+                    # import pdb; pdb.set_trace();
+                    sens_func_regrid[od, :, ob] = fitfunc(
+                        sens_func_fits[od], ad[0].WAVL[od, :]
                     )
-                    sens_func_regrid_var[od, :, ob] = np.interp(
-                        ad[0].WAVL[od, :],
-                        std[0].WAVL[od, :],
-                        sens_func_var[od, :],
-                        left=0, right=0,
-                    )
+                    # sens_func_regrid[od, :, ob] = np.interp(
+                    #     ad[0].WAVL[od, :],
+                    #     std[0].WAVL[od, :],
+                    #     sens_func[od, :],
+                    #     left=0, right=0,
+                    # )
+                    # sens_func_regrid_var[od, :, ob] = np.interp(
+                    #     ad[0].WAVL[od, :],
+                    #     std[0].WAVL[od, :],
+                    #     sens_func_var[od, :],
+                    #     left=0, right=0,
+                    # )
+
 
             # Easiest way to response correct is to stand up a new AstroData
             # instance containing the sensitivity function - this will
@@ -1681,7 +1732,12 @@ class GHOSTSpect(GHOST):
             sens_func_ad = deepcopy(ad)
             sens_func_ad.update_filename(suffix='_sensFunc', strip=True)
             sens_func_ad[0].data = sens_func_regrid
-            sens_func_ad[0].variance = sens_func_regrid_var
+            # sens_func_ad[0].variance = sens_func_regrid_var
+            # sens_func_ad[0].variance = None
+            try:
+                del sens_func_ad[0].variance
+            except AttributeError:
+                pass
 
             if params['write_result']:
                 sens_func_ad.write(overwrite=True)
