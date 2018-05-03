@@ -712,6 +712,8 @@ class GHOSTSpect(GHOST):
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
+            ad[0].hdr['DATADESC'] = ('Order-by-order processed science data',
+                                     self.keyword_comments['DATADESC'])
             if params["write_result"]:
                 ad.write(overwrite=True)
 
@@ -1295,6 +1297,10 @@ class GHOSTSpect(GHOST):
                 # proc_image[0].WGT = None
                 try:
                     del proc_image[0].WGT
+                except AttributeError:
+                    pass
+                try:
+                    del proc_image[0].WAVL
                 except AttributeError:
                     pass
                 ad.append(proc_image[0])
