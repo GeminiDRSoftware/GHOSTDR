@@ -29,6 +29,8 @@ class GHOSTBundle(GHOST):
 
     def splitBundle(self, adinputs=None, **params):
         """
+        Break a GHOST observation bundle into individual exposures
+
         This primitive breaks up a GHOST observation bundle into 3 files, one
         containing the Red camera frame, one containing the Blue camera frame,
         and another containing the Slit Viewer (SV) frames.  The Red and Blue

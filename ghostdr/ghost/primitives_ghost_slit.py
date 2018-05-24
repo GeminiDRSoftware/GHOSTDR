@@ -32,6 +32,8 @@ class GHOSTSlit(GHOST):
 
     def CRCorrect(self, adinputs=None, **params):
         """
+        Cosmic-ray correct slit viewer images.
+
         This primitive replaces CR-affected pixels in each individual slit
         viewer image (taken from the current stream) with their equivalents
         from the median frame of those images.
@@ -110,8 +112,8 @@ class GHOSTSlit(GHOST):
 
     def processSlits(self, adinputs=None, **params):
         """
-        This primitive computes the mean exposure epoch for an input SLITV
-        image (time series of slit-viewer images) and writes it into the PHU
+        Compute the mean exposure epoch for an input SLITV image
+        (time series of slit-viewer images) and write it into the PHU
 
         Parameters
         ----------
@@ -262,6 +264,7 @@ class GHOSTSlit(GHOST):
 def _mad(data, axis=None):
     """
     Median Absolute Deviation: a "Robust" version of standard deviation.
+
     Indices variabililty of the sample.
     https://en.wikipedia.org/wiki/Median_absolute_deviation
     """
@@ -269,10 +272,12 @@ def _mad(data, axis=None):
 
 def _total_obj_flux(res, data, flat_data=None):
     """
-    combined red/blue object flux calculation. uses the slitview object to
-    determine (potentially sky-subtracted) object profiles. in high res
+    Combined red/blue object flux calculation.
+
+    Uses the slitview object to
+    determine (potentially sky-subtracted) object profiles. In high-resolution
     mode, the arc profile is returned as an "object" profile, so we discard
-    it explicitly from this calculation
+    it explicitly from this calculation.
 
     Parameters
     ----------

@@ -64,9 +64,10 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         quadrature. If a mask plane is present, the re-binned mask plane is
         computed by sequentially bitwise_or combining the input mask pixels.
 
-        This function has been included within the GHOST primitive class
-        mostly so logging is consistent. Otherwise, it could be defined as
-        a @staticmethod (or just exist outside the class completely).
+        .. note::
+            This function has been included within the GHOST primitive class
+            mostly so logging is consistent. Otherwise, it could be defined as
+            a @staticmethod (or just exist outside the class completely).
 
         Parameters
         ----------

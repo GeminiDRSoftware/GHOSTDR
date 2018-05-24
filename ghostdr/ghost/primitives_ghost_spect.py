@@ -428,7 +428,7 @@ class GHOSTSpect(GHOST):
         """
         Dark-correct GHOST observations.
 
-        This primitive, at it's core, simply copies the standard
+        This primitive, at its core, simply copies the standard
         DRAGONS darkCorrect (part of :any:`Preprocess`). However, it has
         the ability to examine the binning mode of the requested dark,
         compare it to the adinput(s), and re-bin the dark to the
@@ -1013,6 +1013,10 @@ class GHOSTSpect(GHOST):
         This primitive works by extracting the
         profile from the relevant flat field using the object's extracted
         weights, and then performs simple division.
+
+        .. warning::
+            While the primitive is working, it has been found that the
+            underlying algorithm is flawed. A new algorithm is being developed.
 
         Parameters
         ----------
@@ -1789,7 +1793,8 @@ class GHOSTSpect(GHOST):
 
     def standardizeStructure(self, adinputs=None, **params):
         """
-        The Gemini-level will try to attach an MDF because a GHOST image is
+        The Gemini-level version of this primitive
+        will try to attach an MDF because a GHOST image is
         tagged as SPECT. Rather than set parameters for that primitive to
         stop it from doing so, just override with a no-op primitive.
         
@@ -1808,6 +1813,8 @@ class GHOSTSpect(GHOST):
 
         This primitive will tile the SCI frames of the input images, along
         with the VAR and DQ frames if they exist.
+
+        This primitive takes no additional parameters.
         """
 
         def simple_mosaic_function(ad):
@@ -1878,7 +1885,8 @@ class GHOSTSpect(GHOST):
 
         Returns
         -------
-        str/None: Filename (including path) of the required polyfit file
+        str/None:
+            Filename (including path) of the required polyfit file
         """
         log = self.log
         polyfit_dir = os.path.join(os.path.dirname(polyfit_dict.__file__),
