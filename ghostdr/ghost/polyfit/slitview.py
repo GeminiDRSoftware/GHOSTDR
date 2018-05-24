@@ -138,6 +138,8 @@ class SlitView(object):
     def object_slit_profiles(self, arm='red', correct_for_sky=True,
                              append_sky=True, normalise_profiles=True):
         """
+        Extract object slit profiles.
+
         TODO: Figure out centroid array behaviour if needed.
         """
         # Find the slit profile.
