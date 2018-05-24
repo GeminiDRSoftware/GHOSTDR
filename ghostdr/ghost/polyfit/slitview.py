@@ -22,7 +22,7 @@ class SlitView(object):
             ing camera.
 
         mode: string
-            'std' or 'high': the observing mode.
+            ``'std'`` or ``'high'``: the observing mode.
 
         slit_length: float
             Physical slit length to be extracted in microns.
