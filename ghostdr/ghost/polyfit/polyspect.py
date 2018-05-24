@@ -54,7 +54,9 @@ class Polyspect(object):
     """
 
     def __init__(self, m_ref, szx, szy, m_min, m_max, transpose):
-        """ Initialization function for this class"""
+        """
+        Initialization function for the Polyspect class
+        """
 
         # All necessary parameters are listed here and initialized by the
         # parent class
@@ -302,17 +304,17 @@ class Polyspect(object):
 
         Parameters
         ----------
-        wparams: :obj:``numpy.ndarray``, optional
+        wparams: :obj:`numpy.ndarray`, optional
             2D array with polynomial parameters for wavelength scale
-        xparams: :obj:``numpy.ndarray``, optional
+        xparams: :obj:`numpy.ndarray`, optional
             2D array with polynomial parameters for x scale
-        img: :obj:``numpy.ndarray``, optional
+        img: :obj:`numpy.ndarray`, optional
             2D array containing an image. This function
             uses this image and over plots the created position model.
 
         Raises
         ------
-        User_Warning:
+        UserWarning:
             All inputs are notionally optional but some combination is required.
             Therefore several checks are needed to ensure that a suitable
             combination of those is required for successful implementation
@@ -885,7 +887,8 @@ class Polyspect(object):
         # define what is to be plotted
         def plot_data(model, xparams, wparams, nxbase, ygrid,
                       thar_spectrum=None):
-            """ Function used for working out and defining
+            """
+            Function used for working out and defining
             the data to be plotted as a function of purpose 
 
             Parameters
@@ -967,7 +970,9 @@ class Polyspect(object):
         
 
         def update_imshow(val):
-            """ Function used to trigger update on the contrast slider """
+            """
+            Function used to trigger update on the contrast slider
+            """
             image.set_clim(vmin = image_min + contrastSlider.val*image_diff//8,
                            vmax = image_max - contrastSlider.val*image_diff//2)
 
