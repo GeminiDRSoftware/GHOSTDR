@@ -20,9 +20,7 @@ from recipe_system.utils.decorators import parameter_override
 @parameter_override
 class GHOSTSlit(GHOST):
     """
-    This is the class containing all of the calibration bookkeeping primitives
-    for the GHOSTSlit level of the type hierarchy tree. It inherits all
-    the primitives from the level above
+    Primitive class for processing GHOST slit-viewer images.
     """
     tagset = set(["GEMINI", "GHOST", "SLITV"])
 
@@ -265,8 +263,21 @@ def _mad(data, axis=None):
     """
     Median Absolute Deviation: a "Robust" version of standard deviation.
 
-    Indices variabililty of the sample.
+    Indices variabililty of the sample:
     https://en.wikipedia.org/wiki/Median_absolute_deviation
+
+    Parameters
+    ----------
+    data : list or numpy array
+        Data to get the 'median absolute variation' for
+    axis : int or None
+        Axis along which to compute the MAD. Defaults to None (i.e. MAD
+        is computed across all data points).
+
+    Returns
+    -------
+    float
+        The MAD of the data, along the requested axis.
     """
     return np.median(np.absolute(data - np.median(data, axis)), axis)
 
@@ -282,18 +293,18 @@ def _total_obj_flux(res, data, flat_data=None):
     Parameters
     ----------
     res: string
-        either 'high' or 'std'
+        Either ``'high'`` or ``'std'``.
     data: np.ndarray
-        the slit viewer image data from which to extract the object profiles
+        The slit viewer image data from which to extract the object profiles.
     flat_data: np.ndarray/None
-        the bias-/dark-corrected slit view flat field image used to de-
-        termine sky background levels (may be None if sky subtraction not
-        needed)
+        The bias-/dark-corrected slit view flat field image used to determine
+        sky background levels (may be ``None`` if sky subtraction not
+        needed).
 
     Returns
     -------
     flux: float
-        the object flux, summed, and potentially sky-subtracted
+        The object flux, summed, and potentially sky-subtracted.
     """
     sky_correction = flat_data is not None
     svobj = SlitView(data, flat_data, mode=res)  # OK to pass None for flat

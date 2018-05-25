@@ -49,10 +49,15 @@ GEMINI_SOUTH_LOC = astrocoord.EarthLocation.from_geodetic((-70, 44, 12.096),
 @parameter_override
 class GHOSTSpect(GHOST):
     """
-    This is the class containing all of the calibration bookkeeping primitives
-    for the GHOST level of the type hierarchy tree. It inherits all
-    the primitives from the level above
+    Primitive class for processing GHOST science data.
+
+    This class contains the primitives necessary for processing GHOST science
+    data, as well as all related calibration files from the main spectrograph
+    cameras. Slit viewer images are processed with another primitive class
+    (:class:`ghostdr.ghost.primitives_ghost_slit.GHOSTSlit`).
     """
+
+    """Applicable tagset"""
     tagset = set(["GEMINI", "GHOST"])  # NOT SPECT because of bias/dark
 
     def __init__(self, adinputs, **kwargs):
@@ -94,6 +99,10 @@ class GHOSTSpect(GHOST):
         ----------
         suffix: str
             suffix to be added to output files
+        arc: list of two-tuples
+            A list of two-tuples, with each tuple corresponding to an element of
+            the ``adinputs`` list. Within each tuple, the two elements are the
+            designated 'before' and 'after' arc for that observation.
         """
 
         log = self.log
@@ -209,6 +218,8 @@ class GHOSTSpect(GHOST):
                 wfit /= 2.0
 
             ad[0].WAVL = wfit
+
+            # FIXME Wavelength unit needs to be in output ad
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)

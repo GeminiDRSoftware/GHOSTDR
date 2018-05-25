@@ -34,9 +34,10 @@ def filename_updater(ad, **kwargs):
 @parameter_override
 class GHOST(Gemini, CCD, CalibDBGHOST):
     """
-    This is the class containing all of the calibration bookkeeping primitives
-    for the GHOST level of the type hierarchy tree. It inherits all
-    the primitives from the level above
+    Top-level primitives for handling GHOST data
+
+    The primitives in this class are applicable to all flavours of GHOST data.
+    All other GHOST primitive classes inherit from this class.
     """
     tagset = set()  # Cannot be assigned as a class
 
