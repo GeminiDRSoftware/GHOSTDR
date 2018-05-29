@@ -1,10 +1,10 @@
 :tocdepth: 2
 
-.. polyspect:
+.. _polyspect:
 
-**************
+***************
 Polyspect Class
-**************
+***************
 
 .. note:: This is the first iteration of this documentation
 

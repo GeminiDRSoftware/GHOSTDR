@@ -1,3 +1,5 @@
+.. _polyfit-models:
+
 Generating New ``Polyfit`` Models
 ---------------------------------
 

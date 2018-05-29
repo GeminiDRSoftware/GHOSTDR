@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.abspath('../../../../externals/gemini_python'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-              'sphinx.ext.coverage', 'sphinx.ext.pngmath',
+              'sphinx.ext.coverage', 'sphinx.ext.imgmath',
               'sphinx.ext.ifconfig', 'sphinx.ext.viewcode',
               'sphinx.ext.napoleon',
               # 'numpydoc',
@@ -250,7 +250,14 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+# intersphinx_mapping = {
+#     'http://docs.python.org/': None,}
+intersphinx_mapping = {
+    'astropy': ('http://docs.astropy.org/en/stable', None),
+    'astrodata': ('http://astrodata-cheat-sheet.readthedocs.io/en/latest/', None),  # FIXME Invalid objects.inv
+    'dragons': ('http://dragons-recipe-system-users-manual.readthedocs.io/en/latest/index.html', None),
+    'python': ('https://docs.python.org/2.7', None),
+}
 
 # Activate the todos
 todo_include_todos=True

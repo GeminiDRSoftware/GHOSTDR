@@ -1,6 +1,6 @@
 :tocdepth: 2
 
-.. ghost:
+.. _ghost:
 
 **************
 GhostArm Class
@@ -14,7 +14,7 @@ methods from Polyspect, which is the module that contains all spectrograph
 generic functions.
 
 __init__
-========
+=========
 
 The class initialisation takes the arm, resolution mode and binning modes as
 inputs and defines all needed attributes.

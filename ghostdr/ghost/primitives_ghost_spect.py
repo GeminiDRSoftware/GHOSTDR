@@ -238,6 +238,9 @@ class GHOSTSpect(GHOST):
         the object file before profile extraction, and hence well before actual
         flat correction is performed.
 
+        The BPM flat is applied by ``bitwise_or`` combining it into the main
+        adinput(s) BPM.
+
         Parameters
         ----------
         suffix: str
@@ -330,6 +333,11 @@ class GHOSTSpect(GHOST):
         Perform barycentric correction of the wavelength extension in the input
         files.
 
+        Barycentric correction is performed by multiplying the wavelength
+        (``.WAVL``) data extension by a correction factor. This factor can be
+        supplied manually, or can be left to be calculated based on the
+        headers in the AstroData input.
+
         Parameters
         ----------
         suffix: str
@@ -348,6 +356,12 @@ class GHOSTSpect(GHOST):
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by barycentricCorrect".
+                            format(ad.filename))
+                continue
+
+            if not ad.WAVL:
+                log.warning("No changes will be made to {}, since it contains "
+                            "no wavelength information".
                             format(ad.filename))
                 continue
 
@@ -372,6 +386,10 @@ class GHOSTSpect(GHOST):
     def clipSigmaBPM(self, adinputs=None, **params):
         """
         Perform a sigma-clipping on the input data frame.
+
+        This is a primitive wrapper for the :func:`astropy.stats.sigma_clip`
+        method. The ``sigma`` and ``iters`` parameters are passed through to the
+        corresponding keyword arguments.
 
         Parameters
         ----------
@@ -446,11 +464,12 @@ class GHOSTSpect(GHOST):
         correct format.
 
         To do this, this version of darkCorrect takes over the actual fetching
-        of calibrations from subtractDark, manipulates the dark(s) as necessary,
+        of calibrations from :meth:`subtractDark`,
+        manipulates the dark(s) as necessary,
         saves the updated dark to the present working directory, and then
-        passes the updated list of dark frame(s) on to subtractDark.
+        passes the updated list of dark frame(s) on to :meth:`subtractDark`.
 
-        As a result, IOError will be raised if the adinputs do not
+        As a result, :any:`IOError` will be raised if the adinputs do not
         all share the same binning mode.
 
         Parameters
@@ -574,6 +593,17 @@ class GHOSTSpect(GHOST):
     def extractProfile(self, adinputs=None, **params):
         """
         Extract the object profile from a slit or flat image.
+
+        This is a primtive wrapper for a collection of :any:`polyfit <polyfit>`
+        calls. For each AstroData input, this primitive:
+
+        - Instantiates a :class:`polyfit.GhostArm` class for the input, and
+          executes :meth:`polyfit.GhostArm.spectral_format_with_matrix`;
+        - Instantiate :class:`polyfit.SlitView` and :class:`polyfit.Extractor`
+          objects for the input
+        - Extract the profile from the input AstroData, using calls to
+          :meth:`polyfit.Extractor.one_d_extract` and
+          :meth:`polyfit.Extractor.two_d_extract`.
         
         Parameters
         ----------
@@ -675,9 +705,9 @@ class GHOSTSpect(GHOST):
             log.stdinfo("   processed_flat: {}".format(flat.filename))
 
             res_mode = ad.res_mode()
-            arm = GhostArm(arm = ad.arm(), mode = res_mode,
-                           detector_x_bin = ad.detector_x_bin(),
-                           detector_y_bin = ad.detector_y_bin())
+            arm = GhostArm(arm=ad.arm(), mode=res_mode,
+                           detector_x_bin=ad.detector_x_bin(),
+                           detector_y_bin=ad.detector_y_bin())
 
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
@@ -733,7 +763,28 @@ class GHOSTSpect(GHOST):
     def interpolateAndCombine(self, adinputs=None, **params):
         """
         Combine the independent orders from the input ADs into a single,
-        over-sampled spectrum
+        over-sampled spectrum.
+
+        The wavelength scale of the output is determined by finding the
+        wavelength range of the input, and generating a new
+        wavelength sampling in accordance with the ``scale`` and
+        ``oversample`` parameters.
+
+        The output spectrum is constructed as follows:
+
+        - A blank spectrum, corresponding to the new wavelength scale, is
+          initialised;
+        - For each order of the input AstroData object:
+
+            - The spectrum order is re-gridded onto the output wavelength scale;
+            - The re-gridded order is averaged with the final output spectrum
+              to form a new output spectrum.
+
+          This process continues until all orders have been averaged into the
+          final output spectrum.
+
+        Note that the un-interpolated data is kept - the interpolated data
+        is appended to the end of the file as a new extension.
 
         Parameters
         ----------
@@ -841,7 +892,7 @@ class GHOSTSpect(GHOST):
 
     def findApertures(self, adinputs=None, **params):
         """
-        Locate the slit aperture, parametrized by a :any:`polyfit` model.
+        Locate the slit aperture, parametrized by an :any:`polyfit` model.
 
         The primitive locates the slit apertures within a GHOST frame,
         and inserts a :any:`polyfit` model into a new extension on each data
@@ -850,7 +901,7 @@ class GHOSTSpect(GHOST):
         
         Parameters
         ----------
-        slitflat: str/AD/None
+        slitflat: str or :class:`astrodata.AstroData` or None
             slit flat to use; if None, the calibration system is invoked
         """
         log = self.log
@@ -941,8 +992,14 @@ class GHOSTSpect(GHOST):
         This primitive should only be applied to a reduce GHOST ARC frame. Any
         other files passed through this primitive will be skipped.
 
+        This primitive works as follows:
+        - :class:`polyfit.ghost.GhostArm` and `polyfit.extract.Extractor`
+          classes are instantiated and configured for the data;
+        - The ``Extractor`` class is used to find the line locations;
+        - The ``GhostArm`` class is used to fit this line solution to the data.
+
         The primitive will use the arc line files stored in the same location
-        as the initial :any:`polyfit` models kept in the ``lookups`` system.
+        as the initial :module:`polyfit` models kept in the ``lookups`` system.
 
         This primitive uses no special parameters.
         """
@@ -1224,7 +1281,7 @@ class GHOSTSpect(GHOST):
 
             ``sensitivity_curve``
                 This option includes the sensitivity calculated at the
-                ``responseCorrect`` step of reduction.
+                :meth:`responseCorrect <responseCorrect>` step of reduction.
         """
 
         # This should be the list of allowed detail descriptors in order of
@@ -1585,7 +1642,7 @@ class GHOSTSpect(GHOST):
         - Dividing the standard star observation (in counts or electrons per
           pixel) by
           the exposure time (in s), and then by the standard star reference
-          spectrum (in some unit of flux, e.g. erg/cm^2/s/A) gives a
+          spectrum (in some unit of flux, e.g. erg/cm:math:`^2`/s/A) gives a
           sensitivity curve in units of, in this example, counts / erg.
         - Dividing the object spectrum by the exposure time (i.e. converting 
           to counts per pixel per second) by the sensitivity curve
@@ -1809,8 +1866,9 @@ class GHOSTSpect(GHOST):
         tagged as SPECT. Rather than set parameters for that primitive to
         stop it from doing so, just override with a no-op primitive.
         
-        Note: This could go in primitives_ghost.py if the SLITV version
-        also no-ops.
+        .. note::
+            This could go in primitives_ghost.py if the SLITV version
+            also no-ops.
         """
         return adinputs
 
@@ -1824,6 +1882,12 @@ class GHOSTSpect(GHOST):
 
         This primitive will tile the SCI frames of the input images, along
         with the VAR and DQ frames if they exist.
+
+        The tiling for GHOST is much simpler than for most Gemini
+        instruments, as there are no tile gaps to account for. Data from the
+        four camera amplifiers are simply stiched together, using the
+        :class:`gempy.mosaic.mosaicData.MosaicData` and
+        :class:`gempy.mosaic.mosaicGeometry.MosaicGeometry` classes.
 
         This primitive takes no additional parameters.
         """

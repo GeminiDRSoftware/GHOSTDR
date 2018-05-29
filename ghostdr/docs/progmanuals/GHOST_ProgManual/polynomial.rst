@@ -1,3 +1,5 @@
+.. _polyfit-core:
+
 Polynomial Core Modules
 =======================
 

@@ -58,24 +58,18 @@ Issues and Limitations
 Inputs and Outputs
 ------------------
 
-This primitive does not change the input AstroData structure..
+This primitive does not change the input AstroData structure.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If the science frame and flat field BPMs have a different shape and/or
-extension structure, the primitive will kill the RecipeSystem rather than
-attempt to figure out what has gone wrong.
+None known.
 
 ``barycentricCorrect``
 ============================
@@ -87,23 +81,18 @@ attempt to figure out what has gone wrong.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+This primitive does not change the input AstroData structure.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``clipSigmaBPM``
 ============================
@@ -121,17 +110,13 @@ will be found/applied before and after
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``darkCorrect``
 ============================
@@ -143,23 +128,20 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+No changes are made to the structure of the input AstroData object.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+As mentioned above, there must be a one-to-one correspondence between the input
+AstroData objects and the list of dark files to be applied. There is currently
+no way to broadcast a single dark to multiple AstroData inputs.
 
 ``extractProfile``
 ============================
@@ -171,23 +153,27 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+After processing with this primitive, the AstroData object changes from being
+an image file to a file containing extracted flux values (i.e., uncalibrated
+spectra). The original image data is *not* retained, although it can be kept
+by forcing a ``write_result`` on the last primitive invoked before calling
+``extractProfile``.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Algorithms
 ----------
 
-Algorithm details here (if applicable)
+The concept behind :any:`polyfit <polyfit>` is described in :ref:`polyfit-core`.
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``interpolateAndCombine``
 ============================
@@ -199,23 +185,21 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+The un-interpolated spectrum data is left in place. The interpolated
+data is provided as an additional extension to the end of the input
+AstroData file.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+The only implemented wavelength scale is ``'loglinear'``. A ``'linear'`` option
+should be provided at a later date.
 
 ``findApertures``
 ============================
@@ -227,23 +211,32 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+Each extension of the input AstroData gains a new attribute, ``.XMOD``, which
+describes the polyfit model which represent the aperture locations.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Algorithms
 ----------
 
-Algorithm details here (if applicable)
+The algorithm behind generating a polyfit model is described in
+:ref:`polyfit-models`.
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+This primitive currently contains what is described as an 'attempt' to remove
+the worst cosmic rays from teh data before it is passed along to the model
+fitting routines. This is done by applying a :math:`5\times 5` median filter
+to the data, and then replacing any points which have percetage difference
+between the real data and median filter value with the median filter value.
+Furthermore, only data points above the average data value are replaced.
+Presumably, this will be removed when an improved extraction routine is
+developed, which should remove cosmic rays intrinsically.
 
 ``flatCorrect``
 ============================
@@ -255,23 +248,20 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+This primitive does not change the structure of the AstroData input(s).
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+.. warning::
+            While the primitive is working, it has been found that the
+            underlying algorithm is flawed. A new algorithm is being developed.
 
 ``formatOutput``
 ============================
@@ -283,23 +273,24 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+Additional extensions will be added to the input AstroData objects, one
+extension per requested data product.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+The options for additional data products are deliberately sequential, i.e.,
+if the user asks for the last additional data product in the reduction
+sequence, they will also get all the previous additional data products. This is
+to guarantee that the same data product will always occur at the same
+extension number in output files (given that extensions can't be explicitly
+labelled).
 
 ``responseCorrect``
 ============================
@@ -311,23 +302,19 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+This primitive does not alter the structure of the input AstroData object(s).
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+This primitive will need to be updated once the Gemini calibration service
+for flux standards becomes available.
 
 ``splitBundle``
 ============================
@@ -339,23 +326,33 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+GHOST observations come packaged in a 'bundle' FITS file, containing the
+exposure data from all instrument cameras during a given exposure. This
+primitive breaks that bundle file into its core components:
+
+- The red camera data;
+- The blue camera data;
+- Any slit viewer exposure(s) taken during the main observation.
+
+Each output uses the original bundle file name, modified to identify which
+camera it corresponds to (as well as any filename suffix passed).
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_bundle
+.. autoattribute:: GHOSTBundle.tagset
 
 Algorithms
 ----------
 
-Algorithm details here (if applicable)
+This primitive makes use of the :func:`_write_newfile <_write_newfile>` helper
+function.
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``standardizeStructure``
 ============================
@@ -364,29 +361,20 @@ If applicable.
 
 .. automethod:: ghostdr.ghost.primitives_ghost_spect.GHOSTSpect.standardizeStructure
 
-Inputs and Outputs
-------------------
-
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``tileArrays``
 ============================
+
 
 :class:`ghostdr.ghost.primitives_ghost_spect.GHOSTSpect`
 
@@ -395,23 +383,21 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+The four individual image extensions of the input AstroData object(s) are
+stitched together into a single image frame.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_spect
+.. autoattribute:: GHOSTSpect.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+This primitive contains an internal hepler function, ``simple_mosaic_function``,
+to do the actual tiling. This function will (probably) be placed somewhere in
+the higher-level Gemini primitives at a later date.
 
 **********************
 Calibration Primitives
@@ -427,23 +413,18 @@ Calibration Primitives
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+The structure of the input slit images is not changed.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_slit
+.. autoattribute:: GHOSTSlit.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``fitWavelength``
 ============================
@@ -455,23 +436,26 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+The arc file data extension(s) will gain a new attribute, ``.WFIT``, which
+stores the wavelength solution.
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_slit
+.. autoattribute:: GHOSTSlit.tagset
 
 Algorithms
 ----------
 
-Algorithm details here (if applicable)
+.. note::
+   This needs to point to the ``read_lines_and_fit`` documentation when it
+   exists.
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``processSlits``
 ============================
@@ -483,23 +467,18 @@ If applicable.
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
+This primitve does not change the structure of the input AstroData object(s).
 
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_slit
+.. autoattribute:: GHOSTSlit.tagset
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``stackFrames``
 ============================
@@ -517,7 +496,8 @@ will be found/applied before and after
 AstroData Tag(s)
 -----------------
 
-List the types/tags (or sets of tags)
+.. currentmodule:: ghostdr.ghost.primitives_ghost_slit
+.. autoattribute:: GHOSTSlit.tagset
 
 Algorithms
 ----------

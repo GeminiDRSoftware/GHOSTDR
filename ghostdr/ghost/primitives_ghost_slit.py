@@ -36,6 +36,21 @@ class GHOSTSlit(GHOST):
         viewer image (taken from the current stream) with their equivalents
         from the median frame of those images.
 
+        Cosmic rays are detected via the following algorithm:
+
+        - The median and 'median absolute deviation' (:func:`_mad <_mad>`) is
+          computed  for each pixel across all slit viewer frames in the stream;
+        - For each slit viewer frame in the stream, a pixel is replaced by the
+          corresponding median value if the pixel's deviation from the
+          corresponding median is greater than some threshold (currently,
+          this is hard-coded to be 20 times the median absolute deviation
+          for that pixel).
+
+        Total image fluxes (computed by
+        :func:`_total_obj_func <_total_obj_func>`)
+        before and after pixel replacement are recorded
+        in the log file, but not the file header.
+
         Parameters
         ----------
         suffix: str
@@ -52,7 +67,7 @@ class GHOSTSlit(GHOST):
         for ad in adinputs:
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
-                            "already been processed by correctSlitCosmics".
+                            "already been processed by CRCorrect".
                             format(ad.filename))
                 continue
 
@@ -110,8 +125,26 @@ class GHOSTSlit(GHOST):
 
     def processSlits(self, adinputs=None, **params):
         """
-        Compute the mean exposure epoch for an input SLITV image
-        (time series of slit-viewer images) and write it into the PHU
+        Compute and record the mean exposure epoch for a slit viewer image
+
+        The 'slit viewer image' for each observation will almost certainly
+        be a sequence of short exposures of the slit viewer camera,
+        collected together for convenience. However, it cannot be guaranteed
+        that slit viewer exposures will be taken throughout an entire
+        science exposure; therefore, it is necessary to be able to compute
+        the mean exposure epoch (i.e. the effective time that the combined
+        slit viewer exposures were taken at). This allows a single science
+        observation to be calibrated using multiple packets of slit viewer
+        exposures, with appropriate weighting for the time delay between them.
+
+        ``processSlits`` effectively computes a weighted average of the
+        exposure epoch of all constituent slit viewer exposures, taking into
+        account:
+
+        - Length of each exposure;
+        - Whether there is any overlap between the start/end of the
+          exposure and the start/end of the overall 'image';
+        - Time of each exposure, relative to the start of the 'image'.
 
         Parameters
         ----------
@@ -215,6 +248,15 @@ class GHOSTSlit(GHOST):
         """
         Combines all the extensions in a slit-viewer frame(s) into a single-
         extension AD instance.
+
+        This primitive wraps the higher level
+        :meth:`geminidr.core.primitives_stack.Stack.stackFrames` primitive,
+        but rather than stacking separate files to form a combined file,
+        it is used to stack the extensions within each slit viewer 'image'
+        (collection of exposures).
+
+        This primitive can accept the same parameter set as
+        :meth:`geminidr.core.primitives_stack.Stack.stackFrames`.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
