@@ -8,7 +8,7 @@ be undertaken by Gemini Observatory staff.
    :numbered:
    :maxdepth: 2
 
-   polyfit
+   polyfit-newmods
    utils
 
 

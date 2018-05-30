@@ -99,6 +99,11 @@ def _write_newfile(extns, suffix, base, log):
     log : AstroData logging object
         Log for recording actions. This should be the log in use in the calling
         primitive.
+
+    Raises
+    ------
+    AssertionError
+        If the ``extns`` parameter is :any:`None`, or empty
     """
     assert extns and len(extns) > 0
     n = astrodata.create(copy.deepcopy(base.header[0]))

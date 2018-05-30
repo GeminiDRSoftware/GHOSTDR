@@ -1958,6 +1958,21 @@ class GHOSTSpect(GHOST):
         Gets the filename of the relevant initial polyfit file for this
         input GHOST science image
 
+        This primitive uses the arm, resolution mode and observing epoch
+        of the input AstroData object to determine the correct initial
+        polyfit model to provide. The model provided matches the arm and
+        resolution mode of the data, and is the most recent model generated
+        before the observing epoch.
+
+        Parameters
+        ----------
+        ad : :class:`astrodata.AstroData`
+            AstroData object to return the relevant initial model filename for
+        caltype : str
+            The initial model type (e.g. ``'rotmod'``, ``'spatmod'``, etc.)
+            requested. An :any:`AttributeError` will be raised if the requested
+            model type does not exist.
+
         Returns
         -------
         str/None:
@@ -2015,7 +2030,8 @@ class GHOSTSpect(GHOST):
         The correction will be computed for all extensions of the input
         AstroData object.
 
-        This method is built using astropy v2, and is developed from:
+        This method is built using :py:mod:`astropy <astropy>` v2, and is
+        developed from:
         https://github.com/janerigby/jrr/blob/master/barycen.py
 
 
@@ -2080,7 +2096,14 @@ class GHOSTSpect(GHOST):
         """
         Request the 'before' or 'after' arc for the passed ad object.
 
+        For maximum accuracy in wavelength calibration, GHOST data is calibrated
+        the two arcs taken immediately before and after the exposure. However,
+        the Gemini calibration system is not rigged to perform such logic (it
+        can return multipled arcs, but cannot guarantee that they straddle
+        the observation in time).
+
         This helper function works by doing the following:
+
         - Append a special header keyword, 'ARCBEFOR', to the PHU. This keyword
           will be True if a before arc is requested, or False if an after arc
           is wanted.
@@ -2096,7 +2119,7 @@ class GHOSTSpect(GHOST):
         before : bool
             Denotes whether to ask for the most recent arc before (True) or
             after (False) the input AD was taken. Defaults to None, at which
-            point an error will be thrown.
+            point :any:`ValueError` will be thrown.
 
         Returns
         -------
@@ -2120,7 +2143,14 @@ class GHOSTSpect(GHOST):
                       interp='linear'):
         """
         'Re-grid' a one-dimensional input spectrum by performing simple
-        interpolation on the data
+        interpolation on the data.
+
+        This function performs simple linear interpolation between points
+        on the old wavelength grid, moving the data onto the new
+        wavelength grid. It makes no attempt to be, e.g., flux-conserving.
+
+        The interpolation is performed by
+        :any:`scipy.interpolate.interp1d <scipy.interpolate.interp1d>`.
 
         Parameters
         ----------
@@ -2170,6 +2200,8 @@ class GHOSTSpect(GHOST):
         This is a more robust procedure than :meth:`_interp_spect`, and is
         designed for data with a wavelength dependence in the data units
         (e.g. erg/cm^2/s/A or similar).
+
+        This function utilises the :any:`pysynphot` package.
 
         This function has been adapted from:
         http://www.astrobetter.com/blog/2013/08/12/python-tip-re-sampling-spectra-with-pysynphot/

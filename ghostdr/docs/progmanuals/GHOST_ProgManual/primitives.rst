@@ -523,26 +523,10 @@ be called as primitives by end users.
 
 .. automethod:: ghostdr.ghost.primitives_ghost_spect.GHOSTSpect._compute_barycentric_correction
 
-Inputs and Outputs
-------------------
-
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
-AstroData Tag(s)
------------------
-
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
-
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``_get_polyfit_filename``
 ============================
@@ -551,26 +535,12 @@ If applicable.
 
 .. automethod:: ghostdr.ghost.primitives_ghost_spect.GHOSTSpect._get_polyfit_filename
 
-Inputs and Outputs
-------------------
-
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
-AstroData Tag(s)
------------------
-
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
-
 Issues and Limitations
 ----------------------
 
-If applicable.
+By necessity, information about the ``lookups`` system structure that the
+polyfit models reside in is hard-coded into the function.
+
 
 ``_interp_spect``
 ============================
@@ -579,26 +549,10 @@ If applicable.
 
 .. automethod:: ghostdr.ghost.primitives_ghost_spect.GHOSTSpect._interp_spect
 
-Inputs and Outputs
-------------------
-
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
-AstroData Tag(s)
------------------
-
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
-
 Issues and Limitations
 ----------------------
 
-If applicable.
+As mentioned above, no attempt is made to be flux-conserving.
 
 ``_mad``
 ============================
@@ -606,26 +560,10 @@ If applicable.
 .. currentmodule:: ghostdr.ghost.primitives_ghost_slit
 .. autofunction:: _mad
 
-Inputs and Outputs
-------------------
-
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
-AstroData Tag(s)
------------------
-
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
-
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``_rebin_ghost_ad``
 ============================
@@ -634,26 +572,17 @@ If applicable.
 
 .. automethod:: ghostdr.ghost.primitives_ghost.GHOST._rebin_ghost_ad
 
-Inputs and Outputs
-------------------
-
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
-AstroData Tag(s)
------------------
-
-List the types/tags (or sets of tags)
-
 Algorithms
 ----------
 
-Algorithm details here (if applicable)
+This function performs the binning by re-shaping the input data array such that
+the data points to be added are in the same axes, and then sequentially
+summing along those axes.
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``_regrid_spect``
 ============================
@@ -662,26 +591,11 @@ If applicable.
 
 .. automethod:: ghostdr.ghost.primitives_ghost_spect.GHOSTSpect._regrid_spect
 
-Inputs and Outputs
-------------------
-
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
-AstroData Tag(s)
------------------
-
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
-
 Issues and Limitations
 ----------------------
 
-If applicable.
+The :py:mod:`pysynphot` package currently generates some concerning-looking
+warnings at package load; however, it still seems to work.
 
 ``_request_bracket_arc``
 ============================
@@ -690,26 +604,10 @@ If applicable.
 
 .. automethod:: ghostdr.ghost.primitives_ghost_spect.GHOSTSpect._request_bracket_arc
 
-Inputs and Outputs
-------------------
-
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
-AstroData Tag(s)
------------------
-
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
-
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``_total_obj_flux``
 ============================
@@ -717,17 +615,6 @@ If applicable.
 .. currentmodule:: ghostdr.ghost.primitives_ghost_slit
 .. autofunction:: _total_obj_flux
 
-Inputs and Outputs
-------------------
-
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
-AstroData Tag(s)
------------------
-
-List the types/tags (or sets of tags)
-
 Algorithms
 ----------
 
@@ -736,7 +623,7 @@ Algorithm details here (if applicable)
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.
 
 ``_write_newfile``
 ============================
@@ -744,26 +631,13 @@ If applicable.
 .. currentmodule:: ghostdr.ghost.primitives_ghost_bundle
 .. autofunction:: _write_newfile
 
-.. automodule:: ghostdr.ghost.primitives_ghost_bundle
-   :members: _write_newfile
-
 Inputs and Outputs
 ------------------
 
-Describe state of file before and after processing, including which types/tags
-will be found/applied before and after
-
-AstroData Tag(s)
------------------
-
-List the types/tags (or sets of tags)
-
-Algorithms
-----------
-
-Algorithm details here (if applicable)
+Be aware that this function does write files to disk directly (instead of
+returning a file object the calling code can use to write later on).
 
 Issues and Limitations
 ----------------------
 
-If applicable.
+None known.

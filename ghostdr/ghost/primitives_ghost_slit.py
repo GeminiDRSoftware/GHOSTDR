@@ -305,7 +305,13 @@ def _mad(data, axis=None):
     """
     Median Absolute Deviation: a "Robust" version of standard deviation.
 
-    Indices variabililty of the sample:
+    The median absolute deviation of a sample if the median of data devations
+    from the data median:
+
+    .. math::
+        \\textrm{MAD} = \\textrm{median} ( | X_i - \\textrm{median}(X) | )
+
+    For further details, see:
     https://en.wikipedia.org/wiki/Median_absolute_deviation
 
     Parameters
@@ -327,18 +333,21 @@ def _total_obj_flux(res, data, flat_data=None):
     """
     Combined red/blue object flux calculation.
 
-    Uses the slitview object to
-    determine (potentially sky-subtracted) object profiles. In high-resolution
-    mode, the arc profile is returned as an "object" profile, so we discard
+    Uses the :any:`polyfit.slitview.SlitView` object to
+    determine (potentially sky-subtracted) total object flux. In high-resolution
+    mode, the concurrent arc profile is returned as an "object" profile,
+    so we discard
     it explicitly from this calculation.
+
+    Sky subtraction occurs if the ``flat_data`` parameter is not :any:`None`.
 
     Parameters
     ----------
     res: string
         Either ``'high'`` or ``'std'``.
-    data: np.ndarray
-        The slit viewer image data from which to extract the object profiles.
-    flat_data: np.ndarray/None
+    data: :class:`numpy.ndarray`
+        The slit viewer image data from which to extract the object profiles
+    flat_data: :class:`numpy.ndarray`/None
         The bias-/dark-corrected slit view flat field image used to determine
         sky background levels (may be ``None`` if sky subtraction not
         needed).

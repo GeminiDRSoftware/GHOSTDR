@@ -1,4 +1,5 @@
-"""Given (x,wave,matrices, slit_profile), extract the flux from each order.
+"""
+Given (x,wave,matrices, slit_profile), extract the flux from each order.
 """
 
 from __future__ import division, print_function

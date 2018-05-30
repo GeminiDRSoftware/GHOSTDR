@@ -9,6 +9,7 @@ This chapter compiles detailed documentation for the polyfit core modules contai
    :numbered:
    :maxdepth: 2
 
+   polyfit
    ghost
    polyspect
    
