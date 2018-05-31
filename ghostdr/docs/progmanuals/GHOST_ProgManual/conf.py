@@ -258,12 +258,16 @@ intersphinx_mapping = {
     'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None,),
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
     'dragons': ('http://dragons-recipe-system-users-manual.readthedocs.io/en/latest/index.html', None),
+    'matplotlib': ('https://matplotlib.org/users', None),
     'pysynphot': ('http://pysynphot.readthedocs.io/en/latest/', None),
     'python': ('https://docs.python.org/2.7', None),
 }
 
 # Activate the todos
 todo_include_todos=True
+
+# Put in class __init__ documentation
+autoclass_content = "both"
 
 # Adding style in order to have the todos show up in a red box.
 def setup(app):

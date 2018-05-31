@@ -1,10 +1,3 @@
-.. automodule:: ghostdr.ghost.polyfit.extract
-    :members:
-
-    .. autoclass:: Extractor
-        :show-inheritance:
-        :members:
-
 .. _polyfit-models:
 
 Generating New ``Polyfit`` Models

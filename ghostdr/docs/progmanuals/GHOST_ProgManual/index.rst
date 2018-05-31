@@ -17,8 +17,9 @@ GHOST Programmer's Manual
    recipes
    primitives
    tests
-   config
+   polyfit
    polynomial
+   config
 
 
 Indices and tables

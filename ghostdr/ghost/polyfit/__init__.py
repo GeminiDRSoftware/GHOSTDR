@@ -1,7 +1,9 @@
 
 # coding: utf-8
 
-""" A Python tool for modelling GHOST data in a polynomial fashion """
+"""
+A Python tool for modelling GHOST data in a polynomial fashion.
+"""
 
 __author__ = "Michael Ireland <michael.ireland@anu.edu.au> and " \
              "Joao Bento <joao.bento@anu.edu.au>"

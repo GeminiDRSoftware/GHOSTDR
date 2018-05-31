@@ -1,26 +1,25 @@
 """
-Simulate GHOST/Veloce instruments
+Simulate GHOST/Veloce instrument observations.
 
 This is a simple simulation code for GHOST or Veloce,
-with a class ARM that simulates
+with a class :class:`GhostArm` that simulates
 a single arm of the instrument. The key default parameters
 are hardwired for each named
-configuration in the __init__ function of ARM.
+configuration in the :func:`__init__ <GhostArm.__init__>` function of ARM.
 
 Note that in this simulation code, the 'x' and 'y' directions are the
-along-slit and dispersion directions respectively...
-(similar to physical axes) but by convention, images are returned/displayed
- with a vertical slit and a horizontal dispersion direction.
+along-slit and dispersion directions respectively
+(similar to physical axes), but by convention, images are returned/displayed
+with a vertical slit and a horizontal dispersion direction.
 
-For a simple simulation, run:
+For a simple simulation, run, e.g.::
 
-import pymfe
-
-blue = pymfe.ghost.Arm('blue')
-
-blue.simulate_frame()
+    import pymfe
+    blue = pymfe.ghost.Arm('blue')
+    blue.simulate_frame()
 
 TODO:
+
 1) Add spectrograph aberrations (just focus and coma)
 2) Add pupil illumination plus aberrations.
 """
@@ -28,43 +27,75 @@ from __future__ import division, print_function
 import numpy as np
 from .polyspect import Polyspect
 
+
 class GhostArm(Polyspect):
     """
     Class representing an arm of the spectrograph.
 
     A class for each arm of the spectrograph. The initialisation
     function takes a series of strings representing the configuration.
-    It can be "red" or "blue" for the arm (first string),
-    and "std" or "high" for the mode (second string).
+    It can be ``"red"`` or ``"blue"`` for the arm (first string),
+    and ``"std"`` or ``"high"`` for the mode (second string).
+
+    This class initialises and inherits all attributes and
+    methods from Polyspect, which is the module that contains all spectrograph
+    generic functions.
     """
 
     def __init__(self, arm='blue', mode='std',
-                 detector_x_bin = 1, detector_y_bin = 1 ):
+                 detector_x_bin=1, detector_y_bin=1):
         """
-        Initialisation function that sets all the mode specific parameters
-        related to each configuration of the spectrograph.
+        The class initialisation takes the arm, resolution mode and binning
+        modes as inputs and defines all needed attributes.
+
+        It starts by initialising the :any:`Polyspect` class with the correct
+        detector sizes ``szx`` and ``szy``, order numbers (``m_min``, ``m_max``)
+        and whether the CCD is transposed. Transposed in this case implies that
+        the spectral direction is in the x axis of the CCD image, which is the
+        case for the GHOST data.
+
+        Most of the parameters sent to the
+        :class:`PolySpect <polyfit.polyspect.PolySpect>` initialization function
+        are self-explanatory, but here is a list of those
+        that may not be:
+
+        +------------------------------+---------------------------------------+
+        | **Variable Name**            | **Purpose/meaning**                   |
+        +------------------------------+---------------------------------------+
+        | ``m_ref``, ``m_min`` and     | Reference, minimum and maximum order  |
+        | ``m_max``                    | indices for the camera.               |
+        +------------------------------+---------------------------------------+
+        | ``szx`` and ``szy``          | Number of pixels in the x and y       |
+        |                              | directions                            |
+        +------------------------------+---------------------------------------+
+        | ``nlenslets``                | Number of lenslets in the IFU         |
+        +------------------------------+---------------------------------------+
+        | ``lenslet_high_size`` and    | Unused                                |
+        | ``lenslet_std_size``         |                                       |
+        +------------------------------+---------------------------------------+
         
         Attributes
         ----------
-        
         arm: str
-            Which arm of the GHOST spectrograph is to be initialized.
+            Which arm of the GHOST spectrograph is to be initialized. Can be
+            ``'red'`` or ``'blue'``.
         spect: str
-            Which spectrograph in usage.
+            Which spectrograph in usage. Defaults to ``'ghost'``.
         lenslet_high_size: int
-            Lenslet flat-to-flat in microns for high mode
+            Lenslet flat-to-flat in microns for high mode. Defaults to
+            ``118.0```.
         lenslet_std_size: int
-            Lenslet flat-to-flat in microns for standard mode
+            Lenslet flat-to-flat in microns for standard mode. Defaults to
+            ``197.0``.
         mode: str
-            Resolution mode.
+            Resolution mode. Can be either ``'std'`` or ``'high'``.
         nlenslets: int
-            number of lenslets of the IFU
-        ccdsum: str
-            The binning as present in the header keywords of the data.
+            Number of lenslets of the IFU. This value is set depending on
+            whether ``mode`` is ``'std'`` (17) or ``'high'`` (28).
         detector_x_bin: int, optional
-            The x binning of the detector
+            The x binning of the detector. Defaults to 1.
         detector_y_bin: int, optional
-            The y binning of the detector
+            The y binning of the detector. Defaults to 1.
         """
         if arm == 'red':
             Polyspect.__init__(self, m_ref=50, szx=6144, szy=6160, m_min=34,
@@ -97,34 +128,49 @@ class GhostArm(Polyspect):
             print("Unknown mode!")
             raise UserWarning
 
-    def bin_data(self,data):
+    def bin_data(self, data):
         """
+        Generic data binning function.
+
         Generic function used to create a binned equivalent of a
-        spectrograph image array for the purposes of equivalent extraction. 
+        spectrograph image array for the purposes of equivalent extraction.
+        Data are binned to the binning specified by the class attributes
+        ``detector_x_bin`` and ``detector_y_bin``.
+
+        This function is mostly used to re-bin calibration images (flat,
+        arc, etc) to the binning of related science data prior to performing
+        extraction.
+
+        .. note::
+            This function is now
+            implemented elsewhere as the
+            :any:`ghost.primitives_ghost.GHOST._rebin_ghost_ad`
+            method in the :any:`ghost.primitives_ghost.GHOST` primtive class,
+            and takes care of all the binning.
 
         Parameters
         ----------
-        data: :obj:`numpy.ndarray'
+        data: :obj:`numpy.ndarray`
             The (unbinned) data to be binned
         
         Raises
         ------
-        UserWarning: 
-            If the data provided is not consistent with CCD size. i.e: not
+        UserWarning
+            If the data provided is not consistent with CCD size, i.e., not
             unbinned
 
         Returns
         -------
-        binned_array: :obj:`numpy.ndarray'
-            The binned data
+        binned_array: :obj:`numpy.ndarray`
+            Re-binned data.
         """
         if data.shape != (self.szx, self.szy):
             raise UserWarning('Input data for binning is not in the expected'
                               'format')
-        
+
         if self.xbin == 1 and self.ybin == 1:
             return data
-        
+
         rows = self.xbin
         cols = self.ybin
         binned_array = data.reshape(int(data.shape[0] / rows),
@@ -139,8 +185,57 @@ class GhostArm(Polyspect):
         Convolve a flat field image and a slit profile image.
 
         Function that takes a flat field image and a slit profile and
-        convolves the two in 2D. Returns result of convolution, which
-        should be used for tramline fitting.
+        convolves them in two dimensions. Returns result of the convolution,
+        which should be used for tramline fitting (WHICH FUNCTION???).
+
+        This function is key towards determining the centre of each order.
+        Given the potentially overlapping nature of fiber images in flat field
+        frames, a convolution method is employed with a sampled slit profile,
+        in which the center of the order will, ideally, match the profile best
+        and reveal the maximum of the convolution.
+
+        A convolution map is then fed into a fitting function where the location
+        of the maxima in the map are found, and a model is fit to determine a
+        continuous function describing the centre of the orders.
+
+        This function starts by taking a Fourier transform of the flat field
+        in the line::
+
+          # Fourier transform the flat for convolution
+          im_fft = np.fft.rfft(flat, axis=0)
+
+        It then proceeds to create a linear space for which orders to be
+        evaluated::
+
+          orders = np.linspace(self.m_min, self.m_max, num_conv).astype(int)
+
+        Then a convolution is done in 2D by interpolating the magnified slit
+        profile with the slit coordinates, normalising it and inverse Fourier
+        transforming the product between the flat transform and the shifted slit
+        profile::
+
+          # Create the slit model.
+          mod_slit = np.interp(profilex*spat_scale[i], slit_coord, slit_profile)
+
+          # Normalise the slit model and Fourier transform for convolution
+          mod_slit /= np.sum(mod_slit)
+          mod_slit_ft = np.fft.rfft(np.fft.fftshift(mod_slit))
+
+          flat_conv_cube[j, :, i] = np.fft.irfft((im_fft[:, i] * mod_slit_ft)/num_conv)
+
+        Now, we have the convolution at ``num_conv`` locations, and the final
+        result is an interpolation between these.
+
+        .. note::
+
+            The function currently contains code related to convoling with a
+            fixed synthetic profile, which is not used. This is legacy code and
+            sometimes used only for testing purposes. The normal usage is to
+            have the spatial scale model parameters as inputs which determine
+            the slit magnification as a function of order and pixel along the
+            orders. The flat convolution is done using only a smaller number of
+            orders (defaults to 3) and interpolated over the others but could in
+            principle be done with all orders considered.
 
         Parameters
         ----------
@@ -158,7 +253,7 @@ class GhostArm(Polyspect):
             Required if slit_profile is not None.
         
         microns_pix: float, optional
-            The slit scale in microns per pixel
+            The slit scale in microns per pixel.
             Required if slit_profile is not None.
             
         xpars:  :obj:`numpy.ndarray`, optional
@@ -193,7 +288,7 @@ class GhostArm(Polyspect):
                 profile_sigma = 0.7
         elif self.arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
-            #self.extra_rot = 2.0
+            # self.extra_rot = 2.0
 
             # Now put in the default fiber profile parameters for each mode.
             # These are used by the convolution function on polyspect
@@ -209,7 +304,7 @@ class GhostArm(Polyspect):
 
         # Fourier transform the flat for convolution
         im_fft = np.fft.rfft(flat, axis=0)
-        
+
         # Create a x baseline for convolution 
         xbase = flat.shape[0]
         profilex = np.arange(xbase) - xbase // 2
@@ -218,9 +313,9 @@ class GhostArm(Polyspect):
         # defined above.
         if slit_profile is None:
             flat_conv = np.zeros_like(im_fft)
-            
+
             # At this point create a slit profile
-            
+
             # Now create a model of the slit profile
             mod_slit = np.zeros(xbase)
             if self.mode == 'high':
@@ -229,12 +324,12 @@ class GhostArm(Polyspect):
                 nfibers = self.nlenslets
 
             for i in range(-(nfibers // 2), -(nfibers // 2) + nfibers):
-                mod_slit += np.exp(-(profilex - i * fiber_separation)**2 /
-                                   2.0 / profile_sigma**2)
+                mod_slit += np.exp(-(profilex - i * fiber_separation) ** 2 /
+                                   2.0 / profile_sigma ** 2)
             # Normalise the slit model and fourier transform for convolution
             mod_slit /= np.sum(mod_slit)
             mod_slit_ft = np.fft.rfft(np.fft.fftshift(mod_slit))
-            
+
             # Now convolved in 2D
             for i in range(im_fft.shape[1]):
                 flat_conv[:, i] = im_fft[:, i] * mod_slit_ft
@@ -246,30 +341,31 @@ class GhostArm(Polyspect):
         else:
             flat_conv = np.zeros_like(flat)
             flat_conv_cube = np.zeros((num_conv, flat.shape[0], flat.shape[1]))
-            
+
             # Our orders that we'll evaluate the spatial scale at:
             orders = np.linspace(self.m_min, self.m_max, num_conv).astype(int)
             mprimes = self.m_ref / orders - 1
             y_values = np.arange(self.szy)
-            
+
             # The slit coordinate in microns
             slit_coord = (np.arange(len(slit_profile)) -
-                          len(slit_profile)//2) * microns_pix
+                          len(slit_profile) // 2) * microns_pix
 
             x_map = np.empty((len(mprimes), self.szy))
-            
+
             # Now convolved in 2D
             for j, mprime in enumerate(mprimes):
-            # The spatial scales
-                spat_scale = self.evaluate_poly(spatpars)[orders[j]-self.m_min]
-                
+                # The spatial scales
+                spat_scale = self.evaluate_poly(spatpars)[
+                    orders[j] - self.m_min]
+
                 # The x pixel values, just for this order
-                x_map[j] = self.evaluate_poly(xpars)[orders[j]-self.m_min]
+                x_map[j] = self.evaluate_poly(xpars)[orders[j] - self.m_min]
                 for i in range(im_fft.shape[1]):
                     # Create the slit model.
-                    mod_slit = np.interp(profilex*spat_scale[i], slit_coord,
+                    mod_slit = np.interp(profilex * spat_scale[i], slit_coord,
                                          slit_profile)
-                    
+
                     # Normalise the slit model and Fourier transform for
                     # convolution
                     mod_slit /= np.sum(mod_slit)
@@ -277,18 +373,18 @@ class GhostArm(Polyspect):
                     # FIXME: Remove num_conv on next line and see if it makes
                     # a difference!
                     flat_conv_cube[j, :, i] = np.fft.irfft(
-                        (im_fft[:, i] * mod_slit_ft)/num_conv
+                        (im_fft[:, i] * mod_slit_ft) / num_conv
                     )
-            
+
             # Work through every y coordinate and interpolate between the
             # convolutions with the different slit profiles.
-            x_ix = np.arange(flat.shape[0]) - flat.shape[0]//2
+            x_ix = np.arange(flat.shape[0]) - flat.shape[0] // 2
 
             # Create an m index, and reverse x_map if needed.
             # FIXME: This assumes a minimum size of x_map which should be
             # checked above, i.e. mprimes has 2 or more elements.
             m_map_ix = np.arange(len(mprimes))
-            if x_map[1,0] < x_map[0,0]:
+            if x_map[1, 0] < x_map[0, 0]:
                 m_map_ix = m_map_ix[::-1]
                 x_map = x_map[::-1]
             for i in range(im_fft.shape[1]):
@@ -302,6 +398,6 @@ class GhostArm(Polyspect):
                 for j in range(len(mprimes)):
                     weight = (m_ix_lo == j) * (1 - m_ix_frac) + (
                             m_ix_hi == j) * m_ix_frac
-                    flat_conv[:,i] += weight * flat_conv_cube[j, :, i]
-            
+                    flat_conv[:, i] += weight * flat_conv_cube[j, :, i]
+
         return flat_conv

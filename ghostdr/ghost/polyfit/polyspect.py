@@ -1,6 +1,14 @@
-"""This is a simple simulation and extraction definition code for RHEA.
-The key is to use Tobias's spectral fitting parameters and define
-the same kinds of extraction arrays as pyghost.
+"""
+Common tools for a generic spectrograph.
+
+This code was originally written as a simple simulation/extraction
+definition code for the RHEA instrument.
+
+..
+    ORIGINAL DOCSTRING
+    This is a simple simulation and extraction definition code for RHEA.
+    The key is to use Tobias's spectral fitting parameters and define
+    the same kinds of extraction arrays as pyghost.
 """
 from __future__ import division, print_function
 
@@ -24,11 +32,35 @@ class Polyspect(object):
     This class should be inherited by the specific spectrograph module.
     Contains functions related to polynomial modelling of spectrograph orders.
 
+    The class initialisation takes a series of inputs that define the
+    spectrograph orders and orientation. Most of the parameters are
+    self-explanatory, but here is a list of those that may not be:
+
+    +------------------------------+-------------------------------------------+
+    | **Variable Name**            | **Purpose and meaning**                   |
+    +------------------------------+-------------------------------------------+
+    | ``m_ref``, ``m_min`` and     | Reference, minimum and maximum order      |
+    | ``m_max``                    | indices for the camera.                   |
+    +------------------------------+-------------------------------------------+
+    | ``szx`` and ``szy``          | number of pixels in the x and y directions|
+    +------------------------------+-------------------------------------------+
+    | ``transpose``                | Whether the CCD orientation is transposed,|
+    |                              | e.g. if the spectral direction is along y.|
+    +------------------------------+-------------------------------------------+
+    | ``x_map`` and                | The spatial and wavelength maps of the    |
+    | ``w_map``                    | CCD. These are populated by               |
+    |                              | :any:`spectral_format_with_matrix`        |
+    +------------------------------+-------------------------------------------+
+    | ``blaze`` and                | The blaze function and rotation matrices. |
+    | ``matrices``                 | These are populated by                    |
+    |                              | :any:`spectral_format_with_matrix`        |
+    +------------------------------+-------------------------------------------+
+
     Attributes
     ----------
     m_ref: int
-        The reference order, typically whatever order number is the middle of
-        the range of orders on the CCD
+        The reference order, typically whatever order number is the middle
+        of the range of orders on the CCD
     szx: int
         The number of CCD pixels in the x direction
     szy: int
@@ -38,26 +70,21 @@ class Polyspect(object):
     m_max: int
         The highest order number
     transpose: bool
-        Boolean on whether the CCD is transposed relative to x in the spectral
-        direction and y in the spatial.
+        Boolean; whether the CCD is transposed relative to x in the
+        spectral direction and y in the spatial.
     x_map: :obj:`numpy.ndarray`
-        This is the [n_orders x spectral_pixels] array containing the x value
-        along each order
-    w_map: :obj: `numpy.ndarray`
+        This is the [n_orders x spectral_pixels] array containing the x
+        value along each order
+    w_map: :obj:`numpy.ndarray`
         Wavelength scale map. Same shape as x_map
-    blaze: :obj: `numpy.ndarray`
+    blaze: :obj:`numpy.ndarray`
         Blaze angle map. Same shape as x_map
     matrices: :obj:`numpy.ndarray`
         Rotation matrices as a function of pixel in the spectral direction
-        for all orders. 
-    
+        for all orders.
     """
 
     def __init__(self, m_ref, szx, szy, m_min, m_max, transpose):
-        """
-        Initialization function for the Polyspect class
-        """
-
         # All necessary parameters are listed here and initialized by the
         # parent class
         self.m_ref = m_ref
@@ -80,14 +107,20 @@ class Polyspect(object):
         returns the evaluated polynomials in all spatial pixels
         for all orders.
 
-        Notes
-        -----
-        This is a function designed to avoid code repetition.
+        This function is the key function that enables polynomial
+        descriptions of the various aspects of the spectrograph to work. In its
+        simplest form, this function converts the polynomial coefficients into
+        values as a function of y pixel and spectrograph order. The optional
+        ``data`` input is only provided if the desired structure of the output
+        is not the default (orders, szy) evaluation at all points.
+
+        This function is designed such that any set of polynomial coefficients
+        can be given and the evaluation will take place.
 
         See Also
         --------
-        The :any:`spectral_format` and :any:`fit_resid` functions make use of
-        this tool for simplicity.
+        :meth:`spectral_format`
+        :meth:`fit_resid`
 
         Parameters
         ----------
@@ -103,7 +136,7 @@ class Polyspect(object):
         Raises
         ------
         TypeError
-            If required input :any:`params` is not provided.
+            If required input ``params`` is not provided.
         
         Returns
         -------
@@ -156,12 +189,17 @@ class Polyspect(object):
     def fit_resid(self, params, orders, y_values, data, ydeg=3, xdeg=3,
                   sigma=None):
         """
-        A fit function for :any:`read_lines_and_fit`.
+        A fit function for :meth:`read_lines_and_fit` and :meth:`fit_to_x`.
 
         This function is to be used in :any:`scipy.optimize.leastsq` as the
         minimization function.
         The same function is used in :any:`fit_to_x`, but in that case
         "waves" is replaced by "xs".
+
+        This function was initially designed for the wavelength fit only, but
+        later generalised for both wavelength and order position fitting. The
+        variable names are still named with the wavelength fitting mindset, but
+        the principle is the same.
 
         Parameters
         ----------
@@ -169,7 +207,7 @@ class Polyspect(object):
         params: :obj:`numpy.ndarray` array
             2D array containing the polynomial coefficients that will form the
             model to be compared with the real data.
-        orders: int array
+        orders: :obj:`array`, data type int
             The order numbers for the residual fit repeated ys times.
         y_values: :obj:`numpy.ndarray` array
             This is an orders x y sized array with pixel indices on y direction
@@ -213,44 +251,41 @@ class Polyspect(object):
 
     def read_lines_and_fit(self, init_mod, arclines, ydeg=3, xdeg=3):
         """
-        Read text files containing order information and fit to them.
+        Fit to an array of spectral data using an initial model parameter set.
 
-        Read in a series of text files that have a (Wavelength, pixel)
-        format, and file names like order99.txt, order100.txt, etc.
-        Fit an nth order polynomial to the wavelength as a function
-        of pixel value.
+        This function takes an initial wavelength scale guess and a list of
+        actual arc lines and their wavelengths, sets up the least squares
+        minimisation and fits to the measured positions of the arc lines by the
+        ``find_lines`` function in the :doc:`extract` module.
 
         The functional form of the polynomial of polynomials is:
 
-        ..math::
+        .. math::
 
-            wave = p_0(m) + p_1(m)*y' + p_2(m)*y'^2 + ...)
+            \\textrm{wave} = p_0(m) + p_1(m)\\times y^\\prime + p_2(m)\\times y'^{2} + ...\\textrm{,}
 
-        with :math: `y^{prime} = y - y_{\rm middle}`, and:
+        with :math:`y^{\\prime} = y - y_{\\textrm{middle}}`, and:
 
         .. math::
 
-            p_0(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ...
+            p_0(m) = q_{00} + q_{01} \\times m' + q_{02} \\times m'^2 + ...\\textrm{,}
 
-        with :math: `m^{prime} = m_{\rm ref}/m - 1`
+        with :math:`m' = m_{\\rm ref}/m - 1`.
 
-        This means that the simplest spectrograph model should have:
-        :math: `q_{00}` : central wavelength of order m_ref
-        :math: `q_{01}` : central wavelength of order m_ref
-        :math: `q_{10}` : central_wavelength/R_pix,
-        with R_pix the resolving power / pixel.
-        :math: `q_{11}` : central_wavelength/R_pix,
-        with R_pix the resolving power / pixel.
-        ... with everything else approximately zero.
+        | This means that the simplest spectrograph model should have:
+        | :math:`q_{00}` : central wavelength of order :math:`m_\\textrm{ref}`
+        | :math:`q_{01}` : central wavelength of order :math:`m_\\textrm{ref}`
+        | :math:`q_{10}` : central wavelength :math:`/R_{\\textrm{pix}}`,
+        | :math:`q_{11}` : central_wavelength :math:`/R_{\\textrm{pix}}`,
+        | with :math:`R_\\textrm{pix}` the resolving power :math:`/` pixel. All other model parameters will be (approximately) zero.
 
         Parameters
         ----------
-
-        init_mod: array-like, two-dimensional
+        init_mod: :any:`array`-like, two-dimensional
             initial model parameters.
-        arclines: array, like
+        arclines: :any:`array`-like
             wavelengths of lines from the :any:`find_lines` function.
-        xdeg, ydeg: int
+        xdeg/ydeg: int
             Order of polynomial
 
         Returns
@@ -292,7 +327,13 @@ class Polyspect(object):
 
     def spectral_format(self, wparams=None, xparams=None, img=None):
         """
-        Form a spectrum from wavelength and a polynomial model.
+        Form a spectrum from wavelength and polynomial models.
+
+        .. note::
+
+            This is a simpler version of :any:`spectral_format_with_matrix`
+            (which replaces this) that does not take the slit rotation into
+            consideration.
 
         Create a spectrum, with wavelengths sampled in 2 orders based on
         a pre-existing wavelength and x position polynomial model.
@@ -333,9 +374,11 @@ class Polyspect(object):
             The blaze function (pixel flux divided by order center flux)
             corresponding to each y-pixel and each order (m).
         ccd_centre: :obj:`dict`
-            NOT YET IMPLEMENTED
             Parameters of the internal co-ordinate system describing the
             center of the CCD.
+
+            .. warning::
+                Not yet implemented.
         """
 
         # FIXME this function requires more detail in comments about procedure
@@ -392,15 +435,18 @@ class Polyspect(object):
         """
         Adjusts the x-pixel value mapping.
 
-        Adjust the x pixel value based on an image and an initial
-        array from spectral_format().
-        This function performs a cross correlation between a pixel map
-        and a given 2D array image and calculates a shift along the spatial
-        direction. The result is used to inform an initial global shift for
-        the fitting procedure.
-        Only really designed for a single fiber flat, single fiber science
-        image or a convolution map.
-        This is a helper routine for :any:`fit_x_to_image`.
+        Adjust the x-pixel value based on an image and an initial array from
+        spectral_format(). This function performs a cross correlation between a
+        pixel map and a given 2D array image and calculates a shift along the
+        spatial direction. The result is used to inform an initial global shift
+        for the fitting procedure. Only really designed for a single fiber flat,
+        single fiber science image or a convolution map. This is a helper
+        routine for :any:`fit_x_to_image`.
+
+        This is an assistant function designed to slightly modify the initial
+        position fitting for any global shift in the spatial direction. The
+        usefulness of this function can be debated, but ultimately it won't
+        create any problems.
 
         
         Parameters
@@ -449,11 +495,35 @@ class Polyspect(object):
         """
         Fit a "tramline" map.
 
-        Note that an initial map has to be pretty
-        close, i.e. within "search_pix" everywhere. To get within search_pix
-        everywhere, a simple model with a few parameters is fitted manually.
-        This can be done with the GUI using the adjust_model function and
-        finally adjusted with the adjust_x function.
+        This is the main function that fits the "tramline" map (i.e. the order
+        trace) to the image. The initial map has to be quite close and can be
+        adjusted with the :any:`adjust_model` function, and then fitted further.
+
+        This particular function sets up the data to be fitted, and then calls
+        :any:`fit_to_x` to do the actual fit. The segmentation of the image into
+        smaller sections is done here, to limit the number of parameters to fit
+        and make the fitting faster. The default behaviour is to subdivide the
+        image by a factor of 8 in the spectral direction to reduce the
+        dimensions of the fit. This is acceptable, because the final fit *must*
+        be smooth anyway.
+
+        This function also is responsible for taking the image to fit, typically
+        the result of the smoothed flat convolution, and finding the location of
+        the maxima along the orders for fitting purposes. The process of
+        cleaning up the flats is done in the main processing primitives, but
+        here the weighting for each point is determined based on the peak flux.
+        This weighting is done to ensure the fainter order edges are not
+        contributing to the fit as much.
+
+        Optionally, the ``inspect`` parameter will display the initial order
+        centre maxima locations with point sizes following the weights, and then
+        the result of the fit.
+
+        Note that an initial map has to be pretty close, i.e. within
+        ``search_pix`` everywhere. To get within ``search_pix`` everywhere, a
+        simple model with a few parameters is fitted manually. This can be done
+        with the GUI using the :any:`adjust_model` function and finally adjusted
+        with the :any:`adjust_x` function.
 
         Parameters
         ----------
@@ -475,8 +545,9 @@ class Polyspect(object):
 
         Raises
         ------
-        UserWarning:
-            If the decrease dimension is not possible due to rounding off errors
+        UserWarning
+            If the decreased dimension is not possible due to rounding off
+            errors
         
         Returns
         -------
@@ -570,24 +641,30 @@ class Polyspect(object):
         """
         Fit to an (norders, ny) array of x-values.
 
+        This is the helper function that takes the setup from
+        :any:`fit_x_to_image` and actually fits the x model. This function also
+        has a `decrease_dim` dimension adjustment argument, but is not used by
+        default.
+
         The functional form is:
 
         .. math::
 
-            x = p_0(m) + p_1(m)*y' + p_2(m)*y'^2 + ...)
+            x = p_0(m) + p_1(m)\\times y' + p_2(m)\\times y'^2 + \\ldots\\textrm{,}
 
-        with :math:`y^{prime} = y - y_{\rm middle}`, and:
+        with :math:`y' = y - y_{\\rm middle}`, and:
 
         .. math::
 
-            p_0(m) = q_{00} + q_{01} * m' + q_{02} * m'^2 + ...
+            p_0(m) = q_{00} + q_{01} \\times m' + q_{02} \\times m'^2 + \\ldots\\textrm{,}
 
-        with :math:`mprime = m_{\rm ref}/m - 1
+        with :math:`m' = m_{\\rm ref}/m - 1`.
 
-        This means that the simplest spectrograph model should have:
-        :math:`q_{00}` : central order y pixel
-        :math:`q_{01}`:  spacing between orders divided by the number of orders
-        ... with everything else approximately zero.
+        | This means that the simplest spectrograph model should have:
+        | :math:`q_{00}` : central order y pixel;
+        | :math:`q_{01}`:  spacing between orders divided by the number of
+          orders;
+        | ...with everything else approximately zero.
 
         Parameters
         ----------
@@ -672,56 +749,97 @@ class Polyspect(object):
                                     specmod=None, rotmod=None,
                                     return_arrays=False):
         """
-        Create a spectral format, including a detector to slit matrix, at
+        Create a spectral format, including a detector-to-slit matrix, at
         every point. 
 
-        The input parameters are required for this to work and represent
-        the polynomial coefficients for second order descriptions of
-        how the spectral and spatial scales vary as a function of order
-        for each mode as well as a slit rotation indicator.
+        The input parameters represent the polynomial coefficients for second
+        order descriptions of how the spectral and spatial scales vary as a
+        function of order for each mode, as well as a slit rotation indicator.
+
+        This function is crucial to the workings of the pipeline, as it is
+        designed to be executed almost every time following the initialisation
+        of the class as a way to define the model variables for usage in the
+        pipeline.
+
+        It takes the model parameters and defines the ``x_map``, ``w_map``,
+        ``blaze`` and ``matrices`` arrays that describe every aspect of the
+        spectrograph image for extraction. The two orthogonal
+        ``slit_microns_per_det_pix`` variables represent the physical size of
+        the full slit in detector pixels, which is scaled by the magnification
+        at all points. Each (2, 2) matrix contains 2 parameters that relate to
+        the magnification, and are modified by rotation angle.
 
         The functional form is equivalent to all other models in the spectral
-        format. For the 3 new parameters the simplest interpretation of the
+        format. For the three new parameters, the simplest interpretation of the
         model files is as follows:
 
-        :math:`q_{00}`:  spatial/spectral/rotation scale at the reference order
-        :math:`q_{01}`:  variation as a function of orders divided by the number
-        of orders
-        ... with everything else approximately zero.
+        | :math:`q_{00}`:  spatial/spectral/rotation scale at the reference
+          order
+        | :math:`q_{01}`:  variation as a function of orders divided by the
+          number
+          of orders
+        | ... with everything else approximately zero.
 
-        The explanation of the matrix operations goes as follows:
+        The mathematical principle behind this method is as follows. For every
+        position along an order we create a matrix :math:`A_{mat}` where we map
+        the input angles to output coordinates using the
+        ``slit_microns_per_det_pix_x/y`` variables:
 
-        We need a 2x2 matrix for every pixel long every order that describes the
-        rotation of the slit.
-        In order to obtain the final matrix we require a 2x2 diagonal matrix
-        containing the inverse of the slit microns per detector pixel scale in
-        the spacial and spectral directions as the (0,0) and (1,1) values.
-        We then require another 2x2 matrix with the rotation angle built in
-        the form:
+        .. math::
 
-        \Biggl \lbracket
-        { cos(\theta) , sin(\theta) \atop
-          -sin(theta), cos(theta) }
-        \rbracket
+           A_\\textrm{mat} = \\begin{bmatrix}
+                             1/(\\textrm{slit_microns_per_det_pix_y}) & 0 \\\\
+                             0 & 1/\\textrm{slit_microns_per_det_pix_x}
+                             \\end{bmatrix}
 
-        These two matrices are then multiplied together with a dot product and
-        the desired result is the inverse matrix of the product.
+        We then compute an 'extra rotation matrix' :math:`R_\\textrm{mat}` which
+        maps the single slit rotation value from the model for this position
+        into a rotation matrix:
 
-        However, due to the diagonality of the scale matrix and the time it
-        takes to loop through the inversions, we have then explicitly done the
-        algebra in this way:
+        .. math::
 
-        :math:`( R(\theta) . D )^-1 = D^-1 . R^-1 = D^-1 . R(-\theta)`
+           R_\\textrm{mat} = \\begin{bmatrix}
+                             \\cos(\\theta) & \\sin(\\theta) \\\\
+                             -\\sin(\\theta) & \\cos(\\theta)
+                             \\end{bmatrix},
 
-        if R is the rotation matrix and D is the scale diagonal matrix
+        where :math:`\\theta` is the rotation of the slit in radians.
+
+        We then do a dot product of the two matrices and invert:
+
+        .. math::
+
+           M = (R_\\textrm{mat} \cdot A_\\textrm{mat})^{-1}
+
+        This is computationally complicated, but since the matrices are square
+        and :math:`A_\\textrm{mat}` is diagonal, we can do this explicitly:
+
+        .. math::
+
+           M = \\begin{bmatrix}
+                \\cos(\\theta) / slity & \\sin(\\theta) / slitx \\\\
+                -\\sin(\\theta) / slity & \\cos(\\theta) / slitx
+                \\end{bmatrix} ^ {-1}
+
+        and,
+
+        .. math::
+
+           M = \\begin{bmatrix}
+               cos(\\theta) / slitx & -sin(\\theta) / slitx \\\\
+               sin(\\theta) / slity & cos(\\theta) / slity
+               \\end{bmatrix}
+
+        Therefore, in the code we do this explicitly and obtain the result with
+        simple operations only.
 
         Notes
         -----
-        Function returns are optional and instead this function creates/updates
+        Function returns are optional; instead, this function creates/updates
         class attributes that are used in other circumstances. While this is
         perhaps not advisable from a programmatic point of view, it does
         benefit from a number of advantages, as the model evaluations are used
-        profusely throughout this module.
+        extensively throughout this module.
 
         Parameters
         ----------
@@ -751,19 +869,16 @@ class Polyspect(object):
         Returns
         -------
 
-        All returns are optional, function by default will only update class
-        attributes. If desired, these are:
-
-        x: (norders, ny) :obj:`numpy.ndarray` array
+        x: :obj:`numpy.ndarray` array, ``(norders, ny)``
             The x-direction pixel co-ordinate corresponding to each y-pixel
             and each order (m).
-        w: (norders, ny) :obj:`numpy.ndarray` array
+        w: :obj:`numpy.ndarray` array, ``(norders, ny)``
             The wavelength co-ordinate corresponding to each y-pixel and each
             order (m).
-        blaze: (norders, ny) :obj:`numpy.ndarray` array
+        blaze: :obj:`numpy.ndarray` array, ``(norders, ny)``
             The blaze function (pixel flux divided by order center flux)
             corresponding to each y-pixel and each order (m).
-        matrices: (norders, ny, 2, 2) :obj:`numpy.ndarray` array
+        matrices: :obj:`numpy.ndarray` array, ``(norders, ny, 2, 2)``
             2x2 slit rotation matrices, mapping output co-ordinates back
             to the slit.
         """
@@ -827,7 +942,7 @@ class Polyspect(object):
                             thar_spectrum=None, percentage_variation=10,
                             vary_wrt_max=True, title=None):
         """
-        Interactive manual adjustment for a :module:`polyspect` module
+        Interactive manual adjustment for a :any:`polyspect` module.
 
         Function that uses matplotlib slider widgets to adjust a polynomial
         model overlaid on top of a flat field image. In practice this will be
@@ -835,12 +950,29 @@ class Polyspect(object):
         profile in 2D which just reveals the location of the middle of the
         orders.
         
-        This function actually works by displaying the result of the model on
-        top of an image of some sort, while bringing up other windows with
-        either sliders or value boxes for the polynomial parameters and include
-        update buttons for the user to play around with values. This should
-        be used by the engineering team to manually work out an initial model
-        before running the fitting function.
+        It uses :any:`matplotlib` slider widgets to adjust a polynomial model
+        representation overlaid on top of an image. A ``data`` array is provided
+        containing an image, and the model parameters needed to determine the
+        desired model; ``xparams`` are needed for both position and wavelength,
+        and ``wparams`` are needed for the wavelength model.
+
+        A ``model`` variable is defined and needed to distinguish between a
+        representation of the order centre position or wavelength model. A
+        ``thar_spectrum`` array must be provided for the wavelength model. The
+        ``percentage_variation`` variable refers to the percentage of the
+        parameter values that should be allowed to range in the sliders.
+
+        This function then goes on to show a window that contains the current
+        supplied model overlayed on top of the image provided, and a second
+        window containing a series of sliders which the user can use to vary the
+        model parameters in real time.
+
+        More documentation for this function may be added, but in principle the
+        plotting mechanism is commented and designed to be generic in terms of
+        the number of parameters. The actual workings of the plotting code is
+        documented in the :any:`matplotlib` documentation.
+
+        The function returns the changed model parameters.
         
         Parameters
         ----------
