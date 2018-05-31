@@ -699,7 +699,7 @@ class Polyspect(object):
                 "Can not decrease the x value dimension by this amount. "
                 "Please check if the image size in the spectral dimension "
                 "is exactly divisible by this amount.")
-        
+
         # Create an array of y and m values.
         x_values = x_to_fit.copy()
         order_y = np.meshgrid(np.arange(x_values.shape[1]),
@@ -866,6 +866,12 @@ class Polyspect(object):
             By default, we just set internal object properties. Return the
             arrays themselves instead as an option.
 
+        Raises
+        ------
+        ValueError
+            Raised if neither ``xmod`` or ``wavemod`` are provided, or if none
+            of ``spatmod``, ``specmod`` and ``rotmod`` are provided.
+
         Returns
         -------
 
@@ -883,11 +889,12 @@ class Polyspect(object):
             to the slit.
         """
         if (xmod is None) and (wavemod is None):
-            return 'Must provide at least one of xparams or wparams'
+            raise ValueError('Must provide at least one of xparams or wparams')
 
         if (spatmod is None) and (specmod is None) and (rotmod is None):
-            return 'Must provide at least one of spatmod, specmod or rotmod,\
-            otherwise there is no point in running this function.'
+            raise ValueError('Must provide at least one of spatmod, specmod or '
+                             'rotmod, otherwise there is no point in running '
+                             'this function.')
 
         # Get the basic spectral format
         xbase, waves, blaze = self.spectral_format(xparams=xmod,
@@ -927,7 +934,7 @@ class Polyspect(object):
 
         if return_arrays:
             return xbase, waves, blaze, matrices
-        
+
     def slit_flat_convolve(self, flat, slit_profile=None):
         """
         Dummy function, returns the input flat.
@@ -1095,11 +1102,11 @@ class Polyspect(object):
         contrastSlider_ax  = fig.add_axes([0.15, 0.1, 0.7, 0.05])
         contrastSlider = Slider(contrastSlider_ax, 'contrast', 0, 1,
                                 valinit=init_contrast)
-        
+
         image = axx.imshow(data,
                            vmin = image_min + init_contrast*image_diff//8,
                            vmax = image_max - init_contrast*image_diff//2)
-        
+
 
         def update_imshow(val):
             """
@@ -1109,7 +1116,7 @@ class Polyspect(object):
                            vmax = image_max - contrastSlider.val*image_diff//2)
 
         contrastSlider.on_changed(update_imshow)
-        
+
         # Create a second window for sliders.
         slide_fig = plt.figure()
 
