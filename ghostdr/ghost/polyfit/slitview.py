@@ -2,31 +2,34 @@ import numpy as np
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
-
 class SlitView(object):
+    """
+    A class containing tools common to processing the dark and bias corrected
+    slit-viewer images.
+
+    Parameters
+    ----------
+    slit_image: :obj:`numpy.ndarray`
+        A single slit viewer image, which has been processed, cosmic-ray
+        rejection etc.
+
+    flat_image: :obj:`numpy.ndarray`
+        A single slit viewer flat field image, which has been processed,
+        cosmic-ray rejection etc.
+
+    microns_pix: float (optional)
+        Scale in microns in the slit plane for each pixel in the slit view-
+        ing camera. The default value assumes 2x2 binning of the slit view-
+        ing camera. Default is ``4.54*180/50*2``.
+
+    mode: string
+        ``'std'`` or ``'high'``: the observing mode. Default is ``'std'``.
+
+    slit_length: float (optional)
+        Physical slit length to be extracted in microns. Default is ``3600.``.
+    """
     def __init__(self, slit_image, flat_image, microns_pix=4.54*180/50*2,
                  mode='std', slit_length=3600.):
-        """
-        A class containing tools common processing the dark and bias corrected
-        slit-viewer images.
-
-        Parameters
-        ----------
-        slit_image: :obj:`numpy.ndarray'
-            A single slit viewer image, which has been processed, cosmic-ray
-            rejection etc.
-
-        microns_pix: float (optional)
-            Scale in microns in the slit plane for each pixel in the slit view-
-            ing camera. The default value assumes 2x2 binning of the slit view-
-            ing camera.
-
-        mode: string
-            ``'std'`` or ``'high'``: the observing mode.
-
-        slit_length: float
-            Physical slit length to be extracted in microns.
-        """
         self.slit_image = slit_image
         self.flat_image = flat_image
         self.mode = mode
@@ -65,19 +68,21 @@ class SlitView(object):
             raise UserWarning("Invalid Mode")
 
     def cutout(self, arm='red', use_flat=False):
-        """Extract the 2-dimensional slit profile cutout.
+        """
+        Extract the 2-dimensional slit profile cutout.
 
         Parameters
         ----------
         arm: string, optional
-            Either 'red' or 'blue' for GHOST.
+            Either ``'red'`` or ``'blue'`` for GHOST. Default is ``'red'``.
 
         use_flat: bool, optional
-            Cutout from the flat (True) or the slit frame (False).
+            Cutout from the flat (True) or the slit frame (False). Default is
+            False.
 
         Returns
         -------
-        profile: :obj:`numpy.ndarray' (npix)
+        profile: :obj:`numpy.ndarray` (npix)
             The 2-dimensional slit profile cutout.
         """
         try:
@@ -98,26 +103,28 @@ class SlitView(object):
 
     def slit_profile(self, arm='red', return_centroid=False, use_flat=False,
                      denom_clamp=10):
-        """Extract the 1-dimensional slit profile.
+        """
+        Extract the 1-dimensional slit profile.
 
         Parameters
         ----------
         arm: string, optional
-            Either 'red' or 'blue' for GHOST.
+            Either ``'red'`` or ``'blue'`` for GHOST. Default is ``'red'``.
 
         return_centroid: bool, optional
-            Do we also return the pixel centroid of the slit?
+            Do we also return the pixel centroid of the slit? Default is False.
             
         use_flat: bool, optional
             Do we use the flat image? False for the object image.
+            Default is False.
             
         denom_clamp: float, optional
             Denominator clamp - fluxes below this value are not used when
-            computing the centroid.
+            computing the centroid. Defaults to ``10``.
 
         Returns
         -------
-        profile: :obj:`numpy.ndarray' (npix)
+        profile: :obj:`numpy.ndarray` (npix)
             The summed 1-dimensional slit profile.
         """
         y_halfwidth = int(self.slit_length/self.microns_pix/2)
@@ -139,6 +146,25 @@ class SlitView(object):
                              append_sky=True, normalise_profiles=True):
         """
         Extract object slit profiles.
+
+        Parameters
+        ----------
+        arm: string, optional
+            Either ``'red'`` or ``'blue'`` for GHOST. Default is ``'red'``.
+
+        correct_for_sky : bool, optional
+            Should the slit profiles be corrected for sky? Defaults to True.
+
+        append_sky : bool, optional
+            Append the sky profile to the output ``profiles``? Defaults to True.
+
+        normalise_profiles : bool, optional
+            Should profiles be normalised? Defaults to True.
+
+        Returns
+        -------
+        profiles : list of :any:`numpy.ndarray`
+            List of object slit profiles, as :any:`numpy.ndarray`.
 
         TODO: Figure out centroid array behaviour if needed.
         """

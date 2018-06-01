@@ -9,10 +9,6 @@
 .. automodule:: ghostdr.ghost.polyfit.extract
     :members:
 
-    .. autoclass:: Extractor
-        :show-inheritance:
-        :members:
-
 
 ``ghost``
 ---------
@@ -32,7 +28,3 @@
 
 .. automodule:: ghostdr.ghost.polyfit.slitview
     :members:
-
-    .. autoclass:: SlitView
-        :show-inheritance:
-        :members:
