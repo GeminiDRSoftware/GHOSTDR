@@ -34,9 +34,10 @@ def filename_updater(ad, **kwargs):
 @parameter_override
 class GHOST(Gemini, CCD, CalibDBGHOST):
     """
-    This is the class containing all of the calibration bookkeeping primitives
-    for the GHOST level of the type hierarchy tree. It inherits all
-    the primitives from the level above
+    Top-level primitives for handling GHOST data
+
+    The primitives in this class are applicable to all flavours of GHOST data.
+    All other GHOST primitive classes inherit from this class.
     """
     tagset = set()  # Cannot be assigned as a class
 
@@ -59,18 +60,22 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         AstroData objects that will be saved during reduction. It is designed
         to handle the correct adjustment of the relevant header keywords.
 
+        Binning is done by simply adding together the data pixels in the
+        input AstroData object.
+
         If the input ad contains a variance plane, the re-binned variance
         plane is computed by summing over the binned variance pixels in
         quadrature. If a mask plane is present, the re-binned mask plane is
         computed by sequentially bitwise_or combining the input mask pixels.
 
-        This function has been included within the GHOST primitive class
-        mostly so logging is consistent. Otherwise, it could be defined as
-        a @staticmethod (or just exist outside the class completely).
+        .. note::
+            This function has been included within the GHOST primitive class
+            mostly so logging is consistent. Otherwise, it could be defined as
+            a @staticmethod (or just exist outside the class completely).
 
         Parameters
         ----------
-        ad : :obj:`astrodata.AstroData`
+        ad : :class:`astrodata.AstroData`
             AstroData object to be re-binned. Each extension of the object
             will be rebinned separately. A :any:`ValueError` will be thrown
             if the object's extensions are found to have different binning

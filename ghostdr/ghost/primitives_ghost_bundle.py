@@ -17,9 +17,7 @@ from astropy.io.fits import PrimaryHDU, Header
 @parameter_override
 class GHOSTBundle(GHOST):
     """
-    This is the class containing all of the calibration bookkeeping primitives
-    for the GHOSTBundle level of the type hierarchy tree. It inherits all
-    the primitives from the level above
+    Primitives for unpacking GHOST observation bundle files.
     """
     tagset = set(["GEMINI", "GHOST", "BUNDLE"])
 
@@ -29,9 +27,13 @@ class GHOSTBundle(GHOST):
 
     def splitBundle(self, adinputs=None, **params):
         """
-        This primitive breaks up a GHOST observation bundle into 3 files, one
+        Break a GHOST observation bundle into individual exposures.
+
+        This primitive breaks up a GHOST observation bundle into 3 files: one
         containing the Red camera frame, one containing the Blue camera frame,
-        and another containing the Slit Viewer (SV) frames.  The Red and Blue
+        and another containing the Slit Viewer (SV) frames.
+
+        The Red and Blue
         output files are MEF because each amp quadrant is in its own extension,
         while the SV output file will contain all SV exposures taken during the
         observation run and will thus be single-extension for zero-duration
@@ -82,6 +84,27 @@ class GHOSTBundle(GHOST):
 # Below are the helper functions for the primitives in this module           #
 ##############################################################################
 def _write_newfile(extns, suffix, base, log):
+    """
+    Helper function to write sub-files out from a MEF bundle.
+
+    Parameters
+    ----------
+    extns : iterable of :any:`astrodata.Astrodata`
+        AstroData extensions to be appended to the new file
+    suffix : str
+        Suffix to be appended to file name
+    base : :any:`astrodata.AstroData`
+        Original AstroData instance to base the new file on. The file's
+        primary header unit will be used, as will the base of the filename.
+    log : AstroData logging object
+        Log for recording actions. This should be the log in use in the calling
+        primitive.
+
+    Raises
+    ------
+    AssertionError
+        If the ``extns`` parameter is :any:`None`, or empty
+    """
     assert extns and len(extns) > 0
     n = astrodata.create(copy.deepcopy(base.header[0]))
     for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:

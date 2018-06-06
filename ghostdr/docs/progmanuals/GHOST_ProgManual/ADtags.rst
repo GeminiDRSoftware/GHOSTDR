@@ -137,7 +137,7 @@ Instrument configuration types
 | ``GHOST_BLUE``               | Any data taken on the blue arm of the main    |
 |                              | spectrograph                                  |
 +------------------------------+-----------------------------------------------+
-| ``GHOST_RED` `               | Any data taken on the red arm of the main     |
+| ``GHOST_RED``                | Any data taken on the red arm of the main     |
 |                              | spectrograph                                  |
 +------------------------------+-----------------------------------------------+
 | ``GHOST_STD``                | Any data taken with the spectrograph in       |

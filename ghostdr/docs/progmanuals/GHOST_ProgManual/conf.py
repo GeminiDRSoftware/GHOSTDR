@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.abspath('../../../../externals/gemini_python'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-              'sphinx.ext.coverage', 'sphinx.ext.pngmath',
+              'sphinx.ext.coverage', 'sphinx.ext.mathjax',
               'sphinx.ext.ifconfig', 'sphinx.ext.viewcode',
               'sphinx.ext.napoleon',
               # 'numpydoc',
@@ -80,7 +80,7 @@ exclude_patterns = ['_build']
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
-#add_module_names = True
+add_module_names = True
 
 # If true, sectionauthor and moduleauthor directives will be shown in the
 # output. They are ignored by default.
@@ -250,10 +250,24 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+# intersphinx_mapping = {
+#     'http://docs.python.org/': None,}
+intersphinx_mapping = {
+    'astropy': ('http://docs.astropy.org/en/stable', None),
+    'astrodata': ('http://astrodata-cheat-sheet.readthedocs.io/en/latest/', None),  # FIXME Invalid objects.inv
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None,),
+    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+    'dragons': ('http://dragons-recipe-system-users-manual.readthedocs.io/en/latest/index.html', None),
+    'matplotlib': ('https://matplotlib.org/users', None),
+    'pysynphot': ('http://pysynphot.readthedocs.io/en/latest/', None),
+    'python': ('https://docs.python.org/2.7', None),
+}
 
 # Activate the todos
 todo_include_todos=True
+
+# Put in class __init__ documentation
+autoclass_content = "both"
 
 # Adding style in order to have the todos show up in a red box.
 def setup(app):

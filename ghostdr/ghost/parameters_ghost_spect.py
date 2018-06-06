@@ -79,6 +79,6 @@ class ParametersGHOSTSpect(ParametersGHOST):
         "std_spec"          : None,
         "write_result"      : True,
     }
-    tileAmplifiers = {
-        "suffix"            : "_ampsTiled",
+    tileArrays = {
+        "suffix"            : "_arraysTiled",
     }

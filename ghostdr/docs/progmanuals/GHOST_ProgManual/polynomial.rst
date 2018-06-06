@@ -1,12 +1,9 @@
-Polynomial Core Modules
-=======================
+.. _polyfit-core:
 
-This chapter compiles detailed documentation for the polyfit core modules containing the Polyspect and GhostArm classes
+Polynomial Models
+=================
 
-.. toctree::
-   :numbered:
-   :maxdepth: 2
-
-   ghost
-   polyspect
+This chapter should provide an overview of how the polynomical model fitting
+system works. Most of the gory detail has been shifted to the
+class/function docstrings.
    
