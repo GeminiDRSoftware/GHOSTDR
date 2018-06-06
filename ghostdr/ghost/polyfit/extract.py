@@ -357,8 +357,12 @@ class Extractor():
             pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var,
                                                    spat_conv_weights, axis=0)
         
+        #Set the inverse variance to zero for bad pixels. Note that if all pixels end
+        #up being bad for an extraction, then it will fail. For simplicity, we'll set
+        #an inverse variance that is effectively 0 for counts up to 10^5.
+        #FIXME: Use an inverse variance of 0 here, and propagate NaNs correctly.
         if self.badpixmask is not None:
-            pixel_inv_var[self.badpixmask.astype(bool)] = 0.1
+            pixel_inv_var[self.badpixmask.astype(bool)] = 1e-10
             
         # Loop through all orders then through all y pixels.
         for i in range(nm):
