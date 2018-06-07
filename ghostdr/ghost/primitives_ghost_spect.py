@@ -1013,7 +1013,6 @@ class GHOSTSpect(GHOST):
                 extractor = Extractor(ghost_arm, slitview, badpixmask=ad[0].mask,
                                       vararray=ad[0].variance)
                 pixel_model = extractor.make_pixel_model()
-                import pdb; pdb.set_trace()
                 ad[0].PIXELMODEL = pixel_model
                 
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
