@@ -267,6 +267,75 @@ class Extractor(object):
 
         return x_map, w_map, blaze, matrices
 
+    def make_pixel_model(self):
+        """
+        Based on the xmod and the slit viewer image, create a complete model image, 
+        where flux versus wavelength pixel is constant.
+        
+        Returns
+        -------
+        model: :obj:`numpy.ndarray`
+            An image the same size as the detector.
+        """
+        # Adjust in case of y binning (never for flats, which is what this function
+        # is primarily designed for.
+        try:
+            x_map, w_map, blaze, matrices = self.bin_models()
+        except Exception:
+            raise RuntimeError('Extraction failed, unable to bin models.')
+
+        # Key array constants
+        ny = x_map.shape[1]
+        nm = x_map.shape[0]
+        nx = int(self.arm.szx / self.arm.xbin)
+                             
+        profile = self.slitview.slit_profile(arm=self.arm.arm)
+        
+        n_slitpix = profile.shape[0]
+        profile_y_microns = (np.arange(n_slitpix) -
+                             n_slitpix // 2) * self.slitview.microns_pix
+        
+        if self.transpose:
+            pixel_model = np.zeros( (ny, nx) ) 
+        else:
+            pixel_model = np.zeros( (nx, ny) )
+        
+        # Loop through all orders then through all y pixels.        
+        for i in range(nm):
+            print("Creating order: {0:d}".format(i))
+
+            # Create an empty model array. Base the size on the largest
+            # slit magnification for this order.
+            nx_cutout = int(np.ceil(self.slitview.slit_length / np.min(
+                matrices[i, :, 0, 0])))
+            phi = np.empty((nx_cutout))
+
+            for j in range(ny):
+                # Create an array of y pixels based on the scale for this
+                # order and pixel.
+                profile_y_pix = profile_y_microns / matrices[i, j, 0, 0]
+
+                # Create our column cutout for the data and the PSF, then put
+                # it back into our 2D array. 
+                
+                # FIXME: Is "round" most correct on the next line???
+                # FIXME: Profiles should be convolved by a detector pixel,
+                # but binning has to be taken into account properly!
+                x_ix = int(np.round(
+                    x_map[i, j])) - nx_cutout // 2 + \
+                       np.arange(nx_cutout, dtype=int) + nx // 2
+                phi = np.interp(
+                        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
+                        profile)
+                phi /= np.sum(phi)
+
+                if self.transpose:
+                    pixel_model[j, x_ix] = phi
+                else:
+                    pixel_model[x_ix, j] = phi
+                    
+        return pixel_model
+
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,
                       debug_crs=False):
         """

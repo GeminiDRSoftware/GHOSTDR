@@ -359,7 +359,9 @@ class GHOSTSpect(GHOST):
                             format(ad.filename))
                 continue
 
-            if not ad.WAVL:
+            #FIXME: It is more pythonic to ask forgiveness than permission, so a try
+            #statement is preferred. 
+            if not hasattr(ad[0], 'WAVL'):
                 log.warning("No changes will be made to {}, since it contains "
                             "no wavelength information".
                             format(ad.filename))
@@ -590,6 +592,7 @@ class GHOSTSpect(GHOST):
 
         return adinputs_orig
 
+        
     def extractProfile(self, adinputs=None, **params):
         """
         Extract the object profile from a slit or flat image.
@@ -918,6 +921,11 @@ class GHOSTSpect(GHOST):
             flat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
+        #FIXME: MJI - not sure if this is compliant.
+        if params.get('skipPixelModel'):
+            log.stdinfo('Skipping adding the pixel model to the flat'
+                        'step')
+
         for ad, slit_flat in zip(*gt.make_lists(adinputs, flat_list, force_ad=True)):
             if not {'PREPARED', 'GHOST', 'FLAT'}.issubset(ad.tags):
                 log.warning("findApertures is only run on prepared flats: "
@@ -980,7 +988,34 @@ class GHOSTSpect(GHOST):
             # keywords like DATASEC) but that's not really a big deal.
             # (The header can be modified/started afresh if needed.)
             ad[0].XMOD = fitted_params
+            
+            #MJI: Compute a pixel-by-pixel model of the flat field from the new XMOD and
+            #the slit image.
+            if not params.get('skipPixelModel'):
+                #FIXME: MJI Copied directly from extractProfile. Is this compliant?
+                try:
+                    poly_wave = self._get_polyfit_filename(ad, 'wavemod')
+                    poly_spat = self._get_polyfit_filename(ad, 'spatmod')
+                    poly_spec = self._get_polyfit_filename(ad, 'specmod')
+                    poly_rot = self._get_polyfit_filename(ad, 'rotmod')
+                    wpars = astrodata.open(poly_wave)
+                    spatpars = astrodata.open(poly_spat)
+                    specpars = astrodata.open(poly_spec)
+                    rotpars = astrodata.open(poly_rot)
+                except IOError:
+                    log.warning("Cannot open required initial model files for {};"
+                                " skipping".format(ad.filename))
+                    continue
 
+                #Create an extractor instance. XXX
+                ghost_arm.spectral_format_with_matrix(ad[0].XMOD, wpars[0].data,
+                            spatpars[0].data, specpars[0].data, rotpars[0].data)
+                extractor = Extractor(ghost_arm, slitview, badpixmask=ad[0].mask,
+                                      vararray=ad[0].variance)
+                pixel_model = extractor.make_pixel_model()
+                import pdb; pdb.set_trace()
+                ad[0].PIXELMODEL = pixel_model
+                
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
 
         return adinputs
@@ -1205,6 +1240,9 @@ class GHOSTSpect(GHOST):
             sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
 
             extractor = Extractor(arm, sview)
+            
+            #FIXME - Marc and were *going* to try:
+            #adjusted_data = arm.bin_data(extractor.adjust_data(flat[0].data))
             extracted_flux, extracted_var = extractor.two_d_extract(
                 arm.bin_data(flat[0].data), extraction_weights=ad[0].WGT)
 

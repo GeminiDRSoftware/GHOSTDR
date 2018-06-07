@@ -13,5 +13,5 @@ been implemented for the GHOST Data Reduction Pipeline.
    :numbered:
    :maxdepth: 2
 
-   model
    extraction
+   model
