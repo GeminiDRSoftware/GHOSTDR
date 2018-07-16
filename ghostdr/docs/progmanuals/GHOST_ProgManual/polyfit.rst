@@ -15,6 +15,7 @@
 
 .. automodule:: ghostdr.ghost.polyfit.ghost
     :members:
+    :show-inheritance:
 
 
 ``polyspect``
