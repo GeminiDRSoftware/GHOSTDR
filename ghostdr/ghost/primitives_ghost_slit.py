@@ -336,8 +336,7 @@ def _total_obj_flux(res, data, flat_data=None):
     Uses the :any:`polyfit.slitview.SlitView` object to
     determine (potentially sky-subtracted) total object flux. In high-resolution
     mode, the concurrent arc profile is returned as an "object" profile,
-    so we discard
-    it explicitly from this calculation.
+    so we discard it explicitly from this calculation.
 
     Sky subtraction occurs if the ``flat_data`` parameter is not :any:`None`.
 

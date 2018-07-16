@@ -25,7 +25,8 @@ def makeProcessedDark(p):
     p.biasCorrect()
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
-    p.stackFrames(operation='median', reject_method='sigclip', mclip=True, snoise=0.02, lsigma=7., hsigma=7.)
+    p.stackFrames(operation='median', reject_method='sigclip',
+                  mclip=True, snoise=0.02, lsigma=7., hsigma=7.)
     p.clipSigmaBPM()
     p.storeProcessedDark()
     return

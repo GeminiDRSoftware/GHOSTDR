@@ -38,8 +38,8 @@ class GhostArm(Polyspect):
     and ``"std"`` or ``"high"`` for the mode (second string).
 
     This class initialises and inherits all attributes and
-    methods from Polyspect, which is the module that contains all spectrograph
-    generic functions.
+    methods from :any:`Polyspect`, which is the module that
+    contains all spectrograph generic functions.
     """
 
     def __init__(self, arm='blue', mode='std',
