@@ -18,8 +18,7 @@ class addWavelengthSolutionConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_wavelengthAdded",
                           optional=True)
     arcs = config.ListField("Before & after arcs for each input",
-                            tuple, None, optional=True,
-                            check=arcs_valueCheck)
+                            tuple, None, optional=True)
 
 
 class applyFlatBPMConfig(config.Config):

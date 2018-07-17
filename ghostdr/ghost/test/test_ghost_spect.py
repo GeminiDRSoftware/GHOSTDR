@@ -112,6 +112,7 @@ class TestGhost:
 
         - Look for XMOD in output
         - Ensure said XMOD is valid (i.e. polyfit will accept it)
+        - Ensure skip_pixel_model flag works correctly
         """
         pass
 
