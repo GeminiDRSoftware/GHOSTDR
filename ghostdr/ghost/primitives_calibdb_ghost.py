@@ -6,7 +6,7 @@
 from gempy.gemini import gemini_tools as gt
 
 from geminidr.core import CalibDB
-from .parameters_calibdb_ghost import ParametersCalibDBGHOST
+from . import parameters_calibdb_ghost
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
@@ -22,7 +22,7 @@ class CalibDBGHOST(CalibDB):
     def __init__(self, adinputs, **kwargs):
         super(CalibDBGHOST, self).__init__(adinputs, **kwargs)
         self.inst_lookups = 'ghostdr.ghost.lookups'
-        self.parameters = ParametersCalibDBGHOST
+        self._param_update(parameters_calibdb_ghost)
 
     def getProcessedArc(self, adinputs=None, **params):
         caltype = "processed_arc"
