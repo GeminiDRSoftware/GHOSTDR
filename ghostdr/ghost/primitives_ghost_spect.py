@@ -923,7 +923,7 @@ class GHOSTSpect(GHOST):
                          for ad in adinputs]
 
         #FIXME: MJI - not sure if this is compliant.
-        if params.get('skipPixelModel'):
+        if params.get('skip_pixel_model'):
             log.stdinfo('Skipping adding the pixel model to the flat'
                         'step')
 
@@ -993,7 +993,7 @@ class GHOSTSpect(GHOST):
 
             #MJI: Compute a pixel-by-pixel model of the flat field from the new XMOD and
             #the slit image.
-            if not params.get('skipPixelModel'):
+            if not params.get('skip_pixel_model'):
                 #FIXME: MJI Copied directly from extractProfile. Is this compliant?
                 try:
                     poly_wave = self._get_polyfit_filename(ad, 'wavemod')

@@ -78,6 +78,8 @@ class findAperturesConfig(config.Config):
     slitflat = config.Field("Slit viewer flat field",
                             (str, ad),
                             None, optional=True)
+    skip_pixel_model = config.Field('Skip adding a pixel model to the '
+                                    'flat field?', bool, False)
 
 
 class fitWavelengthConfig(config.Config):
