@@ -13,7 +13,7 @@ from .polyfit import SlitView
 
 from .primitives_ghost import GHOST
 from .primitives_ghost import filename_updater
-from .parameters_ghost_slit import ParametersGHOSTSlit
+from . import parameters_ghost_slit
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ class GHOSTSlit(GHOST):
 
     def __init__(self, adinputs, **kwargs):
         super(GHOSTSlit, self).__init__(adinputs, **kwargs)
-        self.parameters = ParametersGHOSTSlit
+        self._param_update(parameters_ghost_slit)
 
     def CRCorrect(self, adinputs=None, **params):
         """

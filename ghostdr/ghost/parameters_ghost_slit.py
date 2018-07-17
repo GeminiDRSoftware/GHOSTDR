@@ -1,26 +1,30 @@
 # This parameter file contains the parameters related to the primitives located
 # in the primitives_ghost_slit.py file, in alphabetical order.
 
-from .parameters_ghost import ParametersGHOST
+from gempy.library import config
+from geminidr.core import parameters_stack
 
-class ParametersGHOSTSlit(ParametersGHOST):
 
-    CRCorrect = {
-        "suffix"            : "_CRCorrected",
-    }
-    processSlits = {
-        "flat"              : None,
-        "suffix"            : "_slitsProcessed",
-    }
-    stackFrames = {
-        "suffix"            : "_stack",
-        "nhigh"             : 1,
-        "nlow"              : 1,
-        "operation"         : "average",
-        "reject_method"     : "none",
-        "apply_dq"          : True,
-        "zero"              : False,
-        "scale"             : False,
-        "separate_ext"      : True,
-        "statsec"           : None,
-    }
+class CRCorrectConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_CRCorrected",
+                          optional=True)
+
+
+class processSlitsConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_slitsProcessed",
+                          optional=True)
+    flat = config.Field("Slit flat field", str, None, optional=True)
+
+
+class stackFramesConfig(parameters_stack.stackFramesConfig):
+    def setDefaults(self):
+        self.suffix = "_stack"
+        self.nhigh = 1
+        self.nlow = 1
+        self.operation = "average"
+        self.reject_method = "none"
+        self.apply_dq = True
+        self.zero = False
+        self.scale = False
+        self.separate_ext = True
+        self.statsec = None

@@ -4,7 +4,7 @@
 #                                                     primitives_ghost_bundle.py
 # ------------------------------------------------------------------------------
 from .primitives_ghost import GHOST, filename_updater
-from .parameters_ghost_bundle import ParametersGHOSTBundle
+from . import parameters_ghost_bundle
 
 from gempy.gemini import gemini_tools as gt
 from recipe_system.utils.decorators import parameter_override
@@ -23,7 +23,7 @@ class GHOSTBundle(GHOST):
 
     def __init__(self, adinputs, **kwargs):
         super(GHOSTBundle, self).__init__(adinputs, **kwargs)
-        self.parameters = ParametersGHOSTBundle
+        self._param_update(parameters_ghost_bundle)
 
     def splitBundle(self, adinputs=None, **params):
         """

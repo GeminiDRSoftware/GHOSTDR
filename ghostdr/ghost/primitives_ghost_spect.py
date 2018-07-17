@@ -33,7 +33,8 @@ from .polyfit import GhostArm, Extractor, SlitView
 from .polyfit.ghost import GhostArm
 
 from .primitives_ghost import GHOST, filename_updater
-from .parameters_ghost_spect import ParametersGHOSTSpect
+
+from . import parameters_ghost_spect
 
 from .lookups import polyfit_dict, line_list, keyword_comments, targetn_dict
 
@@ -62,7 +63,7 @@ class GHOSTSpect(GHOST):
 
     def __init__(self, adinputs, **kwargs):
         super(GHOSTSpect, self).__init__(adinputs, **kwargs)
-        self.parameters = ParametersGHOSTSpect
+        self._param_update(parameters_ghost_spect)
         self.keyword_comments.update(keyword_comments.keyword_comments)
 
     def addWavelengthSolution(self, adinputs=None, **params):
@@ -918,7 +919,8 @@ class GHOSTSpect(GHOST):
             flat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
-        for ad, slit_flat in zip(*gt.make_lists(adinputs, flat_list, force_ad=True)):
+        for ad, slit_flat in zip(*gt.make_lists(adinputs, flat_list,
+                                                force_ad=True)):
             if not {'PREPARED', 'GHOST', 'FLAT'}.issubset(ad.tags):
                 log.warning("findApertures is only run on prepared flats: "
                             "{} will not be processed".format(ad.filename))
