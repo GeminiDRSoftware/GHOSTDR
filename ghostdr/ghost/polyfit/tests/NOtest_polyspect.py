@@ -1,12 +1,12 @@
 from __future__ import division, print_function
 import pytest
-import ghostdr.polyfit as polyfit
+import ghostdr.ghost.polyfit as polyfit
 import astropy.io.fits as pyfits
 import pdb
 import numpy as np
 
 # Create a generic instantiation of ghost for generic test purposes.
-gen_ghost = polyfit.ghost.Arm()
+gen_ghost = polyfit.ghost.GhostArm()
 
 # Assert if all the correct attributes of the ghost class needed are there
 
@@ -92,7 +92,7 @@ def test_adjust_x(old_x, image):
 def test_polyfit(res, arm):
     """ Function designed to test various aspects of polyfit in all modes"""
 
-    ghost = polyfit.ghost.Arm(arm, res)
+    ghost = polyfit.ghost.GhostArm(arm, res)
 
     yvalues = np.arange(ghost.szy)
     xparams = pyfits.getdata(
