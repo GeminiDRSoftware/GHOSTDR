@@ -66,7 +66,7 @@ simultaneously with the observations. Sky fibre bundles are provided for
 +----------------------+-----------------------------------------+-------------------------+
 | **Approx. limiting   | 17.4 - 17.8                             | 17.0 - 17.4             |
 | Vega                 |                                         |                         |
-| magnitude** [1]_     |                                         |                         |
+| magnitude [1]_**      |                                         |                         |
 +----------------------+-----------------------------------------+-------------------------+
 
 .. [1] Can achieve S/N ratio of 30 in 1 hour at 450 nm.

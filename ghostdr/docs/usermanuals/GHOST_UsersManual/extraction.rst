@@ -24,8 +24,8 @@ fixed as it is for the case of single-fiber spectroscopy. Each object has a prof
 that comes from the slit viewing camera, which has to be scaled in the
 spectrograph :math:`x`-direction (and also in flux).
 
-Weighted Extraction Principle in 1D
-===================================
+Weighted Extraction Principle in 1 Dimension
+============================================
 
 Following the Sharp and Birchall notation (section 5.2 therein), we will
 consider the profiles
@@ -47,17 +47,22 @@ cross-talk between sky and object:
 .. math::
     C = c_{kj} = \Sigma_i \phi_{ki} \phi_{ji} w_i\textrm{,}
 
-and the naive extraction matrix (which would be the extraction matrix in the case of
-no cross-talk):
+and the naive extraction matrix :
 
 .. math::
     B = b_{kj} = \phi_{kj} w_j\textrm{.}
-
-This is slightly different to the Sharp and Birchall notation; for a data vector
-:math:`d=D_i`, their equation (11) becomes
+    
+In the case of no cross-talk, this extraction matrix would left multiply the optimally 
+weighted pixel values :math:`\mathbf{d}=D_i` to solve for the true flux :math:`\eta_k`:
 
 .. math::
-    C \cdot \eta = B \cdot d,
+    \eta_k = \frac{\Sigma_{i} \phi_{ki} w_i D_i}{\Sigma_{i} \phi_{ki}^2 w_i} = \frac{B \cdot \mathbf{d}}{\Sigma_{i} \phi_{ki}^2 w_i} \textrm{.}
+
+In the presence of cross-talk, the simple division on the right hand side of this equation
+is not possible, and we aim to solve: 
+
+.. math::
+    C \cdot \mathbf{\eta} = B \cdot \mathbf{d},
     
 which is solved by
 
@@ -69,14 +74,42 @@ for an extraction weights matrix :math:`Z=z_{ki}` being computed by
 .. math::
     Z = C^{-1} \cdot B\textrm{.}
 
-This matrix also subtracts the sky as measured. The extraction weights :math:`z_{kj}` 
-are stored in an array that is :math:`n_x \times n_y` pixels
-in size, where weights from every order are added together. This only causes a potential
-problem for 8x1 binning in the shortest-wavelength orders. For these orders, where there
-is an overlap, it is important that those pixels are marked as `bad` in the reduction 
-software.
+This matrix also subtracts the sky as measured. This may not always be signal-to-noise
+optimal. For example, if emission from the sky or object 2 is negligible, object 1 
+is best extracted by ignoring those objects. For this reason, data are extracted in modes
+corresponding to models with 1, 2 and 3 objects (including sky).
 
-.. warning:: The paragraph above needs expansion - what potential problem(s)?
+The extraction weights :math:`z_{kj}` 
+are stored in an array that is :math:`n_x \times n_y` pixels
+in size, where weights from every order are added together. This method of storing the
+weights assumes no overlap in weights between orders - otherwise the weights from 
+neighboring orders would be saved on the same pixels. This is a problem for 8x1 binning
+in the shortest-wavelength orders, where there is overlap (at the level of up to 1 binned 
+pixel) between neighboring orders. In this case, it is essential that these pixels are 
+marked as `bad' in the reduction in both orders, to avoid cross-talk between orders. 
+
+Flat Field Correction
+=====================
+
+There are two primary algorithms for flat field correction in spectroscopy: a long slit
+flat field, and an extracted fiber profile flat field. GHOST is in an intermediate regime,
+where the object profile varies (due to different fibers being illuminated), yet is
+mostly stable. The primary flat field algorithm is similar to a long-slit flat field. 
+During flat field processing, a model flat profile :math:`\phi_{k}` is constructed for 
+every pixel :math:`k` for each of the red and blue cameras. This profile is normalised 
+to 1.0 for every spectral direction pixel and every order. Note that we do not include 
+a per-object index here, as the flat lamp can only illuminate the input fibers in the
+same way as the sky. The median combined flat field is divided by the median for all 
+illuminated pixels, with no normalisation from order to order. 
+
+Prior to extraction, science data are corrected by the flat field as follows:
+
+.. math::
+    D_k = \frac{r_k \phi_{k}}{f_k}
+
+Note that the Th/Xe simultaneous reference lamp is not flat-field corrected using this 
+algorithm, with those pixels treated separately. The Th/Xe lamp is only extracted in 1x1
+binning mode for precision radial velocity observations.
 
 Slit Tilt and PSF Variation Issues
 ==================================
