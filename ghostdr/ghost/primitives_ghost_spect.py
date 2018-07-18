@@ -2172,7 +2172,9 @@ class GHOSTSpect(GHOST):
                              'use getProcessedArc directly.')
 
         ad.phu['ARCBEFOR'] = before
-        self.getProcessedArc(ad, howmany=None, refresh=True)
+        self.getProcessedArc(ad,
+                             howmany=None,
+                             refresh=True)
         arc_ad = self._get_cal(ad, 'processed_arc', )
         del ad.phu['ARCBEFOR']
         return arc_ad

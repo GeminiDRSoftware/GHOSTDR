@@ -21,7 +21,7 @@ class stackFramesConfig(parameters_stack.stackFramesConfig):
         self.suffix = "_stack"
         self.nhigh = 1
         self.nlow = 1
-        self.operation = "average"
+        self.operation = "mean"
         self.reject_method = "none"
         self.apply_dq = True
         self.zero = False

@@ -48,6 +48,10 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         # Add GHOST-specific timestamp keywords
         self.timestamp_keys.update(ghost_stamps.timestamp_keys)
 
+    @staticmethod
+    def _has_valid_extensions(ad):
+        return len(ad) > 0
+
     def _rebin_ghost_ad(self, ad, xb, yb):
         """
         Internal helper function to re-bin GHOST data.

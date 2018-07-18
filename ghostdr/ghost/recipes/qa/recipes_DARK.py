@@ -27,7 +27,9 @@ def makeProcessedDark(p):
     p.addVAR(poisson_noise=True)
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackFrames(operation='median',reject_method='sigclip', mclip=True, snoise=0.02, lsigma=7., hsigma=7.)
+    p.stackFrames(operation='median',reject_method='sigclip', mclip=True,
+                  # snoise=0.02,   # No longer a valid option
+                  lsigma=7., hsigma=7.)
     p.clipSigmaBPM()
     p.storeProcessedDark()
     return
