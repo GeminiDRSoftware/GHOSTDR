@@ -23,8 +23,8 @@ class FixtureIterator(object):
             #                                  'test_data', instr, filename
             #                                  ))
             ad = astrodata.open(os.path.join(
-                '/Users/marc/Documents/ghost/testdata-180718'),
-                filename
+                '/Users/marc/Documents/ghost/testdata-180718',
+                filename)
             )
             yield filename, ad, set(self._data[key])
 
@@ -32,3 +32,4 @@ class FixtureIterator(object):
 @pytest.mark.parametrize("fn,ad,tag_set", FixtureIterator(tags_fixture_data))
 def test_descriptor(fn, ad, tag_set):
     assert ad.tags == tag_set
+
