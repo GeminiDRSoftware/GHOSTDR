@@ -11,6 +11,7 @@ import astrodata
 from gempy.utils import logutils
 from recipe_system.reduction.coreReduce import Reduce
 
+import ghostdr
 
 # TESTS TO RUN #
 
@@ -41,7 +42,7 @@ class TestMasterBias(object):
         reduce.drpkg = 'ghostdr'
         reduce.files = rawfiles
         reduce.mode = ['test', ]
-        reduce.urecipe = 'test.recipes_BIAS.recipeBiasCreateMaster'
+        reduce.urecipe = 'recipeBiasCreateMaster'
         reduce.logfile = os.path.join(tmpsubdir.dirname,
                                       'reduce_masterbias.log')
         reduce.logmode = 'quiet'
@@ -55,7 +56,7 @@ class TestMasterBias(object):
         # Find the overscan-corrected bias files
         rawfiles = glob.glob(os.path.join(
             tmpsubdir.dirname,
-            rawfilename.split('.')[0] + '*_overscanCorrected*.fits',
+            rawfilename.split('.')[0] + '*_overscanCorrect*.fits',
         ))
 
         # Return filenames of raw, subtracted files
@@ -87,8 +88,12 @@ class TestMasterBias(object):
             "Difference between mean value of " \
             "master bias and means of input " \
             "biases is over the prescribed " \
-            "threshold ({}%)".format(
-            mean_tolerance*100.
+            "threshold ({}%)\n" \
+            "Raw mean: {}\n" \
+            "Bias mean: {}".format(
+            mean_tolerance*100.,
+            raw_mean,
+            master_mean,
         )
 
     def test_overscan_std(self, do_master_bias):
@@ -118,6 +123,10 @@ class TestMasterBias(object):
                                 "root sum-of-squares of the standard " \
                                 "deviations of the matching input bias " \
                                 "extensions by the given threshold " \
-                                "({}%)".format(
+                                "({}%)\n" \
+                                "Raw STD: {}\n" \
+                                "Bias STD: {}".format(
             std_tolerance*100.,
+            rawstd,
+            corrstd,
         )

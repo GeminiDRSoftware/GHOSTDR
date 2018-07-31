@@ -15,4 +15,4 @@ def recipeBiasCreateMaster(p):
     p.stackFrames()
     return
 
-# default = recipeBiasRemoveOverscan
+default = recipeBiasCreateMaster
