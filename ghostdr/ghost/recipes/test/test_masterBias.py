@@ -41,7 +41,7 @@ class TestMasterBias(object):
         reduce.drpkg = 'ghostdr'
         reduce.files = rawfiles
         reduce.mode = ['test', ]
-        reduce.urecipe = 'recipes_BIAS.recipeBiasCreateMaster'
+        reduce.urecipe = 'test.recipes_BIAS.recipeBiasCreateMaster'
         reduce.logfile = os.path.join(tmpsubdir.dirname,
                                       'reduce_masterbias.log')
         reduce.logmode = 'quiet'
