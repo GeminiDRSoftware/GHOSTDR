@@ -15,11 +15,15 @@ import numpy as np
 import astrodata
 import gemini_instruments
 from gempy.utils import logutils
+from astropy.io import fits
+from copy import deepcopy
+
+from ghostdr.ghost.primitives_ghost import GHOST
 
 # from geminidr.core.test import ad_compare
 
 TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
-logfilename = 'test_standardize.log'
+logfilename = 'test_ghost.log'
 
 
 class TestGhost:
@@ -27,7 +31,7 @@ class TestGhost:
     Suite of tests for the functions in the ghost_primitives module
     """
 
-    def test__rebing_ghost_ad(self):
+    def test__rebin_ghost_ad(self):
         """
         Checks to make:
 
@@ -36,4 +40,38 @@ class TestGhost:
 
         Loop over each valid binning mode
         """
-        pass
+        # Create a test data frame to operate on
+        phu = fits.PrimaryHDU()
+        hdu = fits.ImageHDU(data=np.zeros((1024, 1024,)), name='SCI')
+        hdu.header['CCDSUM'] = '1 1'
+        hdu.header['DATASEC'] = '[0:1024,0:1024]'
+        hdu.header['TRIMSEC'] = '[0:1024,0:1024]'
+        hdu.header['AMPSIZE'] = '[0:1024,0:1024]'
+        ad = astrodata.create(phu, [hdu, ])
+
+        # Rebin the data a bunch of different ways, run tests on each
+        # re-binning
+        binning_options = [
+            (1, 1,),
+            (2, 1,),
+            (2, 2,),
+            (4, 1,),
+            (4, 2,),
+            (8, 1,),
+        ]
+
+        for opt in binning_options:
+            # Re-bin the data
+            ad_new = deepcopy(ad)
+            p = GHOST(adinputs=[ad_new, ])
+            ad_new = p._rebin_ghost_ad(ad_new, opt[0], opt[1])
+            assert np.all([ad_new[0].data.shape[i] ==
+                           (ad[0].data.shape[i] / opt[abs(i - 1)])
+                           for i in [0, 1]])
+            assert ad_new[0].hdr['CCDSUM'] == '{0} {1}'.format(*opt)
+            assert ad_new[0].hdr['DATASEC'] == '[1:{1},1:{0}]'.format(
+                1024/opt[1], 1024/opt[0])
+            assert ad_new[0].hdr['TRIMSEC'] == '[1:{1},1:{0}]'.format(
+                1024 / opt[1], 1024 / opt[0])
+            assert ad_new[0].hdr['AMPSIZE'] == '[1:{1},1:{0}]'.format(
+                1024 / opt[1], 1024 / opt[0])
