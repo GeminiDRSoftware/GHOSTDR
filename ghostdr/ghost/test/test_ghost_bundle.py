@@ -12,6 +12,7 @@ To run:
 """
 import pytest
 import os
+import glob
 import numpy as np
 import astrodata
 import gemini_instruments
@@ -19,13 +20,13 @@ from gempy.utils import logutils
 
 from astropy.io import fits
 
-# from geminidr.core.test import ad_compare
+from ghostdr.ghost.primitives_ghost_bundle import GHOSTBundle
 
 TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
 logfilename = 'test_standardize.log'
 
 BUNDLE_STRUCTURE = {
-    ('slitcamera', 'SLITV'): 10,
+    ('slit', 'SLITV'): 10,
     ('redcamera', 'imageid1'): 3,
     ('redcamera', 'imageid2'): 4,
     ('bluecamera', 'imageid1'): 3,
@@ -49,16 +50,29 @@ class TestGhostBundle:
         phu = fits.PrimaryHDU()
         hdus = []
         for key, value in BUNDLE_STRUCTURE.items():
-            hdu = fits.ImageHDU(data=np.zeros(10, 10, ), name='SCI')
-            hdu.header['CAMERA'] = key[0]
-            hdu.header['EXPID'] = key[1]
-            hdus.append(hdu)
+            for i in range(value):
+                hdu = fits.ImageHDU(data=np.zeros((10, 10, )), name='SCI')
+                hdu.header['CAMERA'] = key[0]
+                hdu.header['EXPID'] = key[1]
+                hdus.append(hdu)
 
-    def test_splitBundle(self):
+        # Create AstroData
+        ad = astrodata.create(phu, hdus)
+
+        return ad, tmpsubdir
+
+    def test_splitBundle(self, create_bundle):
         """
         Checks to make:
 
         - Count number of extracted files
         - Ensure function itself returns empty list
         """
-        pass
+        dummy_bundle, tmpsubdir = create_bundle
+
+        # Do things in the tmpdir
+        os.chdir(tmpsubdir.dirname)
+        p = GHOSTBundle([dummy_bundle, ])
+        output = p.splitBundle(adinputs=[dummy_bundle, ])
+        print('Files in tmpdir: {}'.format(glob.glob(tmpsubdir.dirname)))
+        assert False
