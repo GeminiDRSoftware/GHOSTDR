@@ -62,12 +62,14 @@ class GHOSTBundle(GHOST):
             # TODO: may need to make multiple SV files, not one per SV exposure
             # but one per RED/BLUE exposure which contains all SV exposures that
             # overlap with the RED/BLUE one in time (check with Jon)
-            extns = [x for x in ad if x.hdr['CAMERA'].lower() == 'slit']
-            _write_newfile(extns, '_slit', ad, log)
+            extns = [x for x in ad if x.hdr.get('CAMERA').lower() == 'slit']
+            if len(extns) > 0:
+                _write_newfile(extns, '_slit', ad, log)
 
             # now do non-slitv extensions
-            extns = [x for x in ad if x.hdr['CAMERA'].lower() != 'slit']
-            key = lambda x: '_'+x.hdr['CAMERA'].lower()+str(x.hdr['EXPID'])
+            extns = [x for x in ad if x.hdr.get('CAMERA').lower() != 'slit']
+            key = lambda x: '_' + x.hdr.get('CAMERA').lower() + str(
+                x.hdr.get('EXPID'))
             extns = sorted(extns, key=key)
             for k, g in itertools.groupby(extns, key=key):
                 _write_newfile(list(g), k, ad, log)
@@ -108,12 +110,15 @@ def _write_newfile(extns, suffix, base, log):
     assert extns and len(extns) > 0
     n = astrodata.create(copy.deepcopy(base.header[0]))
     for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:
-        del n.phu[kw]
+        try:
+            del n.phu[kw]
+        except KeyError:
+            pass
     for x in extns: n.append(x)
     for kw in ['CAMERA', 'CCDNAME']:
-        n.phu[kw] = n[0].hdr[kw]
+        n.phu.set(kw, n[0].hdr.get(kw))
     n.filename = base.filename
-    binning = '_' + 'x'.join(n[0].hdr['CCDSUM'].split())
+    binning = '_' + 'x'.join(n[0].hdr.get('CCDSUM').split())
     n.update_filename(suffix=binning+suffix)
     log.stdinfo("   Writing {}".format(n.filename))
     n.write(overwrite=True)  # should we always overwrite?
