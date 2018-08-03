@@ -15,17 +15,70 @@ import numpy as np
 import astrodata
 import gemini_instruments
 from gempy.utils import logutils
+import pytest
+from astropy.io import fits
+import datetime
 
 # from geminidr.core.test import ad_compare
+from ghostdr.ghost.primitives_ghost_slit import GHOSTSlit
 
 TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
-logfilename = 'test_standardize.log'
+logfilename = 'test_ghost_slit.log'
+
+SLIT_CAMERA_SIZE = (160, 160, )
+NO_SLITS = 10
+EXPTIME_SLITS = 10.
+SLIT_UT_START = datetime.datetime(2018, 6, 1, 0, 0)
+STRFTIME = '%H:%M:%S.%f'
 
 
-class TestGhost:
+class TestGhostSlit:
     """
     Suite of tests for the functions in the primitives_ghost_slit module
     """
+
+    @pytest.fixture(scope='class')
+    def create_slit_package(self, tmpdir_factory):
+        """
+        Generate a package of dummy slit files
+        """
+        rawfilename = 'testslitpackage.fits'
+        tmpsubdir = tmpdir_factory.mktemp('fits')
+
+        # Create the AstroData object
+        phu = fits.PrimaryHDU()
+        phu.header.set('CAMERA', 'slit')
+        phu.header.set('CCDNAME', 'Sony-ICX674')
+        phu.header.set('UTSTART', SLIT_UT_START.strftime(STRFTIME))
+        phu.header.set('UTEND', (SLIT_UT_START + datetime.timedelta(
+            seconds=(NO_SLITS + 1) * EXPTIME_SLITS)).strftime(STRFTIME))
+        phu.header.set('INSTRUME', 'GHOST')
+
+
+        hdus = []
+        for i in range(NO_SLITS):
+            hdu = fits.ImageHDU(data=np.zeros(SLIT_CAMERA_SIZE), name='SCI')
+            hdu.header.set('CAMERA', phu.header.get('CAMERA'))
+            hdu.header.set('CCDNAME', phu.header.get('CCDNAME'))
+            hdu.header.set('EXPID', i+1)
+            hdu.header.set('CCDSUM', '2 2')
+            hdu.header.set('EXPUTST', (SLIT_UT_START +
+                           datetime.timedelta(
+                               seconds=(i * 0.2) * EXPTIME_SLITS
+                           )).strftime(STRFTIME))
+            hdu.header.set('EXPUTST', (SLIT_UT_START +
+                           datetime.timedelta(
+                               seconds=((i * 0.2) + 1) * EXPTIME_SLITS
+                           )).strftime(STRFTIME))
+            hdu.header.set('GAIN', 1.0)
+            hdu.header.set('RDNOISE', 8.0)
+            hdus.append(hdu)
+
+        # Create AstroData
+        ad = astrodata.create(phu, hdus)
+        ad.filename = rawfilename
+
+        return ad, tmpsubdir
 
     def test_CRCorrect(self):
         """
@@ -37,8 +90,9 @@ class TestGhost:
         """
         pass
 
-
-    def test_processSlits(self):
+    @pytest.mark.skip(reason='Needs to be tested with a reduced slit flat - '
+                             'full recipe test?')
+    def test_processSlits(self, create_slit_package):
         """
         Checks to make:
 
@@ -47,16 +101,48 @@ class TestGhost:
             b) The correct mean exposure epoch
         """
 
+        ad, tmpsubdir = create_slit_package
+        os.chdir(tmpsubdir.dirname)
 
-    def test_stackFrames(self):
+        p = GHOSTSlit([ad, ])
+        output = p.processSlits(adinputs=[ad, ])
+        assert output.phu.header.get('AVGEPOCH') is not None
+
+    def test_stackFrames_outputs(self, create_slit_package):
         """
         Checks to make:
 
         - Only one file comes out
         - Dimensions of the output image match those of the input image
-        - Attempting to stack images of different shapes should fail
         """
 
+        ad, tmpsubdir = create_slit_package
+        os.chdir(tmpsubdir.dirname)
+
+        p = GHOSTSlit([ad, ])
+        ad = p.prepare(adinputs=[ad, ])
+        output = p.stackFrames(adinputs=ad)
+        assert len(output) == 1, 'Output length not 1'
+        assert np.all([output[0][0].data.shape ==
+                       _.data.shape for _ in ad[0]]), "Stacked frame shape " \
+                                                      "does not match inputs"
+
+    def test_stackFrames_exception(self, create_slit_package):
+        """
+        Checks to make:
+
+        - Stacking frames with different shapes should fail
+        """
+        ad, tmpsubdir = create_slit_package
+        os.chdir(tmpsubdir.dirname)
+
+        for i in range(0, len(ad), 2):
+            ad[i].data = np.zeros((10, 10, ))
+
+        p = GHOSTSlit([ad, ])
+        ad = p.prepare(adinputs=[ad, ])
+        with pytest.raises(IOError):
+            output = p.stackFrames(adinputs=ad)
 
     def test__mad(self):
         """
@@ -65,7 +151,6 @@ class TestGhost:
         - Pass in some known data, check the MAD is computed correctly
         - Check across axes as well
         """
-
 
     def test__total_obj_flux(self):
         """
