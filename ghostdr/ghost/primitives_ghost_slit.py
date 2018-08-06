@@ -301,11 +301,11 @@ class GHOSTSlit(GHOST):
 ##############################################################################
 # Below are the helper functions for the primitives in this module           #
 ##############################################################################
-def _mad(data, axis=None):
+def _mad(data, axis=None, keepdims=False):
     """
     Median Absolute Deviation: a "Robust" version of standard deviation.
 
-    The median absolute deviation of a sample if the median of data devations
+    The median absolute deviation of a sample is the median of data devations
     from the data median:
 
     .. math::
@@ -321,13 +321,20 @@ def _mad(data, axis=None):
     axis : int or None
         Axis along which to compute the MAD. Defaults to None (i.e. MAD
         is computed across all data points).
+    keepdims: bool, optional
+        If this is set to True, the axes which are reduced are left in the
+        result as dimensions with size one. With this option, the result
+        will broadcast correctly against the original data.
 
     Returns
     -------
     float
         The MAD of the data, along the requested axis.
     """
-    return np.median(np.absolute(data - np.median(data, axis)), axis)
+    return np.median(np.absolute(data - np.median(data,
+                                                  axis=axis,
+                                                  keepdims=True)), axis=axis,
+                     keepdims=keepdims)
 
 def _total_obj_flux(res, data, flat_data=None):
     """
