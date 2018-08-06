@@ -108,7 +108,7 @@ def _write_newfile(extns, suffix, base, log):
         If the ``extns`` parameter is :any:`None`, or empty
     """
     assert extns and len(extns) > 0
-    n = astrodata.create(copy.deepcopy(base.header[0]))
+    n = astrodata.create(copy.deepcopy(base.phu))
     for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:
         try:
             del n.phu[kw]
