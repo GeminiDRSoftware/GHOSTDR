@@ -18,6 +18,7 @@ from gempy.utils import logutils
 import pytest
 from astropy.io import fits
 import datetime
+import random
 
 # from geminidr.core.test import ad_compare
 from ghostdr.ghost.primitives_ghost_slit import GHOSTSlit, _mad, _total_obj_flux
@@ -80,15 +81,47 @@ class TestGhostSlit:
 
         return ad, tmpsubdir
 
-    def test_CRCorrect(self):
+    def test_CRCorrect(self, create_slit_package):
         """
         Checks to make:
 
         - Check that all simulated CR are removed from test data
         - Check shape of output data matches shape of input
-        - Checks on the data median/std dev?
         """
-        pass
+        ad, tmpsubdir = create_slit_package
+
+        # Set this to be STD mode data
+        ad.phu.set('SMPNAME', 'LO_ONLY')
+
+        modded_coords = []
+        for ext in ad:
+            # Switch on a '1' in the data plane of each slit. With all other
+            # values being 0., that should trigger _mad detection
+            # Ensure that a different coord pixel is flagged in each ext.
+            success = False
+            while not success:
+                attempt_coord = (random.randint(0, SLIT_CAMERA_SIZE[0] - 1),
+                                 random.randint(0, SLIT_CAMERA_SIZE[1] - 1), )
+                if attempt_coord not in modded_coords:
+                    ext.data[attempt_coord] = 1.0
+                    success = True
+
+        p = GHOSTSlit(adinputs=[ad, ])
+        output = p.CRCorrect(adinputs=[ad, ])[0]
+        # Check CR replacement
+        assert sum([abs(np.sum(ext.data))
+                    < 1e-5 for ext in output]) == \
+               len(output), 'CRCorrect failed to remove all dummy cosmic rays'
+        # Check for replacement header keyword
+        for ext in output:
+            assert ext.hdr.get('CRPIXREJ') == 1, 'Incorrect number of ' \
+                                                 'rejected pixels ' \
+                                                 'recorded in CRPIXREJ'
+        # Check data array shapes
+        for i in range(len(output)):
+            assert output[i].data.shape == ad[i].data.shape, 'CRCorrect has ' \
+                                                             'mangled ' \
+                                                             'data shapes'
 
     @pytest.mark.skip(reason='Needs to be tested with a reduced slit flat - '
                              'full recipe test?')
