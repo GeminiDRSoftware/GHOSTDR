@@ -67,11 +67,20 @@ class TestGhost:
             ad_new = p._rebin_ghost_ad(ad_new, opt[0], opt[1])
             assert np.all([ad_new[0].data.shape[i] ==
                            (ad[0].data.shape[i] / opt[abs(i - 1)])
-                           for i in [0, 1]])
-            assert ad_new[0].hdr['CCDSUM'] == '{0} {1}'.format(*opt)
+                           for i in [0, 1]]), 'Rebinned data has incorrect ' \
+                                              'shape (expected {}, ' \
+                                              'have {})'.format(
+                tuple((ad[0].data.shape[i] / opt[abs(i - 1)])
+                 for i in [0, 1]), ad_new[0].data.shape,
+            )
+            assert ad_new[0].hdr['CCDSUM'] == '{0} {1}'.format(*opt), \
+                'Incorrect value of CCDSUM recorded'
             assert ad_new[0].hdr['DATASEC'] == '[1:{1},1:{0}]'.format(
-                1024/opt[1], 1024/opt[0])
+                1024/opt[1], 1024/opt[0]), 'Incorrect value for DATASEC ' \
+                                           'recorded'
             assert ad_new[0].hdr['TRIMSEC'] == '[1:{1},1:{0}]'.format(
-                1024 / opt[1], 1024 / opt[0])
+                1024 / opt[1], 1024 / opt[0]), 'Incorrect value for TRIMSEC ' \
+                                               'recorded'
             assert ad_new[0].hdr['AMPSIZE'] == '[1:{1},1:{0}]'.format(
-                1024 / opt[1], 1024 / opt[0])
+                1024 / opt[1], 1024 / opt[0]), 'Incorrect value for AMPSIZE ' \
+                                               'recorded'
