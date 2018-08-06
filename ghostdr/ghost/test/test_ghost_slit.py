@@ -244,6 +244,8 @@ class TestGhostSlit:
             test_array_mad_rows, _mad(test_array, axis=1),
         )
 
+    @pytest.mark.skip(reason='Requires full slit viewer image - can it be '
+                             'made part of all-up recipe testing?')
     def test__total_obj_flux(self):
         """
         Checks to make
