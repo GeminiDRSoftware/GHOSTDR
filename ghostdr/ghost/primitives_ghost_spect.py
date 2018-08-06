@@ -1448,7 +1448,8 @@ class GHOSTSpect(GHOST):
             The clipping limit for the fine-structure image.
         """
         raise DeprecationWarning('Cosmic ray rejections is now handled '
-                                 'as part of the profile extraction process.')
+                                 'as part of the profile extraction process. '
+                                 'rejectCosmicRays is *not* being maintained.')
 
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
