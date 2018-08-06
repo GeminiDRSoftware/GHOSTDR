@@ -20,12 +20,12 @@ from astropy.io import fits
 import datetime
 
 # from geminidr.core.test import ad_compare
-from ghostdr.ghost.primitives_ghost_slit import GHOSTSlit
+from ghostdr.ghost.primitives_ghost_slit import GHOSTSlit, _mad, _total_obj_flux
 
 TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
 logfilename = 'test_ghost_slit.log'
 
-SLIT_CAMERA_SIZE = (160, 160, )
+SLIT_CAMERA_SIZE = (160, 160,)
 NO_SLITS = 10
 EXPTIME_SLITS = 10.
 SLIT_UT_START = datetime.datetime(2018, 6, 1, 0, 0)
@@ -54,22 +54,22 @@ class TestGhostSlit:
             seconds=(NO_SLITS + 1) * EXPTIME_SLITS)).strftime(STRFTIME))
         phu.header.set('INSTRUME', 'GHOST')
 
-
         hdus = []
         for i in range(NO_SLITS):
             hdu = fits.ImageHDU(data=np.zeros(SLIT_CAMERA_SIZE), name='SCI')
             hdu.header.set('CAMERA', phu.header.get('CAMERA'))
             hdu.header.set('CCDNAME', phu.header.get('CCDNAME'))
-            hdu.header.set('EXPID', i+1)
+            hdu.header.set('EXPID', i + 1)
             hdu.header.set('CCDSUM', '2 2')
             hdu.header.set('EXPUTST', (SLIT_UT_START +
-                           datetime.timedelta(
-                               seconds=(i * 0.2) * EXPTIME_SLITS
-                           )).strftime(STRFTIME))
+                                       datetime.timedelta(
+                                           seconds=(i * 0.2) * EXPTIME_SLITS
+                                       )).strftime(STRFTIME))
             hdu.header.set('EXPUTST', (SLIT_UT_START +
-                           datetime.timedelta(
-                               seconds=((i * 0.2) + 1) * EXPTIME_SLITS
-                           )).strftime(STRFTIME))
+                                       datetime.timedelta(
+                                           seconds=((
+                                                                i * 0.2) + 1) * EXPTIME_SLITS
+                                       )).strftime(STRFTIME))
             hdu.header.set('GAIN', 1.0)
             hdu.header.set('RDNOISE', 8.0)
             hdus.append(hdu)
@@ -136,21 +136,80 @@ class TestGhostSlit:
         ad, tmpsubdir = create_slit_package
         os.chdir(tmpsubdir.dirname)
 
+        # Re-size every 2nd input AD
         for i in range(0, len(ad), 2):
-            ad[i].data = np.zeros((10, 10, ))
+            ad[i].data = np.zeros((10, 10,))
 
         p = GHOSTSlit([ad, ])
         ad = p.prepare(adinputs=[ad, ])
         with pytest.raises(IOError):
             output = p.stackFrames(adinputs=ad)
 
-    def test__mad(self):
+    def test__mad_fullarray(self):
         """
         Checks to make:
 
         - Pass in some known data, check the MAD is computed correctly
+        """
+        # Create a simple array where the MAD is easily known
+        test_array = [1., 1., 3., 5., 5.]
+        test_array_mad = 2.
+        assert abs(_mad(test_array) -
+                   test_array_mad) < 1e-5, 'MAD computation failed ' \
+                                           '(expected: {}, ' \
+                                           'computed: {})'.format(
+            test_array_mad, _mad(test_array),
+        )
+
+    def test__mad_cols(self):
+        """
+        Checks to make:
+
         - Check across axes as well
         """
+        # Create a simple test array
+        test_array = [
+            [1., 2., 3., ],
+            [4., 6., 8., ],
+            [5., 10., 15., ],
+        ]
+
+        test_array_mad_cols = [1., 4., 5., ]
+        assert sum([abs(_mad(test_array, axis=0)[i] -
+                        test_array_mad_cols[i]) < 1e-5
+                    for i in
+                    range(len(test_array_mad_cols))]) == \
+               len(test_array_mad_cols), 'MAD computation failed ' \
+                                         '(axis 0) ' \
+                                         '(expected: {}, ' \
+                                         'computed: {})'.format(
+            test_array_mad_cols, _mad(test_array, axis=0),
+        )
+
+    def test__mad_rows(self):
+        """
+        Checks to make:
+
+        - Check across axes as well
+        """
+        # Create a simple test array
+        test_array = [
+            [1., 2., 3., ],
+            [4., 6., 8., ],
+            [5., 10., 15., ],
+        ]
+
+        test_array_mad_rows = [1., 2., 5., ]
+        assert sum([abs(_mad(test_array, axis=1)[i] -
+                        test_array_mad_rows[i]) < 1e-5
+                    for i in
+                    range(len(test_array_mad_rows))]
+                   ) == len(test_array_mad_rows), 'MAD computation failed ' \
+                                                  '(axis 1) ' \
+                                                  '(expected: {}, ' \
+                                                  'computed: {})'.format(
+            test_array_mad_rows, _mad(test_array, axis=1),
+        )
 
     def test__total_obj_flux(self):
         """
