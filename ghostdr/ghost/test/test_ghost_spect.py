@@ -21,6 +21,13 @@ from gempy.utils import logutils
 TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
 logfilename = 'test_standardize.log'
 
+import pytest
+import ghost_instruments
+import astrodata
+from astropy.io import fits
+
+from ghostdr.ghost.primitives_ghost_spect import GHOSTSpect
+
 
 class TestGhost:
     """
@@ -30,7 +37,8 @@ class TestGhost:
     - Correct keyword comment has been added
     """
 
-    def test_addWavelengthSolution(self):
+    @pytest.mark.skip(reason='Requires calibrators & polyfit-ing')
+    def test_addWavelengthSolution(self, data_addWavelengthSolution):
         """
         Checks to make:
 
@@ -40,7 +48,11 @@ class TestGhost:
         """
         pass
 
-    def test_applyFlatBPM(self):
+    @pytest.mark.fixture(scope='class')
+    def data_applyFlatBPM(self, tmpdir_factory):
+        return None, None
+
+    def test_applyFlatBPM(self, data_applyFlatBPM):
         """
         Checks to make:
 
@@ -50,6 +62,7 @@ class TestGhost:
         - Check before & after data shape
         """
         pass
+
 
     def test_barycentricCorrect(self):
         """
