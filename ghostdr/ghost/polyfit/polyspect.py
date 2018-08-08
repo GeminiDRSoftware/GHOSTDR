@@ -1018,7 +1018,7 @@ class Polyspect(object):
 
         # Must provide xparams
         if (xparams is None):
-            return 'Must provide at least an initial xparams'
+            raise ValueError('Must provide at least an initial xparams')
 
         # Grab the model to be plotted
         x_int, wave_int, blaze_int = self.spectral_format(wparams=wparams,

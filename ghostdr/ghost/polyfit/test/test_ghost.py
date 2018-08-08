@@ -5,10 +5,13 @@ import astropy.io.fits as pyfits
 import pdb
 import numpy as np
 
-# Create a generic instantiation of ghost for generic test purposes.
-# gen_ghost = polyfit.ghost.GhostArm()
-
 # Assert if all the correct attributes of the ghost class needed are there
+
+# Note that we also test a lot of polyspect.PolySpect functionality here -
+# this is because Polyspect requires a lot of input parameters to be
+# initialized, so it's much easier to use a GhostArm instance. The only
+# Polyspect method overwritten by GhostArm is slit_flat_convolve, which is
+# a no-op function in Polyspect.
 
 
 class TestGhostArmBasic():
@@ -38,7 +41,6 @@ class TestGhostArmBasic():
                                "(expected {}, got {})".format(
             attrib, tp, type(getattr(gen_ghost, attrib)),
         )
-
 
     def test_evaluate_poly_inputs(self, make_ghostarm_basic):
         """ Function designed to test general input aspects of polyspect's
@@ -121,6 +123,74 @@ class TestGhostArmBasic():
                                                 '(2, 2)'):
             gen_ghost.adjust_x(a, a)
 
+    def test_fit_x_to_image_inputs(self, make_ghostarm_basic):
+        """Test the input checking of GhostArm.fit_x_to_image"""
+        gen_ghost = make_ghostarm_basic
+        img = np.zeros((3, 3, 3, ))
+        pars = np.zeros((2, 2, ))
+        with pytest.raises(UserWarning, message='GhostArm.fit_x_to_image '
+                                                'failed to raise a '
+                                                'UserWarning when the image '
+                                                'could not be correctly '
+                                                'reduced by decrease_dim'):
+            gen_ghost.fit_x_to_image(img, pars, decrease_dim=4)
+
+    def test_fit_to_x_inputs(self, make_ghostarm_basic):
+        """Test the input checking of GhostArm.fit_to_x"""
+        gen_ghost = make_ghostarm_basic
+        xtf = np.zeros((3, 3, ))
+        init_mod = np.zeros((2, 2, ))
+        with pytest.raises(UserWarning, message='GhostArm.fit_to_x failed to '
+                                                'raise a UserWarning when '
+                                                'x_to_fit is not a '
+                                                'np.ndarray'):
+            gen_ghost.fit_to_x(xtf.tolist(), init_mod)
+        with pytest.raises(UserWarning, message='GhostArm.fit_to_x failed to '
+                                                'raise a UserWarning when '
+                                                'init_mod is not a '
+                                                'np.ndarray'):
+            gen_ghost.fit_to_x(xtf, init_mod.tolist())
+        with pytest.raises(UserWarning, message='GhostArm.fit_to_x failed to '
+                                                'raise a UserWarning when '
+                                                'init_mod is not a '
+                                                'np.ndarray'):
+            gen_ghost.fit_to_x(xtf, init_mod, decrease_dim=4)
+
+    def test_spectral_format_with_matrix_inputs(self, make_ghostarm_basic):
+        """Test the input checking of spectral_format_with_matrix"""
+        gen_ghost = make_ghostarm_basic
+        a = np.zeros((2, 2, ))
+        with pytest.raises(ValueError,
+                           message='GhostArm.spectral_format_with_matrix '
+                                   'failed to raise ValueError when given '
+                                   'no xmod or wavemod'):
+            gen_ghost.spectral_format_with_matrix(None, None)
+        with pytest.raises(ValueError,
+                           message='GhostArm.spectral_format_with_matrix '
+                                   'failed to raise ValueError when given '
+                                   'no spatmod, specmod or rotmod'):
+            gen_ghost.spectral_format_with_matrix(a, a, spatmod=None,
+                                                  specmod=None, rotmod=None)
+
+    def test_manual_model_adjust_inputs(self, make_ghostarm_basic):
+        """Test the input checking of manual_model_adjust"""
+        gen_ghost = make_ghostarm_basic
+        with pytest.raises(ValueError,
+                           message='GhostArm.manual_model_adjust '
+                                   'failed to raise ValueError when given '
+                                   'no xparams'):
+            gen_ghost.manual_model_adjust(np.zeros((2, 2)), None)
+
+    def test_bin_data_inputs(self, make_ghostarm_basic):
+        """Test the input checking of bin_data"""
+        gen_ghost = make_ghostarm_basic
+        with pytest.raises(UserWarning,
+                           message='GhostArm.bin_data '
+                                   'failed to raise UserWarning when given '
+                                   'a data array not matching the GhostArm '
+                                   'CCD size parameters'):
+            gen_ghost.bin_data(np.zeros((gen_ghost.szx + 1,
+                                         gen_ghost.szy + 2)))
 
 
 # FIXME What was this originally meant to test? The relevant args have
