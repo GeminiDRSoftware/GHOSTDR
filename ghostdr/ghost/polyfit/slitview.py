@@ -40,6 +40,7 @@ class SlitView(object):
         # profile offset, i.e. it interacts directly with the tramline fitting
         # and a change to one is a change to the other.
         # Co-ordinates are in standard python co-ordinates, i.e. y then x
+        # TODO Factor these 'magic numbers' into a config variable/function
         if mode == 'std':
             self.central_pix = {'red': [77, 65], 'blue': [77, 156]}
             self.extract_half_width = 3
@@ -65,7 +66,7 @@ class SlitView(object):
                 'red': [[11, 81], [4, 9]], 'blue': [[11, 81], [4, 9]]}
             self.sky_pix_boundaries = {'red': [11, 106], 'blue': [11, 106]}
         else:
-            raise UserWarning("Invalid Mode")
+            raise ValueError("Invalid Mode")
 
     def cutout(self, arm='red', use_flat=False):
         """
@@ -88,7 +89,7 @@ class SlitView(object):
         try:
             central_pix = self.central_pix[arm]
         except:
-            raise UserWarning("Invalid arm: '%s'" % arm)
+            raise ValueError("Invalid arm: '%s'" % arm)
 
         if use_flat:
             this_slit_image = self.flat_image
