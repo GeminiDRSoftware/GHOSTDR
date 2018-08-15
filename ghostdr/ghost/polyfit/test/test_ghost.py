@@ -192,6 +192,34 @@ class TestGhostArmBasic():
             gen_ghost.bin_data(np.zeros((gen_ghost.szx + 1,
                                          gen_ghost.szy + 2)))
 
+    # @pytest.mark.skip
+    @pytest.mark.parametrize("xparams,wparams,img", [
+        (None, None, None),
+        ('test', None, None),
+        (np.ones((3, 3,)), None, np.arange(10.0)),
+        (np.ones((3, 3,)), None, 'test')
+    ])
+    def test_spectral_format(self, xparams, wparams, img, make_ghostarm_basic):
+        """ Function to test the spectral_format method"""
+        # Test that calling this function with the various combinations of
+        # invalid inputs raises a UserWarning
+        gen_ghost = make_ghostarm_basic
+        with pytest.raises((UserWarning, TypeError)):
+            gen_ghost.spectral_format(xparams, wparams, img)
+
+    # @pytest.mark.skip
+    @pytest.mark.parametrize("old_x,image", [
+        ('test', np.ones((3, 3))),
+        (np.ones((3, 3,)), 'test'),
+        (np.ones((3, 3)), np.ones(10))
+    ])
+    def test_adjust_x(self, old_x, image, make_ghostarm_basic):
+        """ Function to test the adjust_x function"""
+        # Test the TypeError
+        gen_ghost = make_ghostarm_basic
+        with pytest.raises((TypeError, UserWarning)):
+            gen_ghost.adjust_x(old_x, image)
+
 
 # FIXME What was this originally meant to test? The relevant args have
 # changed beyond recognition
@@ -200,51 +228,6 @@ class TestGhostArmBasic():
 # assert gen_ghost.evaluate_poly(np.ones((3, 3)),
 #                                33.,
 #                                ).shape == y_values.shape
-
-
-@pytest.mark.skip()
-@pytest.mark.parametrize("params,orders,waves,y_values", [
-    (np.ones((2, 3)), np.arange(10.), np.arange(10.), np.arange(10.)),
-    (np.ones((3, 3)), np.arange(10.), np.arange(10.), np.arange(20.)),
-])
-def test_wave_fit_resid(params, orders, waves, y_values):
-    """ Function to test the wave_fit_resid method"""
-
-    with pytest.raises(TypeError):
-        gen_ghost.wave_fit_resid(params='test', orders=orders,
-                                 waves=waves, y_values=y_values,
-                                 ydeg=3, xdeg=3)
-    # Then test whether the function catches the UserWarnings
-    with pytest.raises(UserWarning):
-        gen_ghost.wave_fit_resid(params=params, orders=orders,
-                                 waves=waves, y_values=y_values,
-                                 ydeg=3, xdeg=3)
-
-@pytest.mark.skip
-@pytest.mark.parametrize("xparams,wparams,img", [
-    (None, None, None),
-    ('test', None, None),
-    (np.ones((3, 3,)), None, np.arange(10.0)),
-    (np.ones((3, 3,)), None, 'test')
-])
-def test_spectral_format(xparams, wparams, img):
-    """ Function to test the spectral_format method"""
-    # Test that calling this function with the various combinations of
-    # invalid inputs raises a UserWarning
-    with pytest.raises(UserWarning):
-        gen_ghost.spectral_format(xparams, wparams, img)
-
-@pytest.mark.skip
-@pytest.mark.parametrize("old_x,image", [
-    ('test', np.ones((3, 3))),
-    (np.ones((3, 3,)), 'test'),
-    (np.ones((3, 3)), np.ones(10))
-])
-def test_adjust_x(old_x, image):
-    """ Function to test the adjust_x function"""
-    # Test the TypeError
-    with pytest.raises((TypeError, UserWarning)):
-        gen_ghost.adjust_x(old_x, image)
 
 @pytest.mark.skip(reason='Requires non-existant test data')
 @pytest.mark.parametrize("res,arm", [
