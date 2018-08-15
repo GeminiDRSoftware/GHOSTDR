@@ -229,7 +229,7 @@ class TestGhostArmBasic():
 #                                33.,
 #                                ).shape == y_values.shape
 
-@pytest.mark.skip(reason='Requires non-existant test data')
+@pytest.mark.skip(reason='Requires non-existent test data')
 @pytest.mark.parametrize("res,arm", [
     ('high', 'red'), ('std', 'red'), ('high', 'blue'), ('std', 'blue')])
 def test_polyfit(res, arm):
