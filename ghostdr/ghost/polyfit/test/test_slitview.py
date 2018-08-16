@@ -36,6 +36,14 @@ class TestSlitView():
             pytest.fail('Exception raised while trying to instantiate '
                         '{} mode SlitView object'.format(mode))
 
+        for attr, value in polyfit.slitview.SLITVIEW_PARAMETERS[mode].items():
+            assert getattr(sv, attr) == value, "SlitView object has " \
+                                               "incorrect value for " \
+                                               "attribute {} (expected {}, " \
+                                               "found {})".format(
+                attr, value, getattr(sv, attr),
+            )
+
     def test_slitview_cutout_init(self, get_slitview_obj):
         """Test input checking on SlitView.cutout"""
         data_arr, flat_arr, sv = get_slitview_obj
