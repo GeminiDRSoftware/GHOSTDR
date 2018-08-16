@@ -4,6 +4,7 @@ import ghostdr.ghost.polyfit as polyfit
 import astropy.io.fits as pyfits
 import pdb
 import numpy as np
+import os
 
 # Assert if all the correct attributes of the ghost class needed are there
 
@@ -230,7 +231,7 @@ class TestGhostArmBasic():
 #                                ).shape == y_values.shape
 
 @pytest.mark.skip(reason='Requires non-existent test data')
-@pytest.mark.parametrize("res,arm", [
+@pytest.mark.parametrize("res, arm", [
     ('high', 'red'), ('std', 'red'), ('high', 'blue'), ('std', 'blue')])
 def test_polyfit(res, arm):
     """ Function designed to test various aspects of polyfit in all modes"""
@@ -238,8 +239,9 @@ def test_polyfit(res, arm):
     ghost = polyfit.ghost.GhostArm(arm, res)
 
     yvalues = np.arange(ghost.szy)
-    xparams = pyfits.getdata(
-        'tests/xmod_' + ghost.mode + '_' + ghost.arm + '.fits')
+    os.chdir(os.path.dirname(__file__))
+    xparams = pyfits.getdata('Polyfit/' + arm +
+                             '/' + res + '/161120/xmod.fits')
     xx, wave, blaze = ghost.spectral_format(xparams=xparams)
     # Start testing things
     assert xx.shape == wave.shape
