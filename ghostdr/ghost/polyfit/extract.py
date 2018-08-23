@@ -250,7 +250,8 @@ class Extractor(object):
             # principle applies.
             matrices = np.mean(matrices.reshape(n_orders,
                                                 int(
-                                                    self.arm.szy / self.arm.ybin),
+                                                    self.arm.szy /
+                                                    self.arm.ybin),
                                                 self.arm.ybin, 2, 2), axis=2)
 
         if self.arm.xbin > 1:
