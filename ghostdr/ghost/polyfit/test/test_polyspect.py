@@ -6,7 +6,8 @@ import pdb
 import numpy as np
 
 # Most of the testing of polyspect methods is done within test_ghost, as
-# GhostArm provides all the necessary instantiation calls.
+# GhostArm provides all the necessary instantiation calls. This is easier
+# than trying to work out the minimalist calls required ourselves.
 
 # Assert if all the correct attributes of the Polyspect class needed are there
 def test_polyspect_init():

@@ -5,6 +5,7 @@ import astropy.io.fits as pyfits
 import pdb
 import numpy as np
 import os
+import itertools
 
 # Assert if all the correct attributes of the ghost class needed are there
 
@@ -15,10 +16,23 @@ import os
 # a no-op function in Polyspect.
 
 
+def idfn(fixture_value):
+    return ','.join([str(_) for _ in fixture_value])
+
+
 class TestGhostArmBasic():
-    @pytest.fixture(scope='class')
-    def make_ghostarm_basic(self):
-        gen_ghost = polyfit.ghost.GhostArm()
+    @pytest.fixture(scope='class',
+                    params=list(itertools.product(*[
+                        ['std', 'high', ],  # Resolution mode
+                        ['red', 'blue', ],  # Spectrograph arm
+                        [1, 2, ],  # x binning
+                        [1, 2, 4, 8, ],  # y binning
+                    ])), ids=idfn, )
+    def make_ghostarm_basic(self, request):
+        res, arm, xb, yb = request.param
+        gen_ghost = polyfit.ghost.GhostArm(mode=res, arm=arm,
+                                           detector_x_bin=xb,
+                                           detector_y_bin=yb)
         return gen_ghost
 
     @pytest.mark.parametrize("attrib, tp", [
@@ -230,7 +244,8 @@ class TestGhostArmBasic():
 #                                33.,
 #                                ).shape == y_values.shape
 
-@pytest.mark.skip(reason='Requires non-existent test data')
+@pytest.mark.skip(reason='Requires non-existent test data; unsure of what '
+                         'this is meant to do anyway')
 @pytest.mark.parametrize("res, arm", [
     ('high', 'red'), ('std', 'red'), ('high', 'blue'), ('std', 'blue')])
 def test_polyfit(res, arm):
