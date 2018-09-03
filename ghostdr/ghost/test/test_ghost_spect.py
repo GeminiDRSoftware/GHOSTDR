@@ -25,6 +25,8 @@ import pytest
 import ghost_instruments
 import astrodata
 from astropy.io import fits
+import numpy as np
+import copy
 
 from ghostdr.ghost.primitives_ghost_spect import GHOSTSpect
 
@@ -48,9 +50,39 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.fixture(scope='class')
+    @pytest.fixture(scope='class')
     def data_applyFlatBPM(self, tmpdir_factory):
-        return None, None
+        rawfilename = 'test_applyFlatBPM_data.fits'
+        tmpsubdir = tmpdir_factory.mktemp('fits')
+
+        # Create the AstroData object
+        phu = fits.PrimaryHDU()
+        phu.header.set('INSTRUME', 'GHOST')
+        phu.header.set('CAMERA', 'RED')
+        phu.header.set('CCDNAME', 'E2V-CCD-231-C6')
+        phu.header.set('CCDSUM', '1 1')
+
+        # Create a simple data HDU with a zero BPM
+        sci = fits.ImageHDU(data=np.ones((1024, 1024, )), name='SCI')
+        sci.header.set('CCDSUM', '1 1')
+        bpm = fits.ImageHDU(data=np.zeros((1024, 1024, ), dtype=int), name='DQ')
+        bpm.header.set('CCDSUM', '1 1')
+
+        ad = astrodata.create(phu, [sci, ])
+        ad[0].DQ = bpm
+        ad.filename = rawfilename
+
+        # Now create a flat
+        flatfilename = 'test_applyFlatBPM_flat.fits'
+        # Mangle the BPM slightly
+        posns = np.random.randint(0, 2, size=bpm.shape).astype(np.bool)
+        bpm2 = copy.deepcopy(bpm)
+        bpm2.data[posns] = 1
+        flat_ad = astrodata.create(phu, [copy.deepcopy(sci), ])
+        flat_ad[0].DQ = bpm2
+        flat_ad.filename = flatfilename
+
+        return ad, flat_ad, tmpsubdir
 
     def test_applyFlatBPM(self, data_applyFlatBPM):
         """
@@ -61,7 +93,12 @@ class TestGhost:
           of combining and checking)
         - Check before & after data shape
         """
-        pass
+        ad, flat_ad, tmpsubdir = data_applyFlatBPM
+
+        gs = GHOSTSpect([ad, ])
+        ad_output = gs.applyFlatBPM([ad, ], flat=flat_ad)
+        # Check that flat BPM is correctly carried over to (blank) ad BPM
+        assert np.allclose(ad_output[0].mask, flat_ad[0].mask)
 
 
     def test_barycentricCorrect(self):
