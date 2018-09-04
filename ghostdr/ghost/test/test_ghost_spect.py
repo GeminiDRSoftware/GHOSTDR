@@ -95,12 +95,42 @@ class TestGhost:
         """
         ad, flat_ad, tmpsubdir = data_applyFlatBPM
 
+        # Check the AttributeError is no flat is provided
         gs = GHOSTSpect([ad, ])
+        with pytest.raises(AttributeError):
+            ad_output = gs.applyFlatBPM([ad, ]), "applyFlatBPM failed to " \
+                                                 "raise AttributeError when " \
+                                                 "not passed a flat or flat " \
+                                                 "stream"
+
         ad_output = gs.applyFlatBPM([ad, ], flat=flat_ad)
         # Check that flat BPM is correctly carried over to (blank) ad BPM
-        assert np.allclose(ad_output[0].mask, flat_ad[0].mask)
+        assert np.allclose(ad_output[0].mask,
+                           flat_ad[0].mask), "applyFlatBPM failed to " \
+                                             "correctly apply a flat BPM " \
+                                             "to a data file with a blank " \
+                                             "BPM"
 
+        # Double the BPM on the data (i.e. make all the values 2), and ensure
+        # that the re-applied values come out as 3
+        ad[0].mask *= 2
+        ad_output = gs.applyFlatBPM([ad, ], flat=flat_ad)
+        assert np.allclose(ad_output[0].mask,
+                           flat_ad[0].mask * 3), "applyFlatBPM failed to " \
+                                                 "correctly apply a flat BPM " \
+                                                 "to a data file with a non-" \
+                                                 "zero BPM"
 
+        # Ensure the correct behaviour when the data file has no BPM
+        ad[0].mask = None  # Is this the right way to do this? del doesn't work
+        ad_output = gs.applyFlatBPM([ad, ], flat=flat_ad)
+        assert np.allclose(ad_output[0].mask,
+                           flat_ad[0].mask), "applyFlatBPM failed to " \
+                                             "correctly apply a flat BPM " \
+                                             "to a data file with no inital " \
+                                             "BPM"
+
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_barycentricCorrect(self):
         """
         Checks to make:
@@ -111,6 +141,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_clipSigmaBPM(self):
         """
         Checks to make:
@@ -120,6 +151,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_darkCorrect(self):
         """
         Checks to make:
@@ -133,6 +165,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_extractProfile(self):
         """
         Checks to make
@@ -144,6 +177,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_interpolateAndCombine(self):
         """
         Checks to make:
@@ -156,6 +190,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_findApertures(self):
         """
         Checks to make:
@@ -166,6 +201,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_fitWavelength(self):
         """
         Checks to make:
@@ -178,6 +214,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_flatCorrect(self):
         """
         Checks to make:
@@ -191,6 +228,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_formatOutput(self):
         """
         Checks to make:
@@ -200,12 +238,14 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_rejectCosmicRays(self):
         """
         DEPRECATED: No testing required
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_responseCorrect(self):
         """
         Checks to make:
@@ -217,6 +257,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_standardizeStructure(self):
         """
         Checks to make:
@@ -225,6 +266,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test_tileArrays(self):
         """
         Checks to make:
@@ -234,6 +276,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test__get_polyfit_filename(self):
         """
         Checks to make:
@@ -243,6 +286,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test__compute_barycentric_correction(self):
         """
         Checks to make:
@@ -251,6 +295,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test__request_bracket_arc(self):
         """
         Checks to make (will require correctly populated calib system):
@@ -260,6 +305,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test__interp_spect(self):
         """
         Checks to make:
@@ -271,6 +317,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Not yet implemented.')
     def test__regrid_spect(self):
         """
         Checks to make:
