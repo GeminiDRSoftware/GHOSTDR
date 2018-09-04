@@ -27,6 +27,7 @@ import astrodata
 from astropy.io import fits
 import numpy as np
 import copy
+import random
 
 from ghostdr.ghost.primitives_ghost_spect import GHOSTSpect
 
@@ -50,10 +51,9 @@ class TestGhost:
         """
         pass
 
-    @pytest.fixture(scope='class')
-    def data_applyFlatBPM(self, tmpdir_factory):
-        rawfilename = 'test_applyFlatBPM_data.fits'
-        tmpsubdir = tmpdir_factory.mktemp('fits')
+    @staticmethod
+    def generate_minimum_file():
+        rawfilename = 'test_data.fits'
 
         # Create the AstroData object
         phu = fits.PrimaryHDU()
@@ -63,14 +63,24 @@ class TestGhost:
         phu.header.set('CCDSUM', '1 1')
 
         # Create a simple data HDU with a zero BPM
-        sci = fits.ImageHDU(data=np.ones((1024, 1024, )), name='SCI')
+        sci = fits.ImageHDU(data=np.ones((1024, 1024,)), name='SCI')
         sci.header.set('CCDSUM', '1 1')
+
+        ad = astrodata.create(phu, [sci, ])
+        ad.filename = rawfilename
+        return ad
+
+
+    @pytest.fixture(scope='class')
+    def data_applyFlatBPM(self, tmpdir_factory):
+        tmpsubdir = tmpdir_factory.mktemp('fits')
+
+        ad = self.generate_minimum_file()
+
         bpm = fits.ImageHDU(data=np.zeros((1024, 1024, ), dtype=int), name='DQ')
         bpm.header.set('CCDSUM', '1 1')
 
-        ad = astrodata.create(phu, [sci, ])
         ad[0].DQ = bpm
-        ad.filename = rawfilename
 
         # Now create a flat
         flatfilename = 'test_applyFlatBPM_flat.fits'
@@ -78,7 +88,7 @@ class TestGhost:
         posns = np.random.randint(0, 2, size=bpm.shape).astype(np.bool)
         bpm2 = copy.deepcopy(bpm)
         bpm2.data[posns] = 1
-        flat_ad = astrodata.create(phu, [copy.deepcopy(sci), ])
+        flat_ad = copy.deepcopy(ad)
         flat_ad[0].DQ = bpm2
         flat_ad.filename = flatfilename
 
@@ -130,16 +140,39 @@ class TestGhost:
                                              "to a data file with no inital " \
                                              "BPM"
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test_barycentricCorrect(self):
+    @pytest.fixture(scope='class')
+    def data_barycentricCorrect(self):
+        ad = self.generate_minimum_file()
+        # Add a wavl extension - no need to be realistic
+        ad[0].WAVL = np.random.rand(*ad[0].data.shape)
+        return ad, copy.deepcopy(ad[0].WAVL)
+
+    def test_barycentricCorrect(self, data_barycentricCorrect):
         """
         Checks to make:
 
-        - See that a correction factor of 1.0 does nothing
         - Make random checks that a non-1.0 correction factor works properly
         - Check before & after data shape
+
+        Testing of the helper _compute_barycentric_correction is done
+        separately.
         """
-        pass
+        ad, orig_wavl = data_barycentricCorrect
+        orig_ad = copy.deepcopy(ad)
+
+        gs = GHOSTSpect([ad, ])
+        corr_fact = random.uniform(0.5, 1.5)
+        ad_out = gs.barycentricCorrect([ad, ], correction_factor=corr_fact)[0]
+        assert np.allclose(ad_out[0].WAVL / corr_fact,
+                           orig_wavl), "barycentricCorrect appears not to " \
+                                       "have made a valid correction " \
+                                       "(tried to correct by {}, " \
+                                       "apparent correction {})".format(
+            corr_fact, np.average(ad_out[0].WAVL / orig_wavl)
+        )
+        assert orig_ad[0].WAVL.shape == ad_out[0].WAVL.shape, \
+            "barycentricCorrect has mangled the shape of the output " \
+            "WAVL extension"
 
     @pytest.mark.skip(reason='Not yet implemented.')
     def test_clipSigmaBPM(self):
@@ -292,6 +325,8 @@ class TestGhost:
         Checks to make:
 
         - Non-zero float correction factor returned
+        - Correct units of return based on input arguments
+        - Some regression test values
         """
         pass
 
