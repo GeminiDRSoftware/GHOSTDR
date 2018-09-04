@@ -360,8 +360,9 @@ class GHOSTSpect(GHOST):
                             format(ad.filename))
                 continue
 
-            #FIXME: It is more pythonic to ask forgiveness than permission, so a try
-            #statement is preferred.
+            # FIXME: It is more pythonic to ask forgiveness than permission,
+            # so a try
+            # statement is preferred.
             if not hasattr(ad[0], 'WAVL'):
                 log.warning("No changes will be made to {}, since it contains "
                             "no wavelength information".
@@ -372,7 +373,7 @@ class GHOSTSpect(GHOST):
             if params.get('correction_factor') is None:
                 cf = self._compute_barycentric_correction(ad, return_wavl=True)
             else:
-                cf = params.get('correction_factor')
+                cf = [params.get('correction_factor'), ] * len(ad)
 
             # Multiply the wavelength scale by the correction factor
             for i, ext in enumerate(ad):
@@ -2104,29 +2105,40 @@ class GHOSTSpect(GHOST):
 
         corr_facts = []
         for ext in ad:
+
             dt_midp = dt_start + timedelta(
                 seconds=ext.hdr.get('EXPTIME')/2.0
             )
             dt_midp = Time(dt_midp)
-            # ICRS position & vel of Earth geocenter
-            ep, ev = astrocoord.solar_system.get_body_barycentric_posvel(
-                'earth', dt_midp
-            )
-            # GCRS position & vel of observatory (loc)
-            op, ov = loc.get_gcrs_posvel(dt_midp)
-            # Velocities can be simply added (are axes-aligned)
-            vel = ev + ov
 
-            # Get unit ICRS vector in direction of observation
-            sc_cart = sc.icrs.represent_as(
-                astrocoord.UnitSphericalRepresentation
-            ).represent_as(
-                astrocoord.CartesianRepresentation
-            )
+            # Jane Rigby implementation
+            # # ICRS position & vel of Earth geocenter
+            # ep, ev = astrocoord.solar_system.get_body_barycentric_posvel(
+            #     'earth', dt_midp
+            # )
+            # # GCRS position & vel of observatory (loc)
+            # op, ov = loc.get_gcrs_posvel(dt_midp)
+            # # Velocities can be simply added (are axes-aligned)
+            # vel = ev + ov
+            #
+            # # Get unit ICRS vector in direction of observation
+            # sc_cart = sc.icrs.represent_as(
+            #     astrocoord.UnitSphericalRepresentation
+            # ).represent_as(
+            #     astrocoord.CartesianRepresentation
+            # )
+            #
+            # corr_fact = sc_cart.dot(vel).to(u.km/u.s)
 
-            corr_fact = sc_cart.dot(vel).to(u.km/u.s)
+            # Vanilla AstroPy Implementation
+            corr_fact = sc.radial_velocity_correction('barycentric',
+                                                      obstime=dt_midp,
+                                                      location=GEMINI_SOUTH_LOC)
+
             if return_wavl:
                 corr_fact = 1.0 + (corr_fact / const.c)
+            else:
+                corr_fact = corr_fact.to(u.m / u.s)
 
             corr_facts.append(corr_fact)
 
