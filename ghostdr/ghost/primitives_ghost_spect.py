@@ -2227,8 +2227,8 @@ class GHOSTSpect(GHOST):
         """
         # Input checking
         orig_data = np.asarray(orig_data, dtype=orig_data.dtype)
-        orig_wavl = np.asarray(orig_data, dtype=orig_wavl.dtype)
-        new_wavl = np.asarray(orig_data, dtype=new_wavl.dtype)
+        orig_wavl = np.asarray(orig_wavl, dtype=orig_wavl.dtype)
+        new_wavl = np.asarray(new_wavl, dtype=new_wavl.dtype)
 
         if orig_data.shape != orig_wavl.shape:
             raise ValueError('_interp_spect received data and wavelength '
