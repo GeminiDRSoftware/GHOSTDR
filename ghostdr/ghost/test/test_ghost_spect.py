@@ -25,9 +25,11 @@ import pytest
 import ghost_instruments
 import astrodata
 from astropy.io import fits
+from astropy import units as u
 import numpy as np
 import copy
 import random
+import datetime
 
 from ghostdr.ghost.primitives_ghost_spect import GHOSTSpect
 
@@ -70,14 +72,13 @@ class TestGhost:
         ad.filename = rawfilename
         return ad
 
-
     @pytest.fixture(scope='class')
     def data_applyFlatBPM(self, tmpdir_factory):
         tmpsubdir = tmpdir_factory.mktemp('fits')
 
         ad = self.generate_minimum_file()
 
-        bpm = fits.ImageHDU(data=np.zeros((1024, 1024, ), dtype=int), name='DQ')
+        bpm = fits.ImageHDU(data=np.zeros((1024, 1024,), dtype=int), name='DQ')
         bpm.header.set('CCDSUM', '1 1')
 
         ad[0].DQ = bpm
@@ -319,18 +320,72 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test__compute_barycentric_correction(self):
+    @pytest.fixture(scope='class')
+    def data__compute_barycentric_correction(self):
+        """
+        Generate a minimal data file for test__compute_barycentric_correction
+        """
+        ad = self.generate_minimum_file()
+        return ad
+
+    @pytest.mark.parametrize('ra,dec,dt,known_corr', [
+        (90., -30., '2018-01-03 15:23:32', 0.999986388827),
+        (180., -60., '2018-11-12 18:35:15', 1.00001645007),
+        (270., -90., '2018-07-09 13:48:35', 0.999988565947),
+        (0., -45., '2018-12-31 18:59:48', 0.99993510834),
+        (101.1, 0., '2018-02-23 17:18:55', 0.999928361662),
+    ])
+    def test__compute_barycentric_correction_values(
+            self, ra, dec, dt, known_corr,
+            data__compute_barycentric_correction):
         """
         Checks to make:
 
-        - Non-zero float correction factor returned
         - Correct units of return based on input arguments
         - Some regression test values
         """
-        pass
+        ad = data__compute_barycentric_correction
+        ad.phu.set('RA', ra)
+        ad.phu.set('DEC', dec)
+        # Assume a 10 min exposure
+        exp_time_min = 10.
+        dt_obs = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+        dt_start = dt_obs - datetime.timedelta(minutes=exp_time_min)
+        ad.phu.set('DATE-OBS', dt_start.date().strftime('%Y-%m-%d'))
+        ad.phu.set('UTSTART', dt_start.time().strftime('%H:%M:%S.00'))
+        ad[0].hdr.set('EXPTIME', exp_time_min * 60.)
 
-    @pytest.mark.skip(reason='Not yet implemented.')
+        gs = GHOSTSpect([])
+        corr_fact = gs._compute_barycentric_correction(ad, )[0]
+        assert abs(corr_fact - known_corr) < 1e-9, \
+            "_compute_barycentric_correction " \
+            "returned an incorrect value " \
+            "(expected {}, returned {})".format(
+                known_corr, corr_fact,
+            )
+
+    @pytest.mark.parametrize('return_wavl,units', [
+        (True, u.dimensionless_unscaled,),
+        (False, u.m / u.s,),
+    ])
+    def test__compute_barycentric_correction_returnwavl(
+            self, return_wavl, units,
+            data__compute_barycentric_correction):
+        """
+        Check the return units of _compute_barycentric_correction
+        """
+        # ad should be correctly populated from previous test
+        ad = data__compute_barycentric_correction
+
+        gs = GHOSTSpect([])
+        corr_fact = gs._compute_barycentric_correction(
+            ad, return_wavl=return_wavl)[0]
+        assert corr_fact.unit == units, \
+            "_compute_barycentric_correction returned incorrect units " \
+            "(expected {}, got {})".format(units, corr_fact.unit, )
+
+    @pytest.mark.skip(reason='Requires calibration system - '
+                             'part of all-up testing?')
     def test__request_bracket_arc(self):
         """
         Checks to make (will require correctly populated calib system):
@@ -340,8 +395,25 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test__interp_spect(self):
+    @pytest.fixture(scope='class')
+    def data__interp_spect(self):
+        # Generate a wavelength scale
+        wavl = np.arange(1000., 9000., 5.)
+        # Form some data
+        data = np.random.rand(len(wavl))
+        # Put some random np.nan into the data
+        for i in np.random.randint(0, len(data) - 1, 20):
+            data[i] = np.nan
+        # Generate a finer wavelength scale to interp. to
+        # Make sure there are un-interpolable points
+        new_wavl = np.arange(800., 9200., 1.)
+
+        return wavl, data, new_wavl
+
+    @pytest.mark.parametrize('interp',
+                             ['linear', 'nearest', 'zero', 'slinear',
+                              'quadratic', 'cubic', 'previous', 'next',])
+    def test__interp_spect(self, interp, data__interp_spect):
         """
         Checks to make:
 
@@ -350,13 +422,52 @@ class TestGhost:
           input
         - Verify allowed values for kwarg 'interp'
         """
-        pass
+        wavl, data, new_wavl = data__interp_spect
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test__regrid_spect(self):
+        gs = GHOSTSpect([])
+        new_data = gs._interp_spect(data, wavl, new_wavl, interp='linear')
+
+        assert new_data.shape == new_wavl.shape, "Data was not successfully " \
+                                                 "reshaped to the new " \
+                                                 "wavelength scale " \
+                                                 "(expected {}, " \
+                                                 "have {})".format(
+            new_wavl.shape, new_data.shape,
+        )
+
+    def test__interp_spect_invalid_type(self, data__interp_spect):
+        wavl, data, new_wavl = data__interp_spect
+        gs = GHOSTSpect([])
+        with pytest.raises(NotImplementedError):
+            new_data = gs._interp_spect(data, wavl, new_wavl,
+                                        interp='no-such-method')
+
+    def test__regrid_spect(self, data__interp_spect):
         """
         Checks to make:
 
         - Ensure new_wavl comes out correctly in output
         - Ensure no interp'd points above/below input points
         """
+        wavl, data, new_wavl = data__interp_spect
+
+        gs = GHOSTSpect([])
+        new_data = gs._regrid_spect(data, wavl, new_wavl,
+                                    waveunits='angstrom')
+
+        assert new_data.shape == new_wavl.shape, "Data was not successfully " \
+                                                 "reshaped to the new " \
+                                                 "wavelength scale " \
+                                                 "(expected {}, " \
+                                                 "have {})".format(
+            new_wavl.shape, new_data.shape,
+        )
+
+        max_wavl_spacing = np.max(wavl[1:] - wavl[:-1])
+        assert np.sum(new_data[np.logical_or(
+            new_wavl < np.min(wavl) - max_wavl_spacing,
+            new_wavl > np.max(wavl) + max_wavl_spacing,
+        )]) < 1e-6, "Non-zero interpolated data points " \
+                    "have been identified outside the " \
+                    "range of the original wavelength " \
+                    "scale"
