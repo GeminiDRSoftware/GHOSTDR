@@ -30,6 +30,7 @@ import numpy as np
 import copy
 import random
 import datetime
+import itertools
 
 from ghostdr.ghost.primitives_ghost_spect import GHOSTSpect
 
@@ -41,17 +42,6 @@ class TestGhost:
     In all tests, check that:
     - Correct keyword comment has been added
     """
-
-    @pytest.mark.skip(reason='Requires calibrators & polyfit-ing')
-    def test_addWavelengthSolution(self, data_addWavelengthSolution):
-        """
-        Checks to make:
-
-        - Check for attached wavelength extension
-        - Come up with some sanity checks for the solution
-        - Check for wavelength unit in output
-        """
-        pass
 
     @staticmethod
     def generate_minimum_file():
@@ -71,6 +61,17 @@ class TestGhost:
         ad = astrodata.create(phu, [sci, ])
         ad.filename = rawfilename
         return ad
+
+    @pytest.mark.skip(reason='Requires calibrators & polyfit-ing')
+    def test_addWavelengthSolution(self, data_addWavelengthSolution):
+        """
+        Checks to make:
+
+        - Check for attached wavelength extension
+        - Come up with some sanity checks for the solution
+        - Check for wavelength unit in output
+        """
+        pass
 
     @pytest.fixture(scope='class')
     def data_applyFlatBPM(self, tmpdir_factory):
@@ -141,6 +142,12 @@ class TestGhost:
                                              "to a data file with no inital " \
                                              "BPM"
 
+        # Check that the file has been marked as processed
+        assert ad.phu.get(
+            gs.timestamp_keys['applyFlatBPM']), "clipSigmaBPM did not " \
+                                                "timestamp-mark the " \
+                                                "output file"
+
     @pytest.fixture(scope='class')
     def data_barycentricCorrect(self):
         ad = self.generate_minimum_file()
@@ -175,7 +182,11 @@ class TestGhost:
             "barycentricCorrect has mangled the shape of the output " \
             "WAVL extension"
 
-    @pytest.mark.skip(reason='Not yet implemented.')
+        assert ad_out.phu.get(
+            gs.timestamp_keys['barycentricCorrect']), "clipSigmaBPM did not " \
+                                                      "timestamp-mark the " \
+                                                      "output file"
+
     def test_clipSigmaBPM(self):
         """
         Checks to make:
@@ -183,10 +194,37 @@ class TestGhost:
         - Send it dummy file with known number of pixels outside range,
           make sure that many pixels are flagged out
         """
-        pass
+        ad = self.generate_minimum_file()
+        ad[0].DQ = np.zeros(ad[0].data.shape, dtype=np.int)
+        # Insert some very large data points into the otherwise all-1s data
+        xs = range(0, 1024)
+        ys = range(0, 1024)
+        np.random.shuffle(xs)
+        np.random.shuffle(ys)
+        xs = xs[:10]
+        ys = ys[:10]
+        for i in range(10):
+            ad[0].data[ys[i], xs[i]] = 1000.
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test_darkCorrect(self):
+        gs = GHOSTSpect([])
+        ad_out = gs.clipSigmaBPM([ad, ], bpm_value=1)[0]
+
+        assert np.all([ad_out[0].mask[ys[i], xs[i]] == 1
+                       for i in range(10)]), "clipSigmaBPM failed to mask " \
+                                             "out all injected outliers"
+
+        assert ad_out.phu.get(
+            gs.timestamp_keys['clipSigmaBPM']), "clipSigmaBPM did not " \
+                                                "timestamp-mark the " \
+                                                "output file"
+
+    @pytest.mark.parametrize('xbin, ybin',
+                             list(itertools.product(*[
+                                 [1, 2, ],  # x binning
+                                 [1, 2, 4, 8, ],  # y binning
+                             ]))
+                             )
+    def test_darkCorrect_rebin(self, xbin, ybin):
         """
         Checks to make:
 
@@ -197,7 +235,59 @@ class TestGhost:
         - Check for DARKIM in output header
         - Check before & after data shape
         """
-        pass
+        ad = self.generate_minimum_file()
+        dark = self.generate_minimum_file()
+        dark.filename = 'dark.fits'
+
+        # 'Re-bin' the data file
+        ad[0].data = np.ones((1024 / ybin, 1024 / xbin, ), dtype=np.float64)
+        ad[0].hdr.set('CCDSUM', '{} {}'.format(xbin, ybin, ))
+
+        gs = GHOSTSpect([])
+        input_shape = ad[0].data.shape
+        ad_out = gs.darkCorrect([ad, ], dark=[dark, ])[0]
+
+        assert ad_out[0].data.shape == input_shape, "darkCorrect has mangled " \
+                                                    "the shape of the input " \
+                                                    "data"
+
+    def test_darkCorrect_errors(self):
+        ad = self.generate_minimum_file()
+        dark = self.generate_minimum_file()
+        dark.filename = 'dark.fits'
+
+        gs = GHOSTSpect([])
+
+        # Passing in data inputs with different binnings
+        with pytest.raises(IOError):
+            ad2 = copy.deepcopy(ad)
+            ad2[0].hdr.set('CCDSUM', '2 2')
+            gs.darkCorrect([ad, ad2, ], dark=[dark, dark, ])
+
+        # Mismatched list lengths
+        with pytest.raises(Exception):
+            gs.darkCorrect([ad, ad2, ad, ], dark=[dark, dark, ])
+
+    def test_darkCorrect(self):
+        ad = self.generate_minimum_file()
+        dark = self.generate_minimum_file()
+        dark.filename = 'dark.fits'
+
+        gs = GHOSTSpect([])
+        ad_out = gs.darkCorrect([ad, ], dark=[dark, ])
+
+        import pdb; pdb.set_trace()
+
+        assert ad_out[0].phu.get('DARKIM') == dark.filename, \
+            "darkCorrect failed to record the name of the dark " \
+            "file used in the output header (expected {}, got {})".format(
+                dark.filename, ad_out[0].phu.get('DARKIM'),
+            )
+
+        assert ad_out.phu.get(
+            gs.timestamp_keys['darkCorrect']), "darkCorrect did not " \
+                                               "timestamp-mark the " \
+                                               "output file"
 
     @pytest.mark.skip(reason='Not yet implemented.')
     def test_extractProfile(self):
