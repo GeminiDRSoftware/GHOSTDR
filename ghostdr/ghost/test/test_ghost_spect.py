@@ -31,6 +31,7 @@ import copy
 import random
 import datetime
 import itertools
+import os
 
 from ghostdr.ghost.primitives_ghost_spect import GHOSTSpect
 
@@ -76,6 +77,7 @@ class TestGhost:
     @pytest.fixture(scope='class')
     def data_applyFlatBPM(self, tmpdir_factory):
         tmpsubdir = tmpdir_factory.mktemp('fits')
+        os.chdir(tmpsubdir.dirname)
 
         ad = self.generate_minimum_file()
 
@@ -106,6 +108,7 @@ class TestGhost:
         - Check before & after data shape
         """
         ad, flat_ad, tmpsubdir = data_applyFlatBPM
+        os.chdir(tmpsubdir.dirname)
 
         # Check the AttributeError is no flat is provided
         gs = GHOSTSpect([ad, ])
@@ -149,11 +152,14 @@ class TestGhost:
                                                 "output file"
 
     @pytest.fixture(scope='class')
-    def data_barycentricCorrect(self):
+    def data_barycentricCorrect(self, tmpdir_factory):
         ad = self.generate_minimum_file()
+        tmpsubdir = tmpdir_factory.mktemp('fits')
+        os.chdir(tmpsubdir.dirname)
+
         # Add a wavl extension - no need to be realistic
         ad[0].WAVL = np.random.rand(*ad[0].data.shape)
-        return ad, copy.deepcopy(ad[0].WAVL)
+        return ad, copy.deepcopy(ad[0].WAVL), tmpsubdir
 
     def test_barycentricCorrect(self, data_barycentricCorrect):
         """
@@ -165,7 +171,8 @@ class TestGhost:
         Testing of the helper _compute_barycentric_correction is done
         separately.
         """
-        ad, orig_wavl = data_barycentricCorrect
+        ad, orig_wavl, tmpsubdir = data_barycentricCorrect
+        os.chdir(tmpsubdir.dirname)
         orig_ad = copy.deepcopy(ad)
 
         gs = GHOSTSpect([ad, ])
@@ -187,13 +194,16 @@ class TestGhost:
                                                       "timestamp-mark the " \
                                                       "output file"
 
-    def test_clipSigmaBPM(self):
+    def test_clipSigmaBPM(self, tmpdir):
         """
         Checks to make:
 
         - Send it dummy file with known number of pixels outside range,
           make sure that many pixels are flagged out
         """
+        tmpsubdir = tmpdir.mkdir('fits')
+        os.chdir(tmpsubdir.dirname)
+
         ad = self.generate_minimum_file()
         ad[0].DQ = np.zeros(ad[0].data.shape, dtype=np.int)
         # Insert some very large data points into the otherwise all-1s data
@@ -224,7 +234,7 @@ class TestGhost:
                                  [1, 2, 4, 8, ],  # y binning
                              ]))
                              )
-    def test_darkCorrect_rebin(self, xbin, ybin):
+    def test_darkCorrect_rebin(self, xbin, ybin, tmpdir):
         """
         Checks to make:
 
@@ -235,6 +245,9 @@ class TestGhost:
         - Check for DARKIM in output header
         - Check before & after data shape
         """
+        tmpsubdir = tmpdir.mkdir('fits')
+        os.chdir(tmpsubdir.dirname)
+
         ad = self.generate_minimum_file()
         dark = self.generate_minimum_file()
         dark.filename = 'dark.fits'
@@ -251,7 +264,10 @@ class TestGhost:
                                                     "the shape of the input " \
                                                     "data"
 
-    def test_darkCorrect_errors(self):
+    def test_darkCorrect_errors(self, tmpdir):
+        tmpsubdir = tmpdir.mkdir('fits')
+        os.chdir(tmpsubdir.dirname)
+
         ad = self.generate_minimum_file()
         dark = self.generate_minimum_file()
         dark.filename = 'dark.fits'
@@ -268,7 +284,10 @@ class TestGhost:
         with pytest.raises(Exception):
             gs.darkCorrect([ad, ad2, ad, ], dark=[dark, dark, ])
 
-    def test_darkCorrect(self):
+    def test_darkCorrect(self, tmpdir):
+        tmpsubdir = tmpdir.mkdir('fits')
+        os.chdir(tmpsubdir.dirname)
+
         ad = self.generate_minimum_file()
         dark = self.generate_minimum_file()
         dark.filename = 'dark.fits'
@@ -276,20 +295,21 @@ class TestGhost:
         gs = GHOSTSpect([])
         ad_out = gs.darkCorrect([ad, ], dark=[dark, ])
 
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
-        assert ad_out[0].phu.get('DARKIM') == dark.filename, \
+        assert ad_out[0].phu.get('DARKIM') == dark.path, \
             "darkCorrect failed to record the name of the dark " \
             "file used in the output header (expected {}, got {})".format(
                 dark.filename, ad_out[0].phu.get('DARKIM'),
             )
 
-        assert ad_out.phu.get(
+        assert ad_out[0].phu.get(
             gs.timestamp_keys['darkCorrect']), "darkCorrect did not " \
                                                "timestamp-mark the " \
                                                "output file"
 
-    @pytest.mark.skip(reason='Not yet implemented.')
+    @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - save for '
+                             'all-up testing')
     def test_extractProfile(self):
         """
         Checks to make
@@ -301,20 +321,33 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test_interpolateAndCombine(self):
+    def test_interpolateAndCombine(self, tmpdir):
         """
         Checks to make:
 
-        - Ensure wavelength bounds are valid
-        - Should only be one 'order' in output data
-        - Check 'oversampling' of output
-        - Perform sanity checking on output variance
-        - Ensure weights are removed from interpolated data
-        """
-        pass
+        - Error on invalid scale option
+        - Correct functioning of 'skip' parameter
 
-    @pytest.mark.skip(reason='Not yet implemented.')
+        Fuller testing needs to be done 'all-up' in a reduction sequence.
+        """
+        tmpsubdir = tmpdir.mkdir('fits')
+        os.chdir(tmpsubdir.dirname)
+        ad = self.generate_minimum_file()
+        gs = GHOSTSpect([])
+
+        # Make sure the correct error is thrown on an invalid scale
+        with pytest.raises(ValueError):
+            gs.interpolateAndCombine([ad, ], scale='not-a-scale')
+
+        # Test the skip functionality
+        ad_out = gs.interpolateAndCombine([ad, ], skip=True)[0]
+        assert ad_out.phu.get(
+            gs.timestamp_keys['interpolateAndCombine']
+        ) is None, "interpolateAndCombine appears to have acted on a file " \
+                   "when skip=True"
+
+    @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - save for '
+                             'all-up testing')
     def test_findApertures(self):
         """
         Checks to make:
@@ -325,7 +358,8 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Not yet implemented.')
+    @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - save for '
+                             'all-up testing')
     def test_fitWavelength(self):
         """
         Checks to make:
@@ -338,7 +372,8 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Not yet implemented.')
+    @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - save for '
+                             'all-up testing')
     def test_flatCorrect(self):
         """
         Checks to make:
@@ -352,7 +387,7 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Not yet implemented.')
+    @pytest.mark.skip(reason='Needs a full reduction sequence to test')
     def test_formatOutput(self):
         """
         Checks to make:
@@ -362,35 +397,55 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Not yet implemented.')
+    @pytest.mark.skip(reason='Deprecated.')
     def test_rejectCosmicRays(self):
         """
         DEPRECATED: No testing required
         """
         pass
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test_responseCorrect(self):
+    def test_responseCorrect(self, tmpdir):
         """
         Checks to make:
 
-        - Error catching if no standard star passed
-        - Error catching if incorrectly formatted standard star sent in
-        - Ensure shape of data hasn't changed
-        - Make sure there's no variance/DQ plane
-        """
-        pass
+        - Ensure skip option functions correctly
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test_standardizeStructure(self):
+        More complete testing to be made in 'all-up' reduction
+        """
+        tmpsubdir = tmpdir.mkdir('fits')
+        os.chdir(tmpsubdir.dirname)
+        ad = self.generate_minimum_file()
+        gs = GHOSTSpect([])
+
+        # Test the skip functionality
+        ad_out = gs.responseCorrect([ad, ], skip=True)[0]
+        assert ad_out.phu.get(
+            gs.timestamp_keys['responseCorrect']
+        ) is None, "responseCorrect appears to have acted on a file " \
+                   "when skip=True"
+
+    def test_standardizeStructure(self, tmpdir):
         """
         Checks to make:
 
         - This is a no-op primitive - ensure no change is made
         """
-        pass
+        tmpsubdir = tmpdir.mkdir('fits')
+        os.chdir(tmpsubdir.dirname)
+        ad = self.generate_minimum_file()
+        ad_orig = copy.deepcopy(ad)
+        gs = GHOSTSpect([])
 
-    @pytest.mark.skip(reason='Not yet implemented.')
+        ad_out = gs.standardizeStructure([ad, ])[0]
+        assert np.all([
+            ad_orig.info() == ad_out.info(),
+            ad_orig.phu == ad_out.phu,
+            ad_orig[0].hdr == ad_out[0].hdr,
+            len(ad_orig) == len(ad_out),
+        ]), "standardizeStructure is no longer a no-op primitive"
+
+    @pytest.mark.skip(reason='All-up testing required - needs full DATASEC, '
+                             'CCDSEC, AMPSIZE, CCDSIZE etc. calculations')
     def test_tileArrays(self):
         """
         Checks to make:
@@ -400,23 +455,72 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Not yet implemented.')
-    def test__get_polyfit_filename(self):
+    @pytest.fixture(scope='class')
+    def data__get_polyfit_filename(self, tmpdir_factory):
+        """
+        Only need a 'placeholder' AD for this test, can modify on the fly within
+        the test itself
+        """
+        tmpsubdir = tmpdir_factory.mktemp('fits')
+        os.chdir(tmpsubdir.dirname)
+        ad = self.generate_minimum_file()
+        return ad, tmpsubdir
+
+    @pytest.mark.parametrize('arm,res,caltype', list(itertools.product(*[
+        ['BLUE', 'RED'],  # Arm
+        ['LO_ONLY', 'HI_ONLY'],  # Res. mode
+        ['xmod', 'wavemod', 'spatmod', 'specmod', 'rotmod'],  # Cal. type
+    ])))
+    def test__get_polyfit_filename(self, arm, res, caltype,
+                                   data__get_polyfit_filename):
         """
         Checks to make:
 
-        - Provide a set of input (arm, res, epoch) arguments, see if correct
-          name is returned
+        - Provide a set of input (arm, res, ) arguments, see if a/ name is
+          returned
         """
-        pass
+        ad, tmpsubdir = data__get_polyfit_filename
+        os.chdir(tmpsubdir.dirname)
+        ad.phu.set('SMPNAME', res)
+        ad.phu.set('CAMERA', arm)
+        ad.phu.set('UTSTART', datetime.datetime.now().time().strftime(
+            '%H:%M:%S'))
+        ad.phu.set('DATE-OBS', datetime.datetime.now().date().strftime(
+            '%Y-%m-%d'))
+
+        gs = GHOSTSpect([])
+        polyfit_file = gs._get_polyfit_filename(ad, caltype)
+
+        assert polyfit_file is not None, "Could not find polyfit file"
+
+    def test__get_polyfit_filename_errors(self, data__get_polyfit_filename):
+        """
+        Check passing an invalid calib. type throws an error
+        """
+        ad, tmpsubdir = data__get_polyfit_filename
+        os.chdir(tmpsubdir.dirname)
+        ad.phu.set('SMPNAME', 'HI_ONLY')
+        ad.phu.set('CAMERA', 'RED')
+        ad.phu.set('UTSTART', datetime.datetime.now().time().strftime(
+            '%H:%M:%S'))
+        ad.phu.set('DATE-OBS', datetime.datetime.now().date().strftime(
+            '%Y-%m-%d'))
+
+        gs = GHOSTSpect([])
+        polyfit_file = gs._get_polyfit_filename(ad, 'not-a-cal-type')
+        assert polyfit_file is None, "_get_polyfit_filename didn't return " \
+                                     "None when asked for a bogus " \
+                                     "model type"
 
     @pytest.fixture(scope='class')
-    def data__compute_barycentric_correction(self):
+    def data__compute_barycentric_correction(self, tmpdir_factory):
         """
         Generate a minimal data file for test__compute_barycentric_correction
         """
+        tmpsubdir = tmpdir_factory.mktemp('fits')
+        os.chdir(tmpsubdir.dirname)
         ad = self.generate_minimum_file()
-        return ad
+        return ad, tmpsubdir
 
     @pytest.mark.parametrize('ra,dec,dt,known_corr', [
         (90., -30., '2018-01-03 15:23:32', 0.999986388827),
@@ -434,7 +538,8 @@ class TestGhost:
         - Correct units of return based on input arguments
         - Some regression test values
         """
-        ad = data__compute_barycentric_correction
+        ad, tmpsubdir = data__compute_barycentric_correction
+        os.chdir(tmpsubdir.dirname)
         ad.phu.set('RA', ra)
         ad.phu.set('DEC', dec)
         # Assume a 10 min exposure
@@ -465,7 +570,8 @@ class TestGhost:
         Check the return units of _compute_barycentric_correction
         """
         # ad should be correctly populated from previous test
-        ad = data__compute_barycentric_correction
+        ad, tmpsubdir = data__compute_barycentric_correction
+        os.chdir(tmpsubdir.dirname)
 
         gs = GHOSTSpect([])
         corr_fact = gs._compute_barycentric_correction(
