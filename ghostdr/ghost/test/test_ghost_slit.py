@@ -44,7 +44,8 @@ class TestGhostSlit:
         Generate a package of dummy slit files
         """
         rawfilename = 'testslitpackage.fits'
-        tmpsubdir = tmpdir_factory.mktemp('fits')
+        tmpsubdir = tmpdir_factory.mktemp('ghost_slit')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         # Create the AstroData object
         phu = fits.PrimaryHDU()
@@ -89,6 +90,7 @@ class TestGhostSlit:
         - Check shape of output data matches shape of input
         """
         ad, tmpsubdir = create_slit_package
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         # Set this to be STD mode data
         ad.phu.set('SMPNAME', 'LO_ONLY')
@@ -135,7 +137,7 @@ class TestGhostSlit:
         """
 
         ad, tmpsubdir = create_slit_package
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         p = GHOSTSlit([ad, ])
         output = p.processSlits(adinputs=[ad, ])
@@ -150,7 +152,7 @@ class TestGhostSlit:
         """
 
         ad, tmpsubdir = create_slit_package
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         p = GHOSTSlit([ad, ])
         ad = p.prepare(adinputs=[ad, ])
@@ -167,7 +169,7 @@ class TestGhostSlit:
         - Stacking frames with different shapes should fail
         """
         ad, tmpsubdir = create_slit_package
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         # Re-size every 2nd input AD
         for i in range(0, len(ad), 2):

@@ -44,7 +44,8 @@ class TestGhostBundle:
         Generate a dummy test bundle
         """
         rawfilename = 'testbundle.fits'
-        tmpsubdir = tmpdir_factory.mktemp('fits')
+        tmpsubdir = tmpdir_factory.mktemp('ghost_bundle')
+        print(tmpsubdir)
 
         # Create the AstroData object
         phu = fits.PrimaryHDU()
@@ -63,7 +64,8 @@ class TestGhostBundle:
         ad.filename = rawfilename
 
         # Do things in the tmpdir
-        os.chdir(tmpsubdir.dirname)
+        # import pdb; pdb.set_trace()
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         p = GHOSTBundle([ad, ])
         bundle_output = p.splitBundle(adinputs=[ad, ])
 
@@ -82,19 +84,25 @@ class TestGhostBundle:
         bundle
         """
         dummy_bundle, tmpsubdir, bundle_output = create_bundle
-        file_list = glob.glob(os.path.join(tmpsubdir.dirname, '*.fits'))
-        assert len(file_list) == len(BUNDLE_STRUCTURE)
+        # import pdb; pdb.set_trace()
+        file_list = glob.glob(os.path.join(tmpsubdir.dirname,
+                                           tmpsubdir.basename,
+                                           '*.fits'))
+        assert len(file_list) == len(BUNDLE_STRUCTURE.keys())
 
-    def test_splitBundle_count(self, create_bundle):
+    def test_splitBundle_structure(self, create_bundle):
         """
         Check the structure of the output files
         """
         dummy_bundle, tmpsubdir, bundle_output = create_bundle
-        file_list = glob.glob(os.path.join(tmpsubdir.dirname, '*.fits'))
+        file_list = glob.glob(os.path.join(tmpsubdir.dirname,
+                                           tmpsubdir.basename,
+                                           '*.fits'))
+        print(tmpsubdir.realpath())
         # Check files written to disk
         for o in file_list:
             ad = astrodata.open(o)
-            assert len(ad) == BUNDLE_STRUCTURE[(ad.phu.get('CAMERA'),
-                                                ad.phu.get('CCDNAME'))]
+            assert len(ad) == BUNDLE_STRUCTURE[(ad[0].hdr.get('CAMERA'),
+                                                ad[0].hdr.get('CCDNAME'))]
 
 

@@ -76,8 +76,8 @@ class TestGhost:
 
     @pytest.fixture(scope='class')
     def data_applyFlatBPM(self, tmpdir_factory):
-        tmpsubdir = tmpdir_factory.mktemp('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir_factory.mktemp('ghost_applyflatbpm')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         ad = self.generate_minimum_file()
 
@@ -108,7 +108,7 @@ class TestGhost:
         - Check before & after data shape
         """
         ad, flat_ad, tmpsubdir = data_applyFlatBPM
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         # Check the AttributeError is no flat is provided
         gs = GHOSTSpect([ad, ])
@@ -154,8 +154,8 @@ class TestGhost:
     @pytest.fixture(scope='class')
     def data_barycentricCorrect(self, tmpdir_factory):
         ad = self.generate_minimum_file()
-        tmpsubdir = tmpdir_factory.mktemp('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir_factory.mktemp('ghost_bccorrect')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         # Add a wavl extension - no need to be realistic
         ad[0].WAVL = np.random.rand(*ad[0].data.shape)
@@ -172,7 +172,7 @@ class TestGhost:
         separately.
         """
         ad, orig_wavl, tmpsubdir = data_barycentricCorrect
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         orig_ad = copy.deepcopy(ad)
 
         gs = GHOSTSpect([ad, ])
@@ -201,8 +201,8 @@ class TestGhost:
         - Send it dummy file with known number of pixels outside range,
           make sure that many pixels are flagged out
         """
-        tmpsubdir = tmpdir.mkdir('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir.mkdir('ghost_clipsigma')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         ad = self.generate_minimum_file()
         ad[0].DQ = np.zeros(ad[0].data.shape, dtype=np.int)
@@ -245,8 +245,8 @@ class TestGhost:
         - Check for DARKIM in output header
         - Check before & after data shape
         """
-        tmpsubdir = tmpdir.mkdir('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir.mkdir('ghost_darkcorrect')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         ad = self.generate_minimum_file()
         dark = self.generate_minimum_file()
@@ -265,8 +265,8 @@ class TestGhost:
                                                     "data"
 
     def test_darkCorrect_errors(self, tmpdir):
-        tmpsubdir = tmpdir.mkdir('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir.mkdir('ghost_dcerrors')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         ad = self.generate_minimum_file()
         dark = self.generate_minimum_file()
@@ -285,8 +285,8 @@ class TestGhost:
             gs.darkCorrect([ad, ad2, ad, ], dark=[dark, dark, ])
 
     def test_darkCorrect(self, tmpdir):
-        tmpsubdir = tmpdir.mkdir('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir.mkdir('ghost_darkcorr')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         ad = self.generate_minimum_file()
         dark = self.generate_minimum_file()
@@ -330,8 +330,8 @@ class TestGhost:
 
         Fuller testing needs to be done 'all-up' in a reduction sequence.
         """
-        tmpsubdir = tmpdir.mkdir('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir.mkdir('ghost_inc')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad = self.generate_minimum_file()
         gs = GHOSTSpect([])
 
@@ -412,8 +412,8 @@ class TestGhost:
 
         More complete testing to be made in 'all-up' reduction
         """
-        tmpsubdir = tmpdir.mkdir('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir.mkdir('ghost_responsecorr')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad = self.generate_minimum_file()
         gs = GHOSTSpect([])
 
@@ -430,8 +430,8 @@ class TestGhost:
 
         - This is a no-op primitive - ensure no change is made
         """
-        tmpsubdir = tmpdir.mkdir('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir.mkdir('ghost_standstruct')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad = self.generate_minimum_file()
         ad_orig = copy.deepcopy(ad)
         gs = GHOSTSpect([])
@@ -461,8 +461,8 @@ class TestGhost:
         Only need a 'placeholder' AD for this test, can modify on the fly within
         the test itself
         """
-        tmpsubdir = tmpdir_factory.mktemp('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir_factory.mktemp('ghost_pfname')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad = self.generate_minimum_file()
         return ad, tmpsubdir
 
@@ -480,7 +480,7 @@ class TestGhost:
           returned
         """
         ad, tmpsubdir = data__get_polyfit_filename
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad.phu.set('SMPNAME', res)
         ad.phu.set('CAMERA', arm)
         ad.phu.set('UTSTART', datetime.datetime.now().time().strftime(
@@ -498,7 +498,7 @@ class TestGhost:
         Check passing an invalid calib. type throws an error
         """
         ad, tmpsubdir = data__get_polyfit_filename
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad.phu.set('SMPNAME', 'HI_ONLY')
         ad.phu.set('CAMERA', 'RED')
         ad.phu.set('UTSTART', datetime.datetime.now().time().strftime(
@@ -517,8 +517,8 @@ class TestGhost:
         """
         Generate a minimal data file for test__compute_barycentric_correction
         """
-        tmpsubdir = tmpdir_factory.mktemp('fits')
-        os.chdir(tmpsubdir.dirname)
+        tmpsubdir = tmpdir_factory.mktemp('ghost_computebc')
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad = self.generate_minimum_file()
         return ad, tmpsubdir
 
@@ -539,7 +539,7 @@ class TestGhost:
         - Some regression test values
         """
         ad, tmpsubdir = data__compute_barycentric_correction
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad.phu.set('RA', ra)
         ad.phu.set('DEC', dec)
         # Assume a 10 min exposure
@@ -571,7 +571,7 @@ class TestGhost:
         """
         # ad should be correctly populated from previous test
         ad, tmpsubdir = data__compute_barycentric_correction
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         gs = GHOSTSpect([])
         corr_fact = gs._compute_barycentric_correction(

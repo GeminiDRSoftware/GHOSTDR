@@ -31,7 +31,7 @@ class TestGhost:
     Suite of tests for the functions in the ghost_primitives module
     """
 
-    def test__rebin_ghost_ad(self):
+    def test__rebin_ghost_ad(self, tmpdir):
         """
         Checks to make:
 
@@ -40,6 +40,9 @@ class TestGhost:
 
         Loop over each valid binning mode
         """
+        tmpdir.mkdir('ghost_rebin')
+        os.chdir(tmpdir.dirname)
+
         # Create a test data frame to operate on
         phu = fits.PrimaryHDU()
         hdu = fits.ImageHDU(data=np.zeros((1024, 1024,)), name='SCI')

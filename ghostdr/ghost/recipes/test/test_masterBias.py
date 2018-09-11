@@ -25,9 +25,9 @@ class TestMasterBias(object):
         """
         rawfilename = 'bias_*_1x1_blue.fits'
         # Copy the raw data file into here
-        tmpsubdir = tmpdir_factory.mktemp('fits')
+        tmpsubdir = tmpdir_factory.mktemp('ghost_master_bias')
         # Make sure we're working inside the temp dir
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         # Find all the relevant files
         rawfiles = glob.glob(os.path.join(os.path.dirname(
             os.path.abspath(__file__)),
