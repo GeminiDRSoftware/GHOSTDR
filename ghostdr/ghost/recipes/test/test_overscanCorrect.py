@@ -23,15 +23,16 @@ class TestOverscanSubtractClass(object):
         """
         rawfilename = 'bias_1_1x1_blue.fits'
         # Copy the raw data file into here
-        tmpsubdir = tmpdir_factory.mktemp('fits')
+        tmpsubdir = tmpdir_factory.mktemp('ghost_bias_oscorrect')
         # Make sure we're working inside the temp dir
-        os.chdir(tmpsubdir.dirname)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         shutil.copy(
             os.path.join(os.path.dirname(os.path.abspath(__file__)),
                          'testdata',
                          rawfilename),
-            tmpsubdir.dirname)
-        rawfile = os.path.join(tmpsubdir.dirname, rawfilename)
+            os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        rawfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                               rawfilename)
 
         # Do the overscan subtraction
         reduce = Reduce()
@@ -39,7 +40,7 @@ class TestOverscanSubtractClass(object):
         reduce.files = [rawfile, ]
         reduce.mode = ['test', ]
         reduce.urecipe = 'recipes_BIAS.recipeBiasRemoveOverscan'
-        reduce.logfile = os.path.join(tmpsubdir.dirname,
+        reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_overscancorrect.log')
         reduce.logmode = 'quiet'
         reduce.suffix = '_testOverscanCorrect'
@@ -47,7 +48,8 @@ class TestOverscanSubtractClass(object):
         reduce.runr()
 
         corrfilename = rawfilename.split('_')[0] + reduce.suffix + '.fits'
-        corrfile = os.path.join(tmpsubdir.dirname, corrfilename)
+        corrfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                corrfilename)
 
         # Return filenames of raw, subtracted files
         return rawfile, corrfile
@@ -70,7 +72,7 @@ class TestOverscanSubtractClass(object):
         mean(all raw data) - mean(raw overscan) = mean(overscan-corrected)
         to within some threshold value
         """
-        mean_threshold_value = 0.005 # 0.5%
+        mean_threshold_value = 0.005  # 0.5%
 
         rawfile, corrfile = do_overscan_subtract
         rawad = astrodata.open(rawfile)
