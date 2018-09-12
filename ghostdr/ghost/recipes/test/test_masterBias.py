@@ -51,11 +51,12 @@ class TestMasterBias(object):
         reduce.runr()
 
         corrfilename = rawfilename.split('_')[0] + reduce.suffix + '.fits'
-        corrfile = os.path.join(tmpsubdir.dirname, corrfilename)
+        corrfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                corrfilename)
 
         # Find the overscan-corrected bias files
         rawfiles = glob.glob(os.path.join(
-            tmpsubdir.dirname,
+            tmpsubdir.dirname, tmpsubdir.basename,
             rawfilename.split('.')[0] + '*_overscanCorrect*.fits',
         ))
 
