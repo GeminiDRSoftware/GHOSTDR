@@ -39,7 +39,7 @@ class TestOverscanSubtractClass(object):
         reduce.drpkg = 'ghostdr'
         reduce.files = [rawfile, ]
         reduce.mode = ['test', ]
-        reduce.urecipe = 'recipes_BIAS.recipeBiasRemoveOverscan'
+        reduce.urecipe = 'recipeBiasRemoveOverscan'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_overscancorrect.log')
         reduce.logmode = 'quiet'
