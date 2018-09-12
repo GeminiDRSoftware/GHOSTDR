@@ -34,8 +34,9 @@ class TestMasterBias(object):
             'testdata',
             rawfilename))
         for f in rawfiles:
-            shutil.copy(f, tmpsubdir.dirname)
-        rawfiles = glob.glob(os.path.join(tmpsubdir.dirname, rawfilename))
+            shutil.copy(f, os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        rawfiles = glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                          rawfilename))
 
         # Do the master bias generation
         reduce = Reduce()
@@ -43,7 +44,7 @@ class TestMasterBias(object):
         reduce.files = rawfiles
         reduce.mode = ['test', ]
         reduce.urecipe = 'recipeBiasCreateMaster'
-        reduce.logfile = os.path.join(tmpsubdir.dirname,
+        reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_masterbias.log')
         reduce.logmode = 'quiet'
         reduce.suffix = '_testMasterBias'
