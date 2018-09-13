@@ -44,6 +44,8 @@ class TestMasterBias(object):
         reduce.files = rawfiles
         reduce.mode = ['test', ]
         reduce.urecipe = 'recipeBiasCreateMaster'
+        # reduce.mode = ['sq', ]
+        # reduce.urecipe = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_masterbias.log')
         reduce.logmode = 'quiet'
@@ -79,12 +81,12 @@ class TestMasterBias(object):
         for f in rawfiles:
             ad = astrodata.open(f)
             means.append(
-                np.mean([np.mean(ext.data) for ext in ad])
+                np.mean([np.ma.mean(ext.data) for ext in ad])
             )
         raw_mean = np.mean(means)
 
         master = astrodata.open(corrfile)
-        master_mean = np.mean([np.mean(ext.data) for ext in master])
+        master_mean = np.mean([np.ma.mean(ext.data) for ext in master])
 
         assert np.abs(
             raw_mean - master_mean
@@ -114,9 +116,10 @@ class TestMasterBias(object):
 
         results = []
         for i, ext in enumerate(corrad):
-            corrstd = np.std(ext.data)
+            # import pdb; pdb.set_trace()
+            corrstd = np.ma.std(ext.data)
             rawstd = np.sqrt(
-                np.sum([np.std(_[i].data)**2 for _ in rawads])
+                np.sum([np.ma.std(_[i].data)**2 for _ in rawads])
             / len(rawfiles)) #/ len(rawfiles)
             # print((corrstd, rawstd, ))
             results.append(np.abs(corrstd - rawstd) < std_tolerance * rawstd or

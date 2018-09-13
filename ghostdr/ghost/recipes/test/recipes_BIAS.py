@@ -1,5 +1,7 @@
 recipe_tags = set(['GHOST', 'CAL', 'BIAS'])
 
+from ghostdr.ghost.recipes import sq
+
 
 def recipeBiasRemoveOverscan(p):
     p.prepare()
@@ -9,10 +11,28 @@ def recipeBiasRemoveOverscan(p):
 
 
 def recipeBiasCreateMaster(p):
+
+    # Copied SQ recipe - can't import directly (no writeOutput statement)
     p.prepare()
+    p.addDQ()
+    p.addVAR(read_noise=True)
+    p.overscanCorrect()
+    p.writeOutputs()
+    # p.tileArrays()
+    p.addToList(purpose="forStack")
+    p.getList(purpose="forStack")
+    p.stackFrames(operation="median", mask=True)
+    p.clipSigmaBPM(bpm_value=1, sigma=7)
+    p.storeProcessedBias()
+    return
+
+    p.prepare()
+    p.addDQ()
+    p.addVAR(read_noise=True)
     p.overscanCorrect()
     p.writeOutputs()
     p.stackFrames()
+    p.clipSigmaBPM(bpm_value=1, sigma=7)
     return
 
 default = recipeBiasCreateMaster
