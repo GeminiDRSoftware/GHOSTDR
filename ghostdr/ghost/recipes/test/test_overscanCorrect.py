@@ -5,6 +5,7 @@ import shutil
 import re
 import numpy as np
 import pytest
+import glob
 
 import astrodata
 from gempy.utils import logutils
@@ -16,23 +17,25 @@ from recipe_system.reduction.coreReduce import Reduce
 
 class TestOverscanSubtractClass(object):
 
-    @pytest.fixture(scope='class')
-    def do_overscan_subtract(self, tmpdir_factory):
+    @pytest.fixture(scope='class', params=['blue', 'red'])
+    def do_overscan_subtract(self, tmpdir_factory, request):
         """
         Perform overscan subtraction on raw bias frame
         """
-        rawfilename = 'bias_1_1x1_blue.fits'
         # Copy the raw data file into here
-        tmpsubdir = tmpdir_factory.mktemp('ghost_bias_oscorrect')
+        rawfilename = 'bias*{}*.fits'.format(request.param)
+        tmpsubdir = tmpdir_factory.mktemp('ghost_master_bias_os')
         # Make sure we're working inside the temp dir
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        rawfiles = glob.glob(os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'testdata',
+            rawfilename))
         shutil.copy(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         'testdata',
-                         rawfilename),
+            rawfiles[0],
             os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-        rawfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                               rawfilename)
+        rawfile = glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                         rawfilename))[0]
 
         # Do the overscan subtraction
         reduce = Reduce()
@@ -47,7 +50,10 @@ class TestOverscanSubtractClass(object):
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
         reduce.runr()
 
-        corrfilename = rawfilename.split('_')[0] + reduce.suffix + '.fits'
+        corrfilename = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                    '*' +
+                                    reduce.suffix + '.fits')
+        corrfilename = glob.glob(corrfilename)[0]
         corrfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                 corrfilename)
 

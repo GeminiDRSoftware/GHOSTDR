@@ -18,12 +18,12 @@ import ghostdr
 
 class TestMasterBias(object):
 
-    @pytest.fixture(scope='class')
-    def do_master_bias(self, tmpdir_factory):
+    @pytest.fixture(scope='class', params=['blue', 'red'])
+    def do_master_bias(self, tmpdir_factory, request):
         """
         Perform overscan subtraction on raw bias frame
         """
-        rawfilename = 'bias_*_1x1_blue.fits'
+        rawfilename = 'bias*{}*.fits'.format(request.param)
         # Copy the raw data file into here
         tmpsubdir = tmpdir_factory.mktemp('ghost_master_bias')
         # Make sure we're working inside the temp dir
@@ -47,11 +47,13 @@ class TestMasterBias(object):
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_masterbias.log')
         reduce.logmode = 'quiet'
-        reduce.suffix = '_testMasterBias'
+        reduce.suffix = '_testMasterBias_{}'.format(request.param)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
         reduce.runr()
 
-        corrfilename = rawfilename.split('_')[0] + reduce.suffix + '.fits'
+        corrfilename = '*' + reduce.suffix + '.fits'
+        corrfilename = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                    glob.glob(corrfilename)[0])
         corrfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                 corrfilename)
 
@@ -70,7 +72,7 @@ class TestMasterBias(object):
         is within some tolerance factor of the means of the overscan-
         corrected input biases
         """
-        mean_tolerance = 0.05  # 2%
+        mean_tolerance = 0.05  # 5%
 
         rawfiles, corrfile = do_master_bias
         means = []
