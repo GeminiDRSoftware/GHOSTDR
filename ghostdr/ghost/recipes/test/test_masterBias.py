@@ -74,7 +74,7 @@ class TestMasterBias(object):
         is within some tolerance factor of the means of the overscan-
         corrected input biases
         """
-        mean_tolerance = 0.05  # 5%
+        mean_tolerance = 0.01  # 1%
 
         rawfiles, corrfile = do_master_bias
         means = []
