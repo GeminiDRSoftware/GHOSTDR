@@ -38,3 +38,22 @@ order):
 
 
 """
+
+import os
+import py
+
+FULL_REDUCTION_TMPDIR = 'ghost_fullreduce'
+
+
+def get_or_create_tmpdir(tf):
+    basetmp = tf.getbasetemp()
+    try:
+        os.chdir(os.path.join(basetmp.dirname, basetmp.basename,
+                              FULL_REDUCTION_TMPDIR))
+        tmpsubdir = py.path.local(os.getcwd())
+        print('tmpsubdir is {}'.format(tmpsubdir))
+    except OSError:
+        tmpsubdir = tf.mktemp(FULL_REDUCTION_TMPDIR,
+                              numbered=False)
+        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+    return tmpsubdir

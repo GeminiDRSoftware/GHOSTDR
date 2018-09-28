@@ -6,27 +6,32 @@ import re
 import numpy as np
 import pytest
 import glob
+import py
 
 import astrodata
 from gempy.utils import logutils
 from recipe_system.reduction.coreReduce import Reduce
 
+from ..test import get_or_create_tmpdir
 
-# TESTS TO RUN #
+import ghostdr
 
 
+@pytest.mark.fullreduction
 class TestOverscanSubtractClass(object):
 
-    @pytest.fixture(scope='class', params=['blue', 'red'])
+    @pytest.fixture(scope='class', params=[
+        'blue',
+        'red',
+    ])
     def do_overscan_subtract(self, tmpdir_factory, request):
         """
         Perform overscan subtraction on raw bias frame
         """
         # Copy the raw data file into here
         rawfilename = 'bias*{}*.fits'.format(request.param)
-        tmpsubdir = tmpdir_factory.mktemp('ghost_master_bias_os')
+        tmpsubdir = get_or_create_tmpdir(tmpdir_factory)
         # Make sure we're working inside the temp dir
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         rawfiles = glob.glob(os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             'testdata',
@@ -58,7 +63,19 @@ class TestOverscanSubtractClass(object):
                                 corrfilename)
 
         # Return filenames of raw, subtracted files
-        return rawfile, corrfile
+        yield rawfile, corrfile
+
+        # Execute teardown code
+        for _ in glob.glob(os.path.join(
+                os.getcwd(),
+                '*.fits')):
+            os.remove(_)
+        try:
+            os.rmdir(os.path.join(
+                os.getcwd(),
+                'calibrations'))
+        except OSError:
+            pass
 
     def test_overscan_headerkw(self, do_overscan_subtract):
         """
