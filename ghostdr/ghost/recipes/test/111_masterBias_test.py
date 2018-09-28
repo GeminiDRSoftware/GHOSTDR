@@ -116,7 +116,7 @@ class TestMasterBias(object):
             master_mean,
         )
 
-    def test_overscan_std(self, do_master_bias):
+    def test_masterbias_overscan_std(self, do_master_bias):
         """
         Check that the standard deviation of the output master bias frame
         extensions is equal to (or less than) the quadrature sums of the
@@ -151,3 +151,27 @@ class TestMasterBias(object):
             rawstd,
             corrstd,
         )
+
+    def test_masterbias_sigmaclip(self, do_master_bias):
+        """
+        Check that the all points within the data extension of the output biases
+        are within the specified sigma of the mean
+        """
+
+        sigma_limit = 5.0
+
+        rawfiles, corrfile = do_master_bias
+        rawads = [astrodata.open(_) for _ in rawfiles]
+
+        for raw in rawads:
+            for i, ext in enumerate(raw):
+                sigmas = np.abs(raw[i].data -
+                                np.ma.average(raw[i].data)
+                                ) / np.ma.std(raw[i].data)
+                assert np.all(sigmas < sigma_limit), "Points outside {} " \
+                                                     "sigma remain in the " \
+                                                     "output bias " \
+                                                     "(max sigma found: " \
+                                                     "{})".format(
+                    sigma_limit, np.ma.max(sigmas),
+                )

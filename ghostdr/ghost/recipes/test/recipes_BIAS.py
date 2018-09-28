@@ -22,7 +22,7 @@ def recipeBiasCreateMaster(p):
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
     p.stackFrames(operation="median", mask=True)
-    p.clipSigmaBPM(bpm_value=1, sigma=7)
+    p.clipSigmaBPM(bpm_value=1, sigma=5.0)
     p.storeProcessedBias()
     return
 
@@ -32,7 +32,7 @@ def recipeBiasCreateMaster(p):
     p.overscanCorrect()
     p.writeOutputs()
     p.stackFrames()
-    p.clipSigmaBPM(bpm_value=1, sigma=7)
+    p.clipSigmaBPM(bpm_value=1, sigma=5.0)
     return
 
 default = recipeBiasCreateMaster
