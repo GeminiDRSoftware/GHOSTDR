@@ -13,6 +13,8 @@ order):
 +--------------+--------+
 | Obs. type    | Prefix |
 +--------------+--------+
+| Bundles      | 00n_   |
++--------------+--------+
 | Slit bias    | 01n_   |
 +--------------+--------+
 | Slit dark    | 02n_   |
@@ -44,7 +46,7 @@ import py
 
 FULL_REDUCTION_TMPDIR = 'ghost_fullreduce'
 
-FULL_REDUCTION_SPACE_REQD = 1.5 * 1024.  # MB
+FULL_REDUCTION_SPACE_REQD = 5. * 1024.  # MB
 
 import ctypes
 import platform

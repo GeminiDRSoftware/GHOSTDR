@@ -31,12 +31,12 @@ class TestMasterBias(object):
         # Copy the raw data file into here
         tmpsubdir = get_or_create_tmpdir(tmpdir_factory)
         # Find all the relevant files
-        rawfiles = glob.glob(os.path.join(os.path.dirname(
-            os.path.abspath(__file__)),
-            'testdata',
-            rawfilename))
-        for f in rawfiles:
-            shutil.copy(f, os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        # rawfiles = glob.glob(os.path.join(os.path.dirname(
+        #     os.path.abspath(__file__)),
+        #     'testdata',
+        #     rawfilename))
+        # for f in rawfiles:
+        #     shutil.copy(f, os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         rawfiles = glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                           rawfilename))
 
@@ -73,7 +73,7 @@ class TestMasterBias(object):
         # Execute teardown code
         for _ in glob.glob(os.path.join(
                 os.getcwd(),
-                '*.fits')):
+                rawfilename)):
             os.remove(_)
         try:
             os.rmdir(os.path.join(

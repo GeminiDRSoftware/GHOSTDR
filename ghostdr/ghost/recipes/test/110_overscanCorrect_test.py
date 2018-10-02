@@ -32,13 +32,13 @@ class TestOverscanSubtractClass(object):
         rawfilename = 'bias*{}*.fits'.format(request.param)
         tmpsubdir = get_or_create_tmpdir(tmpdir_factory)
         # Make sure we're working inside the temp dir
-        rawfiles = glob.glob(os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            'testdata',
-            rawfilename))
-        shutil.copy(
-            rawfiles[0],
-            os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        # rawfiles = glob.glob(os.path.join(
+        #     os.path.dirname(os.path.abspath(__file__)),
+        #     'testdata',
+        #     rawfilename))
+        # shutil.copy(
+        #     rawfiles[0],
+        #     os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         rawfile = glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                          rawfilename))[0]
 
@@ -68,7 +68,7 @@ class TestOverscanSubtractClass(object):
         # Execute teardown code
         for _ in glob.glob(os.path.join(
                 os.getcwd(),
-                '*.fits')):
+                '*{}.fits'.format(reduce.suffix))):
             os.remove(_)
         try:
             os.rmdir(os.path.join(
