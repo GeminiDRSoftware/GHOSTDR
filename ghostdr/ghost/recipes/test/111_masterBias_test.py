@@ -158,7 +158,7 @@ class TestMasterBias(object):
         are within the specified sigma of the mean
         """
 
-        sigma_limit = 5.0
+        sigma_limit = 5.0  # Needs to be kept in-sync with the test recipe value
 
         rawfiles, corrfile = do_master_bias
         rawads = [astrodata.open(_) for _ in rawfiles]

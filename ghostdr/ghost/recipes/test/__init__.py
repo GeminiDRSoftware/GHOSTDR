@@ -44,9 +44,36 @@ import py
 
 FULL_REDUCTION_TMPDIR = 'ghost_fullreduce'
 
+FULL_REDUCTION_SPACE_REQD = 1.5 * 1024.  # MB
+
+import ctypes
+import platform
+import sys
+
+
+def get_free_space_mb(dirname):
+    """Return folder/drive free space (in megabytes)."""
+    if platform.system() == 'Windows':
+        free_bytes = ctypes.c_ulonglong(0)
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dirname),
+                                                   None, None,
+                                                   ctypes.pointer(free_bytes))
+        return free_bytes.value / 1024. / 1024.
+    else:
+        st = os.statvfs(dirname)
+        return st.f_bavail * st.f_frsize / 1024. / 1024.
+
 
 def get_or_create_tmpdir(tf):
     basetmp = tf.getbasetemp()
+
+    # This test suite requires a minimum amount of available disk space.
+    #  Will raise a RuntimeError if this isn't the case.
+    if get_free_space_mb(os.path.join(
+            basetmp.dirname, basetmp.basename)) < FULL_REDUCTION_SPACE_REQD:
+        raise RuntimeError('You have insufficient free disk space to run '
+                           'the full reduction test suite.')
+
     try:
         os.chdir(os.path.join(basetmp.dirname, basetmp.basename,
                               FULL_REDUCTION_TMPDIR))
