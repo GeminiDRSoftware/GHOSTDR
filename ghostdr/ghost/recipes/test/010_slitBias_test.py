@@ -98,10 +98,10 @@ class TestSlitBias(object):
             "threshold ({}%)\n" \
             "Raw mean: {}\n" \
             "Bias mean: {}".format(
-            mean_tolerance*100.,
-            raw_mean,
-            master_mean,
-        )
+                mean_tolerance * 100.,
+                raw_mean,
+                master_mean,
+            )
 
     def test_slitbias_std(self, do_slit_bias):
         """
@@ -120,8 +120,8 @@ class TestSlitBias(object):
             # import pdb; pdb.set_trace()
             corrstd = np.ma.std(ext.data)
             rawstd = np.sqrt(
-                np.sum([np.ma.std(_[i].data)**2 for _ in rawads])
-            / len(rawfiles)) #/ len(rawfiles)
+                np.sum([np.ma.std(_[i].data) ** 2 for _ in rawads])
+                / len(rawfiles))  # / len(rawfiles)
             # print((corrstd, rawstd, ))
             results.append(np.abs(corrstd - rawstd) < std_tolerance * rawstd or
                            corrstd < rawstd)
@@ -134,7 +134,34 @@ class TestSlitBias(object):
                                 "({}%)\n" \
                                 "Raw STD: {}\n" \
                                 "Bias STD: {}".format(
-            std_tolerance*100.,
+            std_tolerance * 100.,
             rawstd,
             corrstd,
         )
+
+    def test_slitbias_calibrations_system(self, do_slit_bias):
+        """
+        Check that:
+
+        - A bias slit calibrator exists in the local calibrations dir;
+        - It can be retrieved using a getProcessedSlitBias call.
+        """
+        rawfiles, corrfile = do_slit_bias
+        assert len(glob.glob(os.path.join(
+            os.getcwd(), 'calibrations', 'processed_bias', '*bias*slit*.fits'
+        ))) == 1, "Couldn't find the stored slit bias in the calibrations " \
+                  "system OR found multiples"
+
+        # Use an 'object' slit as the adinput to try finding the slit bias
+        ad = astrodata.open(glob.glob(os.path.join(os.getcwd(),
+                                                   'obj*slit*.fits'))[0])
+
+        try:
+            primobj = ghostdr.ghost.primitives_calibdb_ghost.CalibDBGHOST(
+                adinputs=[ad, ])
+            import pdb; pdb.set_trace()
+            bias_retrieved = primobj.getProcessedBias()
+        except IOError:
+            assert 0, 'Calibration system could not locate the slit bias frame'
+        except:
+            assert 0, 'Unknown error in attempting to retrieve slit bias frame'
