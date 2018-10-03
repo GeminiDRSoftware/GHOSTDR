@@ -69,11 +69,72 @@ class TestSlitBias(object):
         )):
             os.remove(_)
 
-    def test_slitbias(self, do_slit_bias):
+    def test_slitbias_mean(self, do_slit_bias):
+        """
+        Check that the mean of the master bias (computed across all extensions)
+        is within some tolerance factor of the means of the overscan-
+        corrected input biases
+        """
+        mean_tolerance = 0.01  # 1%
+
+        rawfiles, corrfile = do_slit_bias
+        means = []
+        for f in rawfiles:
+            ad = astrodata.open(f)
+            means.append(
+                np.mean([np.ma.mean(ext.data) for ext in ad])
+            )
+        raw_mean = np.mean(means)
+
+        master = astrodata.open(corrfile)
+        master_mean = np.mean([np.ma.mean(ext.data) for ext in master])
+
+        assert np.abs(
+            raw_mean - master_mean
+        ) < np.abs(mean_tolerance * raw_mean), \
+            "Difference between mean value of " \
+            "master bias and means of input " \
+            "biases is over the prescribed " \
+            "threshold ({}%)\n" \
+            "Raw mean: {}\n" \
+            "Bias mean: {}".format(
+            mean_tolerance*100.,
+            raw_mean,
+            master_mean,
+        )
+
+    def test_slitbias_std(self, do_slit_bias):
         """
         Check that the standard deviation of the output master bias frame
         extensions is equal to (or less than) the quadrature sums of the
         input bias frame extensions, divided by the number of input biases.
         """
+        std_tolerance = 0.005  # 0.5%
+
         rawfiles, corrfile = do_slit_bias
-        assert 1
+        rawads = [astrodata.open(_) for _ in rawfiles]
+        corrad = astrodata.open(corrfile)
+
+        results = []
+        for i, ext in enumerate(corrad):
+            # import pdb; pdb.set_trace()
+            corrstd = np.ma.std(ext.data)
+            rawstd = np.sqrt(
+                np.sum([np.ma.std(_[i].data)**2 for _ in rawads])
+            / len(rawfiles)) #/ len(rawfiles)
+            # print((corrstd, rawstd, ))
+            results.append(np.abs(corrstd - rawstd) < std_tolerance * rawstd or
+                           corrstd < rawstd)
+
+        assert np.all(results), "At least one extension of the master bias " \
+                                "has a standard deviation which exceeds the " \
+                                "root sum-of-squares of the standard " \
+                                "deviations of the matching input bias " \
+                                "extensions by the given threshold " \
+                                "({}%)\n" \
+                                "Raw STD: {}\n" \
+                                "Bias STD: {}".format(
+            std_tolerance*100.,
+            rawstd,
+            corrstd,
+        )

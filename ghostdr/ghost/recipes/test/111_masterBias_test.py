@@ -107,7 +107,7 @@ class TestMasterBias(object):
             master_mean,
         )
 
-    def test_masterbias_overscan_std(self, do_master_bias):
+    def test_masterbias_std(self, do_master_bias):
         """
         Check that the standard deviation of the output master bias frame
         extensions is equal to (or less than) the quadrature sums of the
