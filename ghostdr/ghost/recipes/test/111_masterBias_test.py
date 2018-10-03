@@ -11,7 +11,7 @@ import astrodata
 from gempy.utils import logutils
 from recipe_system.reduction.coreReduce import Reduce
 
-from ..test import get_or_create_tmpdir
+# from ..test import get_or_create_tmpdir
 
 import ghostdr
 
@@ -23,13 +23,13 @@ class TestMasterBias(object):
         'blue',
         'red',
     ])
-    def do_master_bias(self, tmpdir_factory, request):
+    def do_master_bias(self, get_or_create_tmpdir, request):
         """
         Perform overscan subtraction on raw bias frame
         """
         rawfilename = 'bias*{}*.fits'.format(request.param)
         # Copy the raw data file into here
-        tmpsubdir = get_or_create_tmpdir(tmpdir_factory)
+        tmpsubdir = get_or_create_tmpdir
         # Find all the relevant files
         # rawfiles = glob.glob(os.path.join(os.path.dirname(
         #     os.path.abspath(__file__)),
@@ -71,16 +71,7 @@ class TestMasterBias(object):
         yield rawfiles, corrfile
 
         # Execute teardown code
-        for _ in glob.glob(os.path.join(
-                os.getcwd(),
-                rawfilename)):
-            os.remove(_)
-        try:
-            os.rmdir(os.path.join(
-                os.getcwd(),
-                'calibrations'))
-        except OSError:
-            pass
+        pass
 
     def test_masterbias_mean(self, do_master_bias):
         """

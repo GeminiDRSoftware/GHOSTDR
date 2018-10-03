@@ -12,7 +12,7 @@ import astrodata
 from gempy.utils import logutils
 from recipe_system.reduction.coreReduce import Reduce
 
-from ..test import get_or_create_tmpdir
+# from ..test import get_or_create_tmpdir
 
 import ghostdr
 
@@ -24,13 +24,13 @@ class TestOverscanSubtractClass(object):
         'blue',
         'red',
     ])
-    def do_overscan_subtract(self, tmpdir_factory, request):
+    def do_overscan_subtract(self, get_or_create_tmpdir, request):
         """
         Perform overscan subtraction on raw bias frame
         """
         # Copy the raw data file into here
         rawfilename = 'bias*{}*.fits'.format(request.param)
-        tmpsubdir = get_or_create_tmpdir(tmpdir_factory)
+        tmpsubdir = get_or_create_tmpdir
         # Make sure we're working inside the temp dir
         # rawfiles = glob.glob(os.path.join(
         #     os.path.dirname(os.path.abspath(__file__)),
@@ -70,12 +70,6 @@ class TestOverscanSubtractClass(object):
                 os.getcwd(),
                 '*{}.fits'.format(reduce.suffix))):
             os.remove(_)
-        try:
-            os.rmdir(os.path.join(
-                os.getcwd(),
-                'calibrations'))
-        except OSError:
-            pass
 
     def test_overscan_headerkw(self, do_overscan_subtract):
         """
