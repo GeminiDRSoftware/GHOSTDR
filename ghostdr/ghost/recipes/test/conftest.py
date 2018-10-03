@@ -10,6 +10,7 @@ import ctypes
 import platform
 import sys
 import glob
+import shutil
 
 
 def get_free_space_mb(dirname):
@@ -55,7 +56,7 @@ def get_or_create_tmpdir(tmpdir_factory):
     ):
         os.remove(_)
     try:
-        os.rmdir(os.path.join(
+        shutil.rmtree(os.path.join(
             tmpsubdir.dirname, tmpsubdir.basename,
             'calibrations'))
     except OSError:
