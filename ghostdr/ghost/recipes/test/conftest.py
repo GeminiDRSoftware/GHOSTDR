@@ -55,9 +55,9 @@ def get_or_create_tmpdir(tmpdir_factory):
             '*.fits'),
     ):
         os.remove(_)
-    # try:
-    #     shutil.rmtree(os.path.join(
-    #         tmpsubdir.dirname, tmpsubdir.basename,
-    #         'calibrations'))
-    # except OSError:
-    #     pass
+    try:
+        shutil.rmtree(os.path.join(
+            tmpsubdir.dirname, tmpsubdir.basename,
+            'calibrations'))
+    except OSError:
+        pass

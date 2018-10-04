@@ -14,6 +14,7 @@ from recipe_system.reduction.coreReduce import Reduce
 # from ..test import get_or_create_tmpdir
 
 import ghostdr
+import ghost_instruments
 
 
 @pytest.mark.fullreduction
@@ -139,29 +140,43 @@ class TestSlitBias(object):
             corrstd,
         )
 
-    def test_slitbias_calibrations_system(self, do_slit_bias):
+    def test_slitbias_calibrations_system(self, get_or_create_tmpdir):
         """
         Check that:
 
         - A bias slit calibrator exists in the local calibrations dir;
         - It can be retrieved using a getProcessedSlitBias call.
         """
-        rawfiles, corrfile = do_slit_bias
         assert len(glob.glob(os.path.join(
             os.getcwd(), 'calibrations', 'processed_bias', '*bias*slit*.fits'
         ))) == 1, "Couldn't find the stored slit bias in the calibrations " \
                   "system OR found multiples"
 
-        # Use an 'object' slit as the adinput to try finding the slit bias
-        ad = astrodata.open(glob.glob(os.path.join(os.getcwd(),
-                                                   'obj*slit*.fits'))[0])
+        # Do the master bias generation
+        reduce = Reduce()
+        reduce.drpkg = 'ghostdr'
+        # Use one of the 'dark slit' files to try and retrieve the slit bias
+        reduce.files = [os.path.join(os.getcwd(),
+                                     'dark95_1_MEF_2x2_slit.fits'), ]
+        reduce.mode = ['test', ]
+        reduce.urecipe = 'recipeRetrieveSlitBiasTest'
+        # reduce.mode = ['sq', ]
+        # reduce.urecipe = 'makeProcessedBias'
+        reduce.logfile = os.path.join(os.getcwd(),
+                                      'reduce_slitbias_retrieve.log')
+        reduce.logmode = 'quiet'
+        reduce.suffix = '_testSlitBiasRetrieve'
+        logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
 
         try:
-            primobj = ghostdr.ghost.primitives_calibdb_ghost.CalibDBGHOST(
-                adinputs=[ad, ])
-            import pdb; pdb.set_trace()
-            bias_retrieved = primobj.getProcessedBias()
-        except IOError:
-            assert 0, 'Calibration system could not locate the slit bias frame'
-        except:
-            assert 0, 'Unknown error in attempting to retrieve slit bias frame'
+            reduce.runr()
+        except IOError as e:
+            assert 0, 'Calibration system could not locate the slit bias ' \
+                      'frame ({})'.format(e.message)
+        finally:
+            # Teardown code
+            for _ in glob.glob(os.path.join(
+                    os.getcwd(),
+                    '*{}.fits'.format(reduce.suffix)),
+            ):
+                os.remove(_)

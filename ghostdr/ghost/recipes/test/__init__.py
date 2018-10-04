@@ -49,5 +49,5 @@ Alternatively, to skip the full reduction tests, invoke pytest thus::
 
 """
 
-
+import ghost_instruments
 

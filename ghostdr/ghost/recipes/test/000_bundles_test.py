@@ -15,6 +15,7 @@ from recipe_system.reduction.coreReduce import Reduce
 # from ..test import get_or_create_tmpdir
 
 import ghostdr
+import ghost_instruments
 
 
 @pytest.mark.fullreduction
