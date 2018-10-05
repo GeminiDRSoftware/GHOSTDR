@@ -11,6 +11,7 @@ import platform
 import sys
 import glob
 import shutil
+import subprocess
 
 
 def get_free_space_mb(dirname):
@@ -46,6 +47,10 @@ def get_or_create_tmpdir(tmpdir_factory):
         tmpsubdir = tmpdir_factory.mktemp(FULL_REDUCTION_TMPDIR,
                                           numbered=False)
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+
+    # Blank the calibrations manager
+    print('Blanking calibrations manager')
+    subprocess.check_call(['caldb', 'init',  '-v', '-w', ])
 
     yield tmpsubdir
 

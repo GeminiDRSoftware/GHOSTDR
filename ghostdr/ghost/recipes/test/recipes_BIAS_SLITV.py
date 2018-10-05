@@ -7,10 +7,5 @@ def recipeSlitBiasTest(p):
     return makeProcessedBias(p)
 
 
-def recipeRetrieveSlitBiasTest(p):
-    p.getProcessedBias()
-    return
-
-
 default = recipeSlitBiasTest
 
