@@ -125,7 +125,7 @@ class TestBundleClass(object):
         reduce.drpkg = 'ghostdr'
         reduce.files = rawfile
         reduce.mode = ['test', ]
-        reduce.urecipe = 'recipeBundleTest'
+        reduce.recipename = 'recipeBundleTest'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_bundle.log')
         reduce.logmode = 'quiet'

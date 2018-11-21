@@ -13,6 +13,10 @@ import glob
 import shutil
 import subprocess
 
+from recipe_system import __version__
+from recipe_system.utils.reduce_utils import buildParser
+from recipe_system.cal_service import set_calservice
+
 
 def get_free_space_mb(dirname):
     """Return folder/drive free space (in megabytes)."""
@@ -48,9 +52,18 @@ def get_or_create_tmpdir(tmpdir_factory):
                                           numbered=False)
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
+    # OLD WAY
     # Blank the calibrations manager
-    print('Blanking calibrations manager')
-    subprocess.check_call(['caldb', 'init',  '-v', '-w', ])
+    # print('Blanking calibrations manager')
+    # subprocess.check_call(['caldb', 'init',  '-v', '-w', ])
+
+    # NEW WAY
+    # Set up the calibration system with appropriate arguments
+    args = buildParser(__version__).parse_args([
+        '--local_db_dir {}'.format(os.path.join(basetmp.dirname, basetmp.basename)),
+    ])
+    set_calservice(args)
+
 
     yield tmpsubdir
 

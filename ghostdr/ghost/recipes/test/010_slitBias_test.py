@@ -43,9 +43,9 @@ class TestSlitBias(object):
         reduce.drpkg = 'ghostdr'
         reduce.files = rawfiles
         reduce.mode = ['test', ]
-        reduce.urecipe = 'recipeSlitBiasTest'
+        reduce.recipename = 'recipeSlitBiasTest'
         # reduce.mode = ['sq', ]
-        # reduce.urecipe = 'makeProcessedBias'
+        # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_slitbias.log')
         reduce.logmode = 'quiet'
@@ -159,9 +159,9 @@ class TestSlitBias(object):
         reduce.files = [os.path.join(os.getcwd(),
                                      'dark95_1_MEF_2x2_slit.fits'), ]
         reduce.mode = ['test', ]
-        reduce.urecipe = 'recipeRetrieveSlitBiasTest'
+        reduce.recipename = 'recipeRetrieveSlitBiasTest'
         # reduce.mode = ['sq', ]
-        # reduce.urecipe = 'makeProcessedBias'
+        # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(os.getcwd(),
                                       'reduce_slitbias_retrieve.log')
         reduce.logmode = 'quiet'
