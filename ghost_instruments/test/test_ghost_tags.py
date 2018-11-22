@@ -27,9 +27,11 @@ class FixtureIterator(object):
             #                                  'test_data', instr, filename
             #                                  ))
             ad = astrodata.open(os.path.join(
-                '/Users/marc/Documents/ghost/testdata-180718',
-                filename)
-            )
+                # '/Users/marc/Documents/ghost/testdata-181121',
+                THIS_DIR,
+                'testdata',
+                filename
+            ))
             yield filename, ad, set(self._data[key])
 
 
