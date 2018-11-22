@@ -5,6 +5,8 @@ FULL_REDUCTION_TMPDIR = 'ghost_fullreduce'
 
 FULL_REDUCTION_SPACE_REQD = 5. * 1024.  # MB
 
+THIS_DIR = os.path.dirname(__file__)
+
 import pytest
 import ctypes
 import platform
@@ -59,11 +61,16 @@ def get_or_create_tmpdir(tmpdir_factory):
 
     # NEW WAY
     # Set up the calibration system with appropriate arguments
+    os.mkdir('dbdir')
     args = buildParser(__version__).parse_args([
-        '--local_db_dir {}'.format(os.path.join(basetmp.dirname, basetmp.basename)),
+        '--local_db_dir {}'.format(os.path.join(basetmp.dirname,
+                                                basetmp.basename, 'dbdir')),
     ])
     set_calservice(args)
 
+    # TODO If necessary, populate calibration system from testdata/calibs
+    # Ideally, however, the database would be populated 'as we go' during the
+    # tests
 
     yield tmpsubdir
 
@@ -77,5 +84,11 @@ def get_or_create_tmpdir(tmpdir_factory):
         shutil.rmtree(os.path.join(
             tmpsubdir.dirname, tmpsubdir.basename,
             'calibrations'))
+    except OSError:
+        pass
+    try:
+        shutil.rmtree(os.path.join(
+            tmpsubdir.dirname, tmpsubdir.basename,
+            'dbdir'))
     except OSError:
         pass
