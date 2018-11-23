@@ -32,6 +32,8 @@ import random
 import datetime
 import itertools
 import os
+import glob
+import shutil
 
 from ghostdr.ghost.primitives_ghost_spect import GHOSTSpect
 
@@ -96,7 +98,17 @@ class TestGhost:
         flat_ad[0].DQ = bpm2
         flat_ad.filename = flatfilename
 
-        return ad, flat_ad, tmpsubdir
+        yield ad, flat_ad, tmpsubdir
+
+        # Teardown code - remove files in this tmpdir
+        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                        '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename, 'calibrations'))
+        except OSError:
+            pass
 
     def test_applyFlatBPM(self, data_applyFlatBPM):
         """
@@ -228,6 +240,17 @@ class TestGhost:
                                                 "timestamp-mark the " \
                                                 "output file"
 
+        # Teardown - remove calibrations and output file
+        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                        '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename,
+                'calibrations'))
+        except OSError:
+            pass
+
     @pytest.mark.parametrize('xbin, ybin',
                              list(itertools.product(*[
                                  [1, 2, ],  # x binning
@@ -263,6 +286,16 @@ class TestGhost:
         assert ad_out[0].data.shape == input_shape, "darkCorrect has mangled " \
                                                     "the shape of the input " \
                                                     "data"
+        # Teardown - remove calibrations and output file
+        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                        '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename,
+                'calibrations'))
+        except OSError:
+            pass
 
     def test_darkCorrect_errors(self, tmpdir):
         tmpsubdir = tmpdir.mkdir('ghost_dcerrors')
@@ -283,6 +316,18 @@ class TestGhost:
         # Mismatched list lengths
         with pytest.raises(Exception):
             gs.darkCorrect([ad, ad2, ad, ], dark=[dark, dark, ])
+
+        # Teardown - remove calibrations and output file
+        for _ in glob.glob(
+                os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                             '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename,
+                'calibrations'))
+        except OSError:
+            pass
 
     def test_darkCorrect(self, tmpdir):
         tmpsubdir = tmpdir.mkdir('ghost_darkcorr')
@@ -307,6 +352,17 @@ class TestGhost:
             gs.timestamp_keys['darkCorrect']), "darkCorrect did not " \
                                                "timestamp-mark the " \
                                                "output file"
+
+        # Teardown - remove calibrations and output file
+        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                        '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename,
+                'calibrations'))
+        except OSError:
+            pass
 
     @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - save for '
                              'all-up testing')
@@ -345,6 +401,17 @@ class TestGhost:
             gs.timestamp_keys['interpolateAndCombine']
         ) is None, "interpolateAndCombine appears to have acted on a file " \
                    "when skip=True"
+
+        # Teardown - remove calibrations and output file
+        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                        '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename,
+                'calibrations'))
+        except OSError:
+            pass
 
     @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - save for '
                              'all-up testing')
@@ -424,6 +491,17 @@ class TestGhost:
         ) is None, "responseCorrect appears to have acted on a file " \
                    "when skip=True"
 
+        # Teardown - remove calibrations and output file
+        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                        '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename,
+                'calibrations'))
+        except OSError:
+            pass
+
     def test_standardizeStructure(self, tmpdir):
         """
         Checks to make:
@@ -443,6 +521,17 @@ class TestGhost:
             ad_orig[0].hdr == ad_out[0].hdr,
             len(ad_orig) == len(ad_out),
         ]), "standardizeStructure is no longer a no-op primitive"
+
+        # Teardown - remove calibrations and output file
+        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                        '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename,
+                'calibrations'))
+        except OSError:
+            pass
 
     @pytest.mark.skip(reason='All-up testing required - needs full DATASEC, '
                              'CCDSEC, AMPSIZE, CCDSIZE etc. calculations')

@@ -11,6 +11,8 @@ To run:
     2) From the ??? (location): pytest -v --capture=no
 """
 import os
+import glob
+import shutil
 import numpy as np
 import astrodata
 import gemini_instruments
@@ -87,3 +89,12 @@ class TestGhost:
             assert ad_new[0].hdr['AMPSIZE'] == '[1:{1},1:{0}]'.format(
                 1024 / opt[1], 1024 / opt[0]), 'Incorrect value for AMPSIZE ' \
                                                'recorded'
+
+        # Teardown code - remove files in this tmpdir
+        for _ in glob.glob(os.path.join(tmpdir.dirname, '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpdir.dirname, 'calibrations'))
+        except OSError:
+            pass

@@ -12,6 +12,7 @@ To run:
 """
 import pytest
 import os
+import shutil
 import glob
 import numpy as np
 import astrodata
@@ -69,7 +70,17 @@ class TestGhostBundle:
         p = GHOSTBundle([ad, ])
         bundle_output = p.splitBundle(adinputs=[ad, ])
 
-        return ad, tmpsubdir, bundle_output
+        yield ad, tmpsubdir, bundle_output
+
+        # Teardown code - remove files in this tmpdir
+        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                        '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename, 'calibrations'))
+        except OSError:
+            pass
 
     def test_splitBundle_output(self, create_bundle):
         """

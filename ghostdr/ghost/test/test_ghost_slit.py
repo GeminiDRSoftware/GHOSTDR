@@ -11,6 +11,8 @@ To run:
     2) From the ??? (location): pytest -v --capture=no
 """
 import os
+import shutil
+import glob
 import numpy as np
 import astrodata
 import gemini_instruments
@@ -80,7 +82,18 @@ class TestGhostSlit:
         ad = astrodata.create(phu, hdus)
         ad.filename = rawfilename
 
-        return ad, tmpsubdir
+        yield ad, tmpsubdir
+
+        # Teardown code - remove files in this tmpdir
+        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
+                                        '*.fits')):
+            os.remove(_)
+        try:
+            shutil.rmtree(os.path.join(
+                tmpsubdir.dirname, tmpsubdir.basename,
+                'calibrations'))
+        except OSError:
+            pass
 
     def test_CRCorrect(self, create_slit_package):
         """
