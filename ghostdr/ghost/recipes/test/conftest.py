@@ -62,9 +62,12 @@ def get_or_create_tmpdir(tmpdir_factory):
     # NEW WAY
     # Set up the calibration system with appropriate arguments
     os.mkdir('dbdir')
-    args = buildParser(__version__).parse_args([
-        '--local_db_dir {}'.format(os.path.join(basetmp.dirname,
-                                                basetmp.basename, 'dbdir')),
+    parser = buildParser(__version__)
+    local_db_dir = '{}'.format(os.path.join(basetmp.dirname,
+                                            basetmp.basename, 'dbdir'), )
+    args = parser.parse_args(args=[
+        '--local_db_dir',
+        local_db_dir,
     ])
     set_calservice(args)
 
@@ -80,6 +83,8 @@ def get_or_create_tmpdir(tmpdir_factory):
             '*.fits'),
     ):
         os.remove(_)
+
+    # Remove the detritus of the calibrations system
     try:
         shutil.rmtree(os.path.join(
             tmpsubdir.dirname, tmpsubdir.basename,
