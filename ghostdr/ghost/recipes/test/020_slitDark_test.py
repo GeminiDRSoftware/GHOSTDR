@@ -10,11 +10,22 @@ import pytest
 import astrodata
 from gempy.utils import logutils
 from recipe_system.reduction.coreReduce import Reduce
+from recipe_system import cal_service
+
+import sqlite3
 
 # from ..test import get_or_create_tmpdir
 
 import ghostdr
 import ghost_instruments
+
+
+def get_caldb_contents(dbpath):
+    print(dbpath)
+    conn = sqlite3.connect(dbpath)
+    c = conn.cursor()
+    c.execute('SELECT * FROM diskfile')
+    return c.fetchall()
 
 
 @pytest.mark.fullreduction
@@ -76,7 +87,7 @@ class TestSlitBias(object):
         rawfiles, corrfiles = do_slit_dark
         assert isinstance(corrfiles, str)
 
-    @pytest.mark.skip
+    # @pytest.mark.skip
     def test_slitdark_calibrations_system(self, get_or_create_tmpdir):
         """
         Check that:
@@ -88,10 +99,17 @@ class TestSlitBias(object):
         assert len(glob.glob(os.path.join(
             os.getcwd(), 'calibrations', 'processed_dark', '*dark*slit*.fits'
         ))) == 1, "Couldn't find the stored slit bias in the calibrations " \
-                  "system OR found multiples " \
-                  "(calibration ls: {})".format(
-            glob.glob(os.path.join(os.getcwd(),
-                                   'calibrations', 'processed_*')))
+                  "system OR found multiples\n " \
+                  "(calibration ls: {})\n" \
+                  "(calibration db: {})\n" \
+                  "(caldb contents: {})".format(
+            glob.glob(os.path.join(os.getcwd(), 'calibrations',
+                                   'processed_bias', '*')),
+            glob.glob(os.path.join(cal_service.get_calconf().database_dir,
+                                   '*')),
+            get_caldb_contents(os.path.join(
+                cal_service.get_calconf().database_dir, 'cal_manager.db'))
+        )
 
         # Do the master bias generation
         reduce = Reduce()

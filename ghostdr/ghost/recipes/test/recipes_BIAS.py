@@ -26,13 +26,13 @@ def recipeBiasCreateMaster(p):
     p.storeProcessedBias()
     return
 
-    p.prepare()
-    p.addDQ()
-    p.addVAR(read_noise=True)
-    p.overscanCorrect()
-    p.writeOutputs()
-    p.stackFrames()
-    p.clipSigmaBPM(bpm_value=1, sigma=5.0)
-    return
+    # p.prepare()
+    # p.addDQ()
+    # p.addVAR(read_noise=True)
+    # p.overscanCorrect()
+    # p.writeOutputs()
+    # p.stackFrames()
+    # p.clipSigmaBPM(bpm_value=1, sigma=5.0)
+    # return
 
 default = recipeBiasCreateMaster
