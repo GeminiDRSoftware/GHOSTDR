@@ -30,7 +30,7 @@ class TestOverscanSubtractClass(object):
         """
         # Copy the raw data file into here
         rawfilename = 'bias*{}*.fits'.format(request.param)
-        tmpsubdir = get_or_create_tmpdir
+        tmpsubdir, cal_service = get_or_create_tmpdir
         # Make sure we're working inside the temp dir
         # rawfiles = glob.glob(os.path.join(
         #     os.path.dirname(os.path.abspath(__file__)),

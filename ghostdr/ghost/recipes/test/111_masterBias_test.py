@@ -29,7 +29,7 @@ class TestMasterBias(object):
         """
         rawfilename = 'bias*{}*.fits'.format(request.param)
         # Copy the raw data file into here
-        tmpsubdir = get_or_create_tmpdir
+        tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
         # rawfiles = glob.glob(os.path.join(os.path.dirname(
         #     os.path.abspath(__file__)),

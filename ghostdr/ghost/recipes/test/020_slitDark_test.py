@@ -38,7 +38,7 @@ class TestSlitBias(object):
         """
         rawfilename = 'dark*slit*.fits'
         # Copy the raw data file into here
-        tmpsubdir = get_or_create_tmpdir
+        tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
         # rawfiles = glob.glob(os.path.join(os.path.dirname(
         #     os.path.abspath(__file__)),
@@ -57,11 +57,15 @@ class TestSlitBias(object):
         reduce.recipename = 'recipeSlitDarkTest'
         # Make sure refresh is used for all primitives
         reduce.upars = ['refresh=True', ]
+        reduce.ucals = {
+            'processed_bias':
+                'calibrations/processed_bias/bias_2_MEF_2x2_slit_bias.fits',
+        }
         # reduce.mode = ['sq', ]
         # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_slitdark.log')
-        reduce.logmode = 'quiet'
+        reduce.logmode = 'standard'
         reduce.suffix = '_testSlitDark'
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
         reduce.runr()
@@ -86,6 +90,7 @@ class TestSlitBias(object):
     def test_slitdark_reduce(self, do_slit_dark):
         rawfiles, corrfiles = do_slit_dark
         assert isinstance(corrfiles, str)
+        import pdb; pdb.set_trace()
 
     # @pytest.mark.skip
     def test_slitdark_calibrations_system(self, get_or_create_tmpdir):
@@ -96,19 +101,18 @@ class TestSlitBias(object):
         - It can be retrieved using a getProcessedSlitBias call.
         """
 
+        _, cal_service = get_or_create_tmpdir
+        # import pdb; pdb.set_trace()
+
         assert len(glob.glob(os.path.join(
-            os.getcwd(), 'calibrations', 'processed_dark', '*dark*slit*.fits'
+            os.getcwd(), 'calibrations', 'processed_bias', '*bias*slit*.fits'
         ))) == 1, "Couldn't find the stored slit bias in the calibrations " \
                   "system OR found multiples\n " \
                   "(calibration ls: {})\n" \
-                  "(calibration db: {})\n" \
                   "(caldb contents: {})".format(
             glob.glob(os.path.join(os.getcwd(), 'calibrations',
                                    'processed_bias', '*')),
-            glob.glob(os.path.join(cal_service.get_calconf().database_dir,
-                                   '*')),
-            get_caldb_contents(os.path.join(
-                cal_service.get_calconf().database_dir, 'cal_manager.db'))
+            [_ for _ in cal_service.list_files()],
         )
 
         # Do the master bias generation

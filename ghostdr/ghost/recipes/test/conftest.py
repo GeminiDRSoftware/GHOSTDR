@@ -19,7 +19,7 @@ from recipe_system import __version__
 from recipe_system.utils.reduce_utils import buildParser
 from recipe_system.utils.reduce_utils import normalize_args
 from recipe_system.cal_service import set_calservice
-from recipe_system.cal_service.localmanager import LocalManager
+from recipe_system.cal_service import CalibrationService
 from recipe_system.config import globalConf
 
 
@@ -66,25 +66,30 @@ def get_or_create_tmpdir(tmpdir_factory):
     # Set up the calibration system with appropriate arguments
     os.mkdir('dbdir')
     parser = buildParser(__version__)
-    local_db_dir = '{}'.format(os.path.join(tmpsubdir.dirname,
-                                            tmpsubdir.basename, 'dbdir/'), )
+    local_db_dir = u'{}'.format(os.path.join(tmpsubdir.dirname,
+                                             tmpsubdir.basename, 'dbdir/'), )
     args = parser.parse_args(args=[
         '--local_db_dir',
         local_db_dir,
     ])
     args = normalize_args(args)
-    set_calservice(args)
 
-    # Get a LocalManager and instantiate
-    # import pdb; pdb.set_trace()
-    lm = LocalManager(globalConf['calibs'].database_dir)
-    lm.init_database(wipe=True)
+    # set_calservice(args)
+    #
+    # # Get a LocalManager and instantiate
+    # # import pdb; pdb.set_trace()
+    # lm = LocalManager(globalConf['calibs'].database_dir)
+    # lm.init_database(wipe=True)
+
+    cs = CalibrationService()
+    cs.config(db_dir=local_db_dir)
+    cs.init(wipe=True)
 
     # TODO If necessary, populate calibration system from testdata/calibs
     # Ideally, however, the database would be populated 'as we go' during the
     # tests
 
-    yield tmpsubdir
+    yield tmpsubdir, cs
 
     # Teardown code - clear out the tmpdir, except the log files
     for _ in glob.glob(os.path.join(

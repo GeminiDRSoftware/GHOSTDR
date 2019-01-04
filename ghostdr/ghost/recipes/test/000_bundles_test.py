@@ -106,7 +106,7 @@ class TestBundleClass(object):
         """
         # Copy the raw data file into here
         rawfilename = '*MEF.fits'
-        tmpsubdir = get_or_create_tmpdir
+        tmpsubdir, cal_service = get_or_create_tmpdir
         print(tmpsubdir)
         # Make sure we're working inside the temp dir
         rawfiles = glob.glob(os.path.join(

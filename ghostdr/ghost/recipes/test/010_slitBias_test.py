@@ -27,7 +27,7 @@ class TestSlitBias(object):
         """
         rawfilename = 'bias*slit*.fits'
         # Copy the raw data file into here
-        tmpsubdir = get_or_create_tmpdir
+        tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
         # rawfiles = glob.glob(os.path.join(os.path.dirname(
         #     os.path.abspath(__file__)),
@@ -63,6 +63,9 @@ class TestSlitBias(object):
         yield rawfiles, corrfile
 
         # Execute teardown code
+        # Add the corrfile to the calibrations manager
+        cal_service.add_cal(corrfile)
+
         for _ in glob.glob(os.path.join(
                 os.getcwd(),
                 # rawfilename,
