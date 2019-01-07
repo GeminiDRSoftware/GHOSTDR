@@ -10,6 +10,7 @@ import pytest
 import astrodata
 from gempy.utils import logutils
 from recipe_system.reduction.coreReduce import Reduce
+from recipe_system.utils.reduce_utils import normalize_ucals
 from recipe_system import cal_service
 
 import sqlite3
@@ -57,10 +58,13 @@ class TestSlitBias(object):
         reduce.recipename = 'recipeSlitDarkTest'
         # Make sure refresh is used for all primitives
         reduce.upars = ['refresh=True', ]
-        reduce.ucals = {
-            'processed_bias':
-                'calibrations/processed_bias/bias_2_MEF_2x2_slit_bias.fits',
-        }
+        reduce.ucals = normalize_ucals(reduce.files, [
+            'processed_bias:calibrations/processed_bias/bias_2_MEF_2x2_slit_bias.fits',
+        ])
+        # reduce.ucals = {
+        #     'processed_bias':
+        #         'calibrations/processed_bias/bias_2_MEF_2x2_slit_bias.fits',
+        # }
         # reduce.mode = ['sq', ]
         # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
@@ -90,7 +94,7 @@ class TestSlitBias(object):
     def test_slitdark_reduce(self, do_slit_dark):
         rawfiles, corrfiles = do_slit_dark
         assert isinstance(corrfiles, str)
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
     # @pytest.mark.skip
     def test_slitdark_calibrations_system(self, get_or_create_tmpdir):

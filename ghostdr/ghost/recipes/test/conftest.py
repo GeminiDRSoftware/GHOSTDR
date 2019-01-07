@@ -91,6 +91,8 @@ def get_or_create_tmpdir(tmpdir_factory):
 
     yield tmpsubdir, cs
 
+    # import pdb; pdb.set_trace()
+
     # Teardown code - clear out the tmpdir, except the log files
     for _ in glob.glob(os.path.join(
             tmpsubdir.dirname, tmpsubdir.basename,
