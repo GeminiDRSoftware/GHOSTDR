@@ -144,8 +144,8 @@ class TestBundleClass(object):
 
     def test_bundle_outputs(self, do_bundle_split):
         """
-        Check for header keywords SUBOVER and TRIMOVER in overscan-corrected
-        output
+        Check that the right number and types of files have come out of
+        bundle expansion
         """
         rawfile, tmpsubdir = do_bundle_split
 
