@@ -10,6 +10,7 @@ import pytest
 import astrodata
 from gempy.utils import logutils
 from recipe_system.reduction.coreReduce import Reduce
+from recipe_system.utils.reduce_utils import normalize_ucals
 
 # from ..test import get_or_create_tmpdir
 
@@ -157,6 +158,11 @@ class TestSlitBias(object):
         # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(os.getcwd(),
                                       'reduce_slitbias_retrieve.log')
+        # TODO Dynamically find calibration file name
+        # (depends on disk order of input files used to make it)
+        reduce.ucals = normalize_ucals(reduce.files, [
+            'processed_bias:calibrations/processed_bias/bias_2_MEF_2x2_slit_bias.fits',
+        ])
         reduce.logmode = 'quiet'
         reduce.suffix = '_testSlitBiasRetrieve'
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
