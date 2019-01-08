@@ -41,12 +41,6 @@ class TestSlitBias(object):
         # Copy the raw data file into here
         tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
-        # rawfiles = glob.glob(os.path.join(os.path.dirname(
-        #     os.path.abspath(__file__)),
-        #     'testdata',
-        #     rawfilename))
-        # for f in rawfiles:
-        #     shutil.copy(f, os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         rawfiles = glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                           rawfilename))
 
@@ -61,12 +55,6 @@ class TestSlitBias(object):
         reduce.ucals = normalize_ucals(reduce.files, [
             'processed_bias:calibrations/processed_bias/bias_2_MEF_2x2_slit_bias.fits',
         ])
-        # reduce.ucals = {
-        #     'processed_bias':
-        #         'calibrations/processed_bias/bias_2_MEF_2x2_slit_bias.fits',
-        # }
-        # reduce.mode = ['sq', ]
-        # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_slitdark.log')
         reduce.logmode = 'standard'
@@ -83,6 +71,8 @@ class TestSlitBias(object):
         # Return filenames of raw, subtracted files
         yield rawfiles, corrfile
 
+        # import pdb; pdb.set_trace()
+
         # Execute teardown code
         for _ in glob.glob(os.path.join(
                 os.getcwd(),
@@ -91,12 +81,6 @@ class TestSlitBias(object):
         )):
             os.remove(_)
 
-    def test_slitdark_reduce(self, do_slit_dark):
-        rawfiles, corrfiles = do_slit_dark
-        assert isinstance(corrfiles, str)
-        # import pdb; pdb.set_trace()
-
-    # @pytest.mark.skip
     def test_slitdark_calibrations_system(self, get_or_create_tmpdir):
         """
         Check that:
@@ -146,3 +130,17 @@ class TestSlitBias(object):
                     '*{}.fits'.format(reduce.suffix)),
             ):
                 os.remove(_)
+
+    def test_slitdark_biasused(self, do_slit_dark):
+        """
+        Check that the bias used was recorded in the output dark header
+        """
+
+        rawfiles, corrfile = do_slit_dark
+
+        bias_used = astrodata.open(corrfile).phu.get('BIASIM')
+        assert bias_used == 'bias_2_MEF_2x2_slit' \
+                            '_bias_clipped.fits', "Incorrect bias frame " \
+                                                  "recorded in processed " \
+                                                  "slit dark header " \
+                                                  "({})".format(bias_used)

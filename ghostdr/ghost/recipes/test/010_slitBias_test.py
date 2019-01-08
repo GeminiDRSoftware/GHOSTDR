@@ -29,12 +29,6 @@ class TestSlitBias(object):
         # Copy the raw data file into here
         tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
-        # rawfiles = glob.glob(os.path.join(os.path.dirname(
-        #     os.path.abspath(__file__)),
-        #     'testdata',
-        #     rawfilename))
-        # for f in rawfiles:
-        #     shutil.copy(f, os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         rawfiles = glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                           rawfilename))
 
@@ -44,8 +38,6 @@ class TestSlitBias(object):
         reduce.files = rawfiles
         reduce.mode = ['test', ]
         reduce.recipename = 'recipeSlitBiasTest'
-        # reduce.mode = ['sq', ]
-        # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_slitbias.log')
         reduce.logmode = 'quiet'
@@ -63,8 +55,6 @@ class TestSlitBias(object):
         yield rawfiles, corrfile
 
         # Execute teardown code
-        # Add the corrfile to the calibrations manager
-        cal_service.add_cal(corrfile)
 
         for _ in glob.glob(os.path.join(
                 os.getcwd(),
