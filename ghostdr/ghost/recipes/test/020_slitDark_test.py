@@ -81,7 +81,7 @@ class TestSlitBias(object):
         )):
             os.remove(_)
 
-    def test_slitdark_calibrations_system(self, get_or_create_tmpdir):
+    def test_slitdark_can_access_bias(self, get_or_create_tmpdir):
         """
         Check that:
 
