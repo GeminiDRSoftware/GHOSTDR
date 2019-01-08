@@ -132,15 +132,3 @@ class TestSlitBias(object):
             rawstd,
             corrstd,
         )
-
-    def test_slitbias_calibrations_system(self, get_or_create_tmpdir):
-        """
-        Check that:
-
-        - A bias slit calibrator exists in the local calibrations dir;
-        - It can be retrieved using a getProcessedSlitBias call.
-        """
-        assert len(glob.glob(os.path.join(
-            os.getcwd(), 'calibrations', 'processed_bias', '*bias*slit*.fits'
-        ))) == 1, "Couldn't find the stored slit bias in the calibrations " \
-                  "system OR found multiples"
