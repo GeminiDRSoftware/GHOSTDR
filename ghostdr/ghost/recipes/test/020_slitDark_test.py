@@ -81,7 +81,27 @@ class TestSlitBias(object):
         )):
             os.remove(_)
 
-    def test_slitdark_can_access_bias(self, get_or_create_tmpdir):
+    def test_slitdark_bias_done(self, do_slit_dark):
+        """
+        Check that bias subtraction was actually performed
+        """
+
+        rawfiles, corrfile = do_slit_dark
+        corrdark = astrodata.open(corrfile)
+
+        assert corrdark.phu.get('BIASCORR'), "No record of bias correction " \
+                                             "having been performed on {} " \
+                                             "(PHU keyword BIASCORR " \
+                                             "missing)".format(corrfile)
+
+        bias_used = corrdark.phu.get('BIASIM')
+        assert bias_used == 'bias_2_MEF_2x2_slit' \
+                            '_bias_clipped.fits', "Incorrect bias frame " \
+                                                  "recorded in processed " \
+                                                  "slit dark header " \
+                                                  "({})".format(bias_used)
+
+    def test_slitdark_in_calservice(self, get_or_create_tmpdir, do_slit_dark):
         """
         Check that:
 
@@ -89,11 +109,13 @@ class TestSlitBias(object):
         - It can be retrieved using a getProcessedSlitBias call.
         """
 
+        # Ensure the slit dark reduction has been done
+        _, _ = do_slit_dark
         _, cal_service = get_or_create_tmpdir
         # import pdb; pdb.set_trace()
 
         assert len(glob.glob(os.path.join(
-            os.getcwd(), 'calibrations', 'processed_bias', '*bias*slit*.fits'
+            os.getcwd(), 'calibrations', 'processed_dark', '*dark*slit*.fits'
         ))) == 1, "Couldn't find the stored slit bias in the calibrations " \
                   "system OR found multiples\n " \
                   "(calibration ls: {})\n" \
@@ -130,23 +152,3 @@ class TestSlitBias(object):
                     '*{}.fits'.format(reduce.suffix)),
             ):
                 os.remove(_)
-
-    def test_slitdark_biasdone(self, do_slit_dark):
-        """
-        Check that bias subtraction was actually performed
-        """
-
-        rawfiles, corrfile = do_slit_dark
-        corrdark = astrodata.open(corrfile)
-
-        assert corrdark.phu.get('BIASCORR'), "No record of bias correction " \
-                                             "having been performed on {} " \
-                                             "(PHU keyword BIASCORR " \
-                                             "missing)".format(corrfile)
-
-        bias_used = corrdark.phu.get('BIASIM')
-        assert bias_used == 'bias_2_MEF_2x2_slit' \
-                            '_bias_clipped.fits', "Incorrect bias frame " \
-                                                  "recorded in processed " \
-                                                  "slit dark header " \
-                                                  "({})".format(bias_used)

@@ -132,3 +132,44 @@ class TestSlitBias(object):
             rawstd,
             corrstd,
         )
+
+    def test_slitbias_in_calservice(self, get_or_create_tmpdir):
+        """
+        Check that:
+
+        - A bias slit calibrator exists in the local calibrations dir;
+        - It can be retrieved using a getProcessedSlitBias call.
+        """
+        assert len(glob.glob(os.path.join(
+            os.getcwd(), 'calibrations', 'processed_bias', '*bias*slit*.fits'
+        ))) == 1, "Couldn't find the stored slit bias in the calibrations " \
+                  "system OR found multiples"
+
+        # Do the master bias generation
+        reduce = Reduce()
+        reduce.drpkg = 'ghostdr'
+        # Use one of the 'dark slit' files to try and retrieve the slit bias
+        reduce.files = [os.path.join(os.getcwd(),
+                                     'dark95_1_MEF_2x2_slit.fits'), ]
+        reduce.mode = ['test', ]
+        reduce.recipename = 'recipeRetrieveSlitBiasTest'
+        # reduce.mode = ['sq', ]
+        # reduce.recipename = 'makeProcessedBias'
+        reduce.logfile = os.path.join(os.getcwd(),
+                                      'reduce_slitbias_retrieve.log')
+        reduce.logmode = 'quiet'
+        reduce.suffix = '_testSlitBiasRetrieve'
+        logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
+
+        try:
+            reduce.runr()
+        except IOError as e:
+            assert 0, 'Calibration system could not locate the slit bias ' \
+                      'frame ({})'.format(e.message)
+        finally:
+            # Teardown code
+            for _ in glob.glob(os.path.join(
+                    os.getcwd(),
+                    '*{}.fits'.format(reduce.suffix)),
+            ):
+                os.remove(_)
