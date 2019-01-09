@@ -52,10 +52,13 @@ class TestSlitBias(object):
         reduce.recipename = 'recipeSlitDarkTest'
         # Make sure refresh is used for all primitives
         reduce.upars = ['refresh=True', ]
-        # TODO Dynamically find calibration file name
-        # (depends on disk order of input files used to make it)
+        # FIXME cal_service will hopefully find the calibration itself later
         reduce.ucals = normalize_ucals(reduce.files, [
-            'processed_bias:calibrations/processed_bias/bias_2_MEF_2x2_slit_bias.fits',
+            'processed_bias:{}'.format(
+                glob.glob(os.path.join(
+                    'calibrations',
+                    'processed_bias',
+                    '*slit*bias*.fits'))[0]),
         ])
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_slitdark.log')
@@ -140,11 +143,13 @@ class TestSlitBias(object):
                                       'reduce_slitdark_retrieve.log')
         reduce.logmode = 'quiet'
         reduce.suffix = '_testSlitDarkRetrieve'
-        # TODO Dynamically find calibration file name
-        # (depends on disk order of input files used to make it)
+        # FIXME cal_service will hopefully find the calibration itself later
         reduce.ucals = normalize_ucals(reduce.files, [
-            'processed_dark:calibrations/processed_dark/'
-            'dark95_1_MEF_2x2_slit_dark.fits',
+            'processed_dark:{}'.format(
+                glob.glob(os.path.join(
+                    'calibrations',
+                    'processed_dark',
+                    '*slit*dark*.fits'))[0]),
         ])
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
 

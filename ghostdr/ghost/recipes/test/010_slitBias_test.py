@@ -158,10 +158,13 @@ class TestSlitBias(object):
         # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(os.getcwd(),
                                       'reduce_slitbias_retrieve.log')
-        # TODO Dynamically find calibration file name
-        # (depends on disk order of input files used to make it)
+        # FIXME cal_service will hopefully find the calibration itself later
         reduce.ucals = normalize_ucals(reduce.files, [
-            'processed_bias:calibrations/processed_bias/bias_2_MEF_2x2_slit_bias.fits',
+            'processed_bias:{}'.format(
+                glob.glob(os.path.join(
+                    'calibrations',
+                    'processed_bias',
+                    '*slit*bias*.fits'))[0]),
         ])
         reduce.logmode = 'quiet'
         reduce.suffix = '_testSlitBiasRetrieve'
