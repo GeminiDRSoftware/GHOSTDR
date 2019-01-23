@@ -30,14 +30,17 @@ def get_caldb_contents(dbpath):
 
 
 @pytest.mark.fullreduction
-class TestSlitBias(object):
+class TestSlitFlat(object):
 
     @pytest.fixture
-    def do_slit_dark(self, get_or_create_tmpdir):
+    def do_slit_flat(self, get_or_create_tmpdir):
         """
         Perform overscan subtraction on raw bias frame
         """
-        rawfilename = 'dark*slit*.fits'
+
+        # import pdb; pdb.set_trace()
+
+        rawfilename = 'flat*slit*.fits'
         # Copy the raw data file into here
         tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
@@ -49,7 +52,7 @@ class TestSlitBias(object):
         reduce.drpkg = 'ghostdr'
         reduce.files = rawfiles
         reduce.mode = ['test', ]
-        reduce.recipename = 'recipeSlitDarkTest'
+        reduce.recipename = 'recipeSlitFlatTest'
         # Make sure refresh is used for all primitives
         reduce.upars = ['refresh=True', ]
         # FIXME cal_service will hopefully find the calibration itself later
@@ -59,11 +62,16 @@ class TestSlitBias(object):
                     'calibrations',
                     'processed_bias',
                     '*slit*bias*.fits'))[0]),
+            'processed_dark:{}'.format(
+                glob.glob(os.path.join(
+                    'calibrations',
+                    'processed_dark',
+                    '*slit*dark*.fits'))[0]),
         ])
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                      'reduce_slitdark.log')
+                                      'reduce_slitflat.log')
         reduce.logmode = 'standard'
-        reduce.suffix = '_testSlitDark'
+        reduce.suffix = '_testSlitFlat'
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
         reduce.runr()
 
@@ -86,27 +94,48 @@ class TestSlitBias(object):
         )):
             os.remove(_)
 
-    def test_slitdark_bias_done(self, do_slit_dark):
+    def test_slitflat_bias_done(self, do_slit_flat):
         """
         Check that bias subtraction was actually performed
         """
 
-        rawfiles, corrfile = do_slit_dark
-        corrdark = astrodata.open(corrfile)
+        rawfiles, corrfile = do_slit_flat
+        corrflat = astrodata.open(corrfile)
 
-        assert corrdark.phu.get('BIASCORR'), "No record of bias correction " \
+        assert corrflat.phu.get('BIASCORR'), "No record of bias correction " \
                                              "having been performed on {} " \
                                              "(PHU keyword BIASCORR " \
                                              "missing)".format(corrfile)
 
-        bias_used = corrdark.phu.get('BIASIM')
+        bias_used = corrflat.phu.get('BIASIM')
         assert bias_used == 'bias_2_MEF_2x2_slit' \
                             '_bias_clipped.fits', "Incorrect bias frame " \
                                                   "recorded in processed " \
                                                   "slit dark header " \
                                                   "({})".format(bias_used)
 
-    def test_slitdark_in_calservice(self, get_or_create_tmpdir, do_slit_dark):
+    def test_slitflat_dark_done(self, do_slit_flat):
+        """
+        Check that dark correction was actually performed
+        """
+
+        rawfiles, corrfile = do_slit_flat
+        corrflat = astrodata.open(corrfile)
+
+        assert corrflat.phu.get('DARKCORR'), "No record of bias correction " \
+                                             "having been performed on {} " \
+                                             "(PHU keyword BIASCORR " \
+                                             "missing)".format(corrfile)
+
+        dark_used = corrflat.phu.get('DARKIM')
+        assert dark_used == 'dark95_1_MEF_2x2_' \
+                            'slit_dark_clipped.fits', "Incorrect bias frame " \
+                                                      "recorded in processed " \
+                                                      "slit dark header " \
+                                                      "({})".format(dark_used)
+
+    @pytest.mark.skip
+    def test_slitflat_in_calservice(self, get_or_create_tmpdir, do_slit_dark):
         """
         Check that:
 
