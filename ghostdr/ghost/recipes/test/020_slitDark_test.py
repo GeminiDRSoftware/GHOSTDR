@@ -99,6 +99,8 @@ class TestSlitBias(object):
            "slit dark header " \
            "({})".format(bias_used)
 
+    @pytest.mark.skip('Pointless until calibrators can be auto-found '
+                      'using test calibration service')
     def test_slitdark_in_calservice(self, get_or_create_tmpdir, do_slit_dark):
         """
         Check that:

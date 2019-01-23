@@ -134,6 +134,8 @@ class TestSlitBias(object):
             corrstd,
         )
 
+    @pytest.mark.skip('Pointless until calibrators can be auto-found '
+                      'using test calibration service')
     def test_slitbias_in_calservice(self, get_or_create_tmpdir):
         """
         Check that:
