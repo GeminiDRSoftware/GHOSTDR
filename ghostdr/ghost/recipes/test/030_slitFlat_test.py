@@ -46,17 +46,18 @@ class TestSlitFlat(object):
         # Make sure refresh is used for all primitives
         reduce.upars = ['refresh=True', ]
         # FIXME cal_service will hopefully find the calibration itself later
-        reduce.ucals = normalize_ucals(reduce.files, [
-            'processed_bias:{}'.format(
-                glob.glob(os.path.join(
-                    'calibrations',
-                    'processed_bias',
-                    '*slit*bias*.fits'))[0]),
-            'processed_dark:{}'.format(
-                glob.glob(os.path.join(
+        calibs = {
+            'processed_bias': glob.glob(os.path.join(
+                'calibrations',
+                'processed_bias',
+                '*slit*bias*.fits'))[0],
+            'processed_dark': glob.glob(os.path.join(
                     'calibrations',
                     'processed_dark',
-                    '*slit*dark*.fits'))[0]),
+                    '*slit*dark*.fits'))[0]
+        }
+        reduce.ucals = normalize_ucals(reduce.files, [
+            '{}:{}'.format(k, v) for k, v in calibs.items()
         ])
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_slitflat.log')
@@ -72,7 +73,7 @@ class TestSlitFlat(object):
                                 corrfilename)
 
         # Return filenames of raw, subtracted files
-        yield rawfiles, corrfile
+        yield rawfiles, corrfile, calibs
 
         # import pdb; pdb.set_trace()
 
@@ -89,7 +90,7 @@ class TestSlitFlat(object):
         Check that bias subtraction was actually performed
         """
 
-        rawfiles, corrfile = do_slit_flat
+        rawfiles, corrfile, calibs = do_slit_flat
         corrflat = astrodata.open(corrfile)
 
         assert corrflat.phu.get('BIASCORR'), "No record of bias correction " \
@@ -98,18 +99,19 @@ class TestSlitFlat(object):
                                              "missing)".format(corrfile)
 
         bias_used = corrflat.phu.get('BIASIM')
-        assert bias_used == 'bias_2_MEF_2x2_slit' \
-                            '_bias_clipped.fits', "Incorrect bias frame " \
-                                                  "recorded in processed " \
-                                                  "slit dark header " \
-                                                  "({})".format(bias_used)
+        assert bias_used == '{}_clipped.fits'.format(
+            calibs['processed_bias'].split('/')[-1].split('.')[0]
+        ), "Incorrect bias frame " \
+           "recorded in processed " \
+           "slit flat header " \
+           "({})".format(bias_used)
 
     def test_slitflat_dark_done(self, do_slit_flat):
         """
         Check that dark correction was actually performed
         """
 
-        rawfiles, corrfile = do_slit_flat
+        rawfiles, corrfile, calibs = do_slit_flat
         corrflat = astrodata.open(corrfile)
 
         assert corrflat.phu.get('DARKCORR'), "No record of bias correction " \
@@ -118,11 +120,12 @@ class TestSlitFlat(object):
                                              "missing)".format(corrfile)
 
         dark_used = corrflat.phu.get('DARKIM')
-        assert dark_used == 'dark95_1_MEF_2x2_' \
-                            'slit_dark_clipped.fits', "Incorrect bias frame " \
-                                                      "recorded in processed " \
-                                                      "slit dark header " \
-                                                      "({})".format(dark_used)
+        assert dark_used == '{}_clipped.fits'.format(
+            calibs['processed_dark'].split('/')[-1].split('.')[0]
+        ), "Incorrect dark frame " \
+           "recorded in processed " \
+           "slit flat header " \
+           "({})".format(dark_used)
 
     @pytest.mark.skip
     def test_slitflat_in_calservice(self, get_or_create_tmpdir, do_slit_dark):

@@ -43,12 +43,14 @@ class TestSlitBias(object):
         # Make sure refresh is used for all primitives
         reduce.upars = ['refresh=True', ]
         # FIXME cal_service will hopefully find the calibration itself later
-        reduce.ucals = normalize_ucals(reduce.files, [
-            'processed_bias:{}'.format(
-                glob.glob(os.path.join(
+        calibs = {
+            'processed_bias': glob.glob(os.path.join(
                     'calibrations',
                     'processed_bias',
-                    '*slit*bias*.fits'))[0]),
+                    '*slit*bias*.fits'))[0],
+        }
+        reduce.ucals = normalize_ucals(reduce.files, [
+            '{}:{}'.format(k, v) for k, v in calibs.items()
         ])
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_slitdark.log')
@@ -64,7 +66,7 @@ class TestSlitBias(object):
                                 corrfilename)
 
         # Return filenames of raw, subtracted files
-        yield rawfiles, corrfile
+        yield rawfiles, corrfile, calibs
 
         # import pdb; pdb.set_trace()
 
@@ -81,7 +83,7 @@ class TestSlitBias(object):
         Check that bias subtraction was actually performed
         """
 
-        rawfiles, corrfile = do_slit_dark
+        rawfiles, corrfile, calibs = do_slit_dark
         corrdark = astrodata.open(corrfile)
 
         assert corrdark.phu.get('BIASCORR'), "No record of bias correction " \
@@ -90,11 +92,12 @@ class TestSlitBias(object):
                                              "missing)".format(corrfile)
 
         bias_used = corrdark.phu.get('BIASIM')
-        assert bias_used == 'bias_2_MEF_2x2_slit' \
-                            '_bias_clipped.fits', "Incorrect bias frame " \
-                                                  "recorded in processed " \
-                                                  "slit dark header " \
-                                                  "({})".format(bias_used)
+        assert bias_used == '{}_clipped.fits'.format(
+            calibs['processed_bias'].split('/')[-1].split('.')[0]
+        ), "Incorrect bias frame " \
+           "recorded in processed " \
+           "slit dark header " \
+           "({})".format(bias_used)
 
     def test_slitdark_in_calservice(self, get_or_create_tmpdir, do_slit_dark):
         """
@@ -105,7 +108,7 @@ class TestSlitBias(object):
         """
 
         # Ensure the slit dark reduction has been done
-        _, _ = do_slit_dark
+        _, _, _ = do_slit_dark
         _, cal_service = get_or_create_tmpdir
         # import pdb; pdb.set_trace()
 
