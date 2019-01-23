@@ -51,4 +51,13 @@ Alternatively, to skip the full reduction tests, invoke pytest thus::
 
 # Make sure the GHOST instruments package gets registered
 import ghost_instruments
+import ghostdr
+import sqlite3
 
+
+def get_caldb_contents(dbpath):
+    print(dbpath)
+    conn = sqlite3.connect(dbpath)
+    c = conn.cursor()
+    c.execute('SELECT * FROM diskfile')
+    return c.fetchall()

@@ -13,20 +13,10 @@ from recipe_system.reduction.coreReduce import Reduce
 from recipe_system.utils.reduce_utils import normalize_ucals
 from recipe_system import cal_service
 
-import sqlite3
-
 # from ..test import get_or_create_tmpdir
 
 import ghostdr
 import ghost_instruments
-
-
-def get_caldb_contents(dbpath):
-    print(dbpath)
-    conn = sqlite3.connect(dbpath)
-    c = conn.cursor()
-    c.execute('SELECT * FROM diskfile')
-    return c.fetchall()
 
 
 @pytest.mark.fullreduction
