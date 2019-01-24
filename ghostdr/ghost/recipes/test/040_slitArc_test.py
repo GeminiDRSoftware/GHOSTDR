@@ -55,7 +55,7 @@ class TestSlitArc(object):
                     'calibrations',
                     'processed_dark',
                     '*slit*dark*.fits'))[0],
-            'processed_flat': glob.glob(os.path.join(
+            'processed_slitflat': glob.glob(os.path.join(
                 'calibrations',
                 'processed_slitflat',
                 '*slit*slitflat*.fits'))[0]
@@ -131,6 +131,7 @@ class TestSlitArc(object):
            "slit arc header " \
            "({})".format(dark_used)
 
+    @pytest.mark.skip('slitflat currently not used in slit arc reduction')
     def test_slitarc_slitflat_done(self, do_slit_arc):
         """
         Check that dark correction was actually performed
@@ -139,7 +140,7 @@ class TestSlitArc(object):
         rawfiles, corrfile, calibs = do_slit_arc
         corrflat = astrodata.open(corrfile)
 
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         assert corrflat.phu.get('FLATCORR'), "No record of slitflat c" \
                                              "orrection " \

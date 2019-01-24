@@ -8,7 +8,7 @@ def recipeSlitArcTest(p):
 
 
 def recipeRetrieveSlitFlatTest(p):
-    p.getProcessedFlat()
+    p.getProcessedSlitFlat()
     return
 
 
