@@ -131,8 +131,7 @@ class TestSlitArc(object):
            "slit arc header " \
            "({})".format(dark_used)
 
-    @pytest.mark.skip('slitflat currently not used in slit arc reduction')
-    def test_slitarc_slitflat_done(self, do_slit_arc):
+    def test_slitarc_procslit_done(self, do_slit_arc):
         """
         Check that dark correction was actually performed
         """
@@ -142,79 +141,7 @@ class TestSlitArc(object):
 
         # import pdb; pdb.set_trace()
 
-        assert corrflat.phu.get('FLATCORR'), "No record of slitflat c" \
-                                             "orrection " \
+        assert corrflat.phu.get('PROCSLIT'), "No record of slit processing " \
                                              "having been performed on {} " \
-                                             "(PHU keyword FLATCORR " \
+                                             "(PHU keyword PROCSLIT " \
                                              "missing)".format(corrfile)
-
-        dark_used = corrflat.phu.get('FLATIM')
-        assert dark_used == '{}_clipped.fits'.format(
-            calibs['processed_flat'].split('/')[-1].split('.')[0]
-        ), "Incorrect slitflat frame " \
-           "recorded in processed " \
-           "slit arc header " \
-           "({})".format(dark_used)
-
-    @pytest.mark.skip('Pointless until calibrators can be auto-found '
-                      'using test calibration service')
-    def test_slitarc_in_calservice(self, get_or_create_tmpdir, do_slit_arc):
-        """
-        Check that:
-
-        - A bias slit calibrator exists in the local calibrations dir;
-        - It can be retrieved using a getProcessedSlitBias call.
-        """
-
-        # Ensure the slit dark reduction has been done
-        _, _, _ = do_slit_arc
-        _, cal_service = get_or_create_tmpdir
-        # import pdb; pdb.set_trace()
-
-        assert len(glob.glob(os.path.join(
-            os.getcwd(), 'calibrations', 'processed_arc', '*arc*slit*.fits'
-        ))) == 1, "Couldn't find the stored slit arc in the calibrations " \
-                  "system OR found multiples\n " \
-                  "(calibration ls: {})\n" \
-                  "(caldb contents: {})".format(
-            glob.glob(os.path.join(os.getcwd(), 'calibrations',
-                                   'processed_dark', '*')),
-            [_ for _ in cal_service.list_files()],
-        )
-
-        # Do the master bias generation
-        reduce = Reduce()
-        reduce.drpkg = 'ghostdr'
-        # Use one of the 'dark slit' files to try and retrieve the slit bias
-        reduce.files = glob.glob(os.path.join(os.getcwd(),
-                                              'obj95*MEF_2x2_slit.fits'))
-        reduce.mode = ['test', ]
-        reduce.recipename = 'recipeRetrieveSlitArcTest'
-        # reduce.mode = ['sq', ]
-        reduce.logfile = os.path.join(os.getcwd(),
-                                      'reduce_slitdark_retrieve.log')
-        reduce.logmode = 'quiet'
-        reduce.suffix = '_testSlitArcRetrieve'
-        # FIXME cal_service will hopefully find the calibration itself later
-        # reduce.ucals = normalize_ucals(reduce.files, [
-        #     'processed_dark:{}'.format(
-        #         glob.glob(os.path.join(
-        #             'calibrations',
-        #             'processed_dark',
-        #             '*slit*dark*.fits'))[0]),
-        # ])
-        logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
-
-
-        try:
-            reduce.runr()
-        except IOError as e:
-            assert 0, 'Calibration system could not locate the slit bias ' \
-                      'frame ({})'.format(e.message)
-        finally:
-            # Teardown code
-            for _ in glob.glob(os.path.join(
-                    os.getcwd(),
-                    '*{}.fits'.format(reduce.suffix)),
-            ):
-                os.remove(_)
