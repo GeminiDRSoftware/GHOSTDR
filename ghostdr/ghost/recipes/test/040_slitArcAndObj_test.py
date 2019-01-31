@@ -45,7 +45,8 @@ class TestSlitArc(object):
         reduce.drpkg = 'ghostdr'
         reduce.files = rawfiles
         reduce.mode = ['test', ]
-        reduce.recipename = 'recipeSlitArcTest' if slit_type == 'arc' else 'recipeSlitTest'
+        reduce.recipename = 'recipeSlitArcTest' if slit_type == 'arc' \
+            else 'recipeSlitTest'
         # Make sure refresh is used for all primitives
         reduce.upars = ['refresh=True', ]
         # FIXME cal_service will hopefully find the calibration itself later
