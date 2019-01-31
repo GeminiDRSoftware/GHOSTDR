@@ -19,18 +19,21 @@ import ghostdr
 import ghost_instruments
 
 
+@pytest.mark.parametrize('slit_type', [
+        'arc', 'standard', 'obj'
+    ])
 @pytest.mark.fullreduction
 class TestSlitArc(object):
 
     @pytest.fixture
-    def do_slit_arc(self, get_or_create_tmpdir):
+    def do_slit_arc(self, slit_type, get_or_create_tmpdir):
         """
         Perform overscan subtraction on raw bias frame
         """
 
         # import pdb; pdb.set_trace()
 
-        rawfilename = 'arc*slit*.fits'
+        rawfilename = '{}*slit*.fits'.format(slit_type)
         # Copy the raw data file into here
         tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
@@ -42,7 +45,7 @@ class TestSlitArc(object):
         reduce.drpkg = 'ghostdr'
         reduce.files = rawfiles
         reduce.mode = ['test', ]
-        reduce.recipename = 'recipeSlitArcTest'
+        reduce.recipename = 'recipeSlitArcTest' if slit_type == 'arc' else 'recipeSlitTest'
         # Make sure refresh is used for all primitives
         reduce.upars = ['refresh=True', ]
         # FIXME cal_service will hopefully find the calibration itself later
@@ -64,12 +67,13 @@ class TestSlitArc(object):
             '{}:{}'.format(k, v) for k, v in calibs.items()
         ])
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                      'reduce_slitarc.log')
+                                      'reduce_slit{}.log'.format(slit_type))
         reduce.logmode = 'standard'
-        reduce.suffix = '_testSlitArc'
+        reduce.suffix = '_testSlit{}'.format(slit_type)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
         reduce.runr()
 
+        # import pdb; pdb.set_trace()
         corrfilename = '*' + reduce.suffix + '.fits'
         corrfilename = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                     glob.glob(corrfilename)[0])
