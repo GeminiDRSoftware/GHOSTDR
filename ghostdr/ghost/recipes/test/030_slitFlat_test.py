@@ -22,15 +22,16 @@ import ghost_instruments
 @pytest.mark.fullreduction
 class TestSlitFlat(object):
 
-    @pytest.fixture
-    def do_slit_flat(self, get_or_create_tmpdir):
+    @pytest.fixture(scope='class',
+                    params=['std', 'high'])
+    def do_slit_flat(self, request, get_or_create_tmpdir):
         """
         Perform overscan subtraction on raw bias frame
         """
 
         # import pdb; pdb.set_trace()
 
-        rawfilename = 'flat*slit*.fits'
+        rawfilename = 'flat*{}*slit*.fits'.format(request.param)
         # Copy the raw data file into here
         tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
@@ -56,6 +57,7 @@ class TestSlitFlat(object):
                     'processed_dark',
                     '*slit*dark*.fits'))[0]
         }
+        # import pdb; pdb.set_trace()
         reduce.ucals = normalize_ucals(reduce.files, [
             '{}:{}'.format(k, v) for k, v in calibs.items()
         ])
