@@ -51,9 +51,6 @@ class TestSlitArc(object):
         tmpsubdir, cal_service = get_or_create_tmpdir
         slit_type, res = request.param
         filenames = glob.glob('{}*{}*slit.fits'.format(slit_type, res))
-        # Find all the relevant files
-        # rawfiles = glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-        #                                   rawfilename))
 
         # Do the master bias generation
         reduce = Reduce()
@@ -122,8 +119,9 @@ class TestSlitArc(object):
         for rawfile, corrfile in zip(rawfiles, corrfiles):
             corrflat = astrodata.open(corrfile)
 
-            assert corrflat.phu.get('BIASCORR'), "No record of bias correction " \
-                                                 "having been performed on {} " \
+            assert corrflat.phu.get('BIASCORR'), "No record of bias " \
+                                                 "correction having been " \
+                                                 "performed on {} " \
                                                  "(PHU keyword BIASCORR " \
                                                  "missing)".format(corrfile)
 
@@ -144,8 +142,9 @@ class TestSlitArc(object):
         for rawfile, corrfile in zip(rawfiles, corrfiles):
             corrflat = astrodata.open(corrfile)
 
-            assert corrflat.phu.get('DARKCORR'), "No record of bias correction " \
-                                                 "having been performed on {} " \
+            assert corrflat.phu.get('DARKCORR'), "No record of bias " \
+                                                 "correction having been " \
+                                                 "performed on {} " \
                                                  "(PHU keyword BIASCORR " \
                                                  "missing)".format(corrfile)
 
@@ -168,7 +167,8 @@ class TestSlitArc(object):
 
             # import pdb; pdb.set_trace()
 
-            assert corrflat.phu.get('PROCSLIT'), "No record of slit processing " \
-                                                 "having been performed on {} " \
+            assert corrflat.phu.get('PROCSLIT'), "No record of slit " \
+                                                 "processing having been " \
+                                                 "performed on {} " \
                                                  "(PHU keyword PROCSLIT " \
                                                  "missing)".format(corrfile)
