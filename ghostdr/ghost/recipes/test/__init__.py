@@ -38,8 +38,8 @@ order):
 | Science      | 16n_   |
 +--------------+--------+
 
-* Note that, because slit arcs and the slits associated with objects and
-standards are treated identically, they are currently tested together
+* Note that, because slit arcs and the slits associated standards are
+treated identically, they are currently tested together
 under the slit arc heading.
 
 All tests are marked in pytest as 'fullreduction' - to run only the full
