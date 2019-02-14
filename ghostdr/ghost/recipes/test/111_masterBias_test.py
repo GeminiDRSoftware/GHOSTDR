@@ -46,6 +46,7 @@ class TestMasterBias(object):
         reduce.files = rawfiles
         reduce.mode = ['test', ]
         reduce.recipename = 'recipeBiasCreateMaster'
+        reduce.upars = ['refresh=True', ]
         # reduce.mode = ['sq', ]
         # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
@@ -53,7 +54,9 @@ class TestMasterBias(object):
         reduce.logmode = 'quiet'
         reduce.suffix = '_testMasterBias_{}'.format(request.param)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
+
         reduce.runr()
+        # import pdb; pdb.set_trace()
 
         corrfilename = '*' + reduce.suffix + '.fits'
         corrfilename = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
@@ -123,6 +126,7 @@ class TestMasterBias(object):
         for i, ext in enumerate(corrad):
             # import pdb; pdb.set_trace()
             corrstd = np.ma.std(ext.data)
+            # import pdb; pdb.set_trace()
             rawstd = np.sqrt(
                 np.sum([np.ma.std(_[i].data)**2 for _ in rawads])
             / len(rawfiles)) #/ len(rawfiles)
