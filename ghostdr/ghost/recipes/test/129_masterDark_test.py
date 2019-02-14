@@ -52,7 +52,7 @@ class TestMasterDark(object):
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_masterdark.log')
         reduce.logmode = 'quiet'
-        reduce.suffix = '_testMasterBias_{}'.format(request.param)
+        reduce.suffix = '_testMasterDark_{}'.format(request.param)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
         # import pdb; pdb.set_trace()
         calibs = {
