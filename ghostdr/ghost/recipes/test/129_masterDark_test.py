@@ -103,3 +103,28 @@ class TestMasterDark(object):
                              "recorded in processed " \
                              "bias " \
                              "({})".format(bias_used)
+
+    def test_masterdark_sigmaclip(self, do_master_dark):
+        """
+        Check that the all points within the data extension of the output biases
+        are within the specified sigma of the mean
+        """
+
+        sigma_limit = 3.0  # Needs to be kept in-sync with the test recipe value
+
+        rawfiles, corrfile, calibs = do_master_dark
+        corrad = astrodata.open(corrfile)
+
+        # import pdb; pdb.set_trace()
+
+        for i, ext in enumerate(corrad):
+            sigmas = np.abs(corrad[i].data -
+                            np.ma.average(corrad[i].data)
+                            ) / np.ma.std(corrad[i].data)
+            assert np.all(sigmas < sigma_limit), "Points outside {} " \
+                                                 "sigma remain in the " \
+                                                 "output bias " \
+                                                 "(max sigma found: " \
+                                                 "{})".format(
+                sigma_limit, np.ma.max(sigmas),
+            )

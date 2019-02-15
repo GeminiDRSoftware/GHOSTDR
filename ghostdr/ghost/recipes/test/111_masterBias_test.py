@@ -158,16 +158,16 @@ class TestMasterBias(object):
 
         rawfiles, corrfile = do_master_bias
         rawads = [astrodata.open(_) for _ in rawfiles]
+        corrad = astrodata.open(corrfile)
 
-        for raw in rawads:
-            for i, ext in enumerate(raw):
-                sigmas = np.abs(raw[i].data -
-                                np.ma.average(raw[i].data)
-                                ) / np.ma.std(raw[i].data)
-                assert np.all(sigmas < sigma_limit), "Points outside {} " \
-                                                     "sigma remain in the " \
-                                                     "output bias " \
-                                                     "(max sigma found: " \
-                                                     "{})".format(
-                    sigma_limit, np.ma.max(sigmas),
-                )
+        for i, ext in enumerate(corrad):
+            sigmas = np.abs(corrad[i].data -
+                            np.ma.average(corrad[i].data)
+                            ) / np.ma.std(corrad[i].data)
+            assert np.all(sigmas < sigma_limit), "Points outside {} " \
+                                                 "sigma remain in the " \
+                                                 "output bias " \
+                                                 "(max sigma found: " \
+                                                 "{})".format(
+                sigma_limit, np.ma.max(sigmas),
+            )
