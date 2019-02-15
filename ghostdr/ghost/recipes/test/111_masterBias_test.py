@@ -50,7 +50,8 @@ class TestMasterBias(object):
         # reduce.mode = ['sq', ]
         # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                      'reduce_masterbias.log')
+                                      'reduce_masterbias_{}.log'.format(
+                                          request.param))
         reduce.logmode = 'quiet'
         reduce.suffix = '_testMasterBias_{}'.format(request.param)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)

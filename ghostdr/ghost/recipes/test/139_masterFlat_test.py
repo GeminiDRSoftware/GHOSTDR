@@ -18,17 +18,17 @@ import ghostdr
 
 
 @pytest.mark.fullreduction
-class TestMasterDark(object):
+class TestMasterFlat(object):
 
     @pytest.fixture(scope='class', params=[
         'blue',
         'red',
     ])
-    def do_master_dark(self, get_or_create_tmpdir, request):
+    def do_master_flat(self, get_or_create_tmpdir, request):
         """
         Perform overscan subtraction on raw bias frame
         """
-        rawfilename = 'dark*{}*.fits'.format(request.param)
+        rawfilename = 'flat*{}*.fits'.format(request.param)
         # Copy the raw data file into here
         tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
@@ -46,14 +46,14 @@ class TestMasterDark(object):
         reduce.drpkg = 'ghostdr'
         reduce.files = rawfiles
         reduce.mode = ['test', ]
-        reduce.recipename = 'recipeDarkCreateMaster'
+        reduce.recipename = 'recipeFlatCreateMaster'
         # reduce.mode = ['sq', ]
         # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                      'reduce_masterdark_{}.log'.format(
+                                      'reduce_masterflat_{}.log'.format(
                                           request.param))
         reduce.logmode = 'quiet'
-        reduce.suffix = '_testMasterDark_{}'.format(request.param)
+        reduce.suffix = '_testMasterFlat_{}'.format(request.param)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
         # import pdb; pdb.set_trace()
         calibs = {
@@ -61,6 +61,10 @@ class TestMasterDark(object):
                 'calibrations',
                 'processed_bias',
                 'bias*{}*.fits'.format(request.param)))[0],
+            'processed_dark': glob.glob(os.path.join(
+                'calibrations',
+                'processed_dark',
+                'dark*{}*.fits'.format(request.param)))[0],
         }
         reduce.ucals = normalize_ucals(reduce.files, [
             '{}:{}'.format(k, v) for k, v in calibs.items()
@@ -82,12 +86,12 @@ class TestMasterDark(object):
         # Execute teardown code
         pass
 
-    def test_dark_bias_done(self, do_master_dark):
+    def test_flat_bias_done(self, do_master_flat):
         """
         Check that bias subtraction was actually performed
         """
 
-        rawfiles, corrfile, calibs = do_master_dark
+        rawfiles, corrfile, calibs = do_master_flat
         corrdark = astrodata.open(corrfile)
 
         assert corrdark.phu.get('BIASCORR'), "No record of bias " \
@@ -101,5 +105,5 @@ class TestMasterDark(object):
             'processed_bias'
         ].split(os.sep)[-1], "Incorrect bias frame " \
                              "recorded in processed " \
-                             "bias " \
+                             "flat " \
                              "({})".format(bias_used)
