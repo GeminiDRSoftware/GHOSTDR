@@ -162,7 +162,7 @@ class TestMasterBias(object):
 
         for i, ext in enumerate(corrad):
             sigmas = np.abs(corrad[i].data[corrad[i].mask == 0] -
-                            np.ma.average(corrad[i].data[corrad[i].mask == 0])
+                            np.ma.median(corrad[i].data[corrad[i].mask == 0])
                             ) / np.ma.std(corrad[i].data[corrad[i].mask == 0])
             assert np.all(sigmas < sigma_limit), "Points outside {} " \
                                                  "sigma remain in the " \
