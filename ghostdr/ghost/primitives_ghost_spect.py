@@ -428,9 +428,14 @@ class GHOSTSpect(GHOST):
             for ext in ad:
                 extver = ext.hdr['EXTVER']
                 if ext.mask is not None:
+                    # MCW 190218: Form a masked array to operate on
+                    masked_data = np.ma.masked_where(ext.mask != 0,
+                                                     ext.data, copy=True)
                     # Perform the sigma clip
-                    clipd = sigma_clip(ext.data, sigma=sigma,
-                                       iters=iters, copy=True)
+                    clipd = sigma_clip(
+                        # ext.data,
+                        masked_data,
+                        sigma=sigma, iters=iters, copy=True)
                     # Convert the mask from the return into 0s and 1s and
                     # bitwise OR into the ext BPM
                     clipd_mask = clipd.mask.astype(ext.mask.dtype)
