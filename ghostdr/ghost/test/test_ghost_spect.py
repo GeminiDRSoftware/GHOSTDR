@@ -65,7 +65,8 @@ class TestGhost:
         ad.filename = rawfilename
         return ad
 
-    @pytest.mark.skip(reason='Requires calibrators & polyfit-ing')
+    @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - do '
+                             'in all-up testing')
     def test_addWavelengthSolution(self, data_addWavelengthSolution):
         """
         Checks to make:
@@ -670,7 +671,7 @@ class TestGhost:
             "(expected {}, got {})".format(units, corr_fact.unit, )
 
     @pytest.mark.skip(reason='Requires calibration system - '
-                             'part of all-up testing?')
+                             'will need to be part of all-up testing')
     def test__request_bracket_arc(self):
         """
         Checks to make (will require correctly populated calib system):

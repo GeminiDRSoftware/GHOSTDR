@@ -121,7 +121,7 @@ class TestMasterDark(object):
             sigmas = np.abs(corrad[i].data[corrad[i].mask == 0] -
                             np.ma.median(corrad[i].data[corrad[i].mask == 0])
                             ) / np.ma.std(corrad[i].data[corrad[i].mask == 0])
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             assert np.all(sigmas < sigma_limit), "Points outside {} " \
                                                  "sigma remain in the " \
                                                  "output dark " \

@@ -139,7 +139,7 @@ class TestGhostSlit:
                                                              'data shapes'
 
     @pytest.mark.skip(reason='Needs to be tested with a reduced slit flat - '
-                             'full recipe test?')
+                             'full reduction test required')
     def test_processSlits(self, create_slit_package):
         """
         Checks to make:
@@ -259,8 +259,8 @@ class TestGhostSlit:
             test_array_mad_rows, _mad(test_array, axis=1),
         )
 
-    @pytest.mark.skip(reason='Requires full slit viewer image - can it be '
-                             'made part of all-up recipe testing?')
+    @pytest.mark.skip(reason='Requires full slit viewer image - needs to be '
+                             'part of full reduction testing')
     def test__total_obj_flux(self):
         """
         Checks to make
