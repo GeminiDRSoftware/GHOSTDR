@@ -37,6 +37,17 @@ class TestSlitObj(object):
     # import pdb;
     # pdb.set_trace()
 
+    AVGEPOCH_VALUES = {
+        '0.5': {
+            'std':  '23:18:10.180',
+            'high': '23:35:33.778',
+        },
+        '1.0': {
+            'std':  '23:19:45.167',
+            'high': '23:37:08.756',
+        }
+    }
+
     @pytest.fixture(scope='class',
                     params=TYPE_RES_COMBOS)
     def do_slit_obj(self, request, get_or_create_tmpdir):
@@ -75,7 +86,7 @@ class TestSlitObj(object):
                 '*{}*slit*slitflat*.fits'.format(res, )))[0]
         }
         reduce.logmode = 'standard'
-        reduce.suffix = '_testSlit{}'.format(slit_type)
+        reduce.suffix = '_{}_{}_testSlit'.format(res, slit_type)
 
         corrfiles = []
         for filename in filenames:
@@ -98,6 +109,7 @@ class TestSlitObj(object):
             corrfiles.append(corrfile)
 
         # Return filenames of raw, subtracted files
+        # import pdb; pdb.set_trace()
         yield filenames, corrfiles, calibs
 
         # import pdb; pdb.set_trace()
@@ -158,7 +170,7 @@ class TestSlitObj(object):
 
     def test_slitarc_procslit_done(self, do_slit_obj):
         """
-        Check that dark correction was actually performed
+        Check that processSlits was actually performed
         """
 
         rawfiles, corrfiles, calibs = do_slit_obj
@@ -172,3 +184,35 @@ class TestSlitObj(object):
                                                  "performed on {} " \
                                                  "(PHU keyword PROCSLIT " \
                                                  "missing)".format(corrfile)
+
+            assert corrflat.phu.get('AVGEPOCH'), "Slit {} has no average " \
+                                                 "observing epoch " \
+                                                 "recorded".format(corrfile)
+
+    def test_slitarc_avgepoch(self, do_slit_obj, values=AVGEPOCH_VALUES):
+        """
+        Confirm that the average exposure epoch is correct
+
+        The calculation to do this is somewhat complex, so there's no easy
+        way to compute in a different fashion to check it. Best bet is to use
+        a pre-canned value for each type and resolution (i.e. regression test).
+        """
+        rawfiles, corrfiles, calibs = do_slit_obj
+
+        # Get the res and slit_type from the filename
+        for rawfile, corrfile in zip(rawfiles, corrfiles):
+            # Get the res and slit_type from the corrfile name
+            res, slit_type = '.'.join(corrfile.split(os.path.sep)[-1].split(
+                '.')[:-1]).split('_')[-3:-1]
+            corrslit = astrodata.open(corrfile)
+
+            assert corrslit.phu.get(
+                'AVGEPOCH') == values[slit_type][res], "AVGEPOCH in {} " \
+                                                       "appears to be wrong " \
+                                                       "(expected {}, got " \
+                                                       "{})".format(
+                rawfile,
+                values[slit_type][res],
+                corrslit.phu.get(
+                    'AVGEPOCH')
+            )

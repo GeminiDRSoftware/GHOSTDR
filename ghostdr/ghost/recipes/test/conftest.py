@@ -39,6 +39,7 @@ def get_free_space_mb(dirname):
 @pytest.fixture(scope='session')
 def get_or_create_tmpdir(tmpdir_factory):
     basetmp = tmpdir_factory.getbasetemp()
+    # import pdb; pdb.set_trace()
 
     # This test suite requires a minimum amount of available disk space.
     #  Will raise a RuntimeError if this isn't the case.

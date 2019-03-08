@@ -145,8 +145,8 @@ class TestGhostSlit:
         Checks to make:
 
         - Ensure the slit viewer bundle ends up with
-            a) A mean exposure epoch
-            b) The correct mean exposure epoch
+            a) A mean exposure epoch - DONE in test_slitarc_procslit_done
+            b) The correct mean exposure epoch - DONE in test_slitarc_avgepoch
         """
 
         ad, tmpsubdir = create_slit_package
