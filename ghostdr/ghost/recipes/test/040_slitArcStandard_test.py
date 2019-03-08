@@ -78,7 +78,7 @@ class TestSlitArc(object):
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       'reduce_slit{}.log'.format(slit_type))
         reduce.logmode = 'standard'
-        reduce.suffix = '_testSlit{}'.format(slit_type)
+        reduce.suffix = '_{}_testSlit'.format(slit_type)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
 
         corrfiles = []

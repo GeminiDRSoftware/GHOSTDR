@@ -53,7 +53,7 @@ class TestMasterFlat(object):
                                       'reduce_masterflat_{}.log'.format(
                                           request.param))
         reduce.logmode = 'quiet'
-        reduce.suffix = '_testMasterFlat_{}'.format(request.param)
+        reduce.suffix = '_{}_testMasterFlat'.format(request.param)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
         # import pdb; pdb.set_trace()
         calibs = {

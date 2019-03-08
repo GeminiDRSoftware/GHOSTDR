@@ -259,8 +259,11 @@ class TestGhostSlit:
             test_array_mad_rows, _mad(test_array, axis=1),
         )
 
-    @pytest.mark.skip(reason='Requires full slit viewer image - needs to be '
-                             'part of full reduction testing')
+    @pytest.mark.skip(
+        reason='FIXME: How should this be tested? The simulator randomizes the '
+               'slit viewer flux, so it is hard to get a proper value to test '
+               'against.'
+    )
     def test__total_obj_flux(self):
         """
         Checks to make

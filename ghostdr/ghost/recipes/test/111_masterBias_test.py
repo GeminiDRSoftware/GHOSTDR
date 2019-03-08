@@ -53,7 +53,7 @@ class TestMasterBias(object):
                                       'reduce_masterbias_{}.log'.format(
                                           request.param))
         reduce.logmode = 'quiet'
-        reduce.suffix = '_testMasterBias_{}'.format(request.param)
+        reduce.suffix = '_{}_testMasterBias'.format(request.param)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
 
         reduce.runr()
