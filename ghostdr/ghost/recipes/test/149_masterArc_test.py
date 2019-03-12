@@ -72,7 +72,11 @@ class TestMasterFlat(object):
             'processed_flat': glob.glob(os.path.join(
                 'calibrations',
                 'processed_flat',
-                'flat*{}*.fits'.format(arm)))[0],
+                'flat*{}*{}*.fits'.format(res, arm)))[0],
+            'processed_slitflat': glob.glob(os.path.join(
+                'calibrations',
+                'processed_slitflat',
+                'flat*{}*slitflat*.fits'.format(res)))[0],
         }
         reduce.ucals = normalize_ucals(reduce.files, [
             '{}:{}'.format(k, v) for k, v in calibs.items()
@@ -99,7 +103,7 @@ class TestMasterFlat(object):
         Check that bias subtraction was actually performed
         """
 
-        rawfiles, corrfile, calibs = do_master_flat
+        rawfiles, corrfile, calibs = do_master_arc
         corrdark = astrodata.open(corrfile)
 
         assert corrdark.phu.get('BIASCORR'), "No record of bias " \

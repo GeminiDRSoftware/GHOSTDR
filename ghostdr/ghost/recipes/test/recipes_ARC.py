@@ -1,4 +1,4 @@
-recipe_tags = set(['GHOST', 'CAL', 'FLAT'])
+recipe_tags = set(['GHOST', 'CAL', 'ARC'])
 
 from ghostdr.ghost.recipes.qa import recipes_ARC
 

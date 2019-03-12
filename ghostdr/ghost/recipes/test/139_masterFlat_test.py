@@ -6,6 +6,7 @@ import shutil
 import re
 import numpy as np
 import pytest
+import itertools
 
 import astrodata
 from gempy.utils import logutils
@@ -19,16 +20,18 @@ import ghostdr
 
 @pytest.mark.fullreduction
 class TestMasterFlat(object):
+    ARM_RES_COMBOS = list(itertools.product(
+        ['red', 'blue', ],
+        ['std', 'high']
+    ))
 
-    @pytest.fixture(scope='class', params=[
-        'blue',
-        'red',
-    ])
+    @pytest.fixture(scope='class', params=ARM_RES_COMBOS)
     def do_master_flat(self, get_or_create_tmpdir, request):
         """
         Perform overscan subtraction on raw bias frame
         """
-        rawfilename = 'flat*{}*.fits'.format(request.param)
+        arm, res = request.param
+        rawfilename = 'flat*{}*{}*.fits'.format(res, arm)
         # Copy the raw data file into here
         tmpsubdir, cal_service = get_or_create_tmpdir
         # Find all the relevant files
@@ -50,29 +53,33 @@ class TestMasterFlat(object):
         # reduce.mode = ['sq', ]
         # reduce.recipename = 'makeProcessedBias'
         reduce.logfile = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                      'reduce_masterflat_{}.log'.format(
-                                          request.param))
+                                      'reduce_masterflat_{}_{}.log'.format(
+                                          res, arm))
         reduce.logmode = 'quiet'
-        reduce.suffix = '_{}_testMasterFlat'.format(request.param)
+        reduce.suffix = '_{}_{}_testMasterFlat'.format(res, arm)
         logutils.config(file_name=reduce.logfile, mode=reduce.logmode)
         # import pdb; pdb.set_trace()
         calibs = {
             'processed_bias': glob.glob(os.path.join(
                 'calibrations',
                 'processed_bias',
-                'bias*{}*.fits'.format(request.param)))[0],
+                'bias*{}*.fits'.format(arm)))[0],
             'processed_dark': glob.glob(os.path.join(
                 'calibrations',
                 'processed_dark',
-                'dark*{}*.fits'.format(request.param)))[0],
+                'dark*{}*.fits'.format(arm)))[0],
+            'processed_slitflat': glob.glob(os.path.join(
+                'calibrations',
+                'processed_slitflat',
+                'flat*{}*slitflat*.fits'.format(res)))[0],
         }
         reduce.ucals = normalize_ucals(reduce.files, [
             '{}:{}'.format(k, v) for k, v in calibs.items()
         ])
 
+        reduce.runr()
         # import pdb;
         # pdb.set_trace()
-        reduce.runr()
 
         corrfilename = '*' + reduce.suffix + '.fits'
         corrfilename = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
