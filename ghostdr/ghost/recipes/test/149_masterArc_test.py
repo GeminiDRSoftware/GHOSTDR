@@ -104,18 +104,46 @@ class TestMasterFlat(object):
         """
 
         rawfiles, corrfile, calibs = do_master_arc
-        corrdark = astrodata.open(corrfile)
+        corrarc = astrodata.open(corrfile)
 
-        assert corrdark.phu.get('BIASCORR'), "No record of bias " \
+        assert corrarc.phu.get('BIASCORR'), "No record of bias " \
                                              "correction having been " \
                                              "performed on {} " \
                                              "(PHU keyword BIASCORR " \
                                              "missing)".format(corrfile)
 
-        bias_used = corrdark.phu.get('BIASIM')
+        bias_used = corrarc.phu.get('BIASIM')
         assert bias_used == calibs[
             'processed_bias'
         ].split(os.sep)[-1], "Incorrect bias frame " \
                              "recorded in processed " \
                              "flat " \
                              "({})".format(bias_used)
+
+    def test_arc_dark_done(self, do_master_arc):
+        """
+        Check that dark subtraction was actually performed
+        """
+
+        rawfiles, corrfile, calibs = do_master_arc
+        corrarc = astrodata.open(corrfile)
+
+        assert corrarc.phu.get('DARKCORR'), "No record of dark " \
+                                             "correction having been " \
+                                             "performed on {} " \
+                                             "(PHU keyword DARKCORR " \
+                                             "missing)".format(corrfile)
+
+        dark_used = corrarc.phu.get('DARKIM')
+        assert dark_used == calibs[
+            'processed_dark'
+        ].split(os.sep)[-1], "Incorrect dark frame " \
+                             "recorded in processed " \
+                             "arc " \
+                             "({})".format(dark_used)
+
+    # FIXME: Still requires the following tests:
+    # - Has profile been extracted successfully?
+    # - Has the wavelength been fitted properly?
+    # However, need to work out where the divide-by-zero errors are coming from
+    # in polyfit before meaningful tests can be made

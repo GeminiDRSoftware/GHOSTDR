@@ -101,18 +101,40 @@ class TestMasterFlat(object):
         """
 
         rawfiles, corrfile, calibs = do_master_flat
-        corrdark = astrodata.open(corrfile)
+        corrflat = astrodata.open(corrfile)
 
-        assert corrdark.phu.get('BIASCORR'), "No record of bias " \
+        assert corrflat.phu.get('BIASCORR'), "No record of bias " \
                                              "correction having been " \
                                              "performed on {} " \
                                              "(PHU keyword BIASCORR " \
                                              "missing)".format(corrfile)
 
-        bias_used = corrdark.phu.get('BIASIM')
+        bias_used = corrflat.phu.get('BIASIM')
         assert bias_used == calibs[
             'processed_bias'
         ].split(os.sep)[-1], "Incorrect bias frame " \
+                             "recorded in processed " \
+                             "flat " \
+                             "({})".format(bias_used)
+
+    def test_flat_dark_done(self, do_master_flat):
+        """
+        Check that bias subtraction was actually performed
+        """
+
+        rawfiles, corrfile, calibs = do_master_flat
+        corrflat = astrodata.open(corrfile)
+
+        assert corrflat.phu.get('DARKCORR'), "No record of dark " \
+                                             "correction having been " \
+                                             "performed on {} " \
+                                             "(PHU keyword BIASCORR " \
+                                             "missing)".format(corrfile)
+
+        bias_used = corrflat.phu.get('DARKIM')
+        assert bias_used == calibs[
+            'processed_dark'
+        ].split(os.sep)[-1], "Incorrect dark frame " \
                              "recorded in processed " \
                              "flat " \
                              "({})".format(bias_used)
