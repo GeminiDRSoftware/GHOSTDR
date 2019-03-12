@@ -1000,7 +1000,7 @@ class GHOSTSpect(GHOST):
             #MJI: Compute a pixel-by-pixel model of the flat field from the new XMOD and
             #the slit image.
             if not params.get('skip_pixel_model'):
-                #FIXME: MJI Copied directly from extractProfile. Is this compliant?
+                # FIXME: MJI Copied directly from extractProfile. Is this compliant?
                 try:
                     poly_wave = self._get_polyfit_filename(ad, 'wavemod')
                     poly_spat = self._get_polyfit_filename(ad, 'spatmod')
@@ -1011,11 +1011,11 @@ class GHOSTSpect(GHOST):
                     specpars = astrodata.open(poly_spec)
                     rotpars = astrodata.open(poly_rot)
                 except IOError:
-                    log.warning("Cannot open required initial model files for {};"
-                                " skipping".format(ad.filename))
+                    log.warning("Cannot open required initial model files "
+                                "for {}; skipping".format(ad.filename))
                     continue
 
-                #Create an extractor instance. XXX
+                # Create an extractor instance. XXX
                 ghost_arm.spectral_format_with_matrix(ad[0].XMOD, wpars[0].data,
                             spatpars[0].data, specpars[0].data, rotpars[0].data)
                 extractor = Extractor(ghost_arm, slitview, badpixmask=ad[0].mask,

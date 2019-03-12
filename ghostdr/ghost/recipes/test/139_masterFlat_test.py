@@ -78,8 +78,10 @@ class TestMasterFlat(object):
         ])
 
         reduce.runr()
-        # import pdb;
-        # pdb.set_trace()
+        if res == 'std' and arm == 'red':
+            pass
+            # import pdb;
+            # pdb.set_trace()
 
         corrfilename = '*' + reduce.suffix + '.fits'
         corrfilename = os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
