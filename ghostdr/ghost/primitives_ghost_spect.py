@@ -592,7 +592,9 @@ class GHOSTSpect(GHOST):
             ad.subtract(dark)
 
             # Record dark used, timestamp, and update filename
-            ad.phu.set('DARKIM', os.path.abspath(dark.path),
+            ad.phu.set('DARKIM',
+                       # os.path.abspath(dark.path),
+                       dark.filename,
                        self.keyword_comments["DARKIM"])
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=sfx, strip=True)

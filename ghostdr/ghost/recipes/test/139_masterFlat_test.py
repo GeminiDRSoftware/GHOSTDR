@@ -125,6 +125,8 @@ class TestMasterFlat(object):
         rawfiles, corrfile, calibs = do_master_flat
         corrflat = astrodata.open(corrfile)
 
+        # import pdb; pdb.set_trace()
+
         assert corrflat.phu.get('DARKCORR'), "No record of dark " \
                                              "correction having been " \
                                              "performed on {} " \
