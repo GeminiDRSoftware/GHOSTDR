@@ -30,9 +30,9 @@ def reducePCal(p):
                      # is subtracted from the object profile. Therefore, we
                      # must apply the BPM of the flat to the object file
                      # separately, before we extract its profile.
-    p.extractProfile()
-    p.flatCorrect() # Need to write our own, NOT USE GMOS - extract the flat profile,
-                    # then simple division
+    p.extractProfile(write_result=True, flat_precorrect=True)
+    #p.flatCorrect() # Need to write our own, NOT USE GMOS - extract the flat profile,
+    #                # then simple division
     p.addWavelengthSolution()
     return
 

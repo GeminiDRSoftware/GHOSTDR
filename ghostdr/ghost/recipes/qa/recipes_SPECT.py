@@ -30,10 +30,10 @@ def reduce(p):
                      # is subtracted from the object profile. Therefore, we
                      # must apply the BPM of the flat to the object file
                      # separately, before we extract its profile.
-    p.extractProfile(write_result=True)
-    p.flatCorrect()  # Need to write our own, NOT USE GMOS - extract the flat
-                     # profile,
-                     # then simple division
+    p.extractProfile(write_result=True, flat_precorrect=True)
+    #p.flatCorrect()  # Need to write our own, NOT USE GMOS - extract the flat
+    #                 # profile,
+    #                 # then simple division
     p.addWavelengthSolution()  # should be able to accept multiple input
                                # arcs, e.g. from start and end of night,
                                # and interpolate in time
