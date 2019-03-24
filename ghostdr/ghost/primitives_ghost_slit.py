@@ -13,7 +13,7 @@ from .polyfit import SlitView
 
 from .primitives_ghost import GHOST
 from .primitives_ghost import filename_updater
-from .parameters_ghost_slit import ParametersGHOSTSlit
+from . import parameters_ghost_slit
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ class GHOSTSlit(GHOST):
 
     def __init__(self, adinputs, **kwargs):
         super(GHOSTSlit, self).__init__(adinputs, **kwargs)
-        self.parameters = ParametersGHOSTSlit
+        self._param_update(parameters_ghost_slit)
 
     def CRCorrect(self, adinputs=None, **params):
         """
@@ -301,11 +301,11 @@ class GHOSTSlit(GHOST):
 ##############################################################################
 # Below are the helper functions for the primitives in this module           #
 ##############################################################################
-def _mad(data, axis=None):
+def _mad(data, axis=None, keepdims=False):
     """
     Median Absolute Deviation: a "Robust" version of standard deviation.
 
-    The median absolute deviation of a sample if the median of data devations
+    The median absolute deviation of a sample is the median of data devations
     from the data median:
 
     .. math::
@@ -321,13 +321,20 @@ def _mad(data, axis=None):
     axis : int or None
         Axis along which to compute the MAD. Defaults to None (i.e. MAD
         is computed across all data points).
+    keepdims: bool, optional
+        If this is set to True, the axes which are reduced are left in the
+        result as dimensions with size one. With this option, the result
+        will broadcast correctly against the original data.
 
     Returns
     -------
     float
         The MAD of the data, along the requested axis.
     """
-    return np.median(np.absolute(data - np.median(data, axis)), axis)
+    return np.median(np.absolute(data - np.median(data,
+                                                  axis=axis,
+                                                  keepdims=True)), axis=axis,
+                     keepdims=keepdims)
 
 def _total_obj_flux(res, data, flat_data=None):
     """
@@ -336,8 +343,7 @@ def _total_obj_flux(res, data, flat_data=None):
     Uses the :any:`polyfit.slitview.SlitView` object to
     determine (potentially sky-subtracted) total object flux. In high-resolution
     mode, the concurrent arc profile is returned as an "object" profile,
-    so we discard
-    it explicitly from this calculation.
+    so we discard it explicitly from this calculation.
 
     Sky subtraction occurs if the ``flat_data`` parameter is not :any:`None`.
 

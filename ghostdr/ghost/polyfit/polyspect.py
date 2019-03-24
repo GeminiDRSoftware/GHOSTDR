@@ -277,7 +277,8 @@ class Polyspect(object):
         | :math:`q_{01}` : central wavelength of order :math:`m_\\textrm{ref}`
         | :math:`q_{10}` : central wavelength :math:`/R_{\\textrm{pix}}`,
         | :math:`q_{11}` : central_wavelength :math:`/R_{\\textrm{pix}}`,
-        | with :math:`R_\\textrm{pix}` the resolving power :math:`/` pixel. All other model parameters will be (approximately) zero.
+        | with :math:`R_\\textrm{pix}` the resolving power :math:`/` pixel.
+        | All other model parameters will be (approximately) zero.
 
         Parameters
         ----------
@@ -1017,7 +1018,7 @@ class Polyspect(object):
 
         # Must provide xparams
         if (xparams is None):
-            return 'Must provide at least an initial xparams'
+            raise ValueError('Must provide at least an initial xparams')
 
         # Grab the model to be plotted
         x_int, wave_int, blaze_int = self.spectral_format(wparams=wparams,

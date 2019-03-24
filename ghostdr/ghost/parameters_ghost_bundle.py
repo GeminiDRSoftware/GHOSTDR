@@ -1,11 +1,7 @@
 # This parameter file contains the parameters related to the primitives located
 # in the primitives_ghost_bundle.py file, in alphabetical order.
 
-from .parameters_ghost import ParametersGHOST
+from gempy.library import config
 
-class ParametersGHOSTBundle(ParametersGHOST):
-
-    splitBundle = {
-        "suffix"            : "_unbundled",
-    }
-
+class splitBundleConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_unbundled", optional=True)

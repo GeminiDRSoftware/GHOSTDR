@@ -29,7 +29,7 @@ def makeProcessedSlitArc(p):
     p.CRCorrect()
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackFrames(operation='median', reject_method='None')
+    p.stackFrames(operation='median', reject_method='none')
     p.storeProcessedArc()
     return
 

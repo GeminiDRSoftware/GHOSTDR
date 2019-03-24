@@ -7,7 +7,7 @@ from geminidr.gemini.primitives_gemini import Gemini
 from geminidr.core.primitives_ccd import CCD
 from .primitives_calibdb_ghost import CalibDBGHOST
 
-from .parameters_ghost import ParametersGHOST
+from . import parameters_ghost
 
 from .lookups import timestamp_keywords as ghost_stamps
 
@@ -44,9 +44,13 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
     def __init__(self, adinputs, **kwargs):
         super(GHOST, self).__init__(adinputs, **kwargs)
         self.inst_lookups = 'ghostdr.ghost.lookups'
-        self.parameters = ParametersGHOST
+        self._param_update(parameters_ghost)
         # Add GHOST-specific timestamp keywords
         self.timestamp_keys.update(ghost_stamps.timestamp_keys)
+
+    @staticmethod
+    def _has_valid_extensions(ad):
+        return len(ad) > 0
 
     def _rebin_ghost_ad(self, ad, xb, yb):
         """

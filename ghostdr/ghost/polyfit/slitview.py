@@ -2,6 +2,47 @@ import numpy as np
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
+
+SLITVIEW_PARAMETERS = {
+    'std': {
+        'central_pix': {
+            'red': [77, 65],
+            'blue': [77, 156]
+        },
+        'extract_half_width': 3,
+        'sky_pix_only_boundaries': {
+            'red': [47, 63],
+            'blue': [47, 63]
+        },
+        'object_boundaries': {
+            'red': [[3, 46], [64, 107]],
+            'blue': [[3, 46], [64, 107]]
+        },
+        'sky_pix_boundaries': {
+            'red': [3, 107],
+            'blue': [3, 107]
+        },
+    },
+    'high': {
+        'central_pix': {
+            'red': [78, 95],
+            'blue': [78, 4]
+        },
+        'extract_half_width': 2,
+        'sky_pix_only_boundaries': {
+            'red': [82, 106],
+            'blue': [82, 106]
+        },
+        'object_boundaries': {
+            'red': [[11, 81], [4, 9]],
+            'blue': [[11, 81], [4, 9]]
+        },
+        'sky_pix_boundaries': {
+            'red': [11, 106], 'blue': [11, 106]},
+    }
+}
+
+
 class SlitView(object):
     """
     A class containing tools common to processing the dark and bias corrected
@@ -40,32 +81,11 @@ class SlitView(object):
         # profile offset, i.e. it interacts directly with the tramline fitting
         # and a change to one is a change to the other.
         # Co-ordinates are in standard python co-ordinates, i.e. y then x
-        if mode == 'std':
-            self.central_pix = {'red': [77, 65], 'blue': [77, 156]}
-            self.extract_half_width = 3
-            # Boundaries for lower and upper pixels that contain *only* sky.
-            self.sky_pix_only_boundaries = {'red': [47, 63], 'blue': [47, 63]}
-            # Boundaries for extracting the objects
-            self.object_boundaries = {
-                'red': [[3, 46], [64, 107]], 'blue': [[3, 46], [64, 107]]}
-            # The sky_pix_boundaries is the boundary in pixels of all pixels
-            # contaning some sky contribution (including the object pixels,
-            # which are really object + sky)
-            self.sky_pix_boundaries = {'red': [3, 107], 'blue': [3, 107]}
-        elif mode == 'high':
-            self.central_pix = {'red': [78, 95], 'blue': [78, 4]}
-            self.extract_half_width = 2
-            # Boundaries for lower and upper pixels that contain *only* sky.
-            self.sky_pix_only_boundaries = {
-                'red': [82, 106], 'blue': [82, 106]}
-            # The 2nd "object" from the point of view of the extractor is the
-            # simultaneous Th/Xe. This could become an "object_type" parameter
-            # if we really cared.
-            self.object_boundaries = {
-                'red': [[11, 81], [4, 9]], 'blue': [[11, 81], [4, 9]]}
-            self.sky_pix_boundaries = {'red': [11, 106], 'blue': [11, 106]}
+        if mode in SLITVIEW_PARAMETERS.keys():
+            for attr, value in SLITVIEW_PARAMETERS[mode].items():
+                setattr(self, attr, value)
         else:
-            raise UserWarning("Invalid Mode")
+            raise ValueError("Invalid Mode")
 
     def cutout(self, arm='red', use_flat=False):
         """
@@ -88,7 +108,7 @@ class SlitView(object):
         try:
             central_pix = self.central_pix[arm]
         except:
-            raise UserWarning("Invalid arm: '%s'" % arm)
+            raise ValueError("Invalid arm: '%s'" % arm)
 
         if use_flat:
             this_slit_image = self.flat_image

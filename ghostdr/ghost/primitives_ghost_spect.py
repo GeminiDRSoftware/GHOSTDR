@@ -33,7 +33,8 @@ from .polyfit import GhostArm, Extractor, SlitView
 from .polyfit.ghost import GhostArm
 
 from .primitives_ghost import GHOST, filename_updater
-from .parameters_ghost_spect import ParametersGHOSTSpect
+
+from . import parameters_ghost_spect
 
 from .lookups import polyfit_dict, line_list, keyword_comments, targetn_dict
 
@@ -62,7 +63,7 @@ class GHOSTSpect(GHOST):
 
     def __init__(self, adinputs, **kwargs):
         super(GHOSTSpect, self).__init__(adinputs, **kwargs)
-        self.parameters = ParametersGHOSTSpect
+        self._param_update(parameters_ghost_spect)
         self.keyword_comments.update(keyword_comments.keyword_comments)
 
     def addWavelengthSolution(self, adinputs=None, **params):
@@ -359,8 +360,9 @@ class GHOSTSpect(GHOST):
                             format(ad.filename))
                 continue
 
-            #FIXME: It is more pythonic to ask forgiveness than permission, so a try
-            #statement is preferred. 
+            # FIXME: It is more pythonic to ask forgiveness than permission,
+            # so a try
+            # statement is preferred.
             if not hasattr(ad[0], 'WAVL'):
                 log.warning("No changes will be made to {}, since it contains "
                             "no wavelength information".
@@ -371,7 +373,7 @@ class GHOSTSpect(GHOST):
             if params.get('correction_factor') is None:
                 cf = self._compute_barycentric_correction(ad, return_wavl=True)
             else:
-                cf = params.get('correction_factor')
+                cf = [params.get('correction_factor'), ] * len(ad)
 
             # Multiply the wavelength scale by the correction factor
             for i, ext in enumerate(ad):
@@ -426,9 +428,14 @@ class GHOSTSpect(GHOST):
             for ext in ad:
                 extver = ext.hdr['EXTVER']
                 if ext.mask is not None:
+                    # MCW 190218: Form a masked array to operate on
+                    masked_data = np.ma.masked_where(ext.mask != 0,
+                                                     ext.data, copy=True)
                     # Perform the sigma clip
-                    clipd = sigma_clip(ext.data, sigma=sigma,
-                                       iters=iters, copy=True)
+                    clipd = sigma_clip(
+                        # ext.data,
+                        masked_data,
+                        sigma=sigma, iters=iters, copy=True)
                     # Convert the mask from the return into 0s and 1s and
                     # bitwise OR into the ext BPM
                     clipd_mask = clipd.mask.astype(ext.mask.dtype)
@@ -592,7 +599,7 @@ class GHOSTSpect(GHOST):
 
         return adinputs_orig
 
-        
+
     def extractProfile(self, adinputs=None, **params):
         """
         Extract the object profile from a slit or flat image.
@@ -934,11 +941,12 @@ class GHOSTSpect(GHOST):
                          for ad in adinputs]
 
         #FIXME: MJI - not sure if this is compliant.
-        if params.get('skipPixelModel'):
+        if params.get('skip_pixel_model'):
             log.stdinfo('Skipping adding the pixel model to the flat'
                         'step')
 
-        for ad, slit_flat in zip(*gt.make_lists(adinputs, flat_list, force_ad=True)):
+        for ad, slit_flat in zip(*gt.make_lists(adinputs, flat_list,
+                                                force_ad=True)):
             if not {'PREPARED', 'GHOST', 'FLAT'}.issubset(ad.tags):
                 log.warning("findApertures is only run on prepared flats: "
                             "{} will not be processed".format(ad.filename))
@@ -1000,11 +1008,11 @@ class GHOSTSpect(GHOST):
             # keywords like DATASEC) but that's not really a big deal.
             # (The header can be modified/started afresh if needed.)
             ad[0].XMOD = fitted_params
-            
+
             #MJI: Compute a pixel-by-pixel model of the flat field from the new XMOD and
             #the slit image.
-            if not params.get('skipPixelModel'):
-                #FIXME: MJI Copied directly from extractProfile. Is this compliant?
+            if not params.get('skip_pixel_model'):
+                # FIXME: MJI Copied directly from extractProfile. Is this compliant?
                 try:
                     poly_wave = self._get_polyfit_filename(ad, 'wavemod')
                     poly_spat = self._get_polyfit_filename(ad, 'spatmod')
@@ -1015,8 +1023,8 @@ class GHOSTSpect(GHOST):
                     specpars = astrodata.open(poly_spec)
                     rotpars = astrodata.open(poly_rot)
                 except IOError:
-                    log.warning("Cannot open required initial model files for {};"
-                                " skipping".format(ad.filename))
+                    log.warning("Cannot open required initial model files "
+                                "for {}; skipping".format(ad.filename))
                     continue
 
                 #Create an extractor instance, so that we can add the pixel model to the 
@@ -1027,7 +1035,7 @@ class GHOSTSpect(GHOST):
                                       vararray=ad[0].variance)
                 pixel_model = extractor.make_pixel_model()
                 ad[0].PIXELMODEL = pixel_model
-                
+
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
 
         return adinputs
@@ -1252,7 +1260,7 @@ class GHOSTSpect(GHOST):
             sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
 
             extractor = Extractor(arm, sview)
-            
+
             #FIXME - Marc and were *going* to try:
             #adjusted_data = arm.bin_data(extractor.adjust_data(flat[0].data))
             extracted_flux, extracted_var = extractor.two_d_extract(
@@ -1459,7 +1467,8 @@ class GHOSTSpect(GHOST):
             The clipping limit for the fine-structure image.
         """
         raise DeprecationWarning('Cosmic ray rejections is now handled '
-                                 'as part of the profile extraction process.')
+                                 'as part of the profile extraction process. '
+                                 'rejectCosmicRays is *not* being maintained.')
 
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -2114,29 +2123,40 @@ class GHOSTSpect(GHOST):
 
         corr_facts = []
         for ext in ad:
+
             dt_midp = dt_start + timedelta(
                 seconds=ext.hdr.get('EXPTIME')/2.0
             )
             dt_midp = Time(dt_midp)
-            # ICRS position & vel of Earth geocenter
-            ep, ev = astrocoord.solar_system.get_body_barycentric_posvel(
-                'earth', dt_midp
-            )
-            # GCRS position & vel of observatory (loc)
-            op, ov = loc.get_gcrs_posvel(dt_midp)
-            # Velocities can be simply added (are axes-aligned)
-            vel = ev + ov
 
-            # Get unit ICRS vector in direction of observation
-            sc_cart = sc.icrs.represent_as(
-                astrocoord.UnitSphericalRepresentation
-            ).represent_as(
-                astrocoord.CartesianRepresentation
-            )
+            # Jane Rigby implementation
+            # # ICRS position & vel of Earth geocenter
+            # ep, ev = astrocoord.solar_system.get_body_barycentric_posvel(
+            #     'earth', dt_midp
+            # )
+            # # GCRS position & vel of observatory (loc)
+            # op, ov = loc.get_gcrs_posvel(dt_midp)
+            # # Velocities can be simply added (are axes-aligned)
+            # vel = ev + ov
+            #
+            # # Get unit ICRS vector in direction of observation
+            # sc_cart = sc.icrs.represent_as(
+            #     astrocoord.UnitSphericalRepresentation
+            # ).represent_as(
+            #     astrocoord.CartesianRepresentation
+            # )
+            #
+            # corr_fact = sc_cart.dot(vel).to(u.km/u.s)
 
-            corr_fact = sc_cart.dot(vel).to(u.km/u.s)
+            # Vanilla AstroPy Implementation
+            corr_fact = sc.radial_velocity_correction('barycentric',
+                                                      obstime=dt_midp,
+                                                      location=GEMINI_SOUTH_LOC)
+
             if return_wavl:
                 corr_fact = 1.0 + (corr_fact / const.c)
+            else:
+                corr_fact = corr_fact.to(u.m / u.s)
 
             corr_facts.append(corr_fact)
 
@@ -2183,7 +2203,9 @@ class GHOSTSpect(GHOST):
                              'use getProcessedArc directly.')
 
         ad.phu['ARCBEFOR'] = before
-        self.getProcessedArc(ad, howmany=None, refresh=True)
+        self.getProcessedArc(ad,
+                             howmany=None,
+                             refresh=True)
         arc_ad = self._get_cal(ad, 'processed_arc', )
         del ad.phu['ARCBEFOR']
         return arc_ad
@@ -2223,8 +2245,8 @@ class GHOSTSpect(GHOST):
         """
         # Input checking
         orig_data = np.asarray(orig_data, dtype=orig_data.dtype)
-        orig_wavl = np.asarray(orig_data, dtype=orig_wavl.dtype)
-        new_wavl = np.asarray(orig_data, dtype=new_wavl.dtype)
+        orig_wavl = np.asarray(orig_wavl, dtype=orig_wavl.dtype)
+        new_wavl = np.asarray(new_wavl, dtype=new_wavl.dtype)
 
         if orig_data.shape != orig_wavl.shape:
             raise ValueError('_interp_spect received data and wavelength '
