@@ -751,8 +751,20 @@ class GHOSTSpect(GHOST):
             _, _, extracted_weights = extractor.one_d_extract(
                 ad[0].data, correct_for_sky=params['sky_correct'],
             )
+            
+            #MJI: Pre-correct the data here. 
+            #FIXME: vararray and corrected_dat are input differently here, which
+            #is a small inconsistency. They should either both be object atributes or
+            #input parameters.
+            corrected_data = ad[0].data
+            if params.get('flat_precorrect'):
+                pix_to_correct = flat[0].PIXELMODEL > 0
+                correction = flat[0].PIXELMODEL[pix_to_correct]/flat[0].data[pix_to_correct]
+                corrected_data[pix_to_correct] *= correction
+                extractor.vararray[pix_to_correct] *= correction**2
+            
             extracted_flux, extracted_var = extractor.two_d_extract(
-                ad[0].data,
+                corrected_data,
                 extraction_weights=extracted_weights,
             )
 
@@ -1017,7 +1029,8 @@ class GHOSTSpect(GHOST):
                                 "for {}; skipping".format(ad.filename))
                     continue
 
-                # Create an extractor instance. XXX
+                #Create an extractor instance, so that we can add the pixel model to the 
+                #data.
                 ghost_arm.spectral_format_with_matrix(ad[0].XMOD, wpars[0].data,
                             spatpars[0].data, specpars[0].data, rotpars[0].data)
                 extractor = Extractor(ghost_arm, slitview, badpixmask=ad[0].mask,
