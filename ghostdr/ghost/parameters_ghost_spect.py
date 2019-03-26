@@ -40,6 +40,8 @@ class barycentricCorrectConfig(config.Config):
 
 
 class clipSigmaBPMConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_sigmaBPMClipped",
+                          optional=True)
     sigma = config.Field("Sigma value for clipping", float, 3.0)
     iters = config.Field("Number of clipping iterations", int, None,
                          optional=True)
