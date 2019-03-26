@@ -117,7 +117,7 @@ class GHOSTSpect(GHOST):
         # CJS: Heavily edited because of the new AD way
         # Get processed slits, slitFlats, and flats (for xmod)
         # slits and slitFlats may be provided as parameters
-        arc_list = params.get("arc")
+        arc_list = params["arcs"]
         # if arc_list is None:
         #     # CJS: This populates the calibrations cache (dictionary) with
         #     # "processed_slit" filenames for each input AD
@@ -370,10 +370,10 @@ class GHOSTSpect(GHOST):
                 continue
 
             # Get or compute the correction factor
-            if params.get('correction_factor') is None:
+            if params['correction_factor'] is None:
                 cf = self._compute_barycentric_correction(ad, return_wavl=True)
             else:
-                cf = [params.get('correction_factor'), ] * len(ad)
+                cf = [params['correction_factor'], ] * len(ad)
 
             # Multiply the wavelength scale by the correction factor
             for i, ext in enumerate(ad):
@@ -509,7 +509,7 @@ class GHOSTSpect(GHOST):
                           'different binning modes')
 
         adinputs_orig = list(adinputs)
-        if isinstance(params.get('dark', None), list):
+        if isinstance(params['dark'], list):
             params['dark'] = [params['dark'][i] for i in range(len(adinputs))
                               if not adinputs[i].phu.get(timestamp_key)]
         adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
@@ -519,7 +519,7 @@ class GHOSTSpect(GHOST):
                         '{}'.format(', '.join([_.filename for _ in adinputs_orig
                                                if _ not in adinputs])))
 
-        if params.get('dark', None):
+        if params['dark']:
             pass
         else:
             # All this line seems to do is check the valid darks can be found
@@ -757,7 +757,7 @@ class GHOSTSpect(GHOST):
             #is a small inconsistency. They should either both be object atributes or
             #input parameters.
             corrected_data = ad[0].data
-            if params.get('flat_precorrect'):
+            if params['flat_precorrect']:
                 pix_to_correct = flat[0].PIXELMODEL > 0
                 correction = flat[0].PIXELMODEL[pix_to_correct]/flat[0].data[pix_to_correct]
                 corrected_data[pix_to_correct] *= correction
@@ -942,8 +942,7 @@ class GHOSTSpect(GHOST):
             flat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
-        #FIXME: MJI - not sure if this is compliant.
-        if params.get('skip_pixel_model'):
+        if params['skip_pixel_model']:
             log.stdinfo('Skipping adding the pixel model to the flat'
                         'step')
 
@@ -1013,7 +1012,7 @@ class GHOSTSpect(GHOST):
 
             #MJI: Compute a pixel-by-pixel model of the flat field from the new XMOD and
             #the slit image.
-            if not params.get('skip_pixel_model'):
+            if not params['skip_pixel_model']:
                 # FIXME: MJI Copied directly from extractProfile. Is this compliant?
                 try:
                     poly_wave = self._get_polyfit_filename(ad, 'wavemod')
@@ -1740,7 +1739,7 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        if params.get('skip'):
+        if params['skip']:
             log.stdinfo('Skipping the response (standard star) correction '
                         'step')
             return adinputs

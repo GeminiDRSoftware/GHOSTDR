@@ -46,6 +46,12 @@ class clipSigmaBPMConfig(config.Config):
     bpm_value = config.Field("BPM value to give to clipped pixels", int, 1)
 
 
+class darkCorrectConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_darkCorrected",
+                          optional=True)
+    dark = config.Field("Dark frame to use", str, None, optional=True)
+
+
 
 class extractProfileConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_extractedProfile",
@@ -55,6 +61,8 @@ class extractProfileConfig(config.Config):
                             optional=True)
     sky_correct = config.Field("Correct for sky?", bool, True,
                                optional=True)
+    pre_flatcorrect = config.Field("Pre-correct by the flat field?", bool, True,
+                                   optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, False,
                                 optional=True)
 
