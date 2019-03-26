@@ -343,7 +343,7 @@ class TestGhost:
 
         # import pdb; pdb.set_trace()
 
-        assert ad_out[0].phu.get('DARKIM') == dark.path, \
+        assert ad_out[0].phu.get('DARKIM') == dark.filename, \
             "darkCorrect failed to record the name of the dark " \
             "file used in the output header (expected {}, got {})".format(
                 dark.filename, ad_out[0].phu.get('DARKIM'),
