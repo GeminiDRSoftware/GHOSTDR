@@ -18,14 +18,14 @@ class addWavelengthSolutionConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_wavelengthAdded",
                           optional=True)
     arcs = config.ListField("Before & after arcs for each input",
-                            tuple, None, optional=True)
+                            tuple, None, optional=True, single=False)
 
 
 class applyFlatBPMConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_flatBPMApplied",
                           optional=True)
-    flat = config.Field("Flat field to use", (str, ad), None,
-                        optional=True)
+    flat = config.ListField("Flat field to use", (str, ad), None,
+                            optional=True, single=True)
     flat_stream = config.Field("Stream to obtain flat field from", str, None,
                                optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, True,
@@ -59,9 +59,10 @@ class darkCorrectConfig(config.Config):
 class extractProfileConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_extractedProfile",
                           optional=True)
-    slit = config.Field("Slit viewer exposure", (str, ad), None, optional=True)
-    slitflat = config.Field("Slit viewer flat field", (str, ad), None,
-                            optional=True)
+    slit = config.ListField("Slit viewer exposure", (str, ad), None,
+                            optional=True, single=True)
+    slitflat = config.ListField("Slit viewer flat field", (str, ad), None,
+                            optional=True, single=True)
     sky_correct = config.Field("Correct for sky?", bool, True,
                                optional=True)
     pre_flatcorrect = config.Field("Pre-correct by the flat field?", bool, True,
@@ -101,10 +102,10 @@ class flatCorrectConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_flatCorrected",
                           optional=True)
     slit = config.Field("Slit viewer exposure", (str, ad), None, optional=True)
-    slitflat = config.Field("Slit viewer flat field", (str, ad), None,
-                            optional=True)
-    flat = config.Field("Processed flat field exposure", (str, ad), None,
-                        optional=True)
+    slitflat = config.ListField("Slit viewer flat field", (str, ad), None,
+                                optional=True, single=True)
+    flat = config.ListField("Processed flat field exposure", (str, ad), None,
+                            optional=True, single=True)
     write_result = config.Field("Write primitive output to disk?", bool, True,
                                 optional=True)
 
