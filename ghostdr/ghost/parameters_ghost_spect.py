@@ -51,7 +51,8 @@ class clipSigmaBPMConfig(config.Config):
 class darkCorrectConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_darkCorrected",
                           optional=True)
-    dark = config.ListField("Dark frame to use", ad, None, optional=True)
+    dark = config.ListField("Dark frame to use", (str, ad), None,
+                            optional=True)
 
 
 
