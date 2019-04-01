@@ -752,16 +752,35 @@ class GHOSTSpect(GHOST):
                 ad[0].data, correct_for_sky=params['sky_correct'],
             )
             
-            #MJI: Pre-correct the data here. 
-            #FIXME: vararray and corrected_dat are input differently here, which
-            #is a small inconsistency. They should either both be object atributes or
-            #input parameters.
+            # MJI: Pre-correct the data here.
+            # FIXME: vararray and corrected_dat are input differently here,
+            # which is a small inconsistency. They should either both be object
+            # atributes or input parameters.
             corrected_data = ad[0].data
             if params['flat_precorrect']:
-                pix_to_correct = flat[0].PIXELMODEL > 0
-                correction = flat[0].PIXELMODEL[pix_to_correct]/flat[0].data[pix_to_correct]
-                corrected_data[pix_to_correct] *= correction
-                extractor.vararray[pix_to_correct] *= correction**2
+                try:
+                    pix_to_correct = flat[0].PIXELMODEL > 0
+                    correction = flat[0].PIXELMODEL[
+                                     pix_to_correct
+                                 ]/flat[0].data[
+                        pix_to_correct
+                    ]
+                    corrected_data[pix_to_correct] *= correction
+                    extractor.vararray[pix_to_correct] *= correction**2
+                except AttributeError as e:  # Catch if no PIXELMODEL
+                    if 'PIXELMODEL' in e.message:
+                        raise AttributeError(
+                            'The flat {} has no PIXELMODEL extension - either '
+                            'run extractProfile without the flat_precorrect '
+                            'option, or re-generate your flat field without the '
+                            'skip_pixel_model option.\n'
+                            '(Original error message: {})'.format(
+                                flat.filename,
+                                e.message,
+                            )
+                        )
+                    else:
+                        raise
             
             extracted_flux, extracted_var = extractor.two_d_extract(
                 corrected_data,
