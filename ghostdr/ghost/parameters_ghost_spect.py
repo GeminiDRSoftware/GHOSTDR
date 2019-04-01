@@ -65,7 +65,7 @@ class extractProfileConfig(config.Config):
                             optional=True, single=True)
     sky_correct = config.Field("Correct for sky?", bool, True,
                                optional=True)
-    pre_flatcorrect = config.Field("Pre-correct by the flat field?", bool, True,
+    flat_precorrect = config.Field("Pre-correct by the flat field?", bool, True,
                                    optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, False,
                                 optional=True)
