@@ -77,6 +77,10 @@ class TestMasterFlat(object):
                 'calibrations',
                 'processed_slitflat',
                 'flat*{}*slitflat*.fits'.format(res)))[0],
+            'processed_slit': glob.glob(os.path.join(
+                'calibrations',
+                'processed_slit',
+                'arc*{}*_slit.fits'.format(res)))[0],
         }
         reduce.ucals = normalize_ucals(reduce.files, [
             '{}:{}'.format(k, v) for k, v in calibs.items()
@@ -286,7 +290,7 @@ def test_arc_missing_pixelmodel(arm, res, get_or_create_tmpdir):
     Perform overscan subtraction on raw bias frame
     """
     # import pdb; pdb.set_trace()
-    rawfilename = 'arc*{}*{}[0-9]*.fits'.format(res, arm)
+    rawfilename = 'arc*{}*{}[0-9].fits'.format(res, arm)
     # Copy the raw data file into here
     tmpsubdir, cal_service = get_or_create_tmpdir
     # Find all the relevant files
@@ -333,6 +337,10 @@ def test_arc_missing_pixelmodel(arm, res, get_or_create_tmpdir):
             'calibrations',
             'processed_slitflat',
             'flat*{}*slitflat*.fits'.format(res)))[0],
+        'processed_slit': glob.glob(os.path.join(
+            'calibrations',
+            'processed_slit',
+            'arc*{}*_slit.fits'.format(res)))[0],
     }
     # Update the flat being used
     flat_ad = astrodata.open(calibs['processed_flat'])
@@ -344,6 +352,8 @@ def test_arc_missing_pixelmodel(arm, res, get_or_create_tmpdir):
     reduce.ucals = normalize_ucals(reduce.files, [
         '{}:{}'.format(k, v) for k, v in calibs.items()
     ])
+    import pdb;
+    pdb.set_trace()
 
     with pytest.raises(AssertionError) as e_pixmod:
         reduce.runr()
@@ -351,3 +361,6 @@ def test_arc_missing_pixelmodel(arm, res, get_or_create_tmpdir):
                                      "test doesn't seem to be about the " \
                                      "missing PIXELMODEL extension, as " \
                                      "expected."
+
+    # Teardown code
+    os.remove(flatname)
