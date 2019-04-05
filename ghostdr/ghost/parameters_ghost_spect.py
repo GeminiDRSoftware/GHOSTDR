@@ -62,6 +62,8 @@ class extractProfileConfig(config.Config):
     slit = config.ListField("Slit viewer exposure", (str, ad), None,
                             optional=True, single=True)
     slitflat = config.ListField("Slit viewer flat field", (str, ad), None,
+                                optional=True, single=True)
+    flat = config.ListField("Flat field", (str, ad), None,
                             optional=True, single=True)
     sky_correct = config.Field("Correct for sky?", bool, True,
                                optional=True)
@@ -89,6 +91,8 @@ class findAperturesConfig(config.Config):
     slitflat = config.Field("Slit viewer flat field",
                             (str, ad),
                             None, optional=True)
+    flat = config.ListField("Flat field", (str, ad), None,
+                            optional=True, single=True)
     skip_pixel_model = config.Field('Skip adding a pixel model to the '
                                     'flat field?', bool, False)
 
@@ -96,6 +100,8 @@ class findAperturesConfig(config.Config):
 class fitWavelengthConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_fitWavl",
                           optional=True)
+    flat = config.ListField("Flat field", (str, ad), None,
+                            optional=True, single=True)
 
 
 class flatCorrectConfig(config.Config):
