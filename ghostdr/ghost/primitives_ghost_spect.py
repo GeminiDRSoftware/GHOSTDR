@@ -778,16 +778,16 @@ class GHOSTSpect(GHOST):
                     extractor.vararray[pix_to_correct] *= correction**2
                 except AttributeError as e:  # Catch if no PIXELMODEL
                     if 'PIXELMODEL' in e.message:
-                        raise AttributeError(
-                            'The flat {} has no PIXELMODEL extension - either '
-                            'run extractProfile without the flat_precorrect '
-                            'option, or re-generate your flat field without the '
-                            'skip_pixel_model option.\n'
-                            '(Original error message: {})'.format(
-                                flat.filename,
-                                e.message,
-                            )
+                        e.message = 'The flat {} has no PIXELMODEL extension ' \
+                                    '- either run extractProfile without the ' \
+                                    'flat_precorrect option, or re-generate ' \
+                                    'your flat field without the ' \
+                                    'skip_pixel_model option.\n' \
+                                    '(Original error message: {})'.format(
+                            flat.filename,
+                            e.message,
                         )
+                        raise e
                     else:
                         raise
             

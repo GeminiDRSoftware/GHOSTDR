@@ -20,9 +20,8 @@ from recipe_system.mappers.recipeMapper import RecipeMapper
 
 import ghostdr
 
-@pytest.mark.skip
 @pytest.mark.fullreduction
-class TestMasterFlat(object):
+class TestMasterArc(object):
 
     # Test needs to be run separately for the Before and After arcs so
     # both can have the correct slit viewer frame passed to them
@@ -159,7 +158,7 @@ class TestMasterFlat(object):
     # in polyfit before meaningful tests can be made
 
 @pytest.mark.fullreduction
-@pytest.mark.parametrize('arm,res,epoch', TestMasterFlat.ARM_RES_COMBOS)
+@pytest.mark.parametrize('arm,res,epoch', TestMasterArc.ARM_RES_COMBOS)
 def test_arc_missing_pixelmodel(arm, res, epoch, get_or_create_tmpdir):
     """
     Perform overscan subtraction on raw bias frame
@@ -176,7 +175,7 @@ def test_arc_missing_pixelmodel(arm, res, epoch, get_or_create_tmpdir):
     #     shutil.copy(f, os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
     rawfiles = glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                       rawfilename))
-    rawfiles = [astrodata.open(_) for _ in rawfiles]
+    rawfiles_ad = [astrodata.open(_) for _ in rawfiles]
 
     calibs = {
         'processed_bias': glob.glob(os.path.join(
@@ -206,30 +205,31 @@ def test_arc_missing_pixelmodel(arm, res, epoch, get_or_create_tmpdir):
     flat.write(filename=flatname, overwrite=True)
     calibs['processed_flat'] = flatname
 
-    pm = PrimitiveMapper(rawfiles, mode='test', drpkg='ghostdr',
+    # import pdb;
+    # pdb.set_trace()
+
+    pm = PrimitiveMapper(rawfiles_ad, mode='test', drpkg='ghostdr',
                          recipename='recipeArcCreateMaster',
-                         usercals=normalize_ucals(rawfiles, [
-                             '{}:{}'.format(k, v) for k, v in calibs.items()
-                            ]),
+                         usercals=normalize_ucals(rawfiles, ['{}:{}'.format(k, v) for k,v in calibs.items()])
                          # usercals=calibs,
                          )
-    rm = RecipeMapper(rawfiles, mode='test', drpkg='ghostdr',
+    rm = RecipeMapper(rawfiles_ad, mode='test', drpkg='ghostdr',
                       recipename='recipeArcCreateMaster',
-                      usercals=normalize_ucals(rawfiles, [
-                             '{}:{}'.format(k, v) for k, v in calibs.items()
-                         ]),
                       # usercals=calibs,
                       )
 
     p = pm.get_applicable_primitives()
     recipe = rm.get_applicable_recipe()
 
-    with pytest.raises(AssertionError) as e_pixmod:
+    with pytest.raises(AttributeError) as e_pixmod:
         recipe(p)
-    assert 'PIXELMODEL' in e_pixmod, "The assertion error raised in this " \
-                                     "test doesn't seem to be about the " \
-                                     "missing PIXELMODEL extension, as " \
-                                     "expected."
+        import pdb; pdb.set_trace()
+    assert 'PIXELMODEL' in str(e_pixmod.value), "The assertion error raised " \
+                                                "in this " \
+                                                "test doesn't seem to be " \
+                                                "about the " \
+                                                "missing PIXELMODEL " \
+                                                "extension, as expected."
 
     # Teardown code
     os.remove(flatname)
