@@ -15,10 +15,23 @@ from lut_descriptors import fixture_data as descriptors_fixture_data
 
 class FixtureIterator(object):
     """
-    Helper class to iterate over all files in a directory, returning an
-    attached descriptor and its value in turn.
+    Iterate over all files in a directory, returning a attached descriptor and
+    its value.
     """
     def __init__(self, data_dict):
+        """
+        Parameters
+        ----------
+        data_dict : dict
+            A dictionary, of the form::
+
+                {
+                    ('GHOST', 'filename.fits'): (('descriptor', value, ), ..., )
+                    ...
+                }
+
+            This dictionary is imported from :any:`test.lut_descriptors`.
+        """
         self._data = data_dict
 
     def __iter__(self):
@@ -40,7 +53,7 @@ class FixtureIterator(object):
                          FixtureIterator(descriptors_fixture_data))
 def test_descriptor(fn, ad, descriptor, value):
     """
-    Ensure that the values returned by AstroData descriptors are as expected
+    Ensure that the values returned by AstroData descriptors are as expected.
     """
     method = getattr(ad, descriptor)
     mvalue = method()

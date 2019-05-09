@@ -461,3 +461,4 @@ fixture_data = {
                                      ('wcs_ra', None),
                                      ('well_depth_setting', None)),
 }
+"""Expected descriptors from test files."""
