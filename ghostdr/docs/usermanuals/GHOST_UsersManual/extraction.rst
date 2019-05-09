@@ -99,15 +99,17 @@ During flat field processing, a model flat profile :math:`\phi_{k}` is construct
 every pixel :math:`k` for each of the red and blue cameras. This profile is normalised 
 to 1.0 for every spectral direction pixel and every order. Note that we do not include 
 a per-object index here, as the flat lamp can only illuminate the input fibers in the
-same way as the sky. The median combined flat field is divided by the median for all 
-illuminated pixels, with no normalisation from order to order. 
+same way as the sky. The median combined flat field is divided by the median for all
+illuminated pixels, with no normalisation from order to order. This combined
+flat field is defined as :math:`f_k`.
 
 Prior to extraction, science data are corrected by the flat field as follows:
 
 .. math::
     D_k = \frac{r_k \phi_{k}}{f_k}
 
-Note that the Th/Xe simultaneous reference lamp is not flat-field corrected using this 
+where :math:`r_k` is the raw data for pixel :math:`k`.
+Note that the Th/Xe simultaneous reference lamp is not flat-field corrected using this
 algorithm, with those pixels treated separately. The Th/Xe lamp is only extracted in 1x1
 binning mode for precision radial velocity observations.
 
