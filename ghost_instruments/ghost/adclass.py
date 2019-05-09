@@ -5,6 +5,9 @@ from . import lookup
 from gemini_instruments.common import build_group_id
 
 class AstroDataGhost(AstroDataGemini):
+    """
+    Class for adding tags and descriptors to GHOST data.
+    """
 
     __keyword_dict = dict(array_section = 'CCDSEC',
                           array_name = 'AMPNAME',
@@ -14,44 +17,76 @@ class AstroDataGhost(AstroDataGemini):
 
     @staticmethod
     def _matches_data(source):
+        """
+        Check if data is from GHOST.
+
+        Parameters
+        ----------
+        source : astrodata.AstroData
+            The source file to check.
+        """
         return source[0].header.get('INSTRUME', '').upper() == 'GHOST'
 
     @astro_data_tag
     def _tag_instrument(self):
+        """
+        Define the minimal tag set for GHOST data.
+        """
         return TagSet(['GHOST'])
 
     @astro_data_tag
     def _tag_bundle(self):
+        """
+        Define the 'bundled data' tag set for GHOST data.
+        """
         # Gets blocked by tags created by split files
         return TagSet(['BUNDLE'])
 
     @astro_data_tag
     def _tag_bias(self):
+        """
+        Define the 'bias data' tag set for GHOST data.
+        """
         if self.phu.get('OBSTYPE') == 'BIAS':
             return TagSet(['CAL', 'BIAS'])
 
     @astro_data_tag
     def _tag_dark(self):
+        """
+        Define the 'dark data' tag set for GHOST data.
+        """
         if self.phu.get('OBSTYPE') == 'DARK':
             return TagSet(['CAL', 'DARK'])
 
     @astro_data_tag
     def _tag_arc(self):
+        """
+        Define the 'arc data' tag set for GHOST data.
+        """
         if self.phu.get('OBSTYPE') == 'ARC':
             return TagSet(['CAL', 'ARC'])
 
     @astro_data_tag
     def _tag_flat(self):
+        """
+        Define the 'flat data' tag set for GHOST data.
+        """
         if self.phu.get('OBSTYPE') == 'FLAT':
             return TagSet(['CAL', 'FLAT'])
 
     @astro_data_tag
     def _tag_sky(self):
+        """
+        Define the 'flat data' tag set for GHOST data.
+        """
         if self.phu.get('OBSTYPE') == 'SKY':
             return TagSet(['SKY'])
 
     @astro_data_tag
     def _tag_res(self):
+        """
+        Define the tagset for GHOST data of different resolutions.
+        """
         if self.phu.get('SMPNAME') == 'HI_ONLY':
             return TagSet(['HIGH'])
         else:
@@ -59,11 +94,17 @@ class AstroDataGhost(AstroDataGemini):
 
     @astro_data_tag
     def _tag_slitv(self):
+        """
+        Define the 'slit data' tag set for GHOST data.
+        """
         if self.phu.get('CCDNAME', '').startswith('Sony-ICX674'):
             return TagSet(['SLITV', 'IMAGE'], blocks=['SPECT', 'BUNDLE'])
 
     @astro_data_tag
     def _tag_spect(self):
+        """
+        Define the 'spectrograph data' tag set for GHOST data.
+        """
         # Also returns BLUE or RED if the CAMERA keyword is set thus
         if 'CAMERA' in self.phu:
             return TagSet(({self.phu['CAMERA']} & {'BLUE', 'RED'}) | {'SPECT'},
@@ -71,6 +112,9 @@ class AstroDataGhost(AstroDataGemini):
 
     @astro_data_tag
     def _status_processed_ghost_cals(self):
+        """
+        Define the 'processed data' tag set for GHOST data.
+        """
         kwords = set(['PRSLITIM', 'PRSLITBI', 'PRSLITDA', 'PRSLITFL',
                       'PRWAVLFT', 'PRPOLYFT'])
         if set(self.phu) & kwords:
@@ -78,6 +122,9 @@ class AstroDataGhost(AstroDataGemini):
 
     @astro_data_tag
     def _tag_binning_mode(self):
+        """
+        Define the tagset for GHOST data of different binning modes.
+        """
         binnings = self.hdr.get('CCDSUM')
         if isinstance(binnings, list):
             if all([x == binnings[0] for x in binnings]):
@@ -89,6 +136,9 @@ class AstroDataGhost(AstroDataGemini):
 
     @astro_data_tag
     def _tag_obsclass(self):
+        """
+        Define the tagset for 'partnerCal' observations.
+        """
         if self.phu.get('OBSCLASS') == 'partnerCal':
             return TagSet(['PARTNER_CAL'])
 
@@ -96,7 +146,7 @@ class AstroDataGhost(AstroDataGemini):
     def amp_read_area(self):
         """
         Returns a list of amplifier read areas, one per extension, made by
-        combining the amplifier name and detector section. Or returns a
+        combining the amplifier name and detector section; or, returns a
         string if called on a single-extension slice.
 
         Returns
@@ -123,7 +173,8 @@ class AstroDataGhost(AstroDataGemini):
         Returns
         -------
         str/None
-            Color of the arm ('blue' | 'red')
+            Color of the arm (`'blue'`, `'red'`), or `'slit'` in case of slit
+            viewer data. Returns `None` if arm/slit status can't be determined.
         """
         tags = self.tags
         if 'BLUE' in tags:
@@ -153,7 +204,7 @@ class AstroDataGhost(AstroDataGemini):
     @astro_data_descriptor
     def detector_x_bin(self):
         """
-        Returns the detector binning in the x-direction
+        Returns the detector binning in the x-direction.
 
         Returns
         -------
@@ -177,7 +228,7 @@ class AstroDataGhost(AstroDataGemini):
     @astro_data_descriptor
     def detector_y_bin(self):
         """
-        Returns the detector binning in the y-direction
+        Returns the detector binning in the y-direction.
 
         Returns
         -------
@@ -199,6 +250,7 @@ class AstroDataGhost(AstroDataGemini):
             return ybin_list[0] if ybin_list == ybin_list[::-1] else None
 
     # TODO: GHOST descriptor returns no values if data are unprepared
+
     # The gain() descriptor is inherited from gemini/adclass, and returns
     # the value of the GAIN keyword (as a list if sent a complete AD object,
     # or as a single value if sent a slice). This is what the GHOST version
@@ -247,7 +299,8 @@ class AstroDataGhost(AstroDataGemini):
         Returns
         -------
         str/None
-            Resolution of the dataset ('high' | 'std')
+            Resolution of the dataset ('high' | 'std'). Returns `None` if
+            resolution mode cannot be determined.
         """
         mode = self.phu.get('SMPNAME')
         if mode == 'HI_ONLY':
@@ -260,6 +313,13 @@ class AstroDataGhost(AstroDataGemini):
 
     @astro_data_descriptor
     def read_speed_setting(self):
+        """
+        GHOST does not require a read speed settings - returns `None`
+
+        Returns
+        -------
+        `None`
+        """
         return None
 
     @astro_data_descriptor
@@ -269,6 +329,10 @@ class AstroDataGhost(AstroDataGemini):
         system work-around. Outside of active reduction, this descriptor
         should always return None, as the relevant header keyword should only
         exist very briefly during the fetching of bracketed arc files.
+
+        Returns
+        -------
+        bool or `None`
         """
         want_before = self.phu.get('ARCBEFOR', None)
         if want_before:
