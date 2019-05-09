@@ -19,6 +19,9 @@ import ghostdr
 
 @pytest.mark.fullreduction
 class TestOverscanSubtractClass(object):
+    """
+    Class for testing GHOST overscan correct primitive (overscanCorrect).
+    """
 
     @pytest.fixture(scope='class', params=[
         'blue',

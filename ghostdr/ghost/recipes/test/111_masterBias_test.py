@@ -18,6 +18,9 @@ import ghostdr
 
 @pytest.mark.fullreduction
 class TestMasterBias(object):
+    """
+    Class for testing GHOST bias frame reduction.
+    """
 
     @pytest.fixture(scope='class', params=[
         'blue',

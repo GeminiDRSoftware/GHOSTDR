@@ -20,6 +20,9 @@ import ghost_instruments
 
 @pytest.mark.fullreduction
 class TestBundleClass(object):
+    """
+    Class for performing bundle breakdown tests.
+    """
 
     file_types_required = {
         'red': {
@@ -102,7 +105,7 @@ class TestBundleClass(object):
     @pytest.fixture
     def do_bundle_split(self, get_or_create_tmpdir):
         """
-        Perform overscan subtraction on raw bias frame
+        Decompose the test bundle into constituent parts.
         """
         # Copy the raw data file into here
         rawfilename = '*MEF.fits'
@@ -145,7 +148,7 @@ class TestBundleClass(object):
     def test_bundle_outputs(self, do_bundle_split):
         """
         Check that the right number and types of files have come out of
-        bundle expansion
+        bundle expansion.
         """
         rawfile, tmpsubdir = do_bundle_split
 

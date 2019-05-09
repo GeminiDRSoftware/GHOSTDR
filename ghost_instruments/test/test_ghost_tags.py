@@ -32,7 +32,7 @@ class FixtureIterator(object):
                     ...
                 }
 
-        This dictionary is imported from :any:`test.lut_tags`.
+            This dictionary is imported from :any:`test.lut_tags`.
         """
         self._data = data_dict
 

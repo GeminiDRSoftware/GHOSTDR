@@ -22,6 +22,9 @@ import ghost_instruments
 
 @pytest.mark.fullreduction
 class TestSlitObj(object):
+    """
+    Class for testing GHOST slit object frame reduction.
+    """
 
     TYPE_RES_COMBOS = list(itertools.product(
         ['1.0', '0.5', ],

@@ -21,6 +21,9 @@ import ghost_instruments
 
 @pytest.mark.fullreduction
 class TestSlitBias(object):
+    """
+    Class for testing GHOST slit bias frame reduction.
+    """
 
     @pytest.fixture
     def do_slit_dark(self, get_or_create_tmpdir):

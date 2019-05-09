@@ -21,6 +21,9 @@ import ghost_instruments
 
 @pytest.mark.fullreduction
 class TestSlitFlat(object):
+    """
+    Class for testing GHOST slit flat frame reduction.
+    """
 
     @pytest.fixture(scope='class',
                     params=['std', 'high'])

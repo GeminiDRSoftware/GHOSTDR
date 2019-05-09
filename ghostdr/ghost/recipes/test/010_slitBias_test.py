@@ -20,11 +20,14 @@ import ghost_instruments
 
 @pytest.mark.fullreduction
 class TestSlitBias(object):
+    """
+    Class for testing the reduction of GHOST bias frames.
+    """
 
     @pytest.fixture
     def do_slit_bias(self, get_or_create_tmpdir):
         """
-        Perform overscan subtraction on raw bias frame
+        Perform overscan subtraction on raw bias frame.
         """
         rawfilename = 'bias*slit*.fits'
         # Copy the raw data file into here
@@ -68,7 +71,7 @@ class TestSlitBias(object):
         """
         Check that the mean of the master bias (computed across all extensions)
         is within some tolerance factor of the means of the overscan-
-        corrected input biases
+        corrected input biases.
         """
         mean_tolerance = 0.01  # 1%
 

@@ -20,6 +20,10 @@ import ghostdr
 
 @pytest.mark.fullreduction
 class TestMasterFlat(object):
+    """
+    Class for testing GHOST flat frame reduction.
+    """
+
     ARM_RES_COMBOS = list(itertools.product(
         ['red', 'blue', ],
         ['std', 'high']

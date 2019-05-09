@@ -22,6 +22,9 @@ import ghostdr
 
 @pytest.mark.fullreduction
 class TestMasterArc(object):
+    """
+    Class for testing GHOST arc frame reduction.
+    """
 
     # Test needs to be run separately for the Before and After arcs so
     # both can have the correct slit viewer frame passed to them

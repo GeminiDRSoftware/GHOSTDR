@@ -13,34 +13,34 @@ order):
 +--------------+--------+
 | Obs. type    | Prefix |
 +--------------+--------+
-| Bundles      | 00n_   |
+| Bundles      | 00n\_  |
 +--------------+--------+
-| Slit bias    | 01n_   |
+| Slit bias    | 01n\   |
 +--------------+--------+
-| Slit dark    | 02n_   |
+| Slit dark    | 02n\   |
 +--------------+--------+
-| Slit flat    | 03n_   |
+| Slit flat    | 03n\   |
 +--------------+--------+
-| Slit arc*    | 04n_   |
+| Slit arc [*]_| 04n\   |
 +--------------+--------+
-| Slit*        | 05n_   |
+| Slit [*]_    | 05n\   |
 +--------------+--------+
-| Bias         | 11n_   |
+| Bias         | 11n\   |
 +--------------+--------+
-| Dark         | 12n_   |
+| Dark         | 12n\   |
 +--------------+--------+
-| Flat         | 13n_   |
+| Flat         | 13n\   |
 +--------------+--------+
-| Arc          | 14n_   |
+| Arc          | 14n\   |
 +--------------+--------+
-| Standard     | 15n_   |
+| Standard     | 15n\   |
 +--------------+--------+
-| Science      | 16n_   |
+| Science      | 16n\   |
 +--------------+--------+
 
-* Note that, because slit arcs and the slits associated standards are
-treated identically, they are currently tested together
-under the slit arc heading.
+.. [*] Note that, because slit arcs and the slits associated standards are
+       treated identically, they are currently tested together
+       under the slit arc heading.
 
 All tests are marked in pytest as 'fullreduction' - to run only the full
 reduction tests, invoke pytest as follows::

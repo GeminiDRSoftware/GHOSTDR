@@ -19,6 +19,9 @@ import ghostdr
 
 @pytest.mark.fullreduction
 class TestMasterDark(object):
+    """
+    Class for testing GHOST dark frame reduction.
+    """
 
     @pytest.fixture(scope='class', params=[
         'blue',

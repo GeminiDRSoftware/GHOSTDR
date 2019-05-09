@@ -22,6 +22,9 @@ import ghost_instruments
 
 @pytest.mark.fullreduction
 class TestSlitArc(object):
+    """
+    Class for testing GHOST slit arc frame reduction.
+    """
 
     TYPE_RES_COMBOS = list(itertools.product(
         ['arc', 'standard', ],
