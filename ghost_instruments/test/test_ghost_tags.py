@@ -17,6 +17,10 @@ from lut_tags import fixture_data as tags_fixture_data
 
 
 class FixtureIterator(object):
+    """
+    Helper class to iterate over all files in a directory, returning each
+    attached tag in turn
+    """
     def __init__(self, data_dict):
         self._data = data_dict
 
@@ -37,4 +41,7 @@ class FixtureIterator(object):
 
 @pytest.mark.parametrize("fn,ad,tag_set", FixtureIterator(tags_fixture_data))
 def test_descriptor(fn, ad, tag_set):
+    """
+    Ensure the tag set returned from each test file is as expected
+    """
     assert ad.tags == tag_set

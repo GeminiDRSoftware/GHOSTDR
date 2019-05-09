@@ -14,6 +14,10 @@ from lut_descriptors import fixture_data as descriptors_fixture_data
 
 
 class FixtureIterator(object):
+    """
+    Helper class to iterate over all files in a directory, returning an
+    attached descriptor and its value in turn.
+    """
     def __init__(self, data_dict):
         self._data = data_dict
 
@@ -35,6 +39,9 @@ class FixtureIterator(object):
 @pytest.mark.parametrize("fn, ad, descriptor, value",
                          FixtureIterator(descriptors_fixture_data))
 def test_descriptor(fn, ad, descriptor, value):
+    """
+    Ensure that the values returned by AstroData descriptors are as expected
+    """
     method = getattr(ad, descriptor)
     mvalue = method()
     if float in (type(value), type(mvalue)):
