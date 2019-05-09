@@ -30,8 +30,38 @@ Tags
     :members:
     :show-inheritance:
 
-Full reduction test
-^^^^^^^^^^^^^^^^^^^
+Primitive unit tests
+^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: ghostdr.ghost.test
+    :members:
+
+Global
+""""""
+
+.. automodule:: ghostdr.ghost.test.test_ghost
+    :members:
+
+Bundles
+"""""""
+
+.. automodule:: ghostdr.ghost.test.test_ghost_bundle
+    :members:
+
+Slit frames
+"""""""""""
+
+.. automodule:: ghostdr.ghost.test.test_ghost_slit
+    :members:
+
+Main spectrograph frames
+""""""""""""""""""""""""
+
+.. automodule:: ghostdr.ghost.test.test_ghost_spect
+    :members:
+
+Full reduction tests
+^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: ghostdr.ghost.recipes.test
     :members:
