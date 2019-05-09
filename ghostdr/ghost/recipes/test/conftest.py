@@ -3,7 +3,7 @@ import py
 
 FULL_REDUCTION_TMPDIR = 'ghost_fullreduce'
 
-FULL_REDUCTION_SPACE_REQD = 5. * 1024.  # MB
+FULL_REDUCTION_SPACE_REQD = 10. * 1024.  # MB
 
 THIS_DIR = os.path.dirname(__file__)
 
