@@ -1,4 +1,4 @@
-.. tests:
+.. _tests:
 
 **********
 Test Suite
@@ -7,11 +7,54 @@ Test Suite
 Available Tests
 ---------------
 
+The full list of available tests is provided in :ref:`test-suite-API`. In short,
+we currently provide:
+
+- Regression tests for descriptors and tag sets;
+- Unit tests for primitives, where possible;
+- An 'all-up', full reduction test set to check the GHOST pipeline end-to-end.
+
+It is important to note that writing a true 'unit' test for a lot of primitives
+isn't possible. Many primitives required a large number of previous steps to
+have been completed, proper calibration files to be provided, etc. In such
+cases, these primitives are only tested in the 'full reduction' test suite.
+
 Missing or Desirable Tests
 --------------------------
 
+The 'full reduction' test suite is currently incomplete, as the details
+of the last steps of the reduction process are still being fleshed out.
+
 Running the Tests
 -----------------
+
+To invoke the full test suite, simply run::
+
+    pytest
+
+in the top-level directory of the :any:`ghostdr` package.
+
+The 'full reduction' test suite can be run solo by invoking::
+
+    pytest -m fullreduction
+
+The full reduction test suite already possesses the test data that it
+requires. The :any:`pytest` fixture which controls the full reduction tests
+will automatically place the test files into a temporary directory on your
+computer, and then remove all files relating to the tests from that
+directory once the tests are complete.
+
+.. warning::
+    You'll need 10GB of free disk space to be able to run the full reduction
+    test suite. The full reduction test suite fixture will abort the test run
+    if it detects you don't have enough space.
+
+If you only want to run the regression and unit tests, you can invoke
+pytest thus::
+
+    pytest -m "not fullreduction"
+
+.. _test-suite-API:
 
 Test Suite API
 --------------

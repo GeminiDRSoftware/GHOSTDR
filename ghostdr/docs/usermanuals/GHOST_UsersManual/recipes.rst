@@ -32,8 +32,11 @@ Furthermore, for the commands given below to work properly, you must:
  #. Add the following paths to your environment ``PYTHONPATH`` variable::
 
         DRAGONS
-        GHOSTDR/simulator/pyghost
         GHOSTDR
+
+.. note::
+    You are no longer required to manually import :any:`ghost_instruments` in
+    ``DRAGONS/gempy/scripts/typewalk.py``.
 
 Typical Processing Flows
 ========================
@@ -47,13 +50,13 @@ Setting up the calibrations system
 
 At present, we are using a beta version of the Gemini local calibration
 manager. Assuming that you have access to the current version of this code
-(at the time of writing, ``GeminiCalMgr-0.9.9.6-ghost``), you need to take
+(at the time of writing, ``GeminiCalMgr-0.9.11-*``), you need to take
 the following steps to prepare the calibration manager for use:
 
 #. Activate your ``geminidev`` Anaconda environment;
-#. Install the calibration manager::
+#. Install the calibration manager, e.g.::
 
-    python /path/to/GeminiCalMgr-0.9.9.6-ghost/setup.py install
+    pip install GeminiCalMgr-0.9.11-py2-none-any.whl
 
 #. Initialize your local database, something like this (on a Unix system; for
    MacOSX or Windows, use an appropriate file path for your calibration file)::
@@ -67,43 +70,44 @@ the following steps to prepare the calibration manager for use:
     HERE
     caldb init -v -w
 
-#. Apply the following GHOST-related patches to the calibration system code:
+.. COMMENTED OUT - I DON'T THINK THIS IS NEEDED NOW
+    #. Apply the following GHOST-related patches to the calibration system code:
 
-   - ``/path/to/GeminiCalMgr-0.9.9.6-ghost/src/cal/calibration_ghost``:
+       - ``/path/to/GeminiCalMgr-0.9.9.6-ghost/src/cal/calibration_ghost``:
 
-        - Remove ``Ghost.nodandshuffle`` from around line 183;
-        - Add the following at around line 345::
+            - Remove ``Ghost.nodandshuffle`` from around line 183;
+            - Add the following at around line 345::
 
-            def processed_slitflat(self, howmany=None):
-                return self.flat(True, howmany)
+                def processed_slitflat(self, howmany=None):
+                    return self.flat(True, howmany)
 
 
-   - ``/path/to/GeminiCalMgr-0.9.9.6-ghost/src/orm/calibration_ghost``:
-        - Add the following around line 15::
+       - ``/path/to/GeminiCalMgr-0.9.9.6-ghost/src/orm/calibration_ghost``:
+            - Add the following around line 15::
 
-            RESOLUTIONS = ['std', 'high']
-            RESOLUTION_ENUM = Enum(*RESOLUTIONS, name='ghost_resolution')
+                RESOLUTIONS = ['std', 'high']
+                RESOLUTION_ENUM = Enum(*RESOLUTIONS, name='ghost_resolution')
 
-        - Add the following around line 35::
+            - Add the following around line 35::
 
-            res_mode = Column(RESOLUTION_ENUM, index=True)
+                res_mode = Column(RESOLUTION_ENUM, index=True)
 
-        - Add the following around line 67::
+            - Add the following around line 67::
 
-            resolution = ad.res_mode()
-            if resolution in RESOLUTIONS:
-                self.res_mode = resolution
+                resolution = ad.res_mode()
+                if resolution in RESOLUTIONS:
+                    self.res_mode = resolution
 
-#. Deploy the changes you just made to the calibration system::
+    #. Deploy the changes you just made to the calibration system::
 
-    python /path/to/GeminiCalMgr-0.9.9.6-ghost/setup.py install
+        python /path/to/GeminiCalMgr-0.9.9.6-ghost/setup.py install
 
-DRAGONS does not currently automatically send its output calibration files to
-the GeminiCalMgr. You will have to do this manually after each step, e.g.::
+    DRAGONS does not currently automatically send its output calibration files to
+    the GeminiCalMgr. You will have to do this manually after each step, e.g.::
 
-    caldb add calibrations/processed_thing/my_processed_thing.fits
+        caldb add calibrations/processed_thing/my_processed_thing.fits
 
-where ``thing`` is ``bias``, ``flat``, ``dark``, etc.
+    where ``thing`` is ``bias``, ``flat``, ``dark``, etc.
 
 .. note::
     The calibration system knows about which context (quality assurance, ``qa``,
@@ -117,8 +121,9 @@ where ``thing`` is ``bias``, ``flat``, ``dark``, etc.
 Bulk-reducing simulated data
 ----------------------------
 
-To simplify the end-to-end testing of :any:`ghostdr`, Joao Bento has
-contributed a bash script to run the entire reduction sequence in one command::
+To simplify the end-to-end testing of :any:`ghostdr`, Joao Bento and Lance Luvual
+have contributed a bash script to run the entire reduction sequence in one
+command::
 
     ./GHOSTDR/utils/reduce_all.sh
 
