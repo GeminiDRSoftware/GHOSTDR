@@ -1,6 +1,6 @@
 """
-Recipes available to data with tags ['GHOST', 'SLITV', 'CAL', 'DARK'].
-Default is "makeProcessedSlitDark".
+Recipes available to data with tags ``['GHOST', 'SLITV', 'CAL', 'DARK']``.
+Default is ``makeProcessedSlitDark``.
 """
 recipe_tags = set(['GHOST', 'SLITV', 'CAL', 'DARK'])
 

@@ -1,6 +1,6 @@
 """
-Recipes available to data with tags ['GHOST', 'CAL', 'ARC'].
-Default is "makeProcessedArc". SQ is identical to QA recipe.
+Recipes available to data with tags ``['GHOST', 'CAL', 'ARC']``.
+Default is ``makeProcessedArc``, which is imported from the QA module.
 """
 recipe_tags = set(['GHOST', 'CAL', 'ARC'])
 

@@ -1,6 +1,6 @@
 """
-Recipes available to data with tags ['GHOST', 'CAL', 'FLAT'].
-Default is "makeProcessedFlat".
+Recipes available to data with tags ``['GHOST', 'CAL', 'FLAT']``.
+Default is ``makeProcessedFlat``.
 """
 recipe_tags = set(['GHOST', 'CAL', 'FLAT'])
 

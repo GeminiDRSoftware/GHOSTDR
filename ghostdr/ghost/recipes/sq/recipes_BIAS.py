@@ -1,6 +1,6 @@
 """
-Recipes available to data with tags ['GHOST', 'CAL', 'BIAS'].
-Default is "makeProcessedBias".
+Recipes available to data with tags ``['GHOST', 'CAL', 'BIAS']``.
+Default is ``makeProcessedBias``.
 """
 recipe_tags = set(['GHOST', 'CAL', 'BIAS'])
 

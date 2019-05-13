@@ -1,6 +1,6 @@
 """
-Recipes available to data with tags ['GHOST', 'SLITV', 'CAL', 'BIAS'].
-Default is "makeProcessedSlitBias".
+Recipes available to data with tags ``['GHOST', 'SLITV', 'CAL', 'BIAS']``.
+Default is ``makeProcessedSlitBias``.
 """
 recipe_tags = set(['GHOST', 'SLITV', 'CAL', 'BIAS'])
 

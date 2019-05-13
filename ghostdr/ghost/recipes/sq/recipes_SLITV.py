@@ -1,6 +1,6 @@
 """
-Recipes available to data with tags ['GHOST', 'SLITV'].
-Default is "makeProcessedSlit".
+Recipes available to data with tags ``['GHOST', 'SLITV']``.
+Default is ``makeProcessedSlit``.
 """
 recipe_tags = set(['GHOST', 'SLITV'])
 
