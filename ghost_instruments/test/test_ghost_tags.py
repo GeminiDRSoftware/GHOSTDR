@@ -1,5 +1,5 @@
 """
-Test suite for GHOSTDR tags
+Perform a series of regression tests across GHOST-specific AstroData tags.
 """
 
 import pytest

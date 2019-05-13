@@ -1,3 +1,8 @@
+"""
+Perform a series of regression tests across GHOST-specific AstroData
+descriptors.
+"""
+
 import pytest
 import astrodata
 import gemini_instruments
