@@ -29,7 +29,7 @@ class TestOverscanSubtractClass(object):
     ])
     def do_overscan_subtract(self, get_or_create_tmpdir, request):
         """
-        Perform overscan subtraction on raw bias frame
+        Run overscan correction on the main data.
         """
         # Copy the raw data file into here
         rawfilename = 'bias*{}*.fits'.format(request.param)
@@ -77,7 +77,7 @@ class TestOverscanSubtractClass(object):
     def test_overscan_headerkw(self, do_overscan_subtract):
         """
         Check for header keywords SUBOVER and TRIMOVER in overscan-corrected
-        output
+        output.
         """
         rawfile, corrfile = do_overscan_subtract
         corrad = astrodata.open(corrfile)
@@ -89,8 +89,12 @@ class TestOverscanSubtractClass(object):
     def test_overscan_mean(self, do_overscan_subtract):
         """
         Check that:
-        mean(all raw data) - mean(raw overscan) = mean(overscan-corrected)
-        to within some threshold value
+
+        .. math::
+
+            mean(\\textrm{all raw data}) - mean(\\textrm{raw overscan}) = mean(\\textrm{overscan-corrected})
+
+        to within some threshold value.
         """
         mean_threshold_value = 0.005  # 0.5%
 
@@ -122,8 +126,12 @@ class TestOverscanSubtractClass(object):
     def test_overscan_std(self, do_overscan_subtract):
         """
         Check that:
-        std(all raw data) = std(overscan-corrected)
-        to within some threshold value
+
+        .. math::
+
+            std(\\textrm{all raw data}) = std(\\textrm{overscan-corrected})
+
+        to within some threshold value.
         """
         std_threshold_value = 0.005  # 0.5%
 
@@ -148,7 +156,7 @@ class TestOverscanSubtractClass(object):
     def test_overscan_shape(self, do_overscan_subtract):
         """
         Check the shape of the overscan-corrected data matches the DATASEC
-        keyword from the original file
+        keyword from the original file.
         """
         rawfile, corrfile = do_overscan_subtract
         rawad = astrodata.open(rawfile)

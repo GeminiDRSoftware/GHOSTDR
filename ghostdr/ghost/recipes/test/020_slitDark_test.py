@@ -28,7 +28,7 @@ class TestSlitBias(object):
     @pytest.fixture
     def do_slit_dark(self, get_or_create_tmpdir):
         """
-        Perform overscan subtraction on raw bias frame
+        Reduce the test slit dark data.
         """
         rawfilename = 'dark*slit*.fits'
         # Copy the raw data file into here
@@ -83,7 +83,7 @@ class TestSlitBias(object):
 
     def test_slitdark_bias_done(self, do_slit_dark):
         """
-        Check that bias subtraction was actually performed
+        Check that bias subtraction was actually performed.
         """
 
         rawfiles, corrfile, calibs = do_slit_dark

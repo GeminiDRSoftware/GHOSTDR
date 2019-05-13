@@ -32,7 +32,7 @@ class TestMasterFlat(object):
     @pytest.fixture(scope='class', params=ARM_RES_COMBOS)
     def do_master_flat(self, get_or_create_tmpdir, request):
         """
-        Perform overscan subtraction on raw bias frame
+        Run the recipeFlatCreateMaster recipe.
         """
         arm, res = request.param
         rawfilename = 'flat*{}*{}*.fits'.format(res, arm)
@@ -101,7 +101,7 @@ class TestMasterFlat(object):
 
     def test_flat_bias_done(self, do_master_flat):
         """
-        Check that bias subtraction was actually performed
+        Check that bias subtraction was actually performed.
         """
 
         rawfiles, corrfile, calibs = do_master_flat
@@ -123,7 +123,7 @@ class TestMasterFlat(object):
 
     def test_flat_dark_done(self, do_master_flat):
         """
-        Check that bias subtraction was actually performed
+        Check that dark subtraction was actually performed.
         """
 
         rawfiles, corrfile, calibs = do_master_flat

@@ -1,6 +1,6 @@
 # pytest suite
 """
-Tests for primitives_ghost.
+Unit tests for :any:`ghostdr.ghost.primitives_ghost`.
 
 This is a suite of tests to be run with pytest.
 

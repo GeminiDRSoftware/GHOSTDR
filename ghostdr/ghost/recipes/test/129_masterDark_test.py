@@ -29,7 +29,7 @@ class TestMasterDark(object):
     ])
     def do_master_dark(self, get_or_create_tmpdir, request):
         """
-        Perform overscan subtraction on raw bias frame
+        Perform overall dark subtraction on the main data.
         """
         rawfilename = 'dark*{}*.fits'.format(request.param)
         # Copy the raw data file into here
@@ -87,7 +87,7 @@ class TestMasterDark(object):
 
     def test_dark_bias_done(self, do_master_dark):
         """
-        Check that bias subtraction was actually performed
+        Check that bias subtraction was actually performed.
         """
 
         rawfiles, corrfile, calibs = do_master_dark
@@ -110,7 +110,7 @@ class TestMasterDark(object):
     def test_masterdark_sigmaclip(self, do_master_dark):
         """
         Check that the all points within the data extension of the output biases
-        are within the specified sigma of the mean
+        are within the specified sigma of the mean.
         """
 
         sigma_limit = 3.0  # Needs to be kept in-sync with the test recipe value

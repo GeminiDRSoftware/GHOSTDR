@@ -15,30 +15,30 @@ order):
 +--------------+--------+
 | Bundles      | 00n\_  |
 +--------------+--------+
-| Slit bias    | 01n\   |
+| Slit bias    | 01n\_  |
 +--------------+--------+
-| Slit dark    | 02n\   |
+| Slit dark    | 02n\_  |
 +--------------+--------+
-| Slit flat    | 03n\   |
+| Slit flat    | 03n\_  |
 +--------------+--------+
-| Slit arc [*]_| 04n\   |
+| Slit arc [1]_| 04n\_  |
 +--------------+--------+
-| Slit [*]_    | 05n\   |
+| Slit [1]_    | 05n\_  |
 +--------------+--------+
-| Bias         | 11n\   |
+| Bias         | 11n\_  |
 +--------------+--------+
-| Dark         | 12n\   |
+| Dark         | 12n\_  |
 +--------------+--------+
-| Flat         | 13n\   |
+| Flat         | 13n\_  |
 +--------------+--------+
-| Arc          | 14n\   |
+| Arc          | 14n\_  |
 +--------------+--------+
-| Standard     | 15n\   |
+| Standard     | 15n\_  |
 +--------------+--------+
-| Science      | 16n\   |
+| Science      | 16n\_  |
 +--------------+--------+
 
-.. [*] Note that, because slit arcs and the slits associated standards are
+.. [1] Note that, because slit arcs and the slits associated standards are
        treated identically, they are currently tested together
        under the slit arc heading.
 

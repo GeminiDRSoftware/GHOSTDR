@@ -55,7 +55,7 @@ class TestSlitObj(object):
                     params=TYPE_RES_COMBOS)
     def do_slit_obj(self, request, get_or_create_tmpdir):
         """
-        Perform overscan subtraction on raw bias frame
+        Run the final step of slit observation processing.
         """
 
         # import pdb; pdb.set_trace()
@@ -127,7 +127,7 @@ class TestSlitObj(object):
 
     def test_slitarc_bias_done(self, do_slit_obj):
         """
-        Check that bias subtraction was actually performed
+        Check that bias subtraction was actually performed.
         """
 
         rawfiles, corrfiles, calibs = do_slit_obj
@@ -150,7 +150,7 @@ class TestSlitObj(object):
 
     def test_slitarc_dark_done(self, do_slit_obj):
         """
-        Check that dark correction was actually performed
+        Check that dark correction was actually performed.
         """
 
         rawfiles, corrfiles, calibs = do_slit_obj
@@ -173,7 +173,7 @@ class TestSlitObj(object):
 
     def test_slitarc_procslit_done(self, do_slit_obj):
         """
-        Check that processSlits was actually performed
+        Check that processSlits was actually run.
         """
 
         rawfiles, corrfiles, calibs = do_slit_obj
@@ -194,7 +194,7 @@ class TestSlitObj(object):
 
     def test_slitarc_avgepoch(self, do_slit_obj, values=AVGEPOCH_VALUES):
         """
-        Confirm that the average exposure epoch is correct
+        Confirm that the average exposure epoch is correct.
 
         The calculation to do this is somewhat complex, so there's no easy
         way to compute in a different fashion to check it. Best bet is to use

@@ -112,7 +112,7 @@ class TestMasterArc(object):
 
     def test_arc_bias_done(self, do_master_arc):
         """
-        Check that bias subtraction was actually performed
+        Check that bias subtraction was actually performed.
         """
 
         rawfiles, corrfile, calibs = do_master_arc
@@ -134,7 +134,7 @@ class TestMasterArc(object):
 
     def test_arc_dark_done(self, do_master_arc):
         """
-        Check that dark subtraction was actually performed
+        Check that dark subtraction was actually performed.
         """
 
         rawfiles, corrfile, calibs = do_master_arc
@@ -164,7 +164,7 @@ class TestMasterArc(object):
 @pytest.mark.parametrize('arm,res,epoch', TestMasterArc.ARM_RES_COMBOS)
 def test_arc_missing_pixelmodel(arm, res, epoch, get_or_create_tmpdir):
     """
-    Perform overscan subtraction on raw bias frame
+    Check for the correct behaviour/error handling if PIXELMODEL extn. missing.
     """
     rawfilename = 'arc{}*{}*{}[0-9].fits'.format(epoch, res, arm)
     # Copy the raw data file into here

@@ -44,7 +44,7 @@ class TestSlitArc(object):
                     params=TYPE_RES_COMBOS)
     def do_slit_arc(self, request, get_or_create_tmpdir):
         """
-        Perform overscan subtraction on raw bias frame
+        Reduce the test slit arc data.
         """
 
         # import pdb; pdb.set_trace()
@@ -115,7 +115,7 @@ class TestSlitArc(object):
 
     def test_slitarc_bias_done(self, do_slit_arc):
         """
-        Check that bias subtraction was actually performed
+        Check that bias subtraction was actually performed.
         """
 
         rawfiles, corrfiles, calibs = do_slit_arc
@@ -138,7 +138,7 @@ class TestSlitArc(object):
 
     def test_slitarc_dark_done(self, do_slit_arc):
         """
-        Check that dark correction was actually performed
+        Check that dark correction was actually performed.
         """
 
         rawfiles, corrfiles, calibs = do_slit_arc
@@ -161,7 +161,7 @@ class TestSlitArc(object):
 
     def test_slitarc_procslit_done(self, do_slit_arc):
         """
-        Check that dark correction was actually performed
+        Check that processSlits was actually performed.
         """
 
         rawfiles, corrfiles, calibs = do_slit_arc

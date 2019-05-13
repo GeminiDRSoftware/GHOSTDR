@@ -27,7 +27,7 @@ class TestSlitBias(object):
     @pytest.fixture
     def do_slit_bias(self, get_or_create_tmpdir):
         """
-        Perform overscan subtraction on raw bias frame.
+        Reduce the bias slit test data.
         """
         rawfilename = 'bias*slit*.fits'
         # Copy the raw data file into here

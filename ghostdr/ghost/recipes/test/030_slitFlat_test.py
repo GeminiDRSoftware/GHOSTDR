@@ -29,7 +29,7 @@ class TestSlitFlat(object):
                     params=['std', 'high'])
     def do_slit_flat(self, request, get_or_create_tmpdir):
         """
-        Perform overscan subtraction on raw bias frame
+        Reduce the test slit flat data.
         """
 
         # import pdb; pdb.set_trace()
@@ -92,7 +92,7 @@ class TestSlitFlat(object):
 
     def test_slitflat_bias_done(self, do_slit_flat):
         """
-        Check that bias subtraction was actually performed
+        Check that bias subtraction was actually performed.
         """
 
         rawfiles, corrfile, calibs = do_slit_flat
@@ -113,7 +113,7 @@ class TestSlitFlat(object):
 
     def test_slitflat_dark_done(self, do_slit_flat):
         """
-        Check that dark correction was actually performed
+        Check that dark correction was actually performed.
         """
 
         rawfiles, corrfile, calibs = do_slit_flat
