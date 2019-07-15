@@ -16,4 +16,4 @@ def makeProcessedBundle(p):
     p.splitBundle()
     return
 
-default = makeProcessedBundle
+_default = makeProcessedBundle

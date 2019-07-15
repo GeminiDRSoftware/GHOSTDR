@@ -34,4 +34,4 @@ def makeProcessedSlitArc(p):
 
 makeProcessedSlitArc = makeProcessedSlit
 
-default = makeProcessedSlitArc
+_default = makeProcessedSlitArc

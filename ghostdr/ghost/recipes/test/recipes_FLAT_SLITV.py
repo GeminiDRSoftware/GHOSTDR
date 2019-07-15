@@ -12,5 +12,4 @@ def recipeRetrieveSlitDarkTest(p):
     return
 
 
-default = recipeSlitFlatTest
-
+_default = recipeSlitFlatTest

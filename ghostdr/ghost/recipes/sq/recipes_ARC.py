@@ -6,4 +6,4 @@ recipe_tags = set(['GHOST', 'CAL', 'ARC'])
 
 from ..qa.recipes_ARC import makeProcessedArc
 
-default = makeProcessedArc
+_default = makeProcessedArc

@@ -30,4 +30,4 @@ def makeProcessedSlitFlat(p):
     p.storeProcessedSlitFlat()
     return
 
-default = makeProcessedSlitFlat
+_default = makeProcessedSlitFlat

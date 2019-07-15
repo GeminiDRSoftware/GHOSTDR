@@ -7,4 +7,4 @@ recipe_tags = set(['GHOST', 'SPECT', 'PARTNER_CAL'])
 
 from ..qa.recipes_SPECT_PARTNERCAL import reducePCal
 
-default = reducePCal
+_default = reducePCal

@@ -27,4 +27,4 @@ def makeProcessedSlitDark(p):
     p.storeProcessedDark()
     return
 
-default = makeProcessedSlitDark
+_default = makeProcessedSlitDark

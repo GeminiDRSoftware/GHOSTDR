@@ -6,4 +6,4 @@ from ghostdr.ghost.recipes.qa.recipes_BUNDLE import makeProcessedBundle
 def recipeBundleTest(p):
     return makeProcessedBundle(p)
 
-default = recipeBundleTest
+_default = recipeBundleTest

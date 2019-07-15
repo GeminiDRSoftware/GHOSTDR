@@ -24,4 +24,4 @@ def makeProcessedSlitBias(p):
     p.storeProcessedBias()
     return
 
-default = makeProcessedSlitBias
+_default = makeProcessedSlitBias

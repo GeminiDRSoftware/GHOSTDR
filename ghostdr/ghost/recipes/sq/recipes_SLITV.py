@@ -27,4 +27,4 @@ def makeProcessedSlit(p):
     p.storeProcessedSlit()
     return
 
-default = makeProcessedSlit
+_default = makeProcessedSlit

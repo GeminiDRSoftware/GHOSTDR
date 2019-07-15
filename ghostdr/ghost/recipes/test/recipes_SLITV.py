@@ -12,5 +12,4 @@ def recipeRetrieveSlitArcTest(p):
     return
 
 
-default = recipeSlitTest
-
+_default = recipeSlitTest

@@ -7,4 +7,4 @@ def recipeDarkCreateMaster(p):
 
     return recipes_DARK.makeProcessedDark(p)
 
-default = recipeDarkCreateMaster
+_default = recipeDarkCreateMaster

@@ -12,5 +12,4 @@ def recipeRetrieveSlitBiasTest(p):
     return
 
 
-default = recipeSlitDarkTest
-
+_default = recipeSlitDarkTest

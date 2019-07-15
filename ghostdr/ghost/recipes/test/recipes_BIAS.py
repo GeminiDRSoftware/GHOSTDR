@@ -35,4 +35,4 @@ def recipeBiasCreateMaster(p):
     # p.clipSigmaBPM(bpm_value=1, sigma=5.0)
     # return
 
-default = recipeBiasCreateMaster
+_default = recipeBiasCreateMaster

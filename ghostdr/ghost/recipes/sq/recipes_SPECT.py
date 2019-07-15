@@ -7,4 +7,4 @@ recipe_tags = set(['GHOST', 'SPECT'])
 
 from ..qa.recipes_SPECT import reduce
 
-default = reduce
+_default = reduce

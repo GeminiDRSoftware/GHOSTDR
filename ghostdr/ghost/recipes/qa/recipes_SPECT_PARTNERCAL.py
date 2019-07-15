@@ -36,4 +36,4 @@ def reducePCal(p):
     p.addWavelengthSolution()
     return
 
-default = reduce
+_default = reduce

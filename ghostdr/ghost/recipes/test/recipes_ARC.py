@@ -7,4 +7,4 @@ def recipeArcCreateMaster(p):
 
     return recipes_ARC.makeProcessedArc(p)
 
-default = recipeArcCreateMaster
+_default = recipeArcCreateMaster

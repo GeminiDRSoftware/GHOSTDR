@@ -7,4 +7,4 @@ def recipeFlatCreateMaster(p):
 
     return recipes_FLAT.makeProcessedFlat(p)
 
-default = recipeFlatCreateMaster
+_default = recipeFlatCreateMaster
