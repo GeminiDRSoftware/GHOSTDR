@@ -9,6 +9,7 @@ from . import parameters_ghost_bundle
 from gempy.gemini import gemini_tools as gt
 from recipe_system.utils.decorators import parameter_override
 
+from collections import Counter
 import astrodata
 import copy
 import itertools
@@ -62,12 +63,12 @@ class GHOSTBundle(GHOST):
             # TODO: may need to make multiple SV files, not one per SV exposure
             # but one per RED/BLUE exposure which contains all SV exposures that
             # overlap with the RED/BLUE one in time (check with Jon)
-            extns = [x for x in ad if x.hdr.get('CAMERA').lower() == 'slit']
+            extns = [x for x in ad if x.hdr.get('CAMERA').lower() == 'slitv']
             if len(extns) > 0:
                 _write_newfile(extns, '_slit', ad, log)
 
             # now do non-slitv extensions
-            extns = [x for x in ad if x.hdr.get('CAMERA').lower() != 'slit']
+            extns = [x for x in ad if x.hdr.get('CAMERA').lower() != 'slitv']
             key = lambda x: '_' + x.hdr.get('CAMERA').lower() + str(
                 x.hdr.get('EXPID'))
             extns = sorted(extns, key=key)
@@ -85,6 +86,33 @@ class GHOSTBundle(GHOST):
 ##############################################################################
 # Below are the helper functions for the primitives in this module           #
 ##############################################################################
+def _get_common_hdr_value(extns, key):
+    """
+    Helper function to get a common header value from a list of extensions.
+
+    Parameters
+    ----------
+    extns : iterable of :any:`astrodata.Astrodata`
+        AstroData extensions to be appended to the new file
+    key : str
+        The FITS header key to find in each extension 
+
+    Raises
+    ------
+    KeyError
+        If the ``key`` parameter has multiple values across the extensions
+    """
+
+    # Get the keyword from every extension
+    c = Counter([x.hdr.get(key) for x in extns])
+    # The first extension may not contain the keyword, but we don't care
+    del c[None]
+    # Check that every other extension has the same value for the keyword
+    if len(c.most_common()) != 1:
+        raise KeyError('multiple values for ' + key)
+    val, cnt = c.most_common()[0]
+    return val
+
 def _write_newfile(extns, suffix, base, log):
     """
     Helper function to write sub-files out from a MEF bundle.
@@ -108,17 +136,28 @@ def _write_newfile(extns, suffix, base, log):
         If the ``extns`` parameter is :any:`None`, or empty
     """
     assert extns and len(extns) > 0
+    # Start with a copy of the base PHU
     n = astrodata.create(copy.deepcopy(base.phu))
+    # But also look for the extension with an empty data array,
+    # because this is the real PHU from the original file before
+    # it was mashed into a giant MEF.
+    for x in extns:
+        if (x.data.size == 0):
+            phu = PrimaryHDU(data=None, header=copy.deepcopy(x.hdr))
+            n = astrodata.create(phu)
     for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:
         try:
             del n.phu[kw]
         except KeyError:
             pass
-    for x in extns: n.append(x)
-    for kw in ['CAMERA', 'CCDNAME']:
-        n.phu.set(kw, n[0].hdr.get(kw))
+    for x in extns:
+        if (x.data.size > 0):
+            n.append(x)
+    for kw in ['CAMERA', 'CCDNAME', 'CCDSUM']:
+        n.phu.set(kw, _get_common_hdr_value(extns, kw))
     n.filename = base.filename
-    binning = '_' + 'x'.join(n[0].hdr.get('CCDSUM').split())
+    ccdsum = _get_common_hdr_value(extns, 'CCDSUM')
+    binning = '_' + 'x'.join(ccdsum.split())
     n.update_filename(suffix=binning+suffix)
     log.stdinfo("   Writing {}".format(n.filename))
     n.write(overwrite=True)  # should we always overwrite?
