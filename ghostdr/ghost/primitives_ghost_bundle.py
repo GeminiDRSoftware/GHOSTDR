@@ -63,12 +63,12 @@ class GHOSTBundle(GHOST):
             # TODO: may need to make multiple SV files, not one per SV exposure
             # but one per RED/BLUE exposure which contains all SV exposures that
             # overlap with the RED/BLUE one in time (check with Jon)
-            extns = [x for x in ad if x.hdr.get('CAMERA').lower() == 'slitv']
+            extns = [x for x in ad if x.hdr.get('CAMERA').lower() == 'slit']
             if len(extns) > 0:
                 _write_newfile(extns, '_slit', ad, log)
 
             # now do non-slitv extensions
-            extns = [x for x in ad if x.hdr.get('CAMERA').lower() != 'slitv']
+            extns = [x for x in ad if x.hdr.get('CAMERA').lower() != 'slit']
             key = lambda x: '_' + x.hdr.get('CAMERA').lower() + str(
                 x.hdr.get('EXPID'))
             extns = sorted(extns, key=key)
