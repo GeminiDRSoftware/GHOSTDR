@@ -30,6 +30,9 @@ class TestOverscanSubtractClass(object):
     def do_overscan_subtract(self, get_or_create_tmpdir, request):
         """
         Run overscan correction on the main data.
+
+        .. note::
+            Fixture.
         """
         # Copy the raw data file into here
         rawfilename = 'bias*{}*.fits'.format(request.param)

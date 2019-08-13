@@ -3,12 +3,6 @@
 Unit tests for :any:`ghostdr.ghost.primitives_ghost_spect`.
 
 This is a suite of tests to be run with pytest.
-
-To run:
-    1) Set the environment variable GEMPYTHON_TESTDATA to the path that
-       contains the directories with the test data.
-       Eg. /net/chara/data2/pub/gempython_testdata/
-    2) From the ??? (location): pytest -v --capture=no
 """
 import os
 import numpy as np
@@ -79,6 +73,12 @@ class TestGhost:
 
     @pytest.fixture(scope='class')
     def data_applyFlatBPM(self, tmpdir_factory):
+        """
+        Apply the flat BPM to a minimal test data file.
+
+        .. note::
+            Fixture.
+        """
         tmpsubdir = tmpdir_factory.mktemp('ghost_applyflatbpm')
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
@@ -166,6 +166,12 @@ class TestGhost:
 
     @pytest.fixture(scope='class')
     def data_barycentricCorrect(self, tmpdir_factory):
+        """
+        Create data for the barycentric correction test.
+
+        .. note::
+            Fixture.
+        """
         ad = self.generate_minimum_file()
         tmpsubdir = tmpdir_factory.mktemp('ghost_bccorrect')
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
@@ -549,7 +555,10 @@ class TestGhost:
     def data__get_polyfit_filename(self, tmpdir_factory):
         """
         Only need a 'placeholder' AD for this test, can modify on the fly within
-        the test itself
+        the test itself.
+
+        .. note::
+            Fixture.
         """
         tmpsubdir = tmpdir_factory.mktemp('ghost_pfname')
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
@@ -605,7 +614,11 @@ class TestGhost:
     @pytest.fixture(scope='class')
     def data__compute_barycentric_correction(self, tmpdir_factory):
         """
-        Generate a minimal data file for test__compute_barycentric_correction
+        Generate a minimal data file for
+        :any:`test__compute_barycentric_correction`
+
+        .. note::
+            Fixture.
         """
         tmpsubdir = tmpdir_factory.mktemp('ghost_computebc')
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
@@ -683,6 +696,12 @@ class TestGhost:
 
     @pytest.fixture(scope='class')
     def data__interp_spect(self):
+        """
+        Create an interpolated wavelength scale.
+
+        .. note::
+            Fixture.
+        """
         # Generate a wavelength scale
         wavl = np.arange(1000., 9000., 5.)
         # Form some data

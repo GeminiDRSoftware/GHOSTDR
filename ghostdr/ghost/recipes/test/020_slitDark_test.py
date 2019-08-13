@@ -29,6 +29,9 @@ class TestSlitBias(object):
     def do_slit_dark(self, get_or_create_tmpdir):
         """
         Reduce the test slit dark data.
+
+        .. note::
+            Fixture.
         """
         rawfilename = 'dark*slit*.fits'
         # Copy the raw data file into here

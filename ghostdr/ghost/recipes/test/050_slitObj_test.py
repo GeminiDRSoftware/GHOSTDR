@@ -56,6 +56,9 @@ class TestSlitObj(object):
     def do_slit_obj(self, request, get_or_create_tmpdir):
         """
         Run the final step of slit observation processing.
+
+        .. note::
+            Fixture.
         """
 
         # import pdb; pdb.set_trace()

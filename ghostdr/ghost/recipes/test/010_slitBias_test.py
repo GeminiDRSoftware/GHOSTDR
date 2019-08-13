@@ -28,6 +28,9 @@ class TestSlitBias(object):
     def do_slit_bias(self, get_or_create_tmpdir):
         """
         Reduce the bias slit test data.
+
+        .. note::
+            Fixture.
         """
         rawfilename = 'bias*slit*.fits'
         # Copy the raw data file into here

@@ -46,8 +46,8 @@ directory once the tests are complete.
 
 .. warning::
     You'll need 10GB of free disk space to be able to run the full reduction
-    test suite. The full reduction test suite fixture will abort the test run
-    if it detects you don't have enough space.
+    test suite. The fixture which prepares the temporary folder for the tests
+    will abort the test run if it detects you don't have enough space.
 
 If you only want to run the regression and unit tests, you can invoke
 pytest thus::
@@ -109,23 +109,44 @@ Full reduction tests
 .. automodule:: ghostdr.ghost.recipes.test
     :members:
 
+Bundles
+"""""""
+
 .. automodule:: ghostdr.ghost.recipes.test.000_bundles_test
     :members:
+
+Slit bias
+"""""""""
 
 .. automodule:: ghostdr.ghost.recipes.test.010_slitBias_test
     :members:
 
+Slit dark
+"""""""""
+
 .. automodule:: ghostdr.ghost.recipes.test.020_slitDark_test
     :members:
+
+Slit flat
+"""""""""
 
 .. automodule:: ghostdr.ghost.recipes.test.030_slitFlat_test
     :members:
 
+Slit arc
+""""""""
+
 .. automodule:: ghostdr.ghost.recipes.test.040_slitArcStandard_test
     :members:
 
+Standard slit observation
+"""""""""""""""""""""""""
+
 .. automodule:: ghostdr.ghost.recipes.test.050_slitObj_test
     :members:
+
+Bias
+""""
 
 .. automodule:: ghostdr.ghost.recipes.test.110_overscanCorrect_test
     :members:
@@ -133,11 +154,20 @@ Full reduction tests
 .. automodule:: ghostdr.ghost.recipes.test.111_masterBias_test
     :members:
 
+Dark
+""""
+
 .. automodule:: ghostdr.ghost.recipes.test.129_masterDark_test
     :members:
 
+Flat
+""""
+
 .. automodule:: ghostdr.ghost.recipes.test.139_masterFlat_test
     :members:
+
+Arc
+"""
 
 .. automodule:: ghostdr.ghost.recipes.test.149_masterArc_test
     :members:

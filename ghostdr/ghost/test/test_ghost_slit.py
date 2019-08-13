@@ -3,12 +3,6 @@
 Unit tests for :any:`ghostdr.ghost.primitives_ghost_slit`.
 
 This is a suite of tests to be run with pytest.
-
-To run:
-    1) Set the environment variable GEMPYTHON_TESTDATA to the path that
-       contains the directories with the test data.
-       Eg. /net/chara/data2/pub/gempython_testdata/
-    2) From the ??? (location): pytest -v --capture=no
 """
 import os
 import shutil
@@ -43,7 +37,10 @@ class TestGhostSlit:
     @pytest.fixture(scope='class')
     def create_slit_package(self, tmpdir_factory):
         """
-        Generate a package of dummy slit files
+        Generate a package of dummy slit files.
+
+        .. note::
+            Fixture.
         """
         rawfilename = 'testslitpackage.fits'
         tmpsubdir = tmpdir_factory.mktemp('ghost_slit')
@@ -144,7 +141,8 @@ class TestGhostSlit:
         """
         Checks to make:
 
-        - Ensure the slit viewer bundle ends up with
+        - Ensure the slit viewer bundle ends up with:
+
             a) A mean exposure epoch - DONE in test_slitarc_procslit_done
             b) The correct mean exposure epoch - DONE in test_slitarc_avgepoch
         """

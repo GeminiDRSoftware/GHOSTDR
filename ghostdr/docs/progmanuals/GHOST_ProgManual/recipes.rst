@@ -1,11 +1,10 @@
 .. recipes:
 
+:tocdepth: 2
+
 ********************
 Recipes and Contexts
 ********************
-
-Contexts
-========
 
 .. include:: ../../../ghost/recipes/docs/sq.rst
 
@@ -22,7 +21,10 @@ Contexts
 
 Technical Flow Charts
 =====================
-technical flow charts for each recipes
+
+What does a 'technical' flow chart look like?
 
 Issues and Limitations
 ======================
+
+Issues and limitations here

@@ -37,7 +37,10 @@ class TestMasterArc(object):
     @pytest.fixture(scope='class', params=ARM_RES_COMBOS)
     def do_master_arc(self, get_or_create_tmpdir, request):
         """
-        Perform overscan subtraction on raw bias frame
+        Perform overscan subtraction on raw bias frame.
+
+        .. note::
+            Fixture.
         """
         arm, res, epoch = request.param
         rawfilename = 'arc{}*{}*{}[0-9].fits'.format(epoch, res, arm)

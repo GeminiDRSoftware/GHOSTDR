@@ -3,12 +3,6 @@
 Unit tests for :any:`ghostdr.ghost.primitives_ghost`.
 
 This is a suite of tests to be run with pytest.
-
-To run:
-    1) Set the environment variable GEMPYTHON_TESTDATA to the path that
-       contains the directories with the test data.
-       Eg. /net/chara/data2/pub/gempython_testdata/
-    2) From the ??? (location): pytest -v --capture=no
 """
 import os
 import glob

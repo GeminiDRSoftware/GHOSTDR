@@ -29,6 +29,9 @@ class TestMasterBias(object):
     def do_master_bias(self, get_or_create_tmpdir, request):
         """
         Perform bias subtraction on the main data.
+
+        .. note::
+            Fixture.
         """
         rawfilename = 'bias*{}*.fits'.format(request.param)
         # Copy the raw data file into here

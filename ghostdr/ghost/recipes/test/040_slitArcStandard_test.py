@@ -45,6 +45,9 @@ class TestSlitArc(object):
     def do_slit_arc(self, request, get_or_create_tmpdir):
         """
         Reduce the test slit arc data.
+
+        .. note::
+            Fixture.
         """
 
         # import pdb; pdb.set_trace()

@@ -33,6 +33,9 @@ class TestMasterFlat(object):
     def do_master_flat(self, get_or_create_tmpdir, request):
         """
         Run the recipeFlatCreateMaster recipe.
+
+        .. note::
+            Fixture.
         """
         arm, res = request.param
         rawfilename = 'flat*{}*{}*.fits'.format(res, arm)

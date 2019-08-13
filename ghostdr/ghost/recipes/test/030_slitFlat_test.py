@@ -30,6 +30,9 @@ class TestSlitFlat(object):
     def do_slit_flat(self, request, get_or_create_tmpdir):
         """
         Reduce the test slit flat data.
+
+        .. note::
+            Fixture.
         """
 
         # import pdb; pdb.set_trace()

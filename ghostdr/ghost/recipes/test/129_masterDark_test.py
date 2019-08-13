@@ -30,6 +30,9 @@ class TestMasterDark(object):
     def do_master_dark(self, get_or_create_tmpdir, request):
         """
         Perform overall dark subtraction on the main data.
+
+        .. note::
+            Fixture.
         """
         rawfilename = 'dark*{}*.fits'.format(request.param)
         # Copy the raw data file into here
