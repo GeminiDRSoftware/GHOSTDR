@@ -159,6 +159,13 @@ def _write_newfile(extns, suffix, base, log):
     ccdsum = _get_common_hdr_value(extns, 'CCDSUM')
     binning = '_' + 'x'.join(ccdsum.split())
     n.update_filename(suffix=binning+suffix)
+
+    # MCW 190813 - Update the ORIGNAME of the file
+    # Otherwise, every time we do a 'strip' file rename, the base file name
+    # will go back to being the MEF bundle file name, and things will
+    # quickly start to overlap each other
+    n.phu['ORIGNAME'] = n.filename
+
     log.stdinfo("   Writing {}".format(n.filename))
     n.write(overwrite=True)  # should we always overwrite?
 
