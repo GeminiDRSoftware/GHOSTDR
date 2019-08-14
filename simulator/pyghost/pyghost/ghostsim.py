@@ -751,8 +751,8 @@ class Arm(object):
         if self.arm == 'red':
             # Additional slit rotation across an order needed to match Zemax.
             self.extra_rot = 2.0
-            self.szx = 6144
-            self.szy = 6160
+            self.szx = 6160        # Switched by MCWMCW
+            self.szy = 6144        # 190814
             self.f_cam = 264.0
             self.px_sz = 15e-3
             self.drot = -2.0       # Detector rotation
@@ -770,8 +770,8 @@ class Arm(object):
         elif self.arm == 'blue':
             # Additional slit rotation accross an order needed to match Zemax.
             self.extra_rot = 2.0
-            self.szx = 4096
-            self.szy = 4112
+            self.szx = 4112  # Switched by MCW
+            self.szy = 4096  # 190814
             self.f_cam = 264.0
             self.px_sz = 15e-3
             self.d_x = 1000/1137.  # VPH line spacing
@@ -1719,12 +1719,14 @@ class Arm(object):
         #         np.zeros_like(image[:, hlfw:]),
         #     ), axis=-1)
 
-        image = image.T  # transpose image for conventional axes
+        # MCW 190814 - Flip the image y-axis (axis 0)
+        image = image.T[::-1, :]  # transpose image for conventional axes
         # Split the image into sections for each readout amplifier
         ampims, cxl, cxh, cyl, cyh = split_image(
             image, namps, return_headers=True)
 
-        cosmic_img = cosmic_img.T
+        # MCW 190814 - Flip the image y-axis (axis 0)
+        cosmic_img = cosmic_img.T[::-1, :]
         cosims = split_image(cosmic_img, namps)
         cosims = [add_overscan(i, overscan) for i in cosims]
         if self.split and self.crplane and self.cosmics:
