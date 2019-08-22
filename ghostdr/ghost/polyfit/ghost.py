@@ -27,6 +27,11 @@ from __future__ import division, print_function
 import numpy as np
 from .polyspect import Polyspect
 
+GHOST_BLUE_SZX = 4112
+GHOST_BLUE_SZY = 4096
+GHOST_RED_SZX = 6160
+GHOST_RED_SZY = 6144
+
 
 class GhostArm(Polyspect):
     """
@@ -99,11 +104,13 @@ class GhostArm(Polyspect):
         """
         # MCW 190822 - swapped szy and szx values for new data
         if arm == 'red':
-            Polyspect.__init__(self, m_ref=50, szx=6160, szy=6144, m_min=34,
-                               m_max=67, transpose=True)
+            Polyspect.__init__(self, m_ref=50,
+                               szx=GHOST_RED_SZX, szy=GHOST_RED_SZY,
+                               m_min=34, m_max=67, transpose=True)
         elif arm == 'blue':
-            Polyspect.__init__(self, m_ref=80, szx=4112, szy=4096, m_min=63,
-                               m_max=95, transpose=True)
+            Polyspect.__init__(self, m_ref=80,
+                               szx=GHOST_BLUE_SZX, szy=GHOST_BLUE_SZY,
+                               m_min=63, m_max=95, transpose=True)
         else:
             print("Unknown spectrograph arm!")
             raise UserWarning
