@@ -162,7 +162,8 @@ class SlitView(object):
         else:
             return profile
 
-    def object_slit_profiles(self, arm='red', correct_for_sky=True, used_objects=[0,1],
+    def object_slit_profiles(self, arm='red', correct_for_sky=True,
+                             used_objects=[0, 1],
                              append_sky=True, normalise_profiles=True):
         """
         Extract object slit profiles.
@@ -181,8 +182,10 @@ class SlitView(object):
         normalise_profiles : bool, optional
             Should profiles be normalised? Defaults to True.
             
-        used_objects: indices of used objects
-            FIXME: Totally untested and handing off from Mike to Marc
+        used_objects: list of int, indices of used objects
+            Denotes which objects should be extracted. Should be a list
+            containing the ints 0, 1, or both, or None to extract sky only.
+            FIXME: Needs testing
 
         Returns
         -------
@@ -191,6 +194,16 @@ class SlitView(object):
 
         TODO: Figure out centroid array behaviour if needed.
         """
+        # Input checking
+        if len(used_objects) > 2:
+            raise ValueError('used_objects must have length 1 or 2')
+        used_objects = [int(_) for _ in used_objects]
+        if not np.all([_ in [0, 1] for _ in used_objects]):
+            raise ValueError('Only 0 and 1 may be in used_objects')
+        if len(used_objects) != len(set(used_objects)):
+            raise ValueError('Duplicate values are not allowed in '
+                             'used_objects')
+
         # Find the slit profile.
         full_profile = self.slit_profile(arm=arm)
 
@@ -212,7 +225,7 @@ class SlitView(object):
 
         # Extract the objects.
         profiles = []
-        for boundary in self.object_boundaries[arm][used_objects]:
+        for boundary in [self.object_boundaries[arm][_] for _ in used_objects]:
             profiles.append(np.copy(full_profile))
             profiles[-1][:boundary[0]] = 0
             profiles[-1][boundary[1]+1:] = 0
