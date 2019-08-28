@@ -103,6 +103,29 @@ class Files():
             
             self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/flat95_'+self.mode+'_2_MEF_2x2_slit_slitflat.fits'
             self.slit_arc_image = self.basedir + 'calibrations/processed_slit/arcBefore95_'+self.mode+'_MEF_2x2_slit_slit.fits'
+        elif self.user=='mike':
+            # This is the directory containing the raw (and recently reduced)
+            # files.
+            self.basedir = '/Users/mireland/data/ghost/dhs_testdata_10jul/'
+            
+            self.arclinefile_ar_only = '/Users/mireland/python/GHOSTDR/simulator/pyghost/pyghost/data/mnras_ar_only.txt'
+            self.default_xmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/high/161120/xmod.fits'
+            self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_xmod.fits'
+            self.default_wmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/high/161120/wavemod.fits'
+
+            # Now define locations of actual images for fitting or visualisation.
+            self.flat_image_file = self.basedir + "flat_processed.fits"
+            
+            
+            self.arc_image_file = self.basedir + "intermediates.Et18qyON6m/arcBefore95_"+self.mode+"_MEF_1x1_"+self.cam+"1_tiled.fits"
+
+            self.arc_reduced_file = self.basedir + 'calibrations/processed_arc/arcBefore95_'+self.mode+'_MEF_1x1_'+self.cam+'1_arc.fits'
+            self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
+            #self.flat_image_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
+            self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
+            
+            self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/flat95_'+self.mode+'_2_MEF_2x2_slit_slitflat.fits'
+            self.slit_arc_image = self.basedir + 'calibrations/processed_slit/arcBefore95_'+self.mode+'_MEF_2x2_slit_slit.fits'
         else:
             print('Invalid user, try again.')
         

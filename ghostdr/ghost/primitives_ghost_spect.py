@@ -774,6 +774,7 @@ class GHOSTSpect(GHOST):
                                  ]/flat[0].data[
                         pix_to_correct
                     ]
+                    import pdb; pdb.set_trace()
                     corrected_data[pix_to_correct] *= correction
                     extractor.vararray[pix_to_correct] *= correction**2
                 except AttributeError as e:  # Catch if no PIXELMODEL

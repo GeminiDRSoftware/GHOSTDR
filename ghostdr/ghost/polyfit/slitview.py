@@ -162,7 +162,7 @@ class SlitView(object):
         else:
             return profile
 
-    def object_slit_profiles(self, arm='red', correct_for_sky=True,
+    def object_slit_profiles(self, arm='red', correct_for_sky=True, used_objects=[0,1],
                              append_sky=True, normalise_profiles=True):
         """
         Extract object slit profiles.
@@ -180,6 +180,9 @@ class SlitView(object):
 
         normalise_profiles : bool, optional
             Should profiles be normalised? Defaults to True.
+            
+        used_objects: indices of used objects
+            FIXME: Totally untested and handing off from Mike to Marc
 
         Returns
         -------
@@ -209,7 +212,7 @@ class SlitView(object):
 
         # Extract the objects.
         profiles = []
-        for boundary in self.object_boundaries[arm]:
+        for boundary in self.object_boundaries[arm][used_objects]:
             profiles.append(np.copy(full_profile))
             profiles[-1][:boundary[0]] = 0
             profiles[-1][boundary[1]+1:] = 0

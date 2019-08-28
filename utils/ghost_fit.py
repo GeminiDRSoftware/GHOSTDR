@@ -2,9 +2,11 @@
 
 
 """
+#A path hack...
+#import sys; import os; sys.path.insert(0, os.path.abspath('..'))
 
 from __future__ import division, print_function
-from ghostdr import polyfit
+from ghostdr.ghost import polyfit #!!! Used to be from ghostdr import poilyfit
 import astropy.io.fits as pyfits
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,7 +16,7 @@ import matplotlib.cm as cm
 import astropy.io.fits as pyfits
 import input_locations
 
-user='joao'
+user='mike'
 mode='high'
 cam='red'
 
@@ -27,7 +29,7 @@ flat_file = files.flat_image_file
 flat_data = pyfits.getdata(flat_file)
 
 #instantiate the ghostsim arm
-ghost = polyfit.ghost.GhostArm('red',mode='high')
+ghost = polyfit.ghost.GhostArm('blue',mode='std')
 
 
 #Get the initial default model from the lookup location
@@ -45,7 +47,8 @@ flat_conv=ghost.slit_flat_convolve(flat_data)
 #Have a look at the default model and make small adjustments if needed.
 # This step should not be part of the primitive !!!!!
 # It is for engineering purposes only!
-adjusted_xparams=ghost.adjust_model(flat_conv,xparams=xparams,convolve=False,percentage_variation=10)
+#!!! MJI: was adjust_model
+adjusted_xparams=ghost.adjust_x(flat_conv,xparams=xparams,convolve=False,percentage_variation=10)
 
 #Optionally write this intermediate model to disk
 #pyfits.writeto('new_xmod.fits',adjusted_xparams)

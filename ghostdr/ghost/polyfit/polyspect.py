@@ -425,7 +425,7 @@ class Polyspect(object):
             if not self.transpose:
                 img = img.T
             plt.clf()
-            plt.imshow(np.arcsinh((img - np.median(img)) / 100), aspect='auto',
+            plt.imshow(np.arcsinh(np.maximum(img - np.median(img),0) / 100), aspect='auto',
                        interpolation='nearest', cmap=cm.gray)
             plt.axis([0, img.shape[1], img.shape[0], 0])
             plt.plot(x_int.T + + self.szx // 2)
@@ -1096,7 +1096,7 @@ class Polyspect(object):
                           color='green', linestyle='None', marker='.')
 
         # Now over plot the image and add a contrast adjustment slider.
-        image_min = data.min()
+        image_min = np.percentile(data,10) #!!! MJI Hack
         image_max = data.max()
         image_diff = image_max - image_min
         init_contrast = 0.5
@@ -1105,16 +1105,16 @@ class Polyspect(object):
                                 valinit=init_contrast)
 
         image = axx.imshow(data,
-                           vmin = image_min + init_contrast*image_diff//8,
-                           vmax = image_max - init_contrast*image_diff//2)
+                           vmin = image_min, # + init_contrast*image_diff//8
+                           vmax = image_max - init_contrast*image_diff) #//2
 
 
         def update_imshow(val):
             """
             Function used to trigger update on the contrast slider
             """
-            image.set_clim(vmin = image_min + contrastSlider.val*image_diff//8,
-                           vmax = image_max - contrastSlider.val*image_diff//2)
+            image.set_clim(vmin = image_min, # + contrastSlider.val*image_diff//8
+                           vmax = image_max - contrastSlider.val*image_diff) #//2
 
         contrastSlider.on_changed(update_imshow)
 
@@ -1168,7 +1168,7 @@ class Polyspect(object):
                 left = j * width * 2
                 bottom = 1 - (i + 1) * height * 2 + height
                 axq[i][j] = plt.axes([left, bottom, width, height],
-                                     axisbg=axcolor)
+                                     facecolor=axcolor) #axisbg
                 if params[i, j] == 0:
                     sliders[i][j] = Slider(axq[i][j],
                                            'coeff' + str(i) + str(j), 0, 0.1,

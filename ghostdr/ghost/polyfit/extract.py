@@ -87,7 +87,7 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
         plt.plot(col_data, label='data')
         plt.plot(y_hat + nsigma * np.sqrt(var_use), label='limit')
         plt.pause(.001)
-
+        
     return new_bad
 
 
@@ -387,7 +387,9 @@ class Extractor(object):
             direction
 
         """
-
+        #Lets keep track of the number of additional cosmic rays as an object property
+        self.num_additional_crs = 0
+        
         if data is None:
             if fl is None:
                 raise ValueError("Must input data or file")
@@ -455,7 +457,8 @@ class Extractor(object):
         # PSFs)
         spec_conv_weights = np.hanning(15)[1:-1]
         spec_conv_weights /= np.sum(spec_conv_weights)
-        # Also convolve in the spatial direction, to 
+        
+        # Also convolve in the spatial direction. 
         # FIXME: The need for this convolution might be that the simulated data is just 
         # too good, and we need to add optical aberrations.
         spat_conv_weights = np.array([0.25, .5, .25])
@@ -471,11 +474,9 @@ class Extractor(object):
                                                    spat_conv_weights, axis=0)
         
         #Set the inverse variance to zero for bad pixels. Note that if all pixels end
-        #up being bad for an extraction, then it will fail. For simplicity, we'll set
-        #an inverse variance that is effectively 0 for counts up to 10^5.
-        #FIXME: Use an inverse variance of 0 here, and propagate NaNs correctly.
+        #up being bad for an extraction, then it will fail.
         if self.badpixmask is not None:
-            pixel_inv_var[self.badpixmask.astype(bool)] = 1e-10
+            pixel_inv_var[self.badpixmask.astype(bool)] = 0
             
         # Loop through all orders then through all y pixels.
         for i in range(nm):
@@ -536,13 +537,32 @@ class Extractor(object):
                     col_inv_var = pixel_inv_var[j, x_ix]
                 else:
                     col_data = data[x_ix, j]
-                    col_inv_var = pixel_inv_var[x_ix, j]
+                    col_inv_var = pixel_inv_var[x_ix, j]                    
 
                 # Search for additional cosmic rays here, by seeing if the data
                 # look different to the model.
                 additional_crs = find_additional_crs(phi, slitim_offsets,
                                                      col_data, col_inv_var,
                                                      debug=debug_crs)
+                self.num_additional_crs += len(additional_crs)
+                                                     
+                #Insist that variance if physical. If the model has a significant error
+                #on any pixel, we don't want the weights to be completely wrong - this
+                #check ensures that a reasonable extraction is possible for an imperfect
+                #model. For each of the phi[:,object] arrays, "large" values can't 
+                #correspond to "small" variances. So set the minimum variance to be 
+                #object shot noise.
+                good_pix = np.where(col_inv_var != 0)[0]
+                col_inv_var_mat = np.reshape(col_inv_var.repeat(no), (nx_cutout, no))
+                
+                minimum_variance = phi * np.sum(phi[good_pix,:]/ \
+                    col_inv_var_mat[good_pix,:], axis=0)/ \
+                    np.sum(phi[good_pix,:]**2, axis=0)
+                
+                # FIXME: This is not appropriate for sky fibers.
+                col_inv_var_mat[good_pix] = 1./np.maximum(1./col_inv_var_mat[good_pix], \
+                    minimum_variance[good_pix])
+                                                     
                 if len(additional_crs) > 0:
                     col_inv_var[additional_crs] = 0
                     if self.badpixmask is not None:
@@ -557,17 +577,18 @@ class Extractor(object):
                 # equation 9 Simplify things by writing the sum in the
                 # computation of "b" as a matrix multiplication.
                 # We can do this because we're content to invert the
-                # (small) matrix "c" here. R
+                # (small) matrix "c" here. 
+                
                 # FIXME: Transpose matrices appropriately so that multiplication
                 # order is the same as documentation.
-                col_inv_var_mat = np.reshape(
-                    col_inv_var.repeat(no), (nx_cutout, no))
                 b_mat = phi * col_inv_var_mat
                 c_mat = np.dot(phi.T, phi * col_inv_var_mat)
+                
                 # FIXME: Sometimes the determinant of c_mat is 0.0
                 # leading to the impossibility of inverting the matrix.
                 # currently the pixel weights are unmodified and those used are
                 # whatever the last iteration calculation was.
+                
                 # FIXME: The above problem is made more complicated by the fact
                 # that due to the different slit magnifications,
                 # the previous weights may not have the same shape, so
@@ -677,6 +698,7 @@ class Extractor(object):
         slit_microns_per_det_pix_x = np.mean(matrices[:, :, 0, 0])
         slit_pix_per_det_pix = slit_microns_per_det_pix_x / \
                                self.slitview.microns_pix
+
         # Create the profile of a mean detector pixel in slit pixel units.
         det_pix = np.ones(int(slit_pix_per_det_pix) + 2)
         det_pix[0] = 0.5 * (slit_pix_per_det_pix - int(slit_pix_per_det_pix))

@@ -98,11 +98,11 @@ class GhostArm(Polyspect):
             The y binning of the detector. Defaults to 1.
         """
         if arm == 'red':
-            Polyspect.__init__(self, m_ref=50, szx=6144, szy=6160, m_min=34,
-                               m_max=67, transpose=True)
-        elif arm == 'blue':
+            Polyspect.__init__(self, m_ref=50, szx=6160, szy=6144, m_min=34,
+                               m_max=67, transpose=True) #!!! MJI Need to Swap!!!
+        elif arm == 'blue': 
             Polyspect.__init__(self, m_ref=80, szx=4096, szy=4112, m_min=63,
-                               m_max=95, transpose=True)
+                               m_max=95, transpose=True) #!!! MJI Need to Swap!!!
         else:
             print("Unknown spectrograph arm!")
             raise UserWarning

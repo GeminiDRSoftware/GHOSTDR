@@ -35,11 +35,11 @@ if (model != 'W') and (model != 'X'):
     sys.exit()
 
 # Regardless, need to initialise a few things.
-mode = 'high' # The spectrograph resolution mode.
-cam = 'red'  # The camera
+mode = 'std' # The spectrograph resolution mode.
+cam = 'blue'  # The camera
 # This variable makes it easy for each user (currently only Joao) to
 # have all file locations defined without overwriting.
-user = 'joao'
+user = 'mike'
 
 files = input_locations.Files(user=user, mode=mode, cam=cam)
 # instantiate the ghostsim arm
@@ -62,9 +62,15 @@ flat_file = files.flat_image_file
 flat_data = pyfits.getdata(flat_file)
 
 # Load all the parameter files, even if they are dummy
-xparams = pyfits.open(flat_file)['XMOD'].data
-
-wparams = pyfits.open(files.arc_reduced_file)['WFIT'].data
+try:
+    xparams = pyfits.open(flat_file)['XMOD'].data
+except:
+    xparams = pyfits.getdata(files.default_xmod)
+    
+try:
+    wparams = pyfits.open(files.arc_reduced_file)['WFIT'].data
+except:
+    wparams = pyfits.getdata(files.default_wmod)
 
 rotparams = files.rotparams
 specparams = files.specparams
