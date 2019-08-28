@@ -806,6 +806,7 @@ class GHOSTSpect(GHOST):
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
+            ad.phu.set("FLATIM", flat.filename, self.keyword_comments["FLATIM"])
             ad[0].hdr['DATADESC'] = ('Order-by-order processed science data',
                                      self.keyword_comments['DATADESC'])
             if params["write_result"]:
