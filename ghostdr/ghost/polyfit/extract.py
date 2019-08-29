@@ -408,8 +408,9 @@ class Extractor(object):
         # Our profiles...
         # FIXME: Consider carefully whether there is a way to extract x-centroids
         # as well for PRV, as part of slitim_offsets below.
-        profiles = self.slitview.object_slit_profiles( \
-            arm=self.arm.arm, correct_for_sky=correct_for_sky)
+        profiles = self.slitview.object_slit_profiles(
+            arm=self.arm.arm, correct_for_sky=correct_for_sky
+        )
 
         # Number of "objects" and "slit pixels"
         no = profiles.shape[0]
@@ -857,7 +858,7 @@ class Extractor(object):
 
         # Only use the middle object.
         # In High res mode this will be the object, in std mode it's the sky
-        flux = flux[:, :, 2]
+        flux = flux[:, :, 1]
         ny = flux.shape[1]
         nm = flux.shape[0]
         nx = self.arm.szx
