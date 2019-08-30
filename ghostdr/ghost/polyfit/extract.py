@@ -56,7 +56,9 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
     n_o = phi.shape[1]  # Number of objects.
     n_x = len(col_data)
 
-    var_use = 1 / col_inv_var + (snoise * col_data) ** 2
+    var_use = np.inf * np.ones_like(col_inv_var)
+    good = col_inv_var > 0
+    var_use[good] = 1 / col_inv_var[good] + (snoise * col_data[good]) ** 2
 
     # Create a model matrix for linear regression.
     obj_centers = slitim_offsets[1] + n_x // 2
@@ -271,7 +273,9 @@ class Extractor(object):
     def make_pixel_model(self):
         """
         Based on the xmod and the slit viewer image, create a complete model image, 
-        where flux versus wavelength pixel is constant.
+        where flux versus wavelength pixel is constant. As this is designed for 
+        comparing to flats, normalisation is to the median of the non-zero pixels in the
+        profile.
         
         Returns
         -------
@@ -328,7 +332,10 @@ class Extractor(object):
                 phi = np.interp(
                         x_ix - x_map[i, j] - nx // 2, profile_y_pix,
                         profile)
-                phi /= np.sum(phi)
+                        
+                # Normalise to the median of the non-zero pixels. This used to normalise
+                # to the sum, which doesn't work for flat processing
+                phi /= np.median(phi[phi != 0])
 
                 if self.transpose:
                     pixel_model[j, x_ix] = phi

@@ -45,6 +45,29 @@ GEMINI_SOUTH_LOC = astrocoord.EarthLocation.from_geodetic((-70, 44, 12.096),
                                                           (-30, 14, 26.700),
                                                           height=2722.,
                                                           ellipsoid='WGS84')
+BAD_FLAT_FLAG = 16
+
+# FIXME: This should go somewhere else, but where?
+from scipy.ndimage import median_filter
+def convolve_with_mask(data, mask, rectangle_width = (100,20)):
+    """Helper function to convolve a masked array with a uniform rectangle after median
+    filtering to remove cosmic rays.
+    """
+    #Create our rectangular function
+    rectangle_function = np.zeros_like(data)
+    rectangle_function[:rectangle_width[0], :rectangle_width[1]] = 1.0
+    rectangle_function = np.roll(rectangle_function, -rectangle_width[0]/2, axis=0)
+    rectangle_function = np.roll(rectangle_function, -rectangle_width[1]/2, axis=1)
+    rectangle_fft = np.fft.rfft2(rectangle_function)
+
+    #Median filter in case of cosmic rays
+    filt_data = median_filter(data,3)
+
+    #Now convolve. The mask is never set to exactly zero in order to avoid divide
+    #by zero errors outside the mask.
+    convolved_data = np.fft.irfft2(np.fft.rfft2(filt_data * (mask + 1e-4))*rectangle_fft)
+    convolved_data /= np.fft.irfft2(np.fft.rfft2(mask + 1e-4)*rectangle_fft)
+    return convolved_data
 
 
 @parameter_override
@@ -757,6 +780,98 @@ class GHOSTSpect(GHOST):
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
 
+            # Compute the flat correction.
+            # FIXME: This really could be done as part of flat processing!
+            if params['flat_precorrect']:
+                try:
+                    pix_to_correct = flat[0].PIXELMODEL > 0
+
+                    # Lets find the flat normalisation constant.
+                    # FIXME Should this normalisation be done elsewhere?
+                    mean_flat_flux = np.mean(flat[0].data[pix_to_correct])
+
+                    # Now find the correction.
+                    correction = flat[0].PIXELMODEL[pix_to_correct] / \
+                                 flat[0].data[pix_to_correct] * mean_flat_flux
+
+                    # Find additional bad pixels where the flat doesn't match PIXELMODEL
+                    # This is important to have somewhere, because otherwise any
+                    # newly dead pixels will result in divide by 0.
+                    smoothed_flat = convolve_with_mask(flat[0].data,
+                                                       pix_to_correct)
+                    normalised_flat = flat[0].data / smoothed_flat
+
+                    # Extra bad pixels are where the normalied flat differs from the
+                    # PIXELMODEL, where PIXELMODEL is non-zero and there is a
+                    # non-negligible amount of smoothed flat flux.
+                    extra_bad = (np.abs(
+                        normalised_flat - flat[0].PIXELMODEL) > 0.5) \
+                                & pix_to_correct * (
+                                            smoothed_flat > 0.1 * mean_flat_flux)
+
+                    plotit = np.zeros_like(flat[0].data)
+                    plotit[extra_bad] = 1.0
+
+                    # This is where we add the new bad pixels in. It is needed for
+                    # computing correct weights.
+                    extractor.vararray[extra_bad] = np.inf
+                    extractor.badpixmask[extra_bad] |= BAD_FLAT_FLAG
+
+                    # Uncomment to bugshoot finding bad pixels for the flat. Should be
+                    # repeated once models are reasonable for real data as a sanity
+                    # check
+                    # import matplotlib.pyplot as plt
+                    # plt.ion()
+                    # plt.clf()
+                    # plt.imshow(plotit)
+                    # import pdb; pdb.set_trace()
+
+                except AttributeError as e:  # Catch if no PIXELMODEL
+                    if 'PIXELMODEL' in e.message:
+                        e.message = 'The flat {} has no PIXELMODEL extension ' \
+                                    '- either run extractProfile without the ' \
+                                    'flat_precorrect option, or re-generate ' \
+                                    'your flat field without the ' \
+                                    'skip_pixel_model option.\n' \
+                                    '(Original error message: {})'.format(
+                            flat.filename,
+                            e.message,
+                        )
+                        raise e
+                    else:
+                        raise
+            
+            # MJI: Pre-correct the data here.
+            # FIXME: vararray and corrected_dat are input differently here,
+            # which is a small inconsistency. They should either both be object
+            # atributes or input parameters.
+            corrected_data = ad[0].data
+            if params['flat_precorrect']:
+                try:
+                    pix_to_correct = flat[0].PIXELMODEL > 0
+                    correction = flat[0].PIXELMODEL[
+                                     pix_to_correct
+                                 ]/flat[0].data[
+                        pix_to_correct
+                    ]
+                    import pdb; pdb.set_trace()
+                    corrected_data[pix_to_correct] *= correction
+                    extractor.vararray[pix_to_correct] *= correction**2
+                except AttributeError as e:  # Catch if no PIXELMODEL
+                    if 'PIXELMODEL' in e.message:
+                        e.message = 'The flat {} has no PIXELMODEL extension ' \
+                                    '- either run extractProfile without the ' \
+                                    'flat_precorrect option, or re-generate ' \
+                                    'your flat field without the ' \
+                                    'skip_pixel_model option.\n' \
+                                    '(Original error message: {})'.format(
+                            flat.filename,
+                            e.message,
+                        )
+                        raise e
+                    else:
+                        raise
+
             # MCW 190830
             # MI wants iteration over all possible combinations of sky and
             # object(s)
@@ -770,49 +885,20 @@ class GHOSTSpect(GHOST):
                     [0, ], [1, ], [0, 1], [],
                 ]
 
-            orig_data = deepcopy(ad[0].data)
-
             for i, o in enumerate(objs_to_use):
                 # CJS: Makes it clearer that you're throwing the first two
                 # returned objects away (get replaced in the two_d_extract call)
                 _, _, extracted_weights = extractor.one_d_extract(
-                    # ad[0].data,
-                    orig_data,
-                    correct_for_sky=params['sky_correct'],
-                    used_objects=o,
+                    ad[0].data, correct_for_sky=params['sky_correct'],
                 )
 
-                # MJI: Pre-correct the data here.
+                # Flat correct the final data here.
                 # FIXME: vararray and corrected_dat are input differently here,
                 # which is a small inconsistency. They should either both be object
                 # atributes or input parameters.
-                # corrected_data = ad[0].data
-                corrected_data = orig_data
-                if params['flat_precorrect']:
-                    try:
-                        pix_to_correct = flat[0].PIXELMODEL > 0
-                        correction = flat[0].PIXELMODEL[
-                                         pix_to_correct
-                                     ]/flat[0].data[
-                            pix_to_correct
-                        ]
-                        # import pdb; pdb.set_trace()
-                        corrected_data[pix_to_correct] *= correction
-                        extractor.vararray[pix_to_correct] *= correction**2
-                    except AttributeError as e:  # Catch if no PIXELMODEL
-                        if 'PIXELMODEL' in e.message:
-                            e.message = 'The flat {} has no PIXELMODEL extension ' \
-                                        '- either run extractProfile without the ' \
-                                        'flat_precorrect option, or re-generate ' \
-                                        'your flat field without the ' \
-                                        'skip_pixel_model option.\n' \
-                                        '(Original error message: {})'.format(
-                                flat.filename,
-                                e.message,
-                            )
-                            raise e
-                        else:
-                            raise
+                corrected_data = ad[0].data
+                corrected_data[pix_to_correct] *= correction
+                extractor.vararray[pix_to_correct] *= correction ** 2
 
                 extracted_flux, extracted_var = extractor.two_d_extract(
                     corrected_data,
@@ -829,7 +915,7 @@ class GHOSTSpect(GHOST):
                     ad[i].reset(extracted_flux, mask=None,
                                 variance=extracted_var)
                 except IndexError:
-                    new_adi = deepcopy(ad[i-1])
+                    new_adi = deepcopy(ad[i - 1])
                     ad.append(new_adi[0])
                     ad[i].reset(extracted_flux, mask=None,
                                 variance=extracted_var)
