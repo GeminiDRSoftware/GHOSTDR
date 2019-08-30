@@ -338,7 +338,7 @@ class Extractor(object):
         return pixel_model
 
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,
-                      debug_crs=False):
+                      debug_crs=False, used_objects=[0,1]):
         """
         Extract flux by integrating down columns.
 
@@ -409,7 +409,8 @@ class Extractor(object):
         # FIXME: Consider carefully whether there is a way to extract x-centroids
         # as well for PRV, as part of slitim_offsets below.
         profiles = self.slitview.object_slit_profiles(
-            arm=self.arm.arm, correct_for_sky=correct_for_sky
+            arm=self.arm.arm, correct_for_sky=correct_for_sky,
+            used_objects=used_objects,
         )
 
         # Number of "objects" and "slit pixels"
