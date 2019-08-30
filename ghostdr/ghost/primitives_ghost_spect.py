@@ -218,7 +218,8 @@ class GHOSTSpect(GHOST):
                 wfit = wfit[:, ::2] + wfit[:, 1::2]
                 wfit /= 2.0
 
-            ad[0].WAVL = wfit
+            for ext in ad:
+                ext.WAVL = wfit
 
             # FIXME Wavelength unit needs to be in output ad
 
@@ -755,60 +756,96 @@ class GHOSTSpect(GHOST):
 
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
-            # CJS: Makes it clearer that you're throwing the first two
-            # returned objects away (get replaced in the two_d_extract call)
-            _, _, extracted_weights = extractor.one_d_extract(
-                ad[0].data, correct_for_sky=params['sky_correct'],
-            )
-            
-            # MJI: Pre-correct the data here.
-            # FIXME: vararray and corrected_dat are input differently here,
-            # which is a small inconsistency. They should either both be object
-            # atributes or input parameters.
-            corrected_data = ad[0].data
-            if params['flat_precorrect']:
-                try:
-                    pix_to_correct = flat[0].PIXELMODEL > 0
-                    correction = flat[0].PIXELMODEL[
-                                     pix_to_correct
-                                 ]/flat[0].data[
-                        pix_to_correct
-                    ]
-                    import pdb; pdb.set_trace()
-                    corrected_data[pix_to_correct] *= correction
-                    extractor.vararray[pix_to_correct] *= correction**2
-                except AttributeError as e:  # Catch if no PIXELMODEL
-                    if 'PIXELMODEL' in e.message:
-                        e.message = 'The flat {} has no PIXELMODEL extension ' \
-                                    '- either run extractProfile without the ' \
-                                    'flat_precorrect option, or re-generate ' \
-                                    'your flat field without the ' \
-                                    'skip_pixel_model option.\n' \
-                                    '(Original error message: {})'.format(
-                            flat.filename,
-                            e.message,
-                        )
-                        raise e
-                    else:
-                        raise
-            
-            extracted_flux, extracted_var = extractor.two_d_extract(
-                corrected_data,
-                extraction_weights=extracted_weights,
-            )
 
-            # CJS: Since you don't use the input AD any more, I'm going to
-            # modify it in place, in line with your comment that you're
-            # considering this.
-            ad[0].reset(extracted_flux, mask=None, variance=extracted_var)
-            ad[0].WGT = extracted_weights
+            # MCW 190830
+            # MI wants iteration over all possible combinations of sky and
+            # object(s)
+            # This should only happen for object files, because:
+            # - arcs require full extraction;
+            # - standards should only extract the actual profile
+            if 'ARC' or 'PARTNER_CAL' in ad.tags:
+                objs_to_use = [[0, 1], ]
+            else:
+                objs_to_use = [
+                    [0, ], [1, ], [0, 1], [],
+                ]
+
+            orig_data = deepcopy(ad[0].data)
+
+            for i, o in enumerate(objs_to_use):
+                # CJS: Makes it clearer that you're throwing the first two
+                # returned objects away (get replaced in the two_d_extract call)
+                _, _, extracted_weights = extractor.one_d_extract(
+                    # ad[0].data,
+                    orig_data,
+                    correct_for_sky=params['sky_correct'],
+                    used_objects=o,
+                )
+
+                # MJI: Pre-correct the data here.
+                # FIXME: vararray and corrected_dat are input differently here,
+                # which is a small inconsistency. They should either both be object
+                # atributes or input parameters.
+                # corrected_data = ad[0].data
+                corrected_data = orig_data
+                if params['flat_precorrect']:
+                    try:
+                        pix_to_correct = flat[0].PIXELMODEL > 0
+                        correction = flat[0].PIXELMODEL[
+                                         pix_to_correct
+                                     ]/flat[0].data[
+                            pix_to_correct
+                        ]
+                        # import pdb; pdb.set_trace()
+                        corrected_data[pix_to_correct] *= correction
+                        extractor.vararray[pix_to_correct] *= correction**2
+                    except AttributeError as e:  # Catch if no PIXELMODEL
+                        if 'PIXELMODEL' in e.message:
+                            e.message = 'The flat {} has no PIXELMODEL extension ' \
+                                        '- either run extractProfile without the ' \
+                                        'flat_precorrect option, or re-generate ' \
+                                        'your flat field without the ' \
+                                        'skip_pixel_model option.\n' \
+                                        '(Original error message: {})'.format(
+                                flat.filename,
+                                e.message,
+                            )
+                            raise e
+                        else:
+                            raise
+
+                extracted_flux, extracted_var = extractor.two_d_extract(
+                    corrected_data,
+                    extraction_weights=extracted_weights,
+                )
+
+                # CJS: Since you don't use the input AD any more, I'm going to
+                # modify it in place, in line with your comment that you're
+                # considering this.
+                # MCW now going to add extra EXTVARs to account for different
+                # extractions, where necessary
+                # import pdb; pdb.set_trace()
+                try:
+                    ad[i].reset(extracted_flux, mask=None,
+                                variance=extracted_var)
+                except IndexError:
+                    new_adi = deepcopy(ad[i-1])
+                    ad.append(new_adi[0])
+                    ad[i].reset(extracted_flux, mask=None,
+                                variance=extracted_var)
+                ad[i].WGT = extracted_weights
+                ad[i].hdr['DATADESC'] = (
+                    'Order-by-order processed science data - '
+                    'objects {}, sky correction = {}'.format(
+                        str(o), str(params['sky_correct'])),
+                    self.keyword_comments['DATADESC'])
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
             ad.phu.set("FLATIM", flat.filename, self.keyword_comments["FLATIM"])
-            ad[0].hdr['DATADESC'] = ('Order-by-order processed science data',
-                                     self.keyword_comments['DATADESC'])
+            # ad[0].hdr['DATADESC'] = ('Order-by-order processed science data',
+            #                          self.keyword_comments['DATADESC'])
             if params["write_result"]:
                 ad.write(overwrite=True)
 
@@ -871,72 +908,77 @@ class GHOSTSpect(GHOST):
                 ))
                 continue
 
-            # Determine the wavelength bounds of the file
-            min_wavl, max_wavl = np.min(ad[0].WAVL), np.max(ad[0].WAVL)
-            logspacing = np.median(
-                np.log(ad[0].WAVL[:, 1:]) - np.log(ad[0].WAVL[:, :-1])
-            )
-            # Form a new wavelength scale based on these extremes
-            if params['scale'] == 'loglinear':
-                wavl_grid = np.exp(
-                    np.linspace(np.log(min_wavl), np.log(max_wavl),
-                                num=int(
-                                    (np.log(max_wavl) - np.log(min_wavl)) /
-                                    (logspacing / float(params['oversample']))
-                                ))
-                )
-            else:
-                raise ValueError('interpolateAndCombine does not understand '
-                                 'the scale {}'.format(params['scale']))
-
-            # Create a final spectrum and (inverse) variance to match
-            # (One plane per object)
-            spec_final = np.zeros(wavl_grid.shape + (3, ))
-            var_final = np.inf * np.ones(wavl_grid.shape + (3, ))
-
-            # Loop over each input order, making the output spectrum the
-            # result of the weighted average of itself and the order
-            # spectrum
-            for order in range(ad[0].data.shape[0]):
-                for ob in range(ad[0].data.shape[-1]):
-                    log.stdinfo('Re-gridding order {:2d}, obj {:1d}'.format(
-                        order, ob,
-                    ))
-                    flux_for_adding = np.interp(wavl_grid,
-                                                ad[0].WAVL[order],
-                                                ad[0].data[order, :, ob],
-                                                left=0, right=0)
-                    ivar_for_adding = np.interp(wavl_grid,
-                                                ad[0].WAVL[order],
-                                                1.0 /
-                                                ad[0].variance[order, :, ob],
-                                                left=0, right=0)
-                    spec_comp, ivar_comp = np.ma.average(
-                        np.asarray([spec_final[:, ob], flux_for_adding]),
-                        weights=np.asarray([1.0 / var_final[:, ob],
-                                            ivar_for_adding]),
-                        returned=True, axis=0,
-                    )
-                    spec_final[:, ob] = deepcopy(spec_comp)
-                    var_final[:, ob] = deepcopy(1.0 / ivar_comp)
-
-            # import pdb;
-            # pdb.set_trace()
-
             # MCW, 180501 - Keep initial data, append interp'd data
 
             ad_interp = deepcopy(ad)
-            # Can't use .reset without looping through extensions
-            ad_interp[0].data = spec_final
-            ad_interp[0].variance = var_final
-            ad_interp[0].WAVL = wavl_grid
-            try:
-                del ad_interp[0].WGT
-            except AttributeError:
-                pass
-            ad_interp[0].hdr['DATADESC'] = ('Interpolated data',
-                                            self.keyword_comments['DATADESC'], )
-            ad.append(ad_interp[0])
+
+            for i, ext in enumerate(ad):
+
+                # Determine the wavelength bounds of the file
+                min_wavl, max_wavl = np.min(ext.WAVL), np.max(ext.WAVL)
+                logspacing = np.median(
+                    np.log(ext.WAVL[:, 1:]) - np.log(ext.WAVL[:, :-1])
+                )
+                # Form a new wavelength scale based on these extremes
+                if params['scale'] == 'loglinear':
+                    wavl_grid = np.exp(
+                        np.linspace(np.log(min_wavl), np.log(max_wavl),
+                                    num=int(
+                                        (np.log(max_wavl) - np.log(min_wavl)) /
+                                        (logspacing / float(params['oversample']))
+                                    ))
+                    )
+                else:
+                    raise ValueError('interpolateAndCombine does not understand '
+                                     'the scale {}'.format(params['scale']))
+
+                # Create a final spectrum and (inverse) variance to match
+                # (One plane per object)
+                no_obj = ext.data.shape[-1]
+                spec_final = np.zeros(wavl_grid.shape + (no_obj, ))
+                var_final = np.inf * np.ones(wavl_grid.shape + (no_obj, ))
+
+                # Loop over each input order, making the output spectrum the
+                # result of the weighted average of itself and the order
+                # spectrum
+                for order in range(ext.data.shape[0]):
+                    for ob in range(ext.data.shape[-1]):
+                        log.stdinfo('Re-gridding order {:2d}, obj {:1d}'.format(
+                            order, ob,
+                        ))
+                        flux_for_adding = np.interp(wavl_grid,
+                                                    ext.WAVL[order],
+                                                    ext.data[order, :, ob],
+                                                    left=0, right=0)
+                        ivar_for_adding = np.interp(wavl_grid,
+                                                    ext.WAVL[order],
+                                                    1.0 /
+                                                    ext.variance[order, :, ob],
+                                                    left=0, right=0)
+                        spec_comp, ivar_comp = np.ma.average(
+                            np.asarray([spec_final[:, ob], flux_for_adding]),
+                            weights=np.asarray([1.0 / var_final[:, ob],
+                                                ivar_for_adding]),
+                            returned=True, axis=0,
+                        )
+                        spec_final[:, ob] = deepcopy(spec_comp)
+                        var_final[:, ob] = deepcopy(1.0 / ivar_comp)
+
+                # import pdb;
+                # pdb.set_trace()
+
+                # Can't use .reset without looping through extensions
+                ad_interp[0].data = spec_final
+                ad_interp[0].variance = var_final
+                ad_interp[0].WAVL = wavl_grid
+                try:
+                    del ad_interp[0].WGT
+                except AttributeError:
+                    pass
+                ad_interp[0].hdr['DATADESC'] = (
+                    'Interpolated data',
+                    self.keyword_comments['DATADESC'], )
+                ad.append(ad_interp[i])
 
             # Timestamp & update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -1092,6 +1134,8 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+
+        # import pdb; pdb.set_trace()
 
         # Make no attempt to check if primitive has already been run - may
         # have new calibrators we wish to apply.
@@ -1878,52 +1922,56 @@ class GHOSTSpect(GHOST):
                 raise ValueError('Binning does not match for '
                                  '{} and {}'.format(ad.filename, std.filename))
 
-            # Interpolate the sensitivity function onto the wavelength
-            # grid of this ad
-            # Note that we can get away with this instead of a more
-            # in-depth, flux-conserving regrid because:
-            # (a) The sensitivity curve units do not depend on wavelength;
-            # (b) The wavelength shifts involved are very small
-            sens_func_regrid = np.zeros(ad[0].data.shape, dtype=np.float32)
-            # sens_func_regrid_var = np.inf * np.ones(ad[0].data.shape,
-            #                                         dtype=np.float32)
-            for ob in range(ad[0].data.shape[-1]):
-                for od in range(ad[0].data.shape[0]):
-                    # import pdb; pdb.set_trace();
-                    sens_func_regrid[od, :, ob] = fitfunc(
-                        sens_func_fits[od], ad[0].WAVL[od, :]
-                    )
-                    # if od == 29:
-                    #     import pdb; pdb.set_trace();
-                    # sens_func_regrid[od, :, ob] = np.interp(
-                    #     ad[0].WAVL[od, :],
-                    #     std[0].WAVL[od, :],
-                    #     sens_func[od, :],
-                    #     left=0, right=0,
-                    # )
-                    # sens_func_regrid_var[od, :, ob] = np.interp(
-                    #     ad[0].WAVL[od, :],
-                    #     std[0].WAVL[od, :],
-                    #     sens_func_var[od, :],
-                    #     left=0, right=0,
-                    # )
-
-
             # Easiest way to response correct is to stand up a new AstroData
             # instance containing the sensitivity function - this will
             # automatically handle, e.g., the VAR re-calculation
             sens_func_ad = deepcopy(ad)
             sens_func_ad.update_filename(suffix='_sensFunc', strip=True)
-            sens_func_ad[0].data = sens_func_regrid
-            # sens_func_ad[0].variance = sens_func_regrid_var
-            # sens_func_ad[0].variance = None
-            try:
-                sens_func_ad[0].variance = None
-            except AttributeError:
-                pass
 
-            # Perform the response correction
-            ad /= ad[0].hdr['EXPTIME']
+            for i, ext in enumerate(ad):
+
+                # Interpolate the sensitivity function onto the wavelength
+                # grid of this ad
+                # Note that we can get away with this instead of a more
+                # in-depth, flux-conserving regrid because:
+                # (a) The sensitivity curve units do not depend on wavelength;
+                # (b) The wavelength shifts involved are very small
+                sens_func_regrid = np.zeros(ext.data.shape, dtype=np.float32)
+                # sens_func_regrid_var = np.inf * np.ones(ad[0].data.shape,
+                #                                         dtype=np.float32)
+                for ob in range(ext.data.shape[-1]):
+                    for od in range(ext.data.shape[0]):
+                        # import pdb; pdb.set_trace();
+                        sens_func_regrid[od, :, ob] = fitfunc(
+                            sens_func_fits[od], ext.WAVL[od, :]
+                        )
+                        # if od == 29:
+                        #     import pdb; pdb.set_trace();
+                        # sens_func_regrid[od, :, ob] = np.interp(
+                        #     ad[0].WAVL[od, :],
+                        #     std[0].WAVL[od, :],
+                        #     sens_func[od, :],
+                        #     left=0, right=0,
+                        # )
+                        # sens_func_regrid_var[od, :, ob] = np.interp(
+                        #     ad[0].WAVL[od, :],
+                        #     std[0].WAVL[od, :],
+                        #     sens_func_var[od, :],
+                        #     left=0, right=0,
+                        # )
+
+
+                sens_func_ad[i].data = sens_func_regrid
+                # sens_func_ad[0].variance = sens_func_regrid_var
+                # sens_func_ad[0].variance = None
+                try:
+                    sens_func_ad[i].variance = None
+                except AttributeError:
+                    pass
+
+
+            # Do the response correction
+            ad /= ad[0].hdr['EXPTIME']  # Should be the same for all exts
             ad /= sens_func_ad
             # Make the relevant header update
             ad.hdr['BUNIT'] = bunit
@@ -1931,11 +1979,12 @@ class GHOSTSpect(GHOST):
             # Now that we've made the correction, remove the superfluous
             # extra dimension from sens_func_ad and write out, if requested
             if params['write_result']:
-                sens_func_ad[0].data = sens_func_ad[0].data[:, :, 0]
-                try:
-                    del sens_func_ad[0].WGT
-                except AttributeError:
-                    pass
+                for ext in sens_func_ad:
+                    ext.data = ext.data[:, :, 0]
+                    try:
+                        del ext.WGT
+                    except AttributeError:
+                        pass
                 sens_func_ad.write(overwrite=True)
                 ad.phu.set("SENSFUNC", os.path.abspath(sens_func_ad.path),
                            self.keyword_comments['SENSFUNC'])

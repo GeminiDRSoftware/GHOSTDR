@@ -184,7 +184,8 @@ class SlitView(object):
             
         used_objects: list of int, indices of used objects
             Denotes which objects should be extracted. Should be a list
-            containing the ints 0, 1, or both, or None to extract sky only.
+            containing the ints 0, 1, or both, or None/the empty list
+            to extract sky only.
             FIXME: Needs testing
 
         Returns
@@ -195,6 +196,8 @@ class SlitView(object):
         TODO: Figure out centroid array behaviour if needed.
         """
         # Input checking
+        if used_objects is None:
+            used_objects = []
         if len(used_objects) > 2:
             raise ValueError('used_objects must have length 1 or 2')
         used_objects = [int(_) for _ in used_objects]
