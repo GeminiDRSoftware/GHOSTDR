@@ -27,8 +27,8 @@ from __future__ import division, print_function
 import numpy as np
 from .polyspect import Polyspect
 
-GHOST_BLUE_SZX = 4112
-GHOST_BLUE_SZY = 4096
+GHOST_BLUE_SZX = 4112 #
+GHOST_BLUE_SZY = 4096 #
 GHOST_RED_SZX = 6160
 GHOST_RED_SZY = 6144
 
@@ -190,13 +190,14 @@ class GhostArm(Polyspect):
     def slit_flat_convolve(self, flat, slit_profile=None, spatpars=None,
                            microns_pix=None, xpars=None, num_conv=3):
         """
-        Convolve a flat field image and a slit profile image.
+        Correlate a flat field image with a slit profile image. Note that this is
+        not convolution, as we don't want to shift the image.
 
         Function that takes a flat field image and a slit profile and
         convolves them in two dimensions. Returns result of the convolution,
-        which should be used for tramline fitting (WHICH FUNCTION???).
+        which should be used for tramline fitting in findApertures.
 
-        This function is key towards determining the centre of each order.
+        This function is a first step in finding the centre of each order.
         Given the potentially overlapping nature of fiber images in flat field
         frames, a convolution method is employed with a sampled slit profile,
         in which the center of the order will, ideally, match the profile best
@@ -206,21 +207,15 @@ class GhostArm(Polyspect):
         of the maxima in the map are found, and a model is fit to determine a
         continuous function describing the centre of the orders.
 
-        This function starts by taking a Fourier transform of the flat field
-        in the line::
+        Unfortunately, the slit magnification changes across the detector. Rather
+        than writing a giant for loop, num_conv convolutions are performed with
+        a different slit magnification corresponding to each order stored in the
+        list orders.
 
-          # Fourier transform the flat for convolution
-          im_fft = np.fft.rfft(flat, axis=0)
-
-        It then proceeds to create a linear space for which orders to be
-        evaluated::
-
-          orders = np.linspace(self.m_min, self.m_max, num_conv).astype(int)
-
-        Then a convolution is done in 2D by interpolating the magnified slit
-        profile with the slit coordinates, normalising it and inverse Fourier
-        transforming the product between the flat transform and the shifted slit
-        profile::
+        For each of these orders, a convolution is done in 2D by interpolating 
+        the magnified slit profile with the slit coordinates, normalising it and 
+        inverse Fourier transforming the product between the flat transform and the 
+        shifted slit profile::
 
           # Create the slit model.
           mod_slit = np.interp(profilex*spat_scale[i], slit_coord, slit_profile)
@@ -231,7 +226,7 @@ class GhostArm(Polyspect):
 
           flat_conv_cube[j, :, i] = np.fft.irfft((im_fft[:, i] * mod_slit_ft)/num_conv)
 
-        Now, we have the convolution at ``num_conv`` locations, and the final
+        Now, we have the convolution at ``num_conv`` orders, and the final
         result is an interpolation between these.
 
         .. note::
@@ -369,6 +364,7 @@ class GhostArm(Polyspect):
 
                 # The x pixel values, just for this order
                 x_map[j] = self.evaluate_poly(xpars)[orders[j] - self.m_min]
+                
                 for i in range(im_fft.shape[1]):
                     # Create the slit model.
                     mod_slit = np.interp(profilex * spat_scale[i], slit_coord,
@@ -381,7 +377,7 @@ class GhostArm(Polyspect):
                     # FIXME: Remove num_conv on next line and see if it makes
                     # a difference!
                     flat_conv_cube[j, :, i] = np.fft.irfft(
-                        (im_fft[:, i] * mod_slit_ft) / num_conv
+                        (im_fft[:, i] * mod_slit_ft.conj()) / num_conv
                     )
 
             # Work through every y coordinate and interpolate between the

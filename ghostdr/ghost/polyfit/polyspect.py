@@ -24,7 +24,6 @@ from scipy.interpolate import interp1d
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
-
 class Polyspect(object):
     """
     A class containing tools common for any spectrograph.
@@ -743,6 +742,9 @@ class Polyspect(object):
                                      ydeg=ydeg, xdeg=xdeg, sigma=sigma)
         params = bestp[0].reshape((ydeg + 1, xdeg + 1))
         print(init_resid, final_resid)
+        
+        # FIXME: Issues with the high resolution fit here. Why? How to diagnose?
+        #import pdb; pdb.set_trace()
 
         return params
 

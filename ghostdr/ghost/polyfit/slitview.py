@@ -212,7 +212,7 @@ class SlitView(object):
 
         # Extract the objects.
         profiles = []
-        for boundary in self.object_boundaries[arm][used_objects]:
+        for boundary in [self.object_boundaries[arm][ix] for ix in used_objects]:
             profiles.append(np.copy(full_profile))
             profiles[-1][:boundary[0]] = 0
             profiles[-1][boundary[1]+1:] = 0
