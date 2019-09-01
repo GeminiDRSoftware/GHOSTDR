@@ -345,7 +345,7 @@ class Extractor(object):
         return pixel_model
 
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,
-                      debug_crs=False, used_objects=[0,1]):
+                      debug_crs=False, used_objects=[0,1], use_sky=True):
         """
         Extract flux by integrating down columns.
 
@@ -372,6 +372,9 @@ class Extractor(object):
         correct_for_sky: bool, optional
             Do we correct the object slit profiles for sky? Should be yes for
             objects and no for flats/arcs.
+            
+        use_sky: book, optional
+            In extraction, do we use sky (and therefore self-subtract)?
 
         debug_crs : bool, optional
             Passed along as the ``debug`` parameter to
@@ -417,7 +420,7 @@ class Extractor(object):
         # as well for PRV, as part of slitim_offsets below.
         profiles = self.slitview.object_slit_profiles(
             arm=self.arm.arm, correct_for_sky=correct_for_sky,
-            used_objects=used_objects,
+            used_objects=used_objects, append_sky=use_sky
         )
 
         # Number of "objects" and "slit pixels"
@@ -561,16 +564,21 @@ class Extractor(object):
                 #model. For each of the phi[:,object] arrays, "large" values can't 
                 #correspond to "small" variances. So set the minimum variance to be 
                 #object shot noise.
-                good_pix = np.where(col_inv_var != 0)[0]
+                
+                # FIXME: This is not appropriate for sky fibers, and the extraction
+                # mathematics assumes that pixel variance is the same for all objects.
+                # A sanity check is needed, but this isn't quite it, as 
+                # minimum_variance can't be object-dependent.
                 col_inv_var_mat = np.reshape(col_inv_var.repeat(no), (nx_cutout, no))
+                if False:
+                    good_pix = np.where(col_inv_var != 0)[0]
+                    
+                    minimum_variance = phi * np.sum(phi[good_pix,:]/ \
+                        col_inv_var_mat[good_pix,:], axis=0)/ \
+                        np.sum(phi[good_pix,:]**2, axis=0)
                 
-                minimum_variance = phi * np.sum(phi[good_pix,:]/ \
-                    col_inv_var_mat[good_pix,:], axis=0)/ \
-                    np.sum(phi[good_pix,:]**2, axis=0)
-                
-                # FIXME: This is not appropriate for sky fibers.
-                col_inv_var_mat[good_pix] = 1./np.maximum(1./col_inv_var_mat[good_pix], \
-                    minimum_variance[good_pix])
+                    col_inv_var_mat[good_pix,:] = 1./np.maximum(1./col_inv_var_mat[good_pix,:], \
+                        minimum_variance[good_pix,:])
                                                      
                 if len(additional_crs) > 0:
                     col_inv_var[additional_crs] = 0
@@ -597,6 +605,13 @@ class Extractor(object):
                 # leading to the impossibility of inverting the matrix.
                 # currently the pixel weights are unmodified and those used are
                 # whatever the last iteration calculation was.
+                
+                # DEBUG - should try several columns...
+                # if (i==10 and j>3000):
+                #   import matplotlib.pyplot as plt
+                #   plt.plot(col_data/np.max(col_data))
+                #   plt.plot(phi[:,0]/np.max(phi[:,0])
+                #   import pdb; pdb.set_trace()
                 
                 # FIXME: The above problem is made more complicated by the fact
                 # that due to the different slit magnifications,
@@ -625,7 +640,7 @@ class Extractor(object):
                 # if (j==2000):
 
                 # FIXME: Search here for weights that are non-zero for
-                # overlapping order:
+                # any overlapping orders:
                 for ii, ew_one in enumerate(extraction_weights):
                     ew_one[x_ix, j] += pixel_weights[:, ii]
 

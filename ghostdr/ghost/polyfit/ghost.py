@@ -27,8 +27,8 @@ from __future__ import division, print_function
 import numpy as np
 from .polyspect import Polyspect
 
-GHOST_BLUE_SZX = 4112 #
-GHOST_BLUE_SZY = 4096 #
+GHOST_BLUE_SZX = 4112 # 4096 # 
+GHOST_BLUE_SZY = 4096 # 4112 # 
 GHOST_RED_SZX = 6160
 GHOST_RED_SZY = 6144
 

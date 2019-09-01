@@ -776,11 +776,10 @@ class GHOSTSpect(GHOST):
             arm.spectral_format_with_matrix(flat[0].XMOD, wpars[0].data,
                         spatpars[0].data, specpars[0].data, rotpars[0].data)
             sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
+            extractor = Extractor(arm, sview, badpixmask=ad[0].mask, \
+                    vararray=ad[0].variance)
 
-            extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
-                                  vararray=ad[0].variance)
-
-            # Compute the flat correction.
+            # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
             if params['flat_precorrect']:
                 try:
@@ -804,8 +803,11 @@ class GHOSTSpect(GHOST):
                     # Extra bad pixels are where the normalied flat differs from the
                     # PIXELMODEL, where PIXELMODEL is non-zero and there is a
                     # non-negligible amount of smoothed flat flux.
+                    
+                    # FIXME: the 0.7 on the next line should be significantly lower, but
+                    # requires a model that actually fits the data.
                     extra_bad = (np.abs(
-                        normalised_flat - flat[0].PIXELMODEL) > 0.5) \
+                        normalised_flat - flat[0].PIXELMODEL) > 0.7) \
                                 & pix_to_correct * (
                                             smoothed_flat > 0.1 * mean_flat_flux)
 
@@ -840,65 +842,70 @@ class GHOSTSpect(GHOST):
                         raise e
                     else:
                         raise
-            
-            # MJI: Pre-correct the data here.
-            # FIXME: vararray and corrected_dat are input differently here,
-            # which is a small inconsistency. They should either both be object
-            # atributes or input parameters.
-            corrected_data = ad[0].data
-            if params['flat_precorrect']:
-                try:
-                    pix_to_correct = flat[0].PIXELMODEL > 0
-                    correction = flat[0].PIXELMODEL[
-                                     pix_to_correct
-                                 ]/flat[0].data[
-                        pix_to_correct
-                    ]
-                    # import pdb; pdb.set_trace()
-                    corrected_data[pix_to_correct] *= correction
-                    extractor.vararray[pix_to_correct] *= correction**2
-                except AttributeError as e:  # Catch if no PIXELMODEL
-                    if 'PIXELMODEL' in e.message:
-                        e.message = 'The flat {} has no PIXELMODEL extension ' \
-                                    '- either run extractProfile without the ' \
-                                    'flat_precorrect option, or re-generate ' \
-                                    'your flat field without the ' \
-                                    'skip_pixel_model option.\n' \
-                                    '(Original error message: {})'.format(
-                            flat.filename,
-                            e.message,
-                        )
-                        raise e
-                    else:
-                        raise
 
             # MCW 190830
             # MI wants iteration over all possible combinations of sky and
             # object(s)
             # This should only happen for object files, because:
-            # - arcs require full extraction;
-            # - standards should only extract the actual profile
+            # - arcs require either "sky only" or "skyless" extraction;
+            # - standards should only extract the actual profile in single
+            #   object mode.
             if 'ARC' or 'PARTNER_CAL' in ad.tags:
-                objs_to_use = [[0, 1], ]
+                objs_to_use = [[], [0, 1], ]
+                use_sky = [True, False, ]
+            elif 'PARTNER_CAL' in ad.tags:
+                objs_to_use = [[0, ],[1, ], ]
+                use_sky = [True, True, ]
             else:
                 objs_to_use = [
-                    [0, ], [1, ], [0, 1], [],
+                    [0, ], [0, ], [1, ], [1, ], [0, 1], [0, 1], [],
                 ]
+                use_sky = [
+                    False, True, False, True, False, True, True,
+                ]
+            
+            # !!! Marc - this is for testing. However, you need sview and extractor
+            # in the loop below.
+            objs_to_use = [[0,1], ]
+            use_sky = [True, ]
+            objs_to_use = [[0], ]
+            use_sky = [False, ]
 
-            for i, o in enumerate(objs_to_use):
+            # MJI: Pre-correct the data here. 
+            
+            # FIXME: vararray and corrected_dat are input differently here,
+            # which is a small inconsistency. They should either both be object
+            # atributes or input parameters. See where vararray has to be modified
+            # in the loop below...
+            corrected_data = deepcopy(ad[0].data)
+            corrected_data[pix_to_correct] *= correction
+            extractor.vararray[pix_to_correct] *= correction**2
+
+            for i, (o, s) in enumerate(zip(objs_to_use, use_sky)):
                 # CJS: Makes it clearer that you're throwing the first two
                 # returned objects away (get replaced in the two_d_extract call)
-                _, _, extracted_weights = extractor.one_d_extract(
-                    ad[0].data, correct_for_sky=params['sky_correct'],
+                
+                # MJI: unclear whether ad[0].data or corrected_data should be used
+                # here. Does it matter?
+                DUMMY, _, extracted_weights = extractor.one_d_extract(
+                    corrected_data, correct_for_sky=params['sky_correct'],
+                    use_sky = s, used_objects=o,
                 )
 
+                # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
+                #import matplotlib.pyplot as plt
+                #plt.ion()
+                #plt.figure(1)
+                #import pdb; pdb.set_trace()
+
+                #!!! This is already done above so remove.
                 # Flat correct the final data here.
                 # FIXME: vararray and corrected_dat are input differently here,
                 # which is a small inconsistency. They should either both be object
                 # atributes or input parameters.
-                corrected_data = ad[0].data
-                corrected_data[pix_to_correct] *= correction
-                extractor.vararray[pix_to_correct] *= correction ** 2
+                #corrected_data = ad[0].data
+                #corrected_data[pix_to_correct] *= correction
+                #extractor.vararray[pix_to_correct] *= correction ** 2
 
                 extracted_flux, extracted_var = extractor.two_d_extract(
                     corrected_data,
