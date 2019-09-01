@@ -850,7 +850,7 @@ class GHOSTSpect(GHOST):
             # - arcs require either "sky only" or "skyless" extraction;
             # - standards should only extract the actual profile in single
             #   object mode.
-            if 'ARC' or 'PARTNER_CAL' in ad.tags:
+            if 'ARC' in ad.tags:
                 objs_to_use = [[], [0, 1], ]
                 use_sky = [True, False, ]
             elif 'PARTNER_CAL' in ad.tags:
@@ -864,10 +864,7 @@ class GHOSTSpect(GHOST):
                     False, True, False, True, False, True, True,
                 ]
             
-            # !!! Marc - this is for testing. However, you need sview and extractor
-            # in the loop below.
-            objs_to_use = [[0,1], ]
-            use_sky = [True, ]
+            # !!! Marc - this is for testing in the simplest possible case.
             objs_to_use = [[0], ]
             use_sky = [False, ]
 
@@ -882,6 +879,8 @@ class GHOSTSpect(GHOST):
             extractor.vararray[pix_to_correct] *= correction**2
 
             for i, (o, s) in enumerate(zip(objs_to_use, use_sky)):
+                print("OBJECTS:" + str(o))
+                print("SKY:" + str(s))
                 # CJS: Makes it clearer that you're throwing the first two
                 # returned objects away (get replaced in the two_d_extract call)
                 
