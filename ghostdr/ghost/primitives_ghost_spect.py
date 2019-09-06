@@ -1119,7 +1119,9 @@ class GHOSTSpect(GHOST):
 
             try:
                 poly_xmod = self._get_polyfit_filename(ad, 'xmod')
+                log.stdinfo('Found xmod: {}'.format(poly_xmod))
                 poly_spat = self._get_polyfit_filename(ad, 'spatmod')
+                log.stdinfo('Found spatmod: {}'.format(poly_spat))
                 xpars = astrodata.open(poly_xmod)
                 spatpars = astrodata.open(poly_spat)
             except IOError:
@@ -1464,6 +1466,10 @@ class GHOSTSpect(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=sfx, strip=True)
 
+        # This nomenclature is misleading - this is the list of
+        # intitially-passed AstroData objects, some of which may have been
+        # skipped, and others which should have been modified by this
+        # primitive
         return adinputs_orig
 
     def formatOutput(self, adinputs=None, **params):
