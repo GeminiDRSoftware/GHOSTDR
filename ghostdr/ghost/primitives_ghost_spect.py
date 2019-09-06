@@ -776,8 +776,8 @@ class GHOSTSpect(GHOST):
             arm.spectral_format_with_matrix(flat[0].XMOD, wpars[0].data,
                         spatpars[0].data, specpars[0].data, rotpars[0].data)
             sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
-            extractor = Extractor(arm, sview, badpixmask=ad[0].mask, \
-                    vararray=ad[0].variance)
+            extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
+                                  vararray=ad[0].variance)
 
             # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
@@ -806,10 +806,13 @@ class GHOSTSpect(GHOST):
                     
                     # FIXME: the 0.7 on the next line should be significantly lower, but
                     # requires a model that actually fits the data.
-                    extra_bad = (np.abs(
-                        normalised_flat - flat[0].PIXELMODEL) > 0.7) \
-                                & pix_to_correct * (
-                                            smoothed_flat > 0.1 * mean_flat_flux)
+                    extra_bad = (
+                        np.abs(
+                            normalised_flat - flat[0].PIXELMODEL
+                        ) > 0.7
+                    ) & pix_to_correct * (
+                        smoothed_flat > 0.1 * mean_flat_flux
+                    )
 
                     plotit = np.zeros_like(flat[0].data)
                     plotit[extra_bad] = 1.0
@@ -864,19 +867,21 @@ class GHOSTSpect(GHOST):
                     False, True, False, True, False, True, True,
                 ]
             
-            # !!! Marc - this is for testing in the simplest possible case.
+            # MJI - Marc, this is for testing in the simplest possible case.
+            # TODO Decide on production usage
             objs_to_use = [[0], ]
             use_sky = [False, ]
 
             # MJI: Pre-correct the data here. 
             
-            # FIXME: vararray and corrected_dat are input differently here,
-            # which is a small inconsistency. They should either both be object
-            # atributes or input parameters. See where vararray has to be modified
-            # in the loop below...
+            # FIXED - MCW 190906
+            # Added a kwarg to one_d_extract (the only Extractor method which
+            # uses Extractor.vararray), allowing an update to the instance's
+            # .vararray attribute
             corrected_data = deepcopy(ad[0].data)
+            corrected_var = deepcopy(ad[0].variance)
             corrected_data[pix_to_correct] *= correction
-            extractor.vararray[pix_to_correct] *= correction**2
+            corrected_var[pix_to_correct] *= correction**2
 
             for i, (o, s) in enumerate(zip(objs_to_use, use_sky)):
                 print("OBJECTS:" + str(o))
@@ -884,11 +889,13 @@ class GHOSTSpect(GHOST):
                 # CJS: Makes it clearer that you're throwing the first two
                 # returned objects away (get replaced in the two_d_extract call)
                 
-                # MJI: unclear whether ad[0].data or corrected_data should be used
-                # here. Does it matter?
+                # Need to use corrected_data here; the data in ad[0] is
+                # overwritten with the first extraction pass of this loop
+                # (see the try-except statement at line 925)
                 DUMMY, _, extracted_weights = extractor.one_d_extract(
-                    corrected_data, correct_for_sky=params['sky_correct'],
-                    use_sky = s, used_objects=o,
+                    data=corrected_data, vararray=corrected_var,
+                    correct_for_sky=params['sky_correct'],
+                    use_sky=s, used_objects=o,
                 )
 
                 # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
@@ -896,15 +903,6 @@ class GHOSTSpect(GHOST):
                 #plt.ion()
                 #plt.figure(1)
                 #import pdb; pdb.set_trace()
-
-                #!!! This is already done above so remove.
-                # Flat correct the final data here.
-                # FIXME: vararray and corrected_dat are input differently here,
-                # which is a small inconsistency. They should either both be object
-                # atributes or input parameters.
-                #corrected_data = ad[0].data
-                #corrected_data[pix_to_correct] *= correction
-                #extractor.vararray[pix_to_correct] *= correction ** 2
 
                 extracted_flux, extracted_var = extractor.two_d_extract(
                     corrected_data,
