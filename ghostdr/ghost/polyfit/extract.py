@@ -881,7 +881,7 @@ class Extractor(object):
 
         # Only use the middle object.
         # In High res mode this will be the object, in std mode it's the sky
-        flux = flux[:, :, 1]
+        flux = flux[:, :, 0]
         ny = flux.shape[1]
         nm = flux.shape[0]
         nx = self.arm.szx
