@@ -779,6 +779,15 @@ class GHOSTSpect(GHOST):
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
 
+                        
+            # FIXED - MCW 190906
+            # Added a kwarg to one_d_extract (the only Extractor method which
+            # uses Extractor.vararray), allowing an update to the instance's
+            # .vararray attribute
+            corrected_data = deepcopy(ad[0].data)
+            corrected_var = deepcopy(ad[0].variance)
+
+
             # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
             if params['flat_precorrect']:
@@ -819,8 +828,16 @@ class GHOSTSpect(GHOST):
 
                     # This is where we add the new bad pixels in. It is needed for
                     # computing correct weights.
+                    
+                    #TODO: These 4 lines (and possibly correction= BLAH) can stay.
+                    #the rest to go to findApertures
                     extractor.vararray[extra_bad] = np.inf
                     extractor.badpixmask[extra_bad] |= BAD_FLAT_FLAG
+                    
+                    # MJI: Pre-correct the data here. 
+                    corrected_data[pix_to_correct] *= correction
+                    corrected_var[pix_to_correct] *= correction**2
+
 
                     # Uncomment to bugshoot finding bad pixels for the flat. Should be
                     # repeated once models are reasonable for real data as a sanity
@@ -871,17 +888,6 @@ class GHOSTSpect(GHOST):
             # TODO Decide on production usage
             objs_to_use = [[0], ]
             use_sky = [False, ]
-
-            # MJI: Pre-correct the data here. 
-            
-            # FIXED - MCW 190906
-            # Added a kwarg to one_d_extract (the only Extractor method which
-            # uses Extractor.vararray), allowing an update to the instance's
-            # .vararray attribute
-            corrected_data = deepcopy(ad[0].data)
-            corrected_var = deepcopy(ad[0].variance)
-            corrected_data[pix_to_correct] *= correction
-            corrected_var[pix_to_correct] *= correction**2
 
             for i, (o, s) in enumerate(zip(objs_to_use, use_sky)):
                 print("OBJECTS:" + str(o))
@@ -1166,7 +1172,7 @@ class GHOSTSpect(GHOST):
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
                                                      xparams=xpars[0].data,
                                                      decrease_dim=8,
-                                                     inspect=True) #!!!
+                                                     inspect=False)
 
             # CJS: Append the XMOD as an extension. It will inherit the
             # header from the science plane (including irrelevant/wrong
@@ -2232,7 +2238,10 @@ class GHOSTSpect(GHOST):
                         "{}".format(caltype, ad.filename))
             return None
 
+        #FIXME: Restrict search to correct res and arm (all not necessarily
+        #updated at once!)
         dates_avail = set([k.split('_')[-1] for k in poly_dict.keys()])
+        
         # Safe to assume instrument won't be used after 2099...
         dates_avail = map(lambda x: datetime.strptime('20{}'.format(x),
                                             '%Y%m%d').date(), dates_avail)

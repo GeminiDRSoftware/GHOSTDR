@@ -406,7 +406,7 @@ class Extractor(object):
         self.num_additional_crs = 0
 
         # Update the instance .vararray, if a new one is passed
-        if vararray:
+        if vararray is not None:
             self.vararray = vararray
         
         if data is None:
