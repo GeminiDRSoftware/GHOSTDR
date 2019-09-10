@@ -68,14 +68,20 @@ class SlitView(object):
 
     slit_length: float (optional)
         Physical slit length to be extracted in microns. Default is ``3600.``.
+        
+    reverse_profile: bool
+        Do we reverse the profile? This is a sign convention issue between 
+        the slit viewer and the CCD, to be determined through testing on 
+        real data.
     """
     def __init__(self, slit_image, flat_image, microns_pix=4.54*180/50*2,
-                 mode='std', slit_length=3600.):
+                 mode='std', slit_length=3600., reverse_profile=True):
         self.slit_image = slit_image
         self.flat_image = flat_image
         self.mode = mode
         self.slit_length = slit_length
         self.microns_pix = microns_pix
+        self.reverse_profile = reverse_profile
         # WARNING: These parameters below should be input from somewhere!!!
         # The central pixel in the y-direction (along-slit) defines the slit
         # profile offset, i.e. it interacts directly with the tramline fitting
@@ -122,7 +128,7 @@ class SlitView(object):
             self.extract_half_width+1]
 
     def slit_profile(self, arm='red', return_centroid=False, use_flat=False,
-                     denom_clamp=10):
+                     denom_clamp=10, reverse_profile=None):
         """
         Extract the 1-dimensional slit profile.
 
@@ -149,9 +155,13 @@ class SlitView(object):
         """
         y_halfwidth = int(self.slit_length/self.microns_pix/2)
         cutout = self.cutout(arm, use_flat)
+        if reverse_profile is None:
+            reverse_profile = self.reverse_profile
 
         # Sum over the 2nd axis, i.e. the x-coordinate.
         profile = np.sum(cutout, axis=1)
+        if reverse_profile:
+            profile = profile[::-1]
         if return_centroid:
             xcoord = np.arange(
                 -self.extract_half_width, self.extract_half_width+1)
@@ -208,11 +218,11 @@ class SlitView(object):
                              'used_objects')
 
         # Find the slit profile.
-        full_profile = self.slit_profile(arm=arm)
+        full_profile = self.slit_profile(arm=arm, reverse_profile=False)
 
         if correct_for_sky or append_sky:
             # Get the flat profile from the flat image.
-            flat_profile = self.slit_profile(arm=arm, use_flat=True)
+            flat_profile = self.slit_profile(arm=arm, use_flat=True, reverse_profile=False)
 
         # WARNING: This is done in the extracted profile space. Is there any
         # benefit to doing this in pixel space? Maybe yes for the centroid.
@@ -247,4 +257,7 @@ class SlitView(object):
             for prof in profiles:
                 prof /= np.sum(prof)
 
-        return profiles
+        if self.reverse_profile:
+            return profiles[:,::-1]
+        else:
+            return profiles

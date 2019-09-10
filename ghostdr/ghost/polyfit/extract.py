@@ -431,7 +431,7 @@ class Extractor(object):
             arm=self.arm.arm, correct_for_sky=correct_for_sky,
             used_objects=used_objects, append_sky=use_sky
         )
-
+                
         # Number of "objects" and "slit pixels"
         no = profiles.shape[0]
         n_slitpix = profiles.shape[1]
@@ -616,11 +616,12 @@ class Extractor(object):
                 # whatever the last iteration calculation was.
                 
                 # DEBUG - should try several columns...
-                # if (i==10 and j>3000):
-                #   import matplotlib.pyplot as plt
-                #   plt.plot(col_data/np.max(col_data))
-                #   plt.plot(phi[:,0]/np.max(phi[:,0])
-                #   import pdb; pdb.set_trace()
+                #if (i==10 and j>3000):
+                #    import matplotlib.pyplot as plt
+                #    plt.ion()
+                #    plt.plot(col_data/np.max(col_data))
+                #    plt.plot(phi[:,0]/np.max(phi[:,0]))
+                #    import pdb; pdb.set_trace()
                 
                 # FIXME: The above problem is made more complicated by the fact
                 # that due to the different slit magnifications,
@@ -630,6 +631,7 @@ class Extractor(object):
                 try:
                     pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
                 except:
+                    import pdb; pdb.set_trace()
                     try:
                         pixel_weights
                         if pixel_weights.shape != b_mat.shape:

@@ -838,15 +838,15 @@ class GHOSTSpect(GHOST):
                     corrected_data[pix_to_correct] *= correction
                     corrected_var[pix_to_correct] *= correction**2
 
-
                     # Uncomment to bugshoot finding bad pixels for the flat. Should be
                     # repeated once models are reasonable for real data as a sanity
                     # check
-                    # import matplotlib.pyplot as plt
-                    # plt.ion()
-                    # plt.clf()
-                    # plt.imshow(plotit)
-                    # import pdb; pdb.set_trace()
+                    #import matplotlib.pyplot as plt
+                    #plt.ion()
+                    #plt.clf()
+                    #plt.imshow(corrected_data, vmin=0, vmax=4*np.percentile(corrected_data,75))
+                    #plt.imshow(plotit)
+                    #import pdb; pdb.set_trace()
 
                 except AttributeError as e:  # Catch if no PIXELMODEL
                     if 'PIXELMODEL' in e.message:
