@@ -345,7 +345,8 @@ class Extractor(object):
         return pixel_model
 
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,
-                      debug_crs=False, used_objects=[0,1], use_sky=True):
+                      debug_crs=False, used_objects=[0,1], use_sky=True,
+                      vararray=None):
         """
         Extract flux by integrating down columns.
 
@@ -380,6 +381,10 @@ class Extractor(object):
             Passed along as the ``debug`` parameter to
             :any:`find_additional_crs`.
 
+        vararray : :obj:`numpy.ndarray` , optional
+            If given, the instance's `vararray` attribute will be updated
+            to hold this array.
+
         Raises
         ------
         ValueError
@@ -399,6 +404,10 @@ class Extractor(object):
         """
         #Lets keep track of the number of additional cosmic rays as an object property
         self.num_additional_crs = 0
+
+        # Update the instance .vararray, if a new one is passed
+        if vararray:
+            self.vararray = vararray
         
         if data is None:
             if fl is None:
@@ -881,7 +890,7 @@ class Extractor(object):
 
         # Only use the middle object.
         # In High res mode this will be the object, in std mode it's the sky
-        flux = flux[:, :, 1]
+        flux = flux[:, :, 0]
         ny = flux.shape[1]
         nm = flux.shape[0]
         nx = self.arm.szx
