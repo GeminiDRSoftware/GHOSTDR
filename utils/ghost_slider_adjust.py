@@ -57,6 +57,7 @@ if model == 'W':
     thar_spec = files.thar_spectrum(arclinefile)
 
 flat_file = files.flat_image_file
+print(flat_file) #DEBUG
 
 # Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 flat_data = pyfits.getdata(flat_file)
@@ -66,7 +67,9 @@ try:
     xparams = pyfits.open(flat_file)['XMOD'].data
 except:
     xparams = pyfits.getdata(files.default_xmod)
-    
+
+xparams = pyfits.getdata(files.default_xmod)
+
 try:
     wparams = pyfits.open(files.arc_reduced_file)['WFIT'].data
 except:

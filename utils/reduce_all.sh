@@ -103,10 +103,12 @@ for CAM in SLITV BLUE RED; do
 	bins=()  # 'bins' is the array
 	if [ $CAM = SLITV ]; then bins+=(2x2); else bins+=($BINNING); [[ "${bins[@]}" =~ 1x1 ]] || bins+=(1x1); fi  # populate
 	for BIN in "${bins[@]}"; do reduce_list "Reducing $CAM biases" $CAM BIAS $BIN; done  # iterate
-
-	# process everything else
+    
+    # process everything else
 	BIN=$BINNING; [ $CAM = SLITV ] && BIN=  # binning modes for objects and standards
 	reduce_list "Reducing $CAM darks" $CAM DARK
+	
+	echo "Darks Reduced for Cam " + $CAM
 	for MODE in HIGH STD; do
 		reduce_list "Reducing $CAM $MODE flats" $CAM $MODE FLAT
 		reduce_each "Reducing $CAM $MODE arc" $CAM $MODE ARC
@@ -115,4 +117,5 @@ for CAM in SLITV BLUE RED; do
 		STANDARD=${STANDARD:+-p std=$STANDARD std_spec=$LONGSPEC}
 		reduce_each "Reducing $CAM $MODE object" $CAM $MODE $BIN --filemask "obj.*$SEEING.*\.(fits|FITS)" 
 	done
+	echo "Reduction Complete for Cam " + $CAM
 done

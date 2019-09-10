@@ -107,14 +107,17 @@ class Files():
             # This is the directory containing the raw (and recently reduced)
             # files.
             self.basedir = '/Users/mireland/data/ghost/dhs_testdata_10jul/'
+            self.basedir = '/Users/mireland/data/ghost/testdata-clean-190814/'
             
             self.arclinefile_ar_only = '/Users/mireland/python/GHOSTDR/simulator/pyghost/pyghost/data/mnras_ar_only.txt'
             self.default_xmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/high/161120/xmod.fits'
-            self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_xmod.fits'
+            self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_Xmod.fits'
+            self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_Xmod_reversed.fits'
             self.default_wmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/high/161120/wavemod.fits'
 
             # Now define locations of actual images for fitting or visualisation.
             self.flat_image_file = self.basedir + "flat_processed.fits"
+            self.flat_image_file = self.basedir + "processed_flat/flat95_high_1_MEF_1x1_blue1_flat.fits"
             
             
             self.arc_image_file = self.basedir + "intermediates.Et18qyON6m/arcBefore95_"+self.mode+"_MEF_1x1_"+self.cam+"1_tiled.fits"
