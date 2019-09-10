@@ -36,7 +36,7 @@ if (model != 'W') and (model != 'X'):
 
 # Regardless, need to initialise a few things.
 mode = 'std' # The spectrograph resolution mode.
-cam = 'blue'  # The camera
+cam = 'red'  # The camera
 # This variable makes it easy for each user (currently only Joao) to
 # have all file locations defined without overwriting.
 user = 'mike'
