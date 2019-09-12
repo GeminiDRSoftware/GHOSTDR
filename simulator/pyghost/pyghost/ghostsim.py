@@ -671,6 +671,10 @@ class SlitViewer(object):
             slitview_frac
         slit_camera_image = np.maximum(slit_camera_image, 0)
 
+        # TODO Determine if flipping is required once we have real data
+        # MCW 190911 - Flip the image y-axis (axis 0)
+        # slit_camera_image = slit_camera_image[::-1, :]
+
         # Store the full-sized image in units of photons.
         xoffset = int(slitview_offset[0]/self.slitview_pxsize)
         yoffset = int((self.slit_mode_offsets[mode] +
