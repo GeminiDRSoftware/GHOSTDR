@@ -333,9 +333,10 @@ class Extractor(object):
                         x_ix - x_map[i, j] - nx // 2, profile_y_pix,
                         profile)
                         
-                # Normalise to the median of the non-zero pixels. This used to normalise
-                # to the sum, which doesn't work for flat processing
-                phi /= np.median(phi[phi != 0])
+                # Normalise to the median of the non-zero pixels. This is neater
+                # if it normalises to the median, but normalisation can occur 
+                # later, and shouldn't occur wavelength by wavelength.
+                phi /= np.sum(phi[phi != 0])
 
                 if self.transpose:
                     pixel_model[j, x_ix] = phi

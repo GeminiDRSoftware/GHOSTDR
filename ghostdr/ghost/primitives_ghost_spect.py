@@ -20,6 +20,7 @@ from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
 from scipy import interpolate
+import scipy.ndimage as nd
 from pysynphot import observation, spectrum
 
 import astrodata
@@ -778,7 +779,6 @@ class GHOSTSpect(GHOST):
             sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
-
                         
             # FIXED - MCW 190906
             # Added a kwarg to one_d_extract (the only Extractor method which
@@ -786,7 +786,6 @@ class GHOSTSpect(GHOST):
             # .vararray attribute
             corrected_data = deepcopy(ad[0].data)
             corrected_var = deepcopy(ad[0].variance)
-
 
             # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
@@ -797,10 +796,12 @@ class GHOSTSpect(GHOST):
                     # Lets find the flat normalisation constant.
                     # FIXME Should this normalisation be done elsewhere?
                     mean_flat_flux = np.mean(flat[0].data[pix_to_correct])
+                    mean_pixelmod = np.mean(flat[0].PIXELMODEL[pix_to_correct])
 
                     # Now find the correction.
                     correction = flat[0].PIXELMODEL[pix_to_correct] / \
-                                 flat[0].data[pix_to_correct] * mean_flat_flux
+                                 flat[0].data[pix_to_correct] * \
+                                 mean_flat_flux/mean_pixelmod
 
                     # Find additional bad pixels where the flat doesn't match PIXELMODEL
                     # This is important to have somewhere, because otherwise any
@@ -823,8 +824,18 @@ class GHOSTSpect(GHOST):
                         smoothed_flat > 0.1 * mean_flat_flux
                     )
 
-                    plotit = np.zeros_like(flat[0].data)
-                    plotit[extra_bad] = 1.0
+                    #FIXME: remove False below and turn into an option.
+                    #if params['smoth_flat_spatially']:
+                    if False:
+                        correction_2d = np.zeros_like(flat[0].data)
+                        correction_2d[pix_to_correct] = correction
+                        smoothed_correction_2d = convolve_with_mask(correction_2d,
+                                                    pix_to_correct)
+                        smoothed_correction_2d[pix_to_correct] = \
+                            correction_2d[pix_to_correct]
+                        smoothed_correction_2d = nd.median_filter(
+                            smoothed_correction_2d, size=(7,1))
+                        correction = smoothed_correction_2d[pix_to_correct]
 
                     # This is where we add the new bad pixels in. It is needed for
                     # computing correct weights.
@@ -906,8 +917,16 @@ class GHOSTSpect(GHOST):
 
                 # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
                 #import matplotlib.pyplot as plt
+                #import pickle
+                #pickle.dump( (DUMMY), open( "dummy.p", "wb" ) )
                 #plt.ion()
                 #plt.figure(1)
+                ##plt.plot(DUMMY[1,3510:3720,0])
+                ##plt.plot(np.sum(corrected_data[340:410,3510:3720], axis=0))
+                #plt.plot(np.sum(corrected_data[540:645,2380:3280], axis=0))
+                #plt.plot(DUMMY[2,2380:3280], label='Extracted')
+                #plt.ylim([0,6e4])
+                #plt.legend()
                 #import pdb; pdb.set_trace()
 
                 extracted_flux, extracted_var = extractor.two_d_extract(
