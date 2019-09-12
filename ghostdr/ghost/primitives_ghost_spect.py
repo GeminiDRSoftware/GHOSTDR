@@ -815,14 +815,17 @@ class GHOSTSpect(GHOST):
                     # non-negligible amount of smoothed flat flux.
                     
                     # FIXME: the 0.7 on the next line should be significantly lower, but
-                    # requires a model that actually fits the data.
+                    # requires a model that fits the data well. Re-examine with real 
+                    # data.
                     extra_bad = (
                         np.abs(
-                            normalised_flat - flat[0].PIXELMODEL
+                            normalised_flat - flat[0].PIXELMODEL/mean_pixelmod
                         ) > 0.7
                     ) & pix_to_correct * (
                         smoothed_flat > 0.1 * mean_flat_flux
                     )
+
+                    import pdb; pdb.set_trace()
 
                     #FIXME: remove False below and turn into an option.
                     #if params['smoth_flat_spatially']:
