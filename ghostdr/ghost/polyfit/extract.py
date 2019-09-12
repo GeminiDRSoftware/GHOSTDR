@@ -611,11 +611,6 @@ class Extractor(object):
                 b_mat = phi * col_inv_var_mat
                 c_mat = np.dot(phi.T, phi * col_inv_var_mat)
                 
-                # FIXME: Sometimes the determinant of c_mat is 0.0
-                # leading to the impossibility of inverting the matrix.
-                # currently the pixel weights are unmodified and those used are
-                # whatever the last iteration calculation was.
-                
                 # DEBUG - should try several columns...
                 #if (i==10 and j>3000):
                 #    import matplotlib.pyplot as plt
@@ -624,23 +619,28 @@ class Extractor(object):
                 #    plt.plot(phi[:,0]/np.max(phi[:,0]))
                 #    import pdb; pdb.set_trace()
                 
-                # FIXME: The above problem is made more complicated by the fact
+                # FIXME: (from Joao? Should be deleted if so)
+                # Sometimes the determinant of c_mat is 0.0
+                # leading to the impossibility of inverting the matrix.
+                # currently the pixel weights are unmodified and those used are
+                # whatever the last iteration calculation was.
+
+                # FIXME: (from Joao? Should be deleted if so)
+                # The above problem is made more complicated by the fact
                 # that due to the different slit magnifications,
                 # the previous weights may not have the same shape, so
                 # we make copies of b_mat for pixel weights when
                 # determinant is zero and shape is different.
+                
+                # If all pixels for a given object (e.g. an arc) are
+                # marked as bad, c_mat can't be inverted. In this case,
+                # we do the best we can with an inverse that works for
+                # no cross-talk.
                 try:
                     pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
                 except:
-                    import pdb; pdb.set_trace()
-                    try:
-                        pixel_weights
-                        if pixel_weights.shape != b_mat.shape:
-                            pixel_weights = b_mat.copy()
-                    except:
-                        pixel_weights = b_mat.copy()
-                    else:
-                        pass
+                    pixel_weights = np.dot(b_mat, 
+                        np.diag(1./np.maximum(np.diag(c_mat),1e-12)))
 
                 # FIXME: Some tilted, bright arc lines cause strange
                 # weightings here... Probably OK - only strange weightings in 2D
@@ -662,7 +662,7 @@ class Extractor(object):
 
                 # Rather than trying to understand and
                 # document Equation 17 from Sharp and Birchall, which 
-                # doesn't make a lot of sense... so lets just calculate the
+                # doesn't make a lot of sense...  lets just calculate the
                 # variance in the simple explicit way for a linear combination
                 # of independent pixels.
                 extracted_var[i, j, :] = np.dot(
