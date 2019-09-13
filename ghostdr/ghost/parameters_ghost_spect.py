@@ -109,6 +109,7 @@ class fitWavelengthConfig(config.Config):
 
 
 class flatCorrectConfig(config.Config):
+    skip = config.Field("No-op this primitive?", bool, False, optional=True)
     suffix = config.Field("Filename suffix", str, "_flatCorrected",
                           optional=True)
     slit = config.Field("Slit viewer exposure", (str, ad), None, optional=True)

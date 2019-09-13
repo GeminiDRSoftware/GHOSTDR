@@ -1370,6 +1370,11 @@ class GHOSTSpect(GHOST):
         timestamp_key = self.timestamp_keys[self.myself()]
         sfx = params["suffix"]
 
+        if params['skip']:
+            log.stdinfo('Skipping the flat field correction '
+                        'step')
+            return adinputs
+
         adinputs_orig = list(adinputs)
         adinputs = [_ for _ in adinputs if not _.phu.get(timestamp_key)]
         if len(adinputs) != len(adinputs_orig):
