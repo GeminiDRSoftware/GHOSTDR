@@ -16,6 +16,15 @@ from .primitives_ghost import filename_updater
 from . import parameters_ghost_slit
 
 from recipe_system.utils.decorators import parameter_override
+
+def parse_timestr(timestr):
+    """
+    Parse a time string in the format %H:%M:%S with an optional trailing .%f
+    """
+    if '.' not in timestr:
+        timestr = timestr + '.0'
+    return datetime.strptime(timestr, "%H:%M:%S.%f")
+
 # ------------------------------------------------------------------------------
 @parameter_override
 class GHOSTSlit(GHOST):
@@ -195,13 +204,13 @@ class GHOSTSlit(GHOST):
                 gt.check_inputs_match(ad, slitflat, check_filter=False)
 
             # get science start/end times
-            sc_start = datetime.strptime(ad.phu['UTSTART'], "%H:%M:%S.%f")
-            sc_end = datetime.strptime(ad.phu['UTEND'], "%H:%M:%S.%f")
+            sc_start = parse_timestr(ad.phu['UTSTART'])
+            sc_end = parse_timestr(ad.phu['UTEND'])
 
             res = ad.res_mode()
             for ext in ad:
-                sv_start = datetime.strptime(ext.hdr['EXPUTST'], "%H:%M:%S.%f")
-                sv_end = datetime.strptime(ext.hdr['EXPUTEND'], "%H:%M:%S.%f")
+                sv_start = parse_timestr(ext.hdr['EXPUTST'])
+                sv_end = parse_timestr(ext.hdr['EXPUTEND'])
 
                 # compute overlap percentage and slit view image duration
                 latest_start = max(sc_start, sv_start)
@@ -233,7 +242,7 @@ class GHOSTSlit(GHOST):
                 mean_offset = accum_weighted_time / sum_of_weights
                 mean_offset = timedelta(seconds=mean_offset)
                 # write the mean exposure epoch into the PHU
-                sc_start = datetime.strptime(ad.phu['UTSTART'], "%H:%M:%S.%f")
+                sc_start = parse_timestr(ad.phu['UTSTART'])
                 mean_epoch = sc_start + mean_offset
                 ad.phu['AVGEPOCH'] = (  # hope this keyword string is ok
                     mean_epoch.strftime("%H:%M:%S.%f")[:-3],

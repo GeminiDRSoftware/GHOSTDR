@@ -63,12 +63,12 @@ class GHOSTBundle(GHOST):
             # TODO: may need to make multiple SV files, not one per SV exposure
             # but one per RED/BLUE exposure which contains all SV exposures that
             # overlap with the RED/BLUE one in time (check with Jon)
-            extns = [x for x in ad if x.hdr.get('CAMERA').lower() == 'slit']
+            extns = [x for x in ad if (x.hdr.get('CAMERA').lower().startswith('slit')) and (len(x.data) > 0)]
             if len(extns) > 0:
                 _write_newfile(extns, '_slit', ad, log)
 
             # now do non-slitv extensions
-            extns = [x for x in ad if x.hdr.get('CAMERA').lower() != 'slit']
+            extns = [x for x in ad if not x.hdr.get('CAMERA').lower().startswith('slit')]
             key = lambda x: '_' + x.hdr.get('CAMERA').lower() + str(
                 x.hdr.get('EXPID'))
             extns = sorted(extns, key=key)
@@ -86,14 +86,16 @@ class GHOSTBundle(GHOST):
 ##############################################################################
 # Below are the helper functions for the primitives in this module           #
 ##############################################################################
-def _get_common_hdr_value(extns, key):
+def _get_common_hdr_value(base, extns, key):
     """
     Helper function to get a common header value from a list of extensions.
 
     Parameters
     ----------
+    base : :any:`astrodata.AstroData`
+        Original AstroData instance that may contain useful headers
     extns : iterable of :any:`astrodata.Astrodata`
-        AstroData extensions to be appended to the new file
+        AstroData extensions to be examined
     key : str
         The FITS header key to find in each extension 
 
@@ -104,14 +106,35 @@ def _get_common_hdr_value(extns, key):
     """
 
     # Get the keyword from every extension
-    c = Counter([x.hdr.get(key) for x in extns])
-    # The first extension may not contain the keyword, but we don't care
+    vals = [x.hdr.get(key) for x in extns]
+    c = Counter(vals)
+    # Not all extensions may not contain the keyword, but we don't care about blanks
     del c[None]
-    # Check that every other extension has the same value for the keyword
+    # If the keyword doesn't exist at all in the extensions,
+    # then use the base value instead
+    if len(c) == 0:
+        return base.phu.get(key)
+    # Check that every extension has the same value for the keyword
     if len(c.most_common()) != 1:
-        raise KeyError('multiple values for ' + key)
+        raise KeyError('multiple values for ' + key + " " + str(vals))
     val, cnt = c.most_common()[0]
     return val
+
+def _get_hdr_values(extns, key):
+    """
+    Helper function to get the all header values from a list of extensions.
+    The return value is a dict keyed on the EXPID value.
+
+    Parameters
+    ----------
+    extns : iterable of :any:`astrodata.Astrodata`
+        AstroData extensions to be examined
+    key : str
+        The FITS header key to find in the list of extensions
+    """
+
+    return {x.hdr.get('EXPID'): x.hdr.get(key) for x in extns}
+
 
 def _write_newfile(extns, suffix, base, log):
     """
@@ -153,10 +176,16 @@ def _write_newfile(extns, suffix, base, log):
     for x in extns:
         if (x.data.size > 0):
             n.append(x)
-    for kw in ['CAMERA', 'CCDNAME', 'CCDSUM']:
-        n.phu.set(kw, _get_common_hdr_value(extns, kw))
+    for kw in ['CAMERA', 'CCDNAME', 'CCDSUM', 'OBSTYPE', 'SMPNAME']:
+        n.phu.set(kw, _get_common_hdr_value(base, extns, kw))
+    vals = _get_hdr_values(extns, 'UTDATE')
+    n.phu.set('UTDATE', vals[min(vals.keys())])
+    vals = _get_hdr_values(extns, 'UTSTART')
+    n.phu.set('UTSTART', vals[min(vals.keys())])
+    vals = _get_hdr_values(extns, 'UTEND')
+    n.phu.set('UTEND', vals[max(vals.keys())])
     n.filename = base.filename
-    ccdsum = _get_common_hdr_value(extns, 'CCDSUM')
+    ccdsum = _get_common_hdr_value(base, extns, 'CCDSUM')
     binning = '_' + 'x'.join(ccdsum.split())
     n.update_filename(suffix=binning+suffix)
 

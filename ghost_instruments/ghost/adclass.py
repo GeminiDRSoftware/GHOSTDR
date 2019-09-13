@@ -97,7 +97,7 @@ class AstroDataGhost(AstroDataGemini):
         """
         Define the 'slit data' tag set for GHOST data.
         """
-        if self.phu.get('CCDNAME', '').startswith('Sony-ICX674'):
+        if self.phu.get('CAMERA', '').lower().startswith('slit'):
             return TagSet(['SLITV', 'IMAGE'], blocks=['SPECT', 'BUNDLE'])
 
     @astro_data_tag
@@ -173,7 +173,7 @@ class AstroDataGhost(AstroDataGemini):
         Returns
         -------
         str/None
-            Color of the arm (`'blue'`, `'red'`), or `'slit'` in case of slit
+            Color of the arm (`'blue'`, `'red'`), or `'slitv'` in case of slit
             viewer data. Returns `None` if arm/slit status can't be determined.
         """
         tags = self.tags
@@ -182,7 +182,7 @@ class AstroDataGhost(AstroDataGemini):
         elif 'RED' in tags:
             return 'red'
         elif 'SLITV' in tags:
-            return 'slit'
+            return 'slitv'
         return None
 
     @astro_data_descriptor
@@ -303,9 +303,9 @@ class AstroDataGhost(AstroDataGemini):
             resolution mode cannot be determined.
         """
         mode = self.phu.get('SMPNAME')
-        if mode == 'HI_ONLY':
+        if mode.endswith('HI_ONLY'):
             return 'high'
-        elif mode == 'LO_ONLY':
+        elif mode.endswith('LO_ONLY'):
             return 'std'
         return None
 
