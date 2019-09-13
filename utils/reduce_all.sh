@@ -100,6 +100,7 @@ echo caldb init -v -w >>commands
 reduce_list "Splitting MEFs" BUNDLE  # no need to comment out: noop's on -split simulator outputs
 for CAM in SLITV BLUE RED; do
 	# process biases (populate an array with each necessary binning mode, and run 'reduce' for each)
+	
 	bins=()  # 'bins' is the array
 	if [ $CAM = SLITV ]; then bins+=(2x2); else bins+=($BINNING); [[ "${bins[@]}" =~ 1x1 ]] || bins+=(1x1); fi  # populate
 	for BIN in "${bins[@]}"; do reduce_list "Reducing $CAM biases" $CAM BIAS $BIN; done  # iterate

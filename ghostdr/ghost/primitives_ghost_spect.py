@@ -900,10 +900,9 @@ class GHOSTSpect(GHOST):
                     False, True, False, True, False, True, True,
                 ]
             
-            # MJI - Marc, this is for testing in the simplest possible case.
-            # TODO Decide on production usage
-            objs_to_use = [[0], ]
-            use_sky = [False, ]
+            # MJI - Uncomment the lines below for testing in the simplest possible case.
+            #objs_to_use = [[0], ]
+            #use_sky = [False, ]
 
             for i, (o, s) in enumerate(zip(objs_to_use, use_sky)):
                 print("OBJECTS:" + str(o))
