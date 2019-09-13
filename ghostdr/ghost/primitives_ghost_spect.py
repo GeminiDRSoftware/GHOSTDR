@@ -825,19 +825,21 @@ class GHOSTSpect(GHOST):
                         smoothed_flat > 0.1 * mean_flat_flux
                     )
 
-                    import pdb; pdb.set_trace()
+                    # import pdb; pdb.set_trace()
 
-                    #FIXME: remove False below and turn into an option.
-                    #if params['smoth_flat_spatially']:
-                    if False:
+                    # MCW 190912 - converted to option, default is 'False'
+                    # TODO: MJI to add description of what this (should) do
+                    if params['smooth_flat_spatially']:
                         correction_2d = np.zeros_like(flat[0].data)
                         correction_2d[pix_to_correct] = correction
-                        smoothed_correction_2d = convolve_with_mask(correction_2d,
-                                                    pix_to_correct)
-                        smoothed_correction_2d[pix_to_correct] = \
-                            correction_2d[pix_to_correct]
+                        smoothed_correction_2d = convolve_with_mask(
+                            correction_2d, pix_to_correct)
+                        smoothed_correction_2d[
+                            pix_to_correct
+                        ] = correction_2d[pix_to_correct]
                         smoothed_correction_2d = nd.median_filter(
-                            smoothed_correction_2d, size=(7,1))
+                            smoothed_correction_2d, size=(7, 1)
+                        )
                         correction = smoothed_correction_2d[pix_to_correct]
 
                     # This is where we add the new bad pixels in. It is needed for

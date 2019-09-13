@@ -632,7 +632,10 @@ class Extractor(object):
                 try:
                     pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
                 except:
-                    import pdb; pdb.set_trace()
+                    # print('Bringing you to PDB due to a failure to '
+                    #       'compute the pixel weights by matrix '
+                    #       'algebra')
+                    # import pdb; pdb.set_trace()
                     try:
                         pixel_weights
                         if pixel_weights.shape != b_mat.shape:
