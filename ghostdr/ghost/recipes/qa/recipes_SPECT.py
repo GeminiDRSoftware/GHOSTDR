@@ -44,7 +44,8 @@ def reduce(p):
                          # Possible option for telluric correction (so
                          # option to override canned file used)
     # TODO: define reduce() and reduce_nostack() maybe?
-    p.interpolateAndCombine() # Should factor this step into separate recipe
+    p.interpolateAndCombine(skip=True) # Should factor this step into separate recipe
+                                       # MCW 190913 - Skip for now (not right)
     p.formatOutput()
     return
 
