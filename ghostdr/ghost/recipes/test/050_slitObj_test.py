@@ -195,6 +195,7 @@ class TestSlitObj(object):
                                                  "observing epoch " \
                                                  "recorded".format(corrfile)
 
+    @pytest.mark.skip("No point in doing until data stabilizes")
     def test_slitarc_avgepoch(self, do_slit_obj, values=AVGEPOCH_VALUES):
         """
         Confirm that the average exposure epoch is correct.
