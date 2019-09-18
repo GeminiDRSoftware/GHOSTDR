@@ -58,6 +58,25 @@ def get_or_create_tmpdir(tmpdir_factory):
                                           numbered=False)
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
+    # Bring the test data in
+    rawfilename = '*MEF.fits'
+    rawfiles = glob.glob(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'testdata',
+        rawfilename))
+    if len(rawfiles) == 0:
+        raise RuntimeError("Test data for 'fullreduction' test suite is "
+                           "not present. Please place a directory "
+                           "named 'testdata', filled with "
+                           "complete simulated data, into "
+                           "{}".format(
+            os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1]))
+        )
+    for _ in rawfiles:
+        shutil.copy(
+            _,
+            os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+
     # OLD WAY
     # Blank the calibrations manager
     # print('Blanking calibrations manager')

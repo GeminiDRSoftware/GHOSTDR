@@ -112,14 +112,6 @@ class TestBundleClass(object):
         tmpsubdir, cal_service = get_or_create_tmpdir
         print(tmpsubdir)
         # Make sure we're working inside the temp dir
-        rawfiles = glob.glob(os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            'testdata',
-            rawfilename))
-        for _ in rawfiles:
-            shutil.copy(
-                _,
-                os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         rawfile = glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
                                          rawfilename))
 
