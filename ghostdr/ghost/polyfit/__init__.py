@@ -9,8 +9,8 @@ __author__ = "Michael Ireland <michael.ireland@anu.edu.au> and " \
              "Joao Bento <joao.bento@anu.edu.au>"
 __version__ = "1.0"
 
-from ghost import GhostArm
-from slitview import SlitView
-from extract import Extractor
+from .ghost import GhostArm
+from .slitview import SlitView
+from .extract import Extractor
 
 
