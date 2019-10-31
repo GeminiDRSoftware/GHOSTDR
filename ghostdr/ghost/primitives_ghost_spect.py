@@ -28,7 +28,7 @@ import astrodata
 from geminidr.gemini.lookups import DQ_definitions as DQ
 
 from gempy.gemini import gemini_tools as gt
-from gempy.mosaic.mosaicAD import MosaicAD
+# from gempy.mosaic.mosaicAD import MosaicAD
 
 from .polyfit import GhostArm, Extractor, SlitView
 from .polyfit.ghost import GhostArm
@@ -2147,76 +2147,76 @@ class GHOSTSpect(GHOST):
     # The geometry_conf.py file is not needed; all you're doing is tiling
     # extensions according to their DETSEC keywords, without gaps or rotations
     # so this shouldn't need any extra information.
-    def tileArrays(self, adinputs=None, **params):
-        """
-        Tile GHOST data into a single frame.
-
-        This primitive will tile the SCI frames of the input images, along
-        with the VAR and DQ frames if they exist.
-
-        The tiling for GHOST is much simpler than for most Gemini
-        instruments, as there are no tile gaps to account for. Data from the
-        four camera amplifiers are simply stiched together, using the
-        :class:`gempy.mosaic.mosaicData.MosaicData` and
-        :class:`gempy.mosaic.mosaicGeometry.MosaicGeometry` classes.
-
-        This primitive takes no additional parameters.
-        """
-
-        def simple_mosaic_function(ad):
-            """
-            This will go into MosaicAD as the default function.
-            Being discussed within the SUSD team.
-            """
-            from gempy.mosaic.mosaicData import MosaicData
-            from gempy.mosaic.mosaicGeometry import MosaicGeometry
-
-            # Calling trim_to_data_section() corrects the WCS if the overscan
-            # regions haven't been trimmed yet
-            ad = gt.trim_to_data_section(ad, keyword_comments=self.keyword_comments)
-
-            md = MosaicData()  # Creates an empty object
-            md.data_list = []  # Not needed
-
-            x_bin = ad.detector_x_bin()
-            y_bin = ad.detector_y_bin()
-            detsecs = [(k[0]//x_bin, k[1]//x_bin, k[2]//y_bin, k[3]//y_bin)
-                       for k in ad.detector_section()]
-            # One output block
-            md.coords = {'amp_mosaic_coord': detsecs,
-                         'amp_block_coord': detsecs}
-            nxout = max(k[1] for k in detsecs)
-            nyout = max(k[3] for k in detsecs)
-            mg = MosaicGeometry({'blocksize': (nxout, nyout),
-                                 'mosaic_grid': (1,1)})
-            return md, mg
-
-        log = self.log
-        log.debug(gt.log_message("primitive", self.myself(), "starting"))
-        timestamp_key = self.timestamp_keys[self.myself()]
-
-        adoutputs = []
-        for ad in adinputs:
-            if ad.phu.get(timestamp_key):
-                log.warning("No changes will be made to {}, since it has "
-                            "already been processed by tileArrays".
-                            format(ad.filename))
-                adoutputs.append(ad)
-                continue
-
-            mo = MosaicAD(ad, mosaic_ad_function=simple_mosaic_function)
-            ad_mos = mo.as_astrodata(tile=True)
-
-            gt.mark_history(ad_mos, primname=self.myself(),
-                            keyword=timestamp_key)
-            ad_mos.update_filename(suffix=params["suffix"],
-                                   strip=True)
-            adoutputs.append(ad_mos)
-
-            ad_mos.write(overwrite=True)
-            # ad_mos.write(overwrite=True)
-
-        return adoutputs
+    # def tileArrays(self, adinputs=None, **params):
+    #     """
+    #     Tile GHOST data into a single frame.
+    #
+    #     This primitive will tile the SCI frames of the input images, along
+    #     with the VAR and DQ frames if they exist.
+    #
+    #     The tiling for GHOST is much simpler than for most Gemini
+    #     instruments, as there are no tile gaps to account for. Data from the
+    #     four camera amplifiers are simply stiched together, using the
+    #     :class:`gempy.mosaic.mosaicData.MosaicData` and
+    #     :class:`gempy.mosaic.mosaicGeometry.MosaicGeometry` classes.
+    #
+    #     This primitive takes no additional parameters.
+    #     """
+    #
+    #     def simple_mosaic_function(ad):
+    #         """
+    #         This will go into MosaicAD as the default function.
+    #         Being discussed within the SUSD team.
+    #         """
+    #         from gempy.mosaic.mosaicData import MosaicData
+    #         from gempy.mosaic.mosaicGeometry import MosaicGeometry
+    #
+    #         # Calling trim_to_data_section() corrects the WCS if the overscan
+    #         # regions haven't been trimmed yet
+    #         ad = gt.trim_to_data_section(ad, keyword_comments=self.keyword_comments)
+    #
+    #         md = MosaicData()  # Creates an empty object
+    #         md.data_list = []  # Not needed
+    #
+    #         x_bin = ad.detector_x_bin()
+    #         y_bin = ad.detector_y_bin()
+    #         detsecs = [(k[0]//x_bin, k[1]//x_bin, k[2]//y_bin, k[3]//y_bin)
+    #                    for k in ad.detector_section()]
+    #         # One output block
+    #         md.coords = {'amp_mosaic_coord': detsecs,
+    #                      'amp_block_coord': detsecs}
+    #         nxout = max(k[1] for k in detsecs)
+    #         nyout = max(k[3] for k in detsecs)
+    #         mg = MosaicGeometry({'blocksize': (nxout, nyout),
+    #                              'mosaic_grid': (1,1)})
+    #         return md, mg
+    #
+    #     log = self.log
+    #     log.debug(gt.log_message("primitive", self.myself(), "starting"))
+    #     timestamp_key = self.timestamp_keys[self.myself()]
+    #
+    #     adoutputs = []
+    #     for ad in adinputs:
+    #         if ad.phu.get(timestamp_key):
+    #             log.warning("No changes will be made to {}, since it has "
+    #                         "already been processed by tileArrays".
+    #                         format(ad.filename))
+    #             adoutputs.append(ad)
+    #             continue
+    #
+    #         mo = MosaicAD(ad, mosaic_ad_function=simple_mosaic_function)
+    #         ad_mos = mo.as_astrodata(tile=True)
+    #
+    #         gt.mark_history(ad_mos, primname=self.myself(),
+    #                         keyword=timestamp_key)
+    #         ad_mos.update_filename(suffix=params["suffix"],
+    #                                strip=True)
+    #         adoutputs.append(ad_mos)
+    #
+    #         ad_mos.write(overwrite=True)
+    #         # ad_mos.write(overwrite=True)
+    #
+    #     return adoutputs
 
     # validateData() removed since inherited Standardize method will handle it
 
@@ -2271,8 +2271,8 @@ class GHOSTSpect(GHOST):
         dates_avail = set([k.split('_')[-1] for k in poly_dict.keys()])
         
         # Safe to assume instrument won't be used after 2099...
-        dates_avail = map(lambda x: datetime.strptime('20{}'.format(x),
-                                            '%Y%m%d').date(), dates_avail)
+        dates_avail = [datetime.strptime('20{}'.format(x),
+                                            '%Y%m%d').date() for x in dates_avail]
         dates_avail.sort()
 
         # Determine the latest data that precedes the observing date

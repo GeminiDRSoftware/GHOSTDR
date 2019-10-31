@@ -303,10 +303,13 @@ class AstroDataGhost(AstroDataGemini):
             resolution mode cannot be determined.
         """
         mode = self.phu.get('SMPNAME')
-        if mode.endswith('HI_ONLY'):
-            return 'high'
-        elif mode.endswith('LO_ONLY'):
-            return 'std'
+        try:
+            if mode.endswith('HI_ONLY'):
+                return 'high'
+            elif mode.endswith('LO_ONLY'):
+                return 'std'
+        except:
+            pass
         return None
 
     # TODO: read_noise(): see comments on gain()

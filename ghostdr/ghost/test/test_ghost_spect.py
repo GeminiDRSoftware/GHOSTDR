@@ -4,11 +4,14 @@ Unit tests for :any:`ghostdr.ghost.primitives_ghost_spect`.
 
 This is a suite of tests to be run with pytest.
 """
+from __future__ import division
+
 import os
 import numpy as np
 import astrodata
 import gemini_instruments
 from gempy.utils import logutils
+from six.moves import range
 
 # from geminidr.core.test import ad_compare
 
@@ -226,8 +229,8 @@ class TestGhost:
         ad = self.generate_minimum_file()
         ad[0].DQ = np.zeros(ad[0].data.shape, dtype=np.int)
         # Insert some very large data points into the otherwise all-1s data
-        xs = range(0, 1024)
-        ys = range(0, 1024)
+        xs = list(range(0, 1024))
+        ys = list(range(0, 1024))
         np.random.shuffle(xs)
         np.random.shuffle(ys)
         xs = xs[:10]
@@ -283,7 +286,7 @@ class TestGhost:
         dark.filename = 'dark.fits'
 
         # 'Re-bin' the data file
-        ad[0].data = np.ones((1024 / ybin, 1024 / xbin, ), dtype=np.float64)
+        ad[0].data = np.ones((int(1024 / ybin), int(1024 / xbin), ), dtype=np.float64)
         ad[0].hdr.set('CCDSUM', '{} {}'.format(xbin, ybin, ))
 
         gs = GHOSTSpect([])
@@ -655,7 +658,7 @@ class TestGhost:
 
         gs = GHOSTSpect([])
         corr_fact = gs._compute_barycentric_correction(ad, )[0]
-        assert abs(corr_fact - known_corr) < 1e-9, \
+        assert abs(corr_fact - known_corr) < 1e-6, \
             "_compute_barycentric_correction " \
             "returned an incorrect value " \
             "(expected {}, returned {})".format(

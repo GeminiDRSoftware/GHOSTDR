@@ -102,23 +102,26 @@ class TestBiasSubtraction(object):
         rawfile, corrfile, calibs = do_master_dark
         rawad = astrodata.open(rawfile)
         corrad = astrodata.open(corrfile)
-        bias = astrodata.open(calibs['processed_bias'])
+        biasad = astrodata.open(calibs['processed_bias'])
 
         # import pdb; pdb.set_trace()
 
         for i, ext in enumerate(corrad):
-            mean_raw = np.mean(rawfile[i].data[rawfile[i].mask == 0])
+            mean_raw = np.mean(rawad[i].data[rawad[i].mask == 0])
             mean_corr = np.mean(corrfile[i].data[corrfile[i].mask == 0])
-            mean_bias = np.mean(bias[i].data[bias[i].mask == 0])
+            mean_bias = np.mean(biasad[i].data[biasad[i].mask == 0])
             mean_diff = np.abs(mean_corr - (mean_raw - mean_bias)) / mean_corr
             assert mean_diff < mean_tolerance, "Mean of bias-corrected " \
-                                               "dark frame exceeds tolerance " \
+                                               "dark frame " \
+                                               "extension {} " \
+                                               "exceeds tolerance " \
                                                "threshold when compared to " \
                                                "the mean of the raw dark " \
                                                "less the mean of the bias " \
                                                "used (tolerance permitted = " \
                                                "{}, tolerance found = " \
                                                "{})".format(
+                i,
                 mean_tolerance,
                 mean_diff,
             )
@@ -130,22 +133,32 @@ class TestBiasSubtraction(object):
         input bias, within a tolerance.
         """
 
-        sigma_limit = 3.0  # Needs to be kept in-sync with the test recipe value
+        std_tolerance = 0.03  # 3%
 
-        rawfiles, corrfile, calibs = do_master_dark
+        rawfile, corrfile, calibs = do_master_dark
+        rawad = astrodata.open(rawfile)
         corrad = astrodata.open(corrfile)
+        biasad = astrodata.open(calibs['processed_bias'])
 
         # import pdb; pdb.set_trace()
 
         for i, ext in enumerate(corrad):
-            sigmas = np.abs(corrad[i].data[corrad[i].mask == 0] -
-                            np.ma.median(corrad[i].data[corrad[i].mask == 0])
-                            ) / np.ma.std(corrad[i].data[corrad[i].mask == 0])
-            # import pdb; pdb.set_trace()
-            assert np.all(sigmas < sigma_limit), "Points outside {} " \
-                                                 "sigma remain in the " \
-                                                 "output dark " \
-                                                 "(max sigma found: " \
-                                                 "{})".format(
-                sigma_limit, np.ma.max(sigmas),
+            std_raw = np.std(rawad[i].data[rawad[i].mask == 0])
+            std_corr = np.std(corrfile[i].data[corrfile[i].mask == 0])
+            std_bias = np.std(biasad[i].data[biasad[i].mask == 0])
+            std_diff = np.abs(std_corr - np.sqrt((std_raw**2 + std_bias**2))) / std_corr
+
+            assert std_diff < std_tolerance, "Std. dev. of bias-corrected " \
+                                             "dark frame extension {} " \
+                                             "exceeds tolerance " \
+                                             "threshold when compared to " \
+                                             "the std. dev. of the raw dark " \
+                                             "plus the std. dev. of the bias " \
+                                             "used added in quadrature " \
+                                             "(tolerance permitted = " \
+                                             "{}, tolerance found = " \
+                                             "{})".format(
+                i,
+                std_tolerance,
+                std_diff,
             )
