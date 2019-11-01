@@ -57,8 +57,10 @@ def convolve_with_mask(data, mask, rectangle_width = (100,20)):
     #Create our rectangular function
     rectangle_function = np.zeros_like(data)
     rectangle_function[:rectangle_width[0], :rectangle_width[1]] = 1.0
-    rectangle_function = np.roll(rectangle_function, -rectangle_width[0]/2, axis=0)
-    rectangle_function = np.roll(rectangle_function, -rectangle_width[1]/2, axis=1)
+    rectangle_function = np.roll(rectangle_function, int(-rectangle_width[
+        0] / 2), axis=0)
+    rectangle_function = np.roll(rectangle_function, int(-rectangle_width[1]/2),
+                                 axis=1)
     rectangle_fft = np.fft.rfft2(rectangle_function)
 
     #Median filter in case of cosmic rays
