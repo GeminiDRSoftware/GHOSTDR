@@ -13,6 +13,7 @@ class AstroDataGhost(AstroDataGemini):
                           array_name = 'AMPNAME',
                           overscan_section = 'BIASSEC',
                           res_mode = 'SMPNAME',
+                          exposure_time = 'EXPTIME',
                           )
 
     @staticmethod
@@ -250,6 +251,35 @@ class AstroDataGhost(AstroDataGemini):
             return ybin_list[0] if ybin_list == ybin_list[::-1] else None
 
     # TODO: GHOST descriptor returns no values if data are unprepared
+
+    @astro_data_descriptor
+    def exposure_time(self):
+        """
+        Returns the exposure time in seconds.
+
+        This function extends the standard exposure_time() descriptor
+        by allowing the exposure time to exist in the header of the
+        first data extension, as well as the PHU. If the exposure time
+        exists in both places, the PHU value takes precedence.
+
+        Returns
+        -------
+        float
+            Exposure time.
+        """
+
+        exp_time_default = super(AstroDataGhost, self).exposure_time()
+
+        if exp_time_default is None:
+            exposure_time = self[0].hdr.get(
+                self._keyword_for('exposure_time'),
+                -1)
+            if exposure_time == -1:
+                return None
+            return exposure_time
+
+        return exp_time_default
+
 
     # The gain() descriptor is inherited from gemini/adclass, and returns
     # the value of the GAIN keyword (as a list if sent a complete AD object,
