@@ -165,7 +165,7 @@ def _write_newfile(extns, suffix, base, log):
     # because this is the real PHU from the original file before
     # it was mashed into a giant MEF.
     for x in extns:
-        if (not hasattr(x, 'data')) or (x.data.size == 0):
+        if (x.hdr.get('NAXIS') == 0) or (x.data.size == 0):
             phu = PrimaryHDU(data=None, header=copy.deepcopy(x.hdr))
             n = astrodata.create(phu)
     for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:
@@ -174,7 +174,7 @@ def _write_newfile(extns, suffix, base, log):
         except KeyError:
             pass
     for x in extns:
-        if hasattr(x, 'data') and (x.data.size > 0):
+        if (x.hdr.get('NAXIS') > 0) and (x.data.size > 0):
             n.append(x)
     for kw in ['CAMERA', 'CCDNAME', 'CCDSUM', 'OBSTYPE', 'SMPNAME']:
         n.phu.set(kw, _get_common_hdr_value(base, extns, kw))
