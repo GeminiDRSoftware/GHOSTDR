@@ -155,7 +155,12 @@ class AstroDataGhost(AstroDataGemini):
         list/str
             read_area of each extension
         """
-        ampname = self.array_name()
+        # Note that tiled arrays won't have an array_name, so we'll fake it
+        # FIXME correctly fetch keyword for tileArrays primitive
+        if self.phu.get('TILEARRY', None) is not None:
+            ampname = [0, ]
+        else:
+            ampname = self.array_name()
         detsec = self.detector_section(pretty=True)
         # Combine the amp name(s) and detector section(s)
         if self.is_single:
@@ -192,6 +197,31 @@ class AstroDataGhost(AstroDataGemini):
         Returns a suitable calibration key for GHOST, which includes the arm.
         """
         return (self.data_label().replace('_stack', ''), self.arm())
+
+    # FIXME Remove once headers corrected
+    @astro_data_descriptor
+    def central_wavelength(self, asMicrometers=False, asNanometers=False,
+                           asAngstroms=False):
+        """
+        Dummy to work around current Gemini cal_mgr
+        """
+        val = self.phu.get(self._keyword_for('central_wavelength'), None)
+
+        if val is None:
+            if self.arm() == 'red':
+                val = 4000. * 10**-10
+            elif self.arm() == 'blue':
+                val = 6000. * 10**-10
+
+
+        if asMicrometers:
+            val *= 10**6
+        elif asNanometers:
+            val *= 10**9
+        elif asAngstroms:
+            val *= 10**10
+
+        return float(val)
 
     @astro_data_descriptor
     def detector_name(self):
@@ -249,6 +279,14 @@ class AstroDataGhost(AstroDataGemini):
             ybin_list = [_get_ybin(b) for b in binning]
             # Check list is single-valued
             return ybin_list[0] if ybin_list == ybin_list[::-1] else None
+
+    # FIXME Remove once headers corrected
+    @astro_data_descriptor
+    def disperser(self, stripID=False, pretty=False):
+        """
+        Dummy to work around current Gemini cal_mgr
+        """
+        return "GHOSTDISP"
 
     # TODO: GHOST descriptor returns no values if data are unprepared
 
