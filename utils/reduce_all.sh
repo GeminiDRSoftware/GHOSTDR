@@ -71,7 +71,7 @@ mklist() {
 # perform the reduction; return any calibrator produced
 doreduce() {
 	if [[ "$1" == @* ]]; then TARGET=@$UUID; else TARGET=$1; fi
-	echo PYSYN_CDBS=. reduce --drpkg ghostdr $STANDARD $QUALITY $TARGET >>commands
+	echo PYSYN_CDBS=. reduce --drpkg ghostdr --adpkg ghost_instruments $STANDARD $QUALITY $TARGET >>commands
 	stdbuf -o 0 reduce --drpkg ghostdr $STANDARD $QUALITY "$@" 2>&1 | stdbuf -o 0 grep -v stdbuf | tee /dev/tty \
 		| { grep 'Calibration stored as' || true; } | awk '{print $4}'
 }
