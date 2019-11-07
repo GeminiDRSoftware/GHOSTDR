@@ -110,7 +110,7 @@ fixture_data = {
                                                ('dispersion_axis', None),
                                                ('effective_wavelength', None),
                                                ('elevation', 11.29267010175693),
-                                               ('exposure_time', None),
+                                               ('exposure_time', 10.0),
                                                ('filter_name', None),
                                                ('focal_plane_mask', None),
                                                ('gain',

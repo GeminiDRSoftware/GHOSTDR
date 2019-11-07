@@ -20,12 +20,12 @@ class TestSlitView():
 
     def test_slitview_init(self):
         """Test input checking on SlitView"""
-        with pytest.raises(ValueError,
-                           message='slitview.SlitView failed to throw '
-                                   'ValueError when passed an invalid '
-                                   'instrument mode'):
+        with pytest.raises(ValueError):
             _ = polyfit.slitview.SlitView(np.zeros((1, 1)), np.zeros((1, 1,)),
                                           mode='invalid')
+            pytest.fail('slitview.SlitView failed to throw '
+                        'ValueError when passed an invalid '
+                        'instrument mode')
 
     def test_slitview_modes(self, get_slitview_obj):
         """Test instantiation for each mode"""
@@ -42,10 +42,10 @@ class TestSlitView():
     def test_slitview_cutout_init(self, get_slitview_obj):
         """Test input checking on SlitView.cutout"""
         data_arr, flat_arr, sv = get_slitview_obj
-        with pytest.raises(ValueError,
-                           message='SlitView.cutout failed to throw '
-                                   'ValueError when given an invalid arm'):
+        with pytest.raises(ValueError):
             sv.cutout(arm='invalid')
+            pytest.fail('SlitView.cutout failed to throw '
+                        'ValueError when given an invalid arm')
 
     @pytest.mark.parametrize('use_flat,arm', itertools.product(*[
         [True, False],

@@ -52,7 +52,7 @@ class FixtureIterator(object):
 
 
 @pytest.mark.parametrize("fn,ad,tag_set", FixtureIterator(tags_fixture_data))
-def test_descriptor(fn, ad, tag_set):
+def test_tag(fn, ad, tag_set):
     """
     Ensure the tag set returned from each test file is as expected.
     """

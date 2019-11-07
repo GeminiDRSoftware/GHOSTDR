@@ -76,6 +76,14 @@ class AstroDataGhost(AstroDataGemini):
             return TagSet(['CAL', 'FLAT'])
 
     @astro_data_tag
+    def _tag_slitflat(self):
+        """
+        Define the 'slitflat data' tag set for GHOST data.
+        """
+        if self.phu.get('OBSTYPE') == 'FLAT' and self.phu.get('CAMERA', '').lower().startswith('slit'):
+            return TagSet(['CAL', 'SLITFLAT'])
+
+    @astro_data_tag
     def _tag_sky(self):
         """
         Define the 'flat data' tag set for GHOST data.
@@ -93,13 +101,15 @@ class AstroDataGhost(AstroDataGemini):
         else:
             return TagSet(['STD'])
 
+    # MCW 191107 - had to add SLIT back in to make cal system work
     @astro_data_tag
     def _tag_slitv(self):
         """
         Define the 'slit data' tag set for GHOST data.
         """
         if self.phu.get('CAMERA', '').lower().startswith('slit'):
-            return TagSet(['SLITV', 'IMAGE'], blocks=['SPECT', 'BUNDLE'])
+            return TagSet(['SLITV', 'SLIT', 'IMAGE'],
+                          blocks=['SPECT', 'BUNDLE'])
 
     @astro_data_tag
     def _tag_spect(self):
@@ -212,6 +222,8 @@ class AstroDataGhost(AstroDataGemini):
                 val = 4000. * 10**-10
             elif self.arm() == 'blue':
                 val = 6000. * 10**-10
+            else:
+                return None
 
 
         if asMicrometers:
@@ -280,14 +292,6 @@ class AstroDataGhost(AstroDataGemini):
             # Check list is single-valued
             return ybin_list[0] if ybin_list == ybin_list[::-1] else None
 
-    # FIXME Remove once headers corrected
-    @astro_data_descriptor
-    def disperser(self, stripID=False, pretty=False):
-        """
-        Dummy to work around current Gemini cal_mgr
-        """
-        return "GHOSTDISP"
-
     # TODO: GHOST descriptor returns no values if data are unprepared
 
     @astro_data_descriptor
@@ -308,13 +312,15 @@ class AstroDataGhost(AstroDataGemini):
 
         exp_time_default = super(AstroDataGhost, self).exposure_time()
 
-        if exp_time_default is None:
-            exposure_time = self[0].hdr.get(
-                self._keyword_for('exposure_time'),
-                -1)
-            if exposure_time == -1:
-                return None
-            return exposure_time
+        # Don't let this special logic happen for bundles
+        if 'BUNDLE' not in self.tags:
+            if exp_time_default is None:
+                exposure_time = self[0].hdr.get(
+                    self._keyword_for('exposure_time'),
+                    -1)
+                if exposure_time == -1:
+                    return None
+                return exposure_time
 
         return exp_time_default
 
