@@ -16,6 +16,7 @@ from gempy.utils import logutils
 from astropy.io import fits
 
 from ghostdr.ghost.primitives_ghost_bundle import GHOSTBundle
+from six.moves import range
 
 TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
 logfilename = 'test_standardize.log'

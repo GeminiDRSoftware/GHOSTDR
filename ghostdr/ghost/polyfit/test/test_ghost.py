@@ -66,11 +66,12 @@ class TestGhostArmBasic():
         # params type.
         # This is required because a few operations are performed on params
         # in the function that need it to be a np.array
-        with pytest.raises(TypeError, message='GhostArm.evaluate_poly '
-                                              'failed to raise a '
-                                              'TypeError when passed a list '
-                                              '(instead of np.array)'):
+        with pytest.raises(TypeError):
             gen_ghost.evaluate_poly([[1., 2., ], [3., 4., ], ])
+            pytest.fail('GhostArm.evaluate_poly '
+                        'failed to raise a '
+                        'TypeError when passed a list '
+                        '(instead of np.array)')
 
     fit_resid_atts = ['params', 'orders', 'y_values', 'data', ]
 
@@ -84,17 +85,19 @@ class TestGhostArmBasic():
         a = np.asarray(l)
         kw = {_: a for _ in self.fit_resid_atts}
         kw[attrib] = l
-        with pytest.raises(TypeError, message='GhostArm.fit_resid failed to '
-                                              'raise TypeError when passed '
-                                              'a non-np.array for '
-                                              '{}'.format(attrib)):
+        with pytest.raises(TypeError):
             gen_ghost.fit_resid(**kw)
+            pytest.fail('GhostArm.fit_resid failed to '
+                        'raise TypeError when passed '
+                        'a non-np.array for '
+                        '{}'.format(attrib))
 
-        with pytest.raises(UserWarning, message='GhostArm.fit_resid failed to '
-                                                'raise UserWarning when params '
-                                                'orders and y_values have '
-                                                'different lengths'):
+        with pytest.raises(UserWarning):
             gen_ghost.fit_resid(a, a, a[:1], a, ydeg=1, xdeg=1)
+            pytest.fail('GhostArm.fit_resid failed to '
+                        'raise UserWarning when params '
+                        'orders and y_values have '
+                        'different lengths')
 
     spectral_format_args = ['xparams', 'wparams']
 
@@ -103,109 +106,119 @@ class TestGhostArmBasic():
         gen_ghost = make_ghostarm_basic
         l = [[1, 2, ], [3, 4, ]]
 
-        with pytest.raises(UserWarning, message='GhostArm.spectral_format '
-                                                'failed to raise '
-                                                'UserWarning when given no '
-                                                'xparams or wparams'):
+        with pytest.raises(UserWarning):
             gen_ghost.spectral_format(wparams=None, xparams=None)
-        with pytest.raises(UserWarning, message='GhostArm.spectral_format '
-                                                'failed to raise '
-                                                'UserWarning when given a'
-                                                'non-np.ndarray for xparams'):
+            pytest.fail('GhostArm.spectral_format '
+                        'failed to raise '
+                        'UserWarning when given no '
+                        'xparams or wparams')
+        with pytest.raises(UserWarning):
             gen_ghost.spectral_format(wparams=None, xparams=l)
-        with pytest.raises(UserWarning, message='GhostArm.spectral_format '
-                                                'failed to raise '
-                                                'UserWarning when given a'
-                                                'non-np.ndarray for wparams'):
+            pytest.fail('GhostArm.spectral_format '
+                        'failed to raise '
+                        'UserWarning when given a'
+                        'non-np.ndarray for xparams')
+        with pytest.raises(UserWarning):
             gen_ghost.spectral_format(wparams=l, xparams=None)
+            pytest.fail('GhostArm.spectral_format '
+                        'failed to raise '
+                        'UserWarning when given a'
+                        'non-np.ndarray for wparams')
 
     def test_adjust_x_inputs(self, make_ghostarm_basic):
         """Test the input checking of GhostArm.adjust_x"""
         gen_ghost = make_ghostarm_basic
         l = [1, 2, 3, 4, ]
         a = np.asarray(l)
-        with pytest.raises(TypeError, message='GhostArm.adjust_x failed to '
-                                              'raise TypeError when old_x '
-                                              'is not a np.ndarray'):
+        with pytest.raises(TypeError):
             gen_ghost.adjust_x(l, a)
-        with pytest.raises(TypeError, message='GhostArm.adjust_x failed to '
-                                              'raise TypeError when image '
-                                              'is not a np.ndarray'):
+            pytest.fail('GhostArm.adjust_x failed to '
+                        'raise TypeError when old_x '
+                        'is not a np.ndarray')
+        with pytest.raises(TypeError):
             gen_ghost.adjust_x(a, l)
-        with pytest.raises(UserWarning, message='GhostArm.adjust_x failed to '
-                                                'raise UserWarning when image '
-                                                'does not have dimensions '
-                                                '(2, 2)'):
+            pytest.fail('GhostArm.adjust_x failed to '
+                        'raise TypeError when image '
+                        'is not a np.ndarray')
+        with pytest.raises(UserWarning):
             gen_ghost.adjust_x(a, a)
+            pytest.fail('GhostArm.adjust_x failed to '
+                        'raise UserWarning when image '
+                        'does not have dimensions '
+                        '(2, 2)')
 
     def test_fit_x_to_image_inputs(self, make_ghostarm_basic):
         """Test the input checking of GhostArm.fit_x_to_image"""
         gen_ghost = make_ghostarm_basic
         img = np.zeros((3, 3, 3, ))
         pars = np.zeros((2, 2, ))
-        with pytest.raises(UserWarning, message='GhostArm.fit_x_to_image '
-                                                'failed to raise a '
-                                                'UserWarning when the image '
-                                                'could not be correctly '
-                                                'reduced by decrease_dim'):
+        with pytest.raises(UserWarning):
             gen_ghost.fit_x_to_image(img, pars, decrease_dim=4)
+            pytest.fail('GhostArm.fit_x_to_image '
+                        'failed to raise a '
+                        'UserWarning when the image '
+                        'could not be correctly '
+                        'reduced by decrease_dim')
 
     def test_fit_to_x_inputs(self, make_ghostarm_basic):
         """Test the input checking of GhostArm.fit_to_x"""
         gen_ghost = make_ghostarm_basic
         xtf = np.zeros((3, 3, ))
         init_mod = np.zeros((2, 2, ))
-        with pytest.raises(UserWarning, message='GhostArm.fit_to_x failed to '
-                                                'raise a UserWarning when '
-                                                'x_to_fit is not a '
-                                                'np.ndarray'):
+        with pytest.raises(UserWarning):
             gen_ghost.fit_to_x(xtf.tolist(), init_mod)
-        with pytest.raises(UserWarning, message='GhostArm.fit_to_x failed to '
-                                                'raise a UserWarning when '
-                                                'init_mod is not a '
-                                                'np.ndarray'):
+            pytest.fail('GhostArm.fit_to_x failed to '
+                        'raise a UserWarning when '
+                        'x_to_fit is not a '
+                        'np.ndarray')
+        with pytest.raises(UserWarning):
             gen_ghost.fit_to_x(xtf, init_mod.tolist())
-        with pytest.raises(UserWarning, message='GhostArm.fit_to_x failed to '
-                                                'raise a UserWarning when '
-                                                'init_mod is not a '
-                                                'np.ndarray'):
+            pytest.fail('GhostArm.fit_to_x failed to '
+                        'raise a UserWarning when '
+                        'init_mod is not a '
+                        'np.ndarray')
+        with pytest.raises(UserWarning):
             gen_ghost.fit_to_x(xtf, init_mod, decrease_dim=4)
+            pytest.fail('GhostArm.fit_to_x failed to '
+                        'raise a UserWarning when '
+                        'init_mod is not a '
+                        'np.ndarray')
 
     def test_spectral_format_with_matrix_inputs(self, make_ghostarm_basic):
         """Test the input checking of spectral_format_with_matrix"""
         gen_ghost = make_ghostarm_basic
         a = np.zeros((2, 2, ))
-        with pytest.raises(ValueError,
-                           message='GhostArm.spectral_format_with_matrix '
-                                   'failed to raise ValueError when given '
-                                   'no xmod or wavemod'):
+        with pytest.raises(ValueError):
             gen_ghost.spectral_format_with_matrix(None, None)
-        with pytest.raises(ValueError,
-                           message='GhostArm.spectral_format_with_matrix '
-                                   'failed to raise ValueError when given '
-                                   'no spatmod, specmod or rotmod'):
+            pytest.fail('GhostArm.spectral_format_with_matrix '
+                        'failed to raise ValueError when given '
+                        'no xmod or wavemod')
+        with pytest.raises(ValueError):
             gen_ghost.spectral_format_with_matrix(a, a, spatmod=None,
                                                   specmod=None, rotmod=None)
+            pytest.fail('GhostArm.spectral_format_with_matrix '
+                        'failed to raise ValueError when given '
+                        'no spatmod, specmod or rotmod')
 
     def test_manual_model_adjust_inputs(self, make_ghostarm_basic):
         """Test the input checking of manual_model_adjust"""
         gen_ghost = make_ghostarm_basic
-        with pytest.raises(ValueError,
-                           message='GhostArm.manual_model_adjust '
-                                   'failed to raise ValueError when given '
-                                   'no xparams'):
+        with pytest.raises(ValueError):
             gen_ghost.manual_model_adjust(np.zeros((2, 2)), None)
+            pytest.fail('GhostArm.manual_model_adjust '
+                        'failed to raise ValueError when given '
+                        'no xparams')
 
     def test_bin_data_inputs(self, make_ghostarm_basic):
         """Test the input checking of bin_data"""
         gen_ghost = make_ghostarm_basic
-        with pytest.raises(UserWarning,
-                           message='GhostArm.bin_data '
-                                   'failed to raise UserWarning when given '
-                                   'a data array not matching the GhostArm '
-                                   'CCD size parameters'):
+        with pytest.raises(UserWarning):
             gen_ghost.bin_data(np.zeros((gen_ghost.szx + 1,
                                          gen_ghost.szy + 2)))
+            pytest.fail('GhostArm.bin_data '
+                        'failed to raise UserWarning when given '
+                        'a data array not matching the GhostArm '
+                        'CCD size parameters')
 
     # @pytest.mark.skip
     @pytest.mark.parametrize("xparams,wparams,img", [

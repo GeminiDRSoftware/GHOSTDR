@@ -9,7 +9,7 @@ import os
 
 THIS_DIR = os.path.dirname(__file__)
 
-from lut_tags import fixture_data as tags_fixture_data
+from .lut_tags import fixture_data as tags_fixture_data
 
 # ---
 # REGRESSION TESTING
@@ -52,7 +52,7 @@ class FixtureIterator(object):
 
 
 @pytest.mark.parametrize("fn,ad,tag_set", FixtureIterator(tags_fixture_data))
-def test_descriptor(fn, ad, tag_set):
+def test_tag(fn, ad, tag_set):
     """
     Ensure the tag set returned from each test file is as expected.
     """

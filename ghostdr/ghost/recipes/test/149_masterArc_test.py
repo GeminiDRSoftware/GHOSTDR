@@ -229,13 +229,13 @@ def test_arc_missing_pixelmodel(arm, res, epoch, get_or_create_tmpdir):
 
     with pytest.raises(AttributeError) as e_pixmod:
         recipe(p)
-        import pdb; pdb.set_trace()
-    assert 'PIXELMODEL' in str(e_pixmod.value), "The assertion error raised " \
-                                                "in this " \
-                                                "test doesn't seem to be " \
-                                                "about the " \
-                                                "missing PIXELMODEL " \
-                                                "extension, as expected."
+        # import pdb; pdb.set_trace()
+        assert 'PIXELMODEL' in e_pixmod.value.__str__(), "The assertion error raised " \
+                                                         "in this " \
+                                                         "test doesn't seem to be " \
+                                                         "about the " \
+                                                         "missing PIXELMODEL " \
+                                                         "extension, as expected."
 
     # Teardown code
     os.remove(flatname)

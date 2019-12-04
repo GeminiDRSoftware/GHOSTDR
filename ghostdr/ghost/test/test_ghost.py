@@ -75,13 +75,13 @@ class TestGhost:
             assert ad_new[0].hdr['CCDSUM'] == '{0} {1}'.format(*opt), \
                 'Incorrect value of CCDSUM recorded'
             assert ad_new[0].hdr['DATASEC'] == '[1:{1},1:{0}]'.format(
-                1024/opt[1], 1024/opt[0]), 'Incorrect value for DATASEC ' \
+                int(1024/opt[1]), int(1024/opt[0])), 'Incorrect value for DATASEC ' \
                                            'recorded'
             assert ad_new[0].hdr['TRIMSEC'] == '[1:{1},1:{0}]'.format(
-                1024 / opt[1], 1024 / opt[0]), 'Incorrect value for TRIMSEC ' \
+                int(1024 / opt[1]), int(1024 / opt[0])), 'Incorrect value for TRIMSEC ' \
                                                'recorded'
             assert ad_new[0].hdr['AMPSIZE'] == '[1:{1},1:{0}]'.format(
-                1024 / opt[1], 1024 / opt[0]), 'Incorrect value for AMPSIZE ' \
+                int(1024 / opt[1]), int(1024 / opt[0])), 'Incorrect value for AMPSIZE ' \
                                                'recorded'
 
         # Teardown code - remove files in this tmpdir

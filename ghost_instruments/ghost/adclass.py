@@ -13,6 +13,7 @@ class AstroDataGhost(AstroDataGemini):
                           array_name = 'AMPNAME',
                           overscan_section = 'BIASSEC',
                           res_mode = 'SMPNAME',
+                          exposure_time = 'EXPTIME',
                           )
 
     @staticmethod
@@ -75,6 +76,14 @@ class AstroDataGhost(AstroDataGemini):
             return TagSet(['CAL', 'FLAT'])
 
     @astro_data_tag
+    def _tag_slitflat(self):
+        """
+        Define the 'slitflat data' tag set for GHOST data.
+        """
+        if self.phu.get('OBSTYPE') == 'FLAT' and self.phu.get('CAMERA', '').lower().startswith('slit'):
+            return TagSet(['CAL', 'SLITFLAT'])
+
+    @astro_data_tag
     def _tag_sky(self):
         """
         Define the 'flat data' tag set for GHOST data.
@@ -92,13 +101,15 @@ class AstroDataGhost(AstroDataGemini):
         else:
             return TagSet(['STD'])
 
+    # MCW 191107 - had to add SLIT back in to make cal system work
     @astro_data_tag
     def _tag_slitv(self):
         """
         Define the 'slit data' tag set for GHOST data.
         """
         if self.phu.get('CAMERA', '').lower().startswith('slit'):
-            return TagSet(['SLITV', 'IMAGE'], blocks=['SPECT', 'BUNDLE'])
+            return TagSet(['SLITV', 'SLIT', 'IMAGE'],
+                          blocks=['SPECT', 'BUNDLE'])
 
     @astro_data_tag
     def _tag_spect(self):
@@ -154,7 +165,12 @@ class AstroDataGhost(AstroDataGemini):
         list/str
             read_area of each extension
         """
-        ampname = self.array_name()
+        # Note that tiled arrays won't have an array_name, so we'll fake it
+        # FIXME correctly fetch keyword for tileArrays primitive
+        if self.phu.get('TILEARRY', None) is not None:
+            ampname = [0, ]
+        else:
+            ampname = self.array_name()
         detsec = self.detector_section(pretty=True)
         # Combine the amp name(s) and detector section(s)
         if self.is_single:
@@ -191,6 +207,33 @@ class AstroDataGhost(AstroDataGemini):
         Returns a suitable calibration key for GHOST, which includes the arm.
         """
         return (self.data_label().replace('_stack', ''), self.arm())
+
+    # FIXME Remove once headers corrected
+    @astro_data_descriptor
+    def central_wavelength(self, asMicrometers=False, asNanometers=False,
+                           asAngstroms=False):
+        """
+        Dummy to work around current Gemini cal_mgr
+        """
+        val = self.phu.get(self._keyword_for('central_wavelength'), None)
+
+        if val is None:
+            if self.arm() == 'red':
+                val = 4000. * 10**-10
+            elif self.arm() == 'blue':
+                val = 6000. * 10**-10
+            else:
+                return None
+
+
+        if asMicrometers:
+            val *= 10**6
+        elif asNanometers:
+            val *= 10**9
+        elif asAngstroms:
+            val *= 10**10
+
+        return float(val)
 
     @astro_data_descriptor
     def detector_name(self):
@@ -251,6 +294,37 @@ class AstroDataGhost(AstroDataGemini):
 
     # TODO: GHOST descriptor returns no values if data are unprepared
 
+    @astro_data_descriptor
+    def exposure_time(self):
+        """
+        Returns the exposure time in seconds.
+
+        This function extends the standard exposure_time() descriptor
+        by allowing the exposure time to exist in the header of the
+        first data extension, as well as the PHU. If the exposure time
+        exists in both places, the PHU value takes precedence.
+
+        Returns
+        -------
+        float
+            Exposure time.
+        """
+
+        exp_time_default = super(AstroDataGhost, self).exposure_time()
+
+        # Don't let this special logic happen for bundles
+        if 'BUNDLE' not in self.tags:
+            if exp_time_default is None:
+                exposure_time = self[0].hdr.get(
+                    self._keyword_for('exposure_time'),
+                    -1)
+                if exposure_time == -1:
+                    return None
+                return exposure_time
+
+        return exp_time_default
+
+
     # The gain() descriptor is inherited from gemini/adclass, and returns
     # the value of the GAIN keyword (as a list if sent a complete AD object,
     # or as a single value if sent a slice). This is what the GHOST version
@@ -303,10 +377,13 @@ class AstroDataGhost(AstroDataGemini):
             resolution mode cannot be determined.
         """
         mode = self.phu.get('SMPNAME')
-        if mode.endswith('HI_ONLY'):
-            return 'high'
-        elif mode.endswith('LO_ONLY'):
-            return 'std'
+        try:
+            if mode.endswith('HI_ONLY'):
+                return 'high'
+            elif mode.endswith('LO_ONLY'):
+                return 'std'
+        except:
+            pass
         return None
 
     # TODO: read_noise(): see comments on gain()

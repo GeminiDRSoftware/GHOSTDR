@@ -16,6 +16,7 @@ from .primitives_ghost import filename_updater
 from . import parameters_ghost_slit
 
 from recipe_system.utils.decorators import parameter_override
+from functools import reduce
 
 def parse_timestr(timestr):
     """

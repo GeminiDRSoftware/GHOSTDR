@@ -18,6 +18,7 @@ import random
 
 # from geminidr.core.test import ad_compare
 from ghostdr.ghost.primitives_ghost_slit import GHOSTSlit, _mad, _total_obj_flux
+from six.moves import range
 
 TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
 logfilename = 'test_ghost_slit.log'
