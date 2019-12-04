@@ -309,7 +309,7 @@ class Polyspect(object):
         xdeg = init_mod.shape[1] - 1
         # For weighted fitting purposes, use the maximum of the Gaussian fit.
         sigma = 1. / lines[:, 4]
-
+        
         # Now we proceed to the least squares minimization.
         # We provide the fit_resid function as the minimization function
         # and the initial model. All required arguments are also provided.
@@ -1025,7 +1025,7 @@ class Polyspect(object):
         # Grab the model to be plotted
         x_int, wave_int, blaze_int = self.spectral_format(wparams=wparams,
                                                           xparams=xparams)
-
+        
         # define what is to be plotted
         def plot_data(model, xparams, wparams, nxbase, ygrid,
                       thar_spectrum=None):
@@ -1069,13 +1069,15 @@ class Polyspect(object):
                 thar_spectrum[1][-1] = 0.0
                 interp_thar = interp1d(thar_spectrum[0], thar_spectrum[1])
                 flux = interp_thar(wave)
-                # Now remove anything that is below 10 times the average sigma.
+                # Now remove anything that is below 40 times the average sigma.
                 # This means only the very brightest lines are displayed.
-                thar_threshold = np.average(flux) * 10.
+                thar_threshold = np.average(flux) * 40.
                 ygrid_filtered = ygrid[np.where(flux > thar_threshold)]
                 xbase_filtered = xbase[np.where(flux > thar_threshold)]
+                wave_filtered = wave[np.where(flux > thar_threshold)]
+                #import pdb; pdb.set_trace()
                 return ygrid_filtered.flatten(), xbase_filtered.flatten() + (
-                nxbase // 2)
+                    nxbase // 2), wave_filtered.flatten()
             else:
                 raise UserWarning('invalid model type for plot_data')
 
@@ -1097,18 +1099,24 @@ class Polyspect(object):
         lplot, = plt.plot(to_plot[0], to_plot[1],
                           color='green', linestyle='None', marker='.')
 
+        #*** Plot additional colours. Can't figure out how to make this update on
+        #    slider change though ***
+        #if len(to_plot)>2:
+        #    plt.scatter(to_plot[0], to_plot[1], c=to_plot[2])
+        #    plt.colorbar() 
+        
         # Now over plot the image and add a contrast adjustment slider.
         image_min = np.percentile(data,10) #!!! MJI Hack
         image_max = data.max()
         image_diff = image_max - image_min
-        init_contrast = 0.5
+        init_contrast = 0.8
         contrastSlider_ax  = fig.add_axes([0.15, 0.1, 0.7, 0.05])
         contrastSlider = Slider(contrastSlider_ax, 'contrast', 0, 1,
                                 valinit=init_contrast)
 
         image = axx.imshow(data,
                            vmin = image_min, # + init_contrast*image_diff//8
-                           vmax = image_max - init_contrast*image_diff) #//2
+                           vmax = image_max - init_contrast*image_diff, cmap='binary') #//2
 
 
         def update_imshow(val):
@@ -1197,4 +1205,5 @@ class Polyspect(object):
         button.on_clicked(submit)
 
         plt.show()
+        print(params)
         return params

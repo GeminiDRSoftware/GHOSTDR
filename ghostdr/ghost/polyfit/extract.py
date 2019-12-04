@@ -78,8 +78,11 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
     # w_mat = np.diag(1./var_use)
     # xtw = np.dot(x_mat.T, w_mat) 
     # beta = np.dot(np.dot(np.linalg.inv(np.dot(xtw, x_mat)), xtw), col_data)
-    beta = np.dot(np.dot(np.linalg.inv(np.dot(x_mat.T, x_mat)), x_mat.T),
+    try:
+        beta = np.dot(np.dot(np.linalg.inv(np.dot(x_mat.T, x_mat)), x_mat.T),
                   col_data)
+    except:
+        import pdb; pdb.set_trace()
     y_hat = np.maximum(np.dot(x_mat, beta), 0)
 
     new_bad = np.where(col_data > y_hat + nsigma * np.sqrt(var_use))[0]
@@ -337,11 +340,11 @@ class Extractor(object):
                 # if it normalises to the median, but normalisation can occur 
                 # later, and shouldn't occur wavelength by wavelength.
                 phi /= np.sum(phi[phi != 0])
-
+                
                 if self.transpose:
-                    pixel_model[j, x_ix] = phi
+                    pixel_model[j, np.minimum(x_ix,nx-1)] = phi
                 else:
-                    pixel_model[x_ix, j] = phi
+                    pixel_model[np.minimum(x_ix,nx-1), j] = phi
                     
         return pixel_model
 
@@ -853,8 +856,8 @@ class Extractor(object):
 
         return extracted_flux, extracted_var
 
-    def find_lines(self, flux, arclines, hw=10, arcfile=None,
-                   inspect=False, plots=False):
+    def find_lines(self, flux, arclines, hw=12, arcfile=None,
+                   inspect=False, plots=False): #!!!. arcfile should be None.
         """
         Find lines near the locations of input arc lines.
         
@@ -873,7 +876,7 @@ class Extractor(object):
 
         hw: int, optional
             Number of pixels from each order end to be ignored due to proximity
-            with the edge of the chip.
+            with the edge of the chip. Default was 10.
 
         arcfile: float array
             Arc file data.
@@ -890,7 +893,8 @@ class Extractor(object):
         lines_out: float array
             Whatever used to be placed in a file.
         """
-
+        #!!!
+        arcfile = pyfits.getdata('/Users/mireland/data/ghost/2October2019/BLUE/arc_comb01_arc.fits',1)
         # Only use the middle object.
         # In High res mode this will be the object, in std mode it's the sky
         flux = flux[:, :, 0]
@@ -901,7 +905,7 @@ class Extractor(object):
         # Let's try the median absolute deviation as a measure of background
         # noise if the search region is not large enough for robust median
         # determination.
-        if hw < 7:
+        if hw < 8:
             noise_level = np.median(np.abs(flux - np.median(flux)))
 
         if (inspect == True) and (arcfile is None):
@@ -931,11 +935,12 @@ class Extractor(object):
             for i, ix in enumerate(w_ix):
                 # This ensures that lines too close together are not used in the
                 # fit, whilst avoiding looking at indeces that don't exist.
-                if (np.abs(ix - w_ix[i - 1]) < 1.5 * hw):
-                    continue
-                elif i != (len(w_ix) - 1) and (
-                        np.abs(ix - w_ix[i + 1]) < 1.5 * hw):
-                    continue
+                if len(w_ix) > 1:
+                    if (np.abs(ix - w_ix[i - 1]) < 1.5 * hw):
+                        continue
+                    elif i != (len(w_ix) - 1) and (
+                            np.abs(ix - w_ix[i + 1]) < 1.5 * hw):
+                        continue
                 x = np.arange(ix - hw, ix + hw, dtype=np.int)
                 y = flux[m_ix, x]
                 # Try median absolute deviation for noise characteristics if
@@ -943,7 +948,9 @@ class Extractor(object):
                 if hw >= 7:
                     noise_level = np.median(np.abs(y - np.median(y)))
                 # Any line with peak S/N under a value is not considered.
+                # e.g. 20 is considered.
                 if (np.max(y) < 20 * noise_level):
+                    print("Rejecting due to low SNR!")
                     continue
 
                 g_init = models.Gaussian1D(amplitude=np.max(y), mean=x[

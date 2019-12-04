@@ -1311,10 +1311,16 @@ class GHOSTSpect(GHOST):
                                             rotpars[0].data)
 
             extractor = Extractor(arm, None)  # slitview=None for this usage
-            # import pdb;pdb.set_trace()
+
+            # Find lines based on the extracted flux and the arc wavelengths. 
+            # Note that "inspect=True" also requires and input arc file, which has
+            # the non-extracted data. There is also a keyword "plots".
             lines_out = extractor.find_lines(ad[0].data, arcwaves,
                                              inspect=False)
             
+            #lines_out is now a long vector of many parameters, including the 
+            #x and y position on the chip of each line, the order, the expected 
+            #wavelength, the measured line strength and the measured line width.
             fitted_params, wave_and_resid = arm.read_lines_and_fit(
                 wpars[0].data, lines_out)
 

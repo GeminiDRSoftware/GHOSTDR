@@ -110,28 +110,50 @@ class Files():
             self.basedir = '/Users/mireland/data/ghost/testdata-clean-190814/'
             
             self.arclinefile_ar_only = '/Users/mireland/python/GHOSTDR/simulator/pyghost/pyghost/data/mnras_ar_only.txt'
-            
-            self.default_wmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/high/161120/wavemod.fits'
+
+            self.arc_image_file = self.basedir + "intermediates.Et18qyON6m/arcBefore95_"+self.mode+"_MEF_1x1_"+self.cam+"1_tiled.fits"
+            self.arc_reduced_file = self.basedir + 'calibrations/processed_arc/arcBefore95_'+self.mode+'_MEF_1x1_'+self.cam+'1_arc.fits'
 
             # Now define locations of actual images for fitting or visualisation.
             self.flat_image_file = self.basedir + "flat_processed.fits"
-            if self.mode == 'blue':
-                self.flat_image_file = self.basedir + "processed_flat/flat95_high_1_MEF_1x1_blue1_flat.fits"
-                self.default_xmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/high/161120/xmod.fits'
+            if self.cam == 'blue':
+                self.default_wmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/std/161120/wavemod.fits'
+                #self.flat_image_file = self.basedir + "processed_flat/flat95_high_1_MEF_1x1_blue1_flat.fits"
+                self.flat_image_file = '/Users/mireland/data/ghost/2October2019/BLUE/calibrations/processed_flat/cont_comb04_flat.fits'
+                #191105: Edited line below.
+                self.flat_image_file = '/Users/mireland/data/ghost/2019-11-01/BLUE/cont_comb01_flat.fits'
+                self.default_xmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/std/161120/xmod.fits'
+                self.arc_reduced_file = '/Users/mireland/data/ghost/2October2019/BLUE/calibrations/processed_arc/arc_comb00_arc.fits'
+                self.arc_image_file = '/Users/mireland/data/ghost/2October2019/BLUE/arc_comb00_arraysTiled.fits'
+                #191105: Edited line below.
+                self.arc_image_file = '/Users/mireland/data/ghost/2019-11-04/BLUE/HG/hg_1s00044_arraysTiled.fits'
+                self.arclinefile = '/Users/mireland/python/GHOSTDR/utils/Hg.txt'
+                self.arc_image_file = '/Users/mireland/data/ghost/2019-11-01/BLUE/arc_comb01_arraysTiled.fits'
+                self.arclinefile = '/Users/mireland/python/GHOSTDR/utils/ThXe.txt'
+                #191113
+                self.arc_image_file = '/Users/mireland/data/ghost/2019-11-08/BLUE/arc_comb01_arraysTiled.fits'
+                self.flat_image_file = '/Users/mireland/data/ghost/2019-11-08/BLUE/cont_comb02_flat.fits'
+                self.arclinefile = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/Xe.txt'
+                #Hg file
+                #self.arc_image_file = '/Users/mireland/data/ghost/20sept2019/MONOCHROME/test_Hg_2s_blue_arraysTiled.fits'
+                #self.arclinefile = '/Users/mireland/python/GHOSTDR/utils/Hg.txt'
             else:
+                self.default_wmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/red/std/161120/wavemod.fits'
                 self.flat_image_file = self.basedir + "processed_flat/flat95_std_1_MEF_1x1_red1_flat.fits"
                 self.default_xmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/red/std/161120/xmod.fits'
+                #191105: Edited below
+                self.flat_image_file = "/Users/mireland/data/ghost/2019-11-01/RED/cont_comb02_arraysTiled.fits"
+                self.arc_image_file = '/Users/mireland/data/ghost/2019-11-01/RED/arc_comb00_arraysTiled.fits'
+                self.arclinefile = '/Users/mireland/python/GHOSTDR/utils/ThXe.txt'
+                
             
             #Override Hacks.
-            self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_Xmod.fits'
-            self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_Xmod_reversed.fits'
-            self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_red.fits'
-            self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_red_reversed.fits'
+            #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_Xmod.fits'
+            #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_Xmod_reversed.fits'
+            #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_red.fits'
+            #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_red_reversed.fits'
            
             
-            self.arc_image_file = self.basedir + "intermediates.Et18qyON6m/arcBefore95_"+self.mode+"_MEF_1x1_"+self.cam+"1_tiled.fits"
-
-            self.arc_reduced_file = self.basedir + 'calibrations/processed_arc/arcBefore95_'+self.mode+'_MEF_1x1_'+self.cam+'1_arc.fits'
             self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
             #self.flat_image_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
             self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
@@ -158,12 +180,12 @@ class Files():
 
         thar = np.loadtxt(linefile, usecols=[0, 1, 2])
         # Create a fixed wavelength scale evenly spaced in log.
-        thar_wave = 3600 * np.exp(np.arange(5e5) / 5e5)
-        thar_flux = np.zeros(int(5e5))
+        thar_wave = 3600 * np.exp(np.arange(6e5) / 5e5)
+        thar_flux = np.zeros(int(6e5))
         # NB This is *not* perfect: we just find the nearest index of the
         # wavelength scale corresponding to each Th/Ar line.
         wave_ix = (np.log(thar[:, 1] / 3600) * 5e5).astype(int)                     
-        wave_ix = np.minimum(np.maximum(wave_ix, 0), 5e5 - 1).astype(int)           
+        wave_ix = np.minimum(np.maximum(wave_ix, 0), 6e5 - 1).astype(int)           
         thar_flux[wave_ix] = 10**(np.minimum(thar[:, 2], 4))                        
         thar_flux = np.convolve(thar_flux, [0.2, 0.5, 0.9, 1, 0.9, 0.5, 0.2],
                                 mode='same')
