@@ -82,7 +82,8 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
         beta = np.dot(np.dot(np.linalg.inv(np.dot(x_mat.T, x_mat)), x_mat.T),
                   col_data)
     except:
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
+        pass
     y_hat = np.maximum(np.dot(x_mat, beta), 0)
 
     new_bad = np.where(col_data > y_hat + nsigma * np.sqrt(var_use))[0]
@@ -894,7 +895,7 @@ class Extractor(object):
             Whatever used to be placed in a file.
         """
         #!!!
-        arcfile = pyfits.getdata('/Users/mireland/data/ghost/2October2019/BLUE/arc_comb01_arc.fits',1)
+        # arcfile = pyfits.getdata('/Users/mireland/data/ghost/2October2019/BLUE/arc_comb01_arc.fits',1)
         # Only use the middle object.
         # In High res mode this will be the object, in std mode it's the sky
         flux = flux[:, :, 0]
