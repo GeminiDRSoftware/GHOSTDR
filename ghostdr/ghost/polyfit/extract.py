@@ -857,8 +857,9 @@ class Extractor(object):
 
         return extracted_flux, extracted_var
 
-    def find_lines(self, flux, arclines, hw=12, arcfile=None,
-                   inspect=False, plots=False): #!!!. arcfile should be None.
+    def find_lines(self, flux, arclines, hw=12,
+                   arcfile=None, # Now dead-letter - always overridden
+                   inspect=False, plots=False):
         """
         Find lines near the locations of input arc lines.
         
@@ -894,11 +895,11 @@ class Extractor(object):
         lines_out: float array
             Whatever used to be placed in a file.
         """
-        #!!!
-        # arcfile = pyfits.getdata('/Users/mireland/data/ghost/2October2019/BLUE/arc_comb01_arc.fits',1)
+        # arcfile = flux
         # Only use the middle object.
         # In High res mode this will be the object, in std mode it's the sky
         flux = flux[:, :, 0]
+        arcfile = flux
         ny = flux.shape[1]
         nm = flux.shape[0]
         nx = self.arm.szx
@@ -910,8 +911,7 @@ class Extractor(object):
             noise_level = np.median(np.abs(flux - np.median(flux)))
 
         if (inspect == True) and (arcfile is None):
-            print('Must provide an arc image for the inpection')
-            raise UserWarning
+            raise UserWarning('Must provide an arc image for the inpection')
         if inspect or plots:
             image = np.arcsinh((arcfile - np.median(arcfile)) / 1e2)
         if inspect:

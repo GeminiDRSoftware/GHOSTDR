@@ -8,6 +8,7 @@ import numpy as pn
 # Firstly, let's find all the needed files
 
 fitsdir='/Users/mireland/data/ghost/cal_frames/'
+fitsdir='/Users/marc/Documents/ghost/mulga/cals/'
 
 #Define the files in use (NB xmod.txt and wavemod.txt should be correct)
 arc_file  = fitsdir+"arc95_std_blue.fits"

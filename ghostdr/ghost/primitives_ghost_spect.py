@@ -1318,7 +1318,8 @@ class GHOSTSpect(GHOST):
             # Note that "inspect=True" also requires and input arc file, which has
             # the non-extracted data. There is also a keyword "plots".
             lines_out = extractor.find_lines(ad[0].data, arcwaves,
-                                             inspect=False)
+                                             arcfile=ad[0].data,
+                                             plots=params['plot_fit'])
             
             #lines_out is now a long vector of many parameters, including the 
             #x and y position on the chip of each line, the order, the expected 
