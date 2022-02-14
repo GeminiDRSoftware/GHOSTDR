@@ -44,7 +44,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u"GHOST Users' Manual"
+project = u"GHOST Data Reduction System Users' Manual"
 copyright = u'2016-17, The GHOST DRS Team & Kathleen Labrie'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -168,7 +168,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'GHOSTUsersManualdoc'
+htmlhelp_basename = 'GHOSTDRSUsersManualdoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -182,13 +182,13 @@ latex_elements = {
 
 # Additional stuff for the LaTeX preamble.
 #'preamble': '',
-'preamble': '\usepackage{appendix} \setcounter{tocdepth}{0}',
+'preamble': r'\usepackage{appendix} \setcounter{tocdepth}{0}',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index-latex', 'GHOSTUsersManual.tex', u'GHOST Users Manual',
+  ('index-latex', 'GHOSTDRSUsersManual.tex', u'GHOST Data Reduction System Users Manual',
    u'Marc White, Kathleen Labrie \& the GHOST DRS Team', 'manual'),
 ]
 
@@ -218,7 +218,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'ghostusersmanual', u'GHOST Users Manual',
+    ('index', 'ghostdrsusersmanual', u'GHOST Data Reduction System Users Manual',
      [u'Kathleen Labrie & the GHOST DRS team'], 1)
 ]
 
@@ -232,8 +232,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'GHOSTUsersManual', u'GHOST Users Manual',
-   u'Kathleen Labrie & the GHOST DRS team', 'GHOSTUsersManual', 'One line description of project.',
+  ('index', 'GHOSTDRSUsersManual', u'GHOST Data Reduction System Users Manual',
+   u'Kathleen Labrie & the GHOST DRS team', 'GHOSTDRSUsersManual', 'One line description of project.',
    'Miscellaneous'),
 ]
 
@@ -255,6 +255,6 @@ todo_include_todos=True
 
 # Adding style in order to have the todos show up in a red box.
 def setup(app):
-   app.add_stylesheet('todo-styles.css')
+   app.add_css_file('todo-styles.css')
 
 

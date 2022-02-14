@@ -4,8 +4,8 @@
    contain the root `toctree` directive.
    Manually edited by KL Fri Apr 4 2014
 
-GHOST Users Manual
-==================
+GHOST Data Reduction System Users Manual
+========================================
 
 .. toctree::
    :numbered:
