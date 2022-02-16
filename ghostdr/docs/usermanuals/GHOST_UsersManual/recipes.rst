@@ -9,34 +9,31 @@ Recipes for GHOST
 Setting up the development DRAGONS system
 =========================================
 
-For this discussion, we assume that you've already installed
-a compatible Anaconda Python distribution, and done the setup necessary to
-create a Gemini data reduction environment. For the purposes of this manual,
-we assume that your environment is named ``geminidev``. Therefore, before doing
-anything, you'll need to activate the environment::
+| Instructions on installing the Gemini DRAGONS system are available here:
+| https://www.gemini.edu/observing/phase-iii/understanding-and-processing-data/data-processing-software
+.. note::
+    You do not need Gemini IRAF to use the GHOST DRS. 
 
-    source activate geminidev
+As the time of writing, the GHOST DRS works with the latest available version
+of DRAGONS (v3.0.1).
+
+The remainder of these instructions assume that you've already installed
+a compatible Anaconda Python distribution together with the latest version
+of DRAGONS. We assume that your environment is named ``dragons``.
+Before doing anything further, you'll need to activate the
+environment::
+
+    source activate dragons
 
 Furthermore, for the commands given below to work properly, you must:
 
- #. Add the following line to the top of ``DRAGONS/gempy/scripts/typewalk.py``::
+ #. Add the following to your system ``PATH`` variable::
 
-        import ghost_instruments
-
- #. Add the following paths to your system ``PATH`` variable::
-
-        DRAGONS/recipe_system/scripts
         GHOSTDR/scripts
-        DRAGONS/gempy/scripts
 
  #. Add the following paths to your environment ``PYTHONPATH`` variable::
 
-        DRAGONS
         GHOSTDR
-
-.. note::
-    You are no longer required to manually import :any:`ghost_instruments` in
-    ``DRAGONS/gempy/scripts/typewalk.py``.
 
 Typical Processing Flows
 ========================
@@ -48,15 +45,22 @@ its documentation: :any:`ghostsim`.
 Setting up the calibrations system
 ----------------------------------
 
-At present, we are using a beta version of the Gemini local calibration
-manager. Assuming that you have access to the current version of this code
-(at the time of writing, ``GeminiCalMgr-0.9.11-*``), you need to take
-the following steps to prepare the calibration manager for use:
+.. COMMENTED OUT - Looks like the calibration manager is packaged with
+   DRAGONS now 
+    At present, we are using a beta version of the Gemini local calibration
+    manager. Assuming that you have access to the current version of this code
+    (at the time of writing, ``GeminiCalMgr-1.0.0-*``), you need to take
+    the following steps to prepare the calibration manager for use:
 
-#. Activate your ``geminidev`` Anaconda environment;
-#. Install the calibration manager, e.g.::
+    #. Activate your ``dragons`` Anaconda environment;
+    #. Install the calibration manager, e.g.::
 
-    pip install GeminiCalMgr-0.9.11-py2-none-any.whl
+        pip install GeminiCalMgr-1.0.0-py3-none-any.whl
+
+Before starting a new reduction it is sensible to begin with a fresh
+calibration database:
+
+#. Activate your ``dragons`` Anaconda environment;
 
 #. Initialize your local database, something like this (on a Unix system; for
    MacOSX or Windows, use an appropriate file path for your calibration file)::
@@ -133,6 +137,34 @@ reduction step (e.g. bias reduction, dark reduction, etc.) to allow you to
 review the output. Alternatively, you could choose to run through the steps
 manually yourself, as described below.
 
+Reducing lab data
+-----------------
+
+Data files produced in the lab are saved directly to disk, and are not processed
+by the Gemini data handling service. This means that they may not contain all
+the required FITS headers for the reduction process to correctly identify them.
+In particular, the following headers need to be given values that are recognised
+by DRAGONS. As long as these values are of the correct format and are consistent
+then it does not matter that they are actually for a different Gemini instrument
+and program.
+
++----------------------+------------------------------------+
+| **FITS Header**      |          **Example value**         |
++======================+====================================+
+| GEMPRGID             | GS-2016B-Q-20                      |
++----------------------+------------------------------------+
+| OBSID                | GS-2016B-Q-20-8                    |
++----------------------+------------------------------------+
+| DATALAB              | GS-2016B-Q-20-8-001                |
++----------------------+------------------------------------+
+| DATE-OBS             | 2016-11-20                         |
++----------------------+------------------------------------+
+
+Note also that care also needs to be taken with the ``UTSTART`` and ``UTEND``
+keywords, as these times are used to determine the arc frames that bracket
+each science frame. Without appropriately set times the calibration manager
+will not be able to find the correct arcs to reduce the science frames.
+
 Data Reduction Steps
 --------------------
 
@@ -157,7 +189,11 @@ of all files in the current directory which are red camera biases with 2x4
 binning, and write this list out to a text file called
 ``bias.1x1.red.list``, use the following::
 
-    typewalk --tags GHOST BIAS RED 1x1 -o bias.1x1.red.list
+    typewalk --adpkg ghost_instruments --tags GHOST BIAS RED 1x1 -o bias.1x1.red.list
+
+.. note::
+    The use of the ``--adpkg ghost_instruments`` option is only required until
+    Gemini incorporate the GHOSTDR package into the base DRAGONS package.
 
 There are several other options available (e.g. using a regex filemask to
 further restrict the files you're considering) -- type ``typewalk --help`` to
@@ -234,17 +270,14 @@ frame
 (with tags ``SLITV`` and ``BIAS``).  Or, follow these steps to produce one by
 stacking multiple frames together::
 
-    typewalk --tags GHOST BIAS SLITV --dir <path_to>/data_folder -o slit.bias.list
+    typewalk --adpkg ghost_instruments --tags GHOST BIAS SLITV --dir <path_to>/data_folder -o slit.bias.list
     reduce --drpkg ghostdr @slit.bias.list
     caldb add calibrations/processed_bias/your_red_SLIT_bias.fits
-
-.. warning::
-    Make sure you've made the necessary changes to the ``typewalk.py`` script!
 
 The next step is to generate the dark calibrator.  Follow these steps to produce
 one::
 
-    typewalk --tags GHOST SLITV DARK --dir <path_to>/data_folder -o slit.dark.list
+    typewalk --adpkg ghost_instruments --tags GHOST SLITV DARK --dir <path_to>/data_folder -o slit.dark.list
     reduce --drpkg ghostdr @slit.dark.list
     caldb add calibrations/processed_dark/your_red_SLIT_dark.fits
 
@@ -253,7 +286,7 @@ additional type to ``typewalk`` that identifies the resolution of the data that
 you wish to process (as mixing resolutions would be nonsensical).  Follow these
 steps as an example::
 
-    typewalk --tags GHOST SLITV FLAT STD --dir <path_to>/data_folder -o slit.flat.std.list
+    typewalk --adpkg ghost_instruments --tags GHOST SLITV FLAT STD --dir <path_to>/data_folder -o slit.flat.std.list
     reduce --drpkg ghostdr @slit.flat.std.list
     caldb add calibrations/processed_slitflat/your_red_SLIT_slitflat.fits
 
@@ -285,7 +318,7 @@ Once you have a few biases of the same arm to work with, generate a file list
 using the ``typewalk`` utility.  The following command assumes you have
 generated several red arm biases with a 1x1 binning::
 
-    typewalk --tags GHOST BIAS RED 1x1 --dir <path_to>/data_folder -o bias.1x1.red.list
+    typewalk --adpkg ghost_instruments --tags GHOST BIAS RED 1x1 --dir <path_to>/data_folder -o bias.1x1.red.list
 
 The ``--dir`` argument can be omitted if you are already within the folder
 containing the data.
@@ -350,7 +383,7 @@ making a bias calibration frame. However, the tags to be passed to ``typewalk``
 should be ``DARK`` instead of ``BIAS`` (in addition to the
 necessary ``RED``/``BLUE`` tag)::
 
-    typewalk --tags GHOST DARK RED --dir <path_to>/data_folder -o dark.red.list
+    typewalk --adpkg ghost_instruments --tags GHOST DARK RED --dir <path_to>/data_folder -o dark.red.list
 
 The dark frames may then be reduced by invoking::
 
@@ -384,7 +417,7 @@ creating a dark or bias, although you have to ``typewalk`` over FLAT files
 instead. You also need to specify an instrument resolution for the first time,
 e.g.::
 
-    typewalk --types FLAT GHOST STD RED --dir <path_to>/data_folder -o flat.red.std.list
+    typewalk --adpkg ghost_instruments --types FLAT GHOST STD RED --dir <path_to>/data_folder -o flat.red.std.list
 
 A simple call to ``reduce`` once again processes the list of flats::
 
@@ -488,7 +521,7 @@ the folder containing these, you'll see that they are identified as having the
 tag ``SPECT``, but none of the further tags we've encountered already (e.g.
 ``BIAS``, ``DARK``, etc.)::
 
-    typewalk --dir <path_to>/data_folder
+    typewalk --adpkg ghost_instruments --dir <path_to>/data_folder
 
 This informs the reduction framework to run the ``reduce`` GHOST recipe on
 them. which will now run all the way through to the final
