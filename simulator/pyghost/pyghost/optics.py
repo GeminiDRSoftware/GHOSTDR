@@ -74,23 +74,23 @@ def azimuthal_average(image, center=None, stddev=False, returnradii=False,
     n_r = np.bincount(whichbin)[1:]
 
     # recall that bins are from 1 to nbins (which is expressed in array terms
-    # by arange(nbins)+1 or xrange(1,nbins+1) )
+    # by arange(nbins)+1 or range(1,nbins+1) )
     # radial_prof.shape = bin_centers.shape
 
     if stddev:
         radial_prof = \
             np.array([image.flat[whichbin == b].std()
-                      for b in xrange(1, nbins+1)])
+                      for b in range(1, nbins+1)])
     elif return_max:
         radial_prof = \
             np.array([np.append((image*weights).\
                       flat[whichbin == b], -np.inf).max() \
-                      for b in xrange(1, nbins+1)])
+                      for b in range(1, nbins+1)])
     else:
         radial_prof = \
             np.array([(image*weights).flat[whichbin == b].sum() /
                       weights.flat[whichbin == b].sum()
-                      for b in xrange(1, nbins+1)])
+                      for b in range(1, nbins+1)])
         #!!! Often a NaN here. nbins -> nbins+1
         #import pdb; pdb.set_trace()
 

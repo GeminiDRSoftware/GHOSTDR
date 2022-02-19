@@ -879,7 +879,7 @@ class Arm(object):
         s_vect = np.array([0, np.cos(np.radians(self.theta)),
                            -np.sin(np.radians(self.theta))])
         # Orders for each wavelength. We choose +/- 1 free spectral range.
-        orders = np.arange(self.order_min, self.order_max+1)
+        orders = np.arange(self.order_min, self.order_max+1, dtype=int)
         wave_mins = 2*self.d_y*np.sin(np.radians(self.theta))/(orders + 1.0)
         wave_maxs = 2*self.d_y*np.sin(np.radians(self.theta))/(orders - 1.0)
         wave = np.empty((len(orders), self.nwave))
@@ -960,7 +960,7 @@ class Arm(object):
         if ccd_centre:
             xpix_offset = ccd_centre['xpix_offset']
         else:
-            w_ix = np.where((ypx < self.szy/2) * (ypx > -self.szy/2))[0]
+            w_ix = np.where((ypx < self.szy//2) * (ypx > -self.szy//2))[0]
             xpix_offset = 0.5*(np.min(xpx[w_ix]) + np.max(xpx[w_ix]))
 
         xpx -= xpix_offset
@@ -973,10 +973,10 @@ class Arm(object):
         # plt.clf()
         for order in range(self.order_min, self.order_max+1):
             w_ix = np.where(orders == order)[0]
-            ypx_min = np.max([np.min(ypx[w_ix]).astype(int), -self.szy/2])
-            ypx_max = np.min([np.max(ypx[w_ix]).astype(int), self.szy/2])
+            ypx_min = np.max([np.min(ypx[w_ix]).astype(int), -self.szy//2])
+            ypx_max = np.min([np.max(ypx[w_ix]).astype(int), self.szy//2])
             y_int_m = np.arange(ypx_min, ypx_max, dtype=int)
-            y_ix = y_int_m + self.szy/2
+            y_ix = y_int_m + self.szy//2
             x_int[order-self.order_min, y_ix] = \
                 np.interp(y_int_m, ypx[w_ix], xpx[w_ix])
             wave_int[order-self.order_min, y_ix] = \
@@ -1161,8 +1161,8 @@ class Arm(object):
             optics.hexagon(szy, lenslet_width/self.microns_pix*fillfact)
         h_long = np.zeros((szy, szx))
         h_long_big = np.zeros((szy, szx))
-        h_long[:, szx/2-szy/2:szx/2+szy/2] = h_cutout
-        h_long_big[:, szx/2-szy/2:szx/2+szy/2] = hbig_cutout
+        h_long[:, szx//2-szy//2:szx//2+szy//2] = h_cutout
+        h_long_big[:, szx//2-szy//2:szx//2+szy//2] = hbig_cutout
         if len(fluxes) != 0:
             # If we're not simulating seeing, the image-plane is uniform,
             # and we only use the values of "fluxes" to scale the lenslet
@@ -1179,15 +1179,15 @@ class Arm(object):
             im_object = np.zeros((szy, szx))
             im_cutout = optics.moffat2d(szy,  # noqa
                 seeing * self.microns_arcsec / self.microns_pix / 2, beta=4.0)
-            im_object[:, szx/2-szy/2:szx/2+szy/2] = im_cutout
+            im_object[:, szx//2-szy//2:szx//2+szy//2] = im_cutout
             # Scale the image so the mean is 1.0, simply for rough numerical
             # consistency with the no-seeing case above.
             im_object /= im_object.mean()
             fluxes = np.ones(len(xoffset))
 
         # Go through the flux vector and fill in each lenslet.
-        cutoutx = [max(0, szx/2 - cutout_hw), min(szx/2 + cutout_hw, szx)]
-        cutouty = [max(0, szy/2 - cutout_hw), min(szy/2 + cutout_hw, szy)]
+        cutoutx = [max(0, szx//2 - cutout_hw), min(szx//2 + cutout_hw, szx)]
+        cutouty = [max(0, szy//2 - cutout_hw), min(szy//2 + cutout_hw, szy)]
         for i, flux in enumerate(fluxes):
             im_one = np.zeros((szy, szx))
             im_cutout = np.roll(np.roll(im_object, yoffset[i], axis=0),
@@ -1276,7 +1276,7 @@ class Arm(object):
                 the_x = x[i, j] + xshift
                 # Create an (x,y) index of the actual pixels we want
                 # to index.
-                cutout_shifted = (cutout_xy[0].copy() + int(the_x) + n_x/2,
+                cutout_shifted = (cutout_xy[0].copy() + int(the_x) + n_x//2,
                                   cutout_xy[1].copy() + j)
                 w_ix = np.where((cutout_shifted[0] >= 0) *
                                 (cutout_shifted[1] >= 0) *
@@ -1297,8 +1297,8 @@ class Arm(object):
                     np.array([cutout_xy[0][w_ix] + int(the_x) - the_x,
                               cutout_xy[1][w_ix]]) / self.microns_pix
                 ).astype(int)
-                slit_y = xy_scaled[1] + im_slit.shape[0]/2
-                slit_x = xy_scaled[0] + im_slit.shape[1]/2
+                slit_y = xy_scaled[1] + im_slit.shape[0]//2
+                slit_x = xy_scaled[0] + im_slit.shape[1]//2
                 w_ix = np.where((slit_x >= 0) * (slit_y >= 0) *
                                 (slit_x < im_slit.shape[1]) *
                                 (slit_y < im_slit.shape[0]))
@@ -1380,7 +1380,7 @@ class Arm(object):
     def simulate_frequency_noise(self, freq, mean, std, binmode=(1, 1),
                                  overscan=0):
         """ Simulate an image with noise of specific frequencies in it. """
-        shape = (self.szx/binmode[1], (self.szy+2*overscan)/binmode[0])
+        shape = (self.szx//binmode[1], (self.szy+2*overscan)//binmode[0])
         return frequency_noise(
             freq, self.sample_rate, shape, mean=mean, std=std)
 
