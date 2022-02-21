@@ -469,8 +469,8 @@ class SlitViewer(object):
             return
 
         # Calculate the detector/ccd section
-        y0 = self.det_ysz / 2 - self.slitcam_ysz
-        x0 = self.det_xsz / 2 - self.slitcam_xsz
+        y0 = self.det_ysz // 2 - self.slitcam_ysz
+        x0 = self.det_xsz // 2 - self.slitcam_xsz
         secstr = '[{}:{},{}:{}]'.format(
             y0, y0 + self.slitcam_ysz*self.binning - 1,
             x0, x0 + self.slitcam_xsz*self.binning - 1)
