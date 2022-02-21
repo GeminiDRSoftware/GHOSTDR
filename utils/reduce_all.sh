@@ -2,6 +2,7 @@
 # Script to reduce all GHOST data using the recipe system.
 # This must be ran from within where the GHOST data are kept
 
+LC_ALL=C
 set -o pipefail
 exec 6<&0
 
@@ -62,9 +63,13 @@ prep() {
 mklist() {
 	flag="$1"; shift
 	if [[ $flag == silent ]]; then msg="$1"; shift; else msg=$flag; fi
-	UUID=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1 || true`
-	[[ $flag == silent ]] || echo typewalk --tags GHOST UNPREPARED $@ -n -o $UUID >>commands
-	list=`typewalk --tags GHOST UNPREPARED $@ -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#' || true`
+    if [[ -x /usr/bin/uuidgen ]]; then
+        UUID=`/usr/bin/uuidgen`
+    else
+        UUID=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1 || true`
+    fi
+	[[ $flag == silent ]] || echo typewalk --adpkg ghost_instruments --tags GHOST UNPREPARED $@ -n -o $UUID >>commands
+	list=`typewalk --adpkg ghost_instruments --tags GHOST UNPREPARED $@ -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#' || true`
 	[ -n "$list" ]
 }
 
@@ -114,7 +119,7 @@ for CAM in SLITV BLUE RED; do
 		reduce_list "Reducing $CAM $MODE flats" $CAM $MODE FLAT
 		reduce_each "Reducing $CAM $MODE arc" $CAM $MODE ARC
 		reduce_each "Reducing $CAM $MODE standard" $CAM $MODE $BIN --filemask "standard.*\.(fits|FITS)" 
-		STANDARD=`typewalk --tags GHOST $CAM $MODE $BIN --filemask "standard.*${SHORTSPEC}.*wavelengthAdded\.(fits|FITS)" -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#' || true`
+		STANDARD=`typewalk --adpkg ghost_instruments --tags GHOST $CAM $MODE $BIN --filemask "standard.*${SHORTSPEC}.*wavelengthAdded\.(fits|FITS)" -n -o /dev/stderr 2>&1 1>/dev/null | grep -v '^#' || true`
 		STANDARD=${STANDARD:+-p std=$STANDARD std_spec=$LONGSPEC}
 		reduce_each "Reducing $CAM $MODE object" $CAM $MODE $BIN --filemask "obj.*$SEEING.*\.(fits|FITS)" 
 	done
