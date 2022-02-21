@@ -462,7 +462,7 @@ class GHOSTSpect(GHOST):
                     clipd = sigma_clip(
                         # ext.data,
                         masked_data,
-                        sigma=sigma, iters=iters, copy=True)
+                        sigma=sigma, maxiters=iters, copy=True)
                     # Convert the mask from the return into 0s and 1s and
                     # bitwise OR into the ext BPM
                     clipd_mask = clipd.mask.astype(ext.mask.dtype)
@@ -2427,7 +2427,7 @@ class GHOSTSpect(GHOST):
                              'use getProcessedArc directly.')
 
         ad.phu['ARCBEFOR'] = before
-        self.getProcessedArc(ad,
+        self.getProcessedArc([ad,],
                              howmany=None,
                              refresh=True)
         arc_ad = self._get_cal(ad, 'processed_arc', )
