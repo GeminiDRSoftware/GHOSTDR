@@ -794,9 +794,9 @@ class Extractor(object):
                 xy = np.meshgrid(x_ix, y_ix, indexing='ij')
 
                 # Cut out our data and inverse variance.
-                col_data = data[xy]
-                col_inv_var = pixel_inv_var[xy]
-                col_weights = np.array([ew[xy] for ew in extraction_weights])
+                col_data = data[tuple(xy)]
+                col_inv_var = pixel_inv_var[tuple(xy)]
+                col_weights = np.array([ew[tuple(xy)] for ew in extraction_weights])
 
                 # Find the pixel (including fractional pixels) within our
                 # cutout that we'll use for extraction. First - find the pixel
