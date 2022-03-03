@@ -79,11 +79,14 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
     # xtw = np.dot(x_mat.T, w_mat) 
     # beta = np.dot(np.dot(np.linalg.inv(np.dot(xtw, x_mat)), xtw), col_data)
     try:
-        beta = np.dot(np.dot(np.linalg.inv(np.dot(x_mat.T, x_mat)), x_mat.T),
-                  col_data)
-    except:
+        # Use the pinv function to calculate the pseudoinverse
+        beta = np.dot(np.linalg.pinv(x_mat), col_data)
+        #beta = np.dot(np.dot(np.linalg.inv(np.dot(x_mat.T, x_mat)), x_mat.T), col_data)
+    except Exception as e:
+        print(repr(e))
         # import pdb; pdb.set_trace()
-        pass
+        # pass
+
     y_hat = np.maximum(np.dot(x_mat, beta), 0)
 
     new_bad = np.where(col_data > y_hat + nsigma * np.sqrt(var_use))[0]
