@@ -27,6 +27,20 @@ class AstroDataGhost(AstroDataGemini):
                           exposure_time = 'EXPTIME',
                           )
 
+    @astro_data_descriptor
+    def data_label(self):
+        """
+        Returns the data label of an observation.
+
+        Returns
+        -------
+        str
+            the observation's data label
+        """
+        if super().data_label() is None:
+            raise RuntimeError("Your data has no DATALAB header keyword")
+        return super().data_label()
+
     @staticmethod
     def _matches_data(source):
         """
@@ -220,6 +234,8 @@ class AstroDataGhost(AstroDataGemini):
         Returns a suitable calibration key for GHOST, which includes the arm.
         """
         return (self.data_label().replace('_stack', ''), self.arm())
+
+
 
     # FIXME Remove once headers corrected
     @astro_data_descriptor
