@@ -1,7 +1,18 @@
-from astrodata import astro_data_tag, TagSet, astro_data_descriptor, returns_list
-from gemini_instruments.gemini import AstroDataGemini
+# This code follows the Gemini standard for other instruments
+# even though pylint doesn't like it.
+# pylint: disable=no-self-use, inconsistent-return-statements
 
-from . import lookup
+"""
+This module contains the AstroDataGhost class, used for adding tags
+and descriptors to GHOST data.
+"""
+
+from astrodata import (
+    astro_data_tag,
+    TagSet,
+    astro_data_descriptor,
+)
+from gemini_instruments.gemini import AstroDataGemini
 from gemini_instruments.common import build_group_id
 
 class AstroDataGhost(AstroDataGemini):
@@ -80,7 +91,8 @@ class AstroDataGhost(AstroDataGemini):
         """
         Define the 'slitflat data' tag set for GHOST data.
         """
-        if self.phu.get('OBSTYPE') == 'FLAT' and self.phu.get('CAMERA', '').lower().startswith('slit'):
+        if (self.phu.get('OBSTYPE') == 'FLAT' and
+            self.phu.get('CAMERA', '').lower().startswith('slit')):
             return TagSet(['CAL', 'SLITFLAT'])
 
     @astro_data_tag
@@ -138,7 +150,7 @@ class AstroDataGhost(AstroDataGemini):
         """
         binnings = self.hdr.get('CCDSUM')
         if isinstance(binnings, list):
-            if all([x == binnings[0] for x in binnings]):
+            if all(x == binnings[0] for x in binnings):
                 return TagSet([binnings[0].replace(' ', 'x', 1)])
             else:
                 return TagSet(['NxN'])
@@ -154,7 +166,7 @@ class AstroDataGhost(AstroDataGemini):
             return TagSet(['PARTNER_CAL'])
 
     @astro_data_descriptor
-    def amp_read_area(self):
+    def amp_read_area(self, pretty=False):
         """
         Returns a list of amplifier read areas, one per extension, made by
         combining the amplifier name and detector section; or, returns a
@@ -177,7 +189,8 @@ class AstroDataGhost(AstroDataGemini):
             return "'{}':{}".format(ampname,
                         detsec) if ampname and detsec else None
         else:
-            return ["'{}':{}".format(a,d) if a is not None and d is not None else None
+            return ["'{}':{}".format(a,d)
+                    if a is not None and d is not None else None
                     for a,d in zip(ampname, detsec)]
 
     @astro_data_descriptor
@@ -236,7 +249,7 @@ class AstroDataGhost(AstroDataGemini):
         return float(val)
 
     @astro_data_descriptor
-    def detector_name(self):
+    def detector_name(self, pretty=False):
         """
         Returns the detector (CCD) name.
         """
@@ -254,9 +267,9 @@ class AstroDataGhost(AstroDataGemini):
         int
             The detector binning
         """
-        def _get_xbin(b):
+        def _get_xbin(binning):
             try:
-                return int(b.split()[0])
+                return int(binning.split()[0])
             except (AttributeError, ValueError):
                 return None
 
@@ -278,9 +291,9 @@ class AstroDataGhost(AstroDataGemini):
         int
             The detector binning
         """
-        def _get_ybin(b):
+        def _get_ybin(binning):
             try:
-                return int(b.split()[1])
+                return int(binning.split()[1])
             except (AttributeError, ValueError, IndexError):
                 return None
 
@@ -310,7 +323,7 @@ class AstroDataGhost(AstroDataGemini):
             Exposure time.
         """
 
-        exp_time_default = super(AstroDataGhost, self).exposure_time()
+        exp_time_default = super().exposure_time()
 
         # Don't let this special logic happen for bundles
         if 'BUNDLE' not in self.tags:
@@ -382,7 +395,7 @@ class AstroDataGhost(AstroDataGemini):
                 return 'high'
             elif mode.endswith('LO_ONLY'):
                 return 'std'
-        except:
+        except Exception:
             pass
         return None
 
@@ -418,4 +431,3 @@ class AstroDataGhost(AstroDataGemini):
             return None
         else:
             return False
-
