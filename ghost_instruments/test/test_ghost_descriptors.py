@@ -61,8 +61,12 @@ def test_descriptor(fn, ad, descriptor, value):
     Ensure that the values returned by AstroData descriptors are as expected.
     """
     method = getattr(ad, descriptor)
-    mvalue = method()
-    if float in (type(value), type(mvalue)):
-        assert abs(mvalue - value) < 0.0001
+    if isinstance(value, type) and issubclass(value, BaseException):
+        with pytest.raises(value):
+            mvalue = method()
     else:
-        assert mvalue == value
+        mvalue = method()
+        if float in (type(value), type(mvalue)):
+            assert abs(mvalue - value) < 0.0001
+        else:
+            assert mvalue == value

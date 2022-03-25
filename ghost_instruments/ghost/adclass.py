@@ -169,6 +169,8 @@ class AstroDataGhost(AstroDataGemini):
             else:
                 return TagSet(['NxN'])
         else:
+            # A list should always be returned but it doesn't
+            # hurt to be able to handle a string just in case
             return TagSet([binnings.replace(' ', 'x', 1)])
 
     @astro_data_tag
@@ -240,10 +242,11 @@ class AstroDataGhost(AstroDataGemini):
     # FIXME Remove once headers corrected
     @astro_data_descriptor
     def central_wavelength(self, asMicrometers=False, asNanometers=False,
-                           asAngstroms=False):
+                           asAngstroms=False): # pragma: no cover
         """
         Dummy to work around current Gemini cal_mgr
         """
+
         val = self.phu.get(self._keyword_for('central_wavelength'), None)
 
         if val is None:
