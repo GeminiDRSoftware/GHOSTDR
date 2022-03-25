@@ -50,6 +50,7 @@ class TestGhost:
         # Create the AstroData object
         phu = fits.PrimaryHDU()
         phu.header.set('INSTRUME', 'GHOST')
+        phu.header.set('DATALAB', 'test')
         phu.header.set('CAMERA', 'RED')
         phu.header.set('CCDNAME', 'E2V-CCD-231-C6')
         phu.header.set('CCDSUM', '1 1')
@@ -95,7 +96,7 @@ class TestGhost:
         # Now create a flat
         flatfilename = 'test_applyFlatBPM_flat.fits'
         # Mangle the BPM slightly
-        posns = np.random.randint(0, 2, size=bpm.shape).astype(np.bool)
+        posns = np.random.randint(0, 2, size=bpm.shape).astype(bool)
         bpm2 = copy.deepcopy(bpm)
         bpm2.data[posns] = 1
         flat_ad = copy.deepcopy(ad)
@@ -126,13 +127,13 @@ class TestGhost:
         ad, flat_ad, tmpsubdir = data_applyFlatBPM
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
-        # Check the AttributeError is no flat is provided
         gs = GHOSTSpect([ad, ])
-        with pytest.raises(AttributeError):
-            ad_output = gs.applyFlatBPM([ad, ]), "applyFlatBPM failed to " \
-                                                 "raise AttributeError when " \
-                                                 "not passed a flat or flat " \
-                                                 "stream"
+
+        # Check the output when no flat is provided
+        ad_output = gs.applyFlatBPM([ad, ])
+        assert ad.phu.get(gs.timestamp_keys['applyFlatBPM']) is None, \
+                "applyFlatBPM modified the output file when not passed " \
+                "a flat or flat stream"
 
         ad_output = gs.applyFlatBPM([ad, ], flat=flat_ad)
         # Check that flat BPM is correctly carried over to (blank) ad BPM
@@ -163,7 +164,7 @@ class TestGhost:
 
         # Check that the file has been marked as processed
         assert ad.phu.get(
-            gs.timestamp_keys['applyFlatBPM']), "clipSigmaBPM did not " \
+            gs.timestamp_keys['applyFlatBPM']), "applyFlatBPM did not " \
                                                 "timestamp-mark the " \
                                                 "output file"
 
@@ -227,7 +228,7 @@ class TestGhost:
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         ad = self.generate_minimum_file()
-        ad[0].DQ = np.zeros(ad[0].data.shape, dtype=np.int)
+        ad[0].DQ = np.zeros(ad[0].data.shape, dtype=int)
         # Insert some very large data points into the otherwise all-1s data
         xs = list(range(0, 1024))
         ys = list(range(0, 1024))

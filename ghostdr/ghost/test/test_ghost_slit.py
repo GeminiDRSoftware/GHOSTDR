@@ -55,6 +55,7 @@ class TestGhostSlit:
         phu.header.set('UTEND', (SLIT_UT_START + datetime.timedelta(
             seconds=(NO_SLITS + 1) * EXPTIME_SLITS)).strftime(STRFTIME))
         phu.header.set('INSTRUME', 'GHOST')
+        phu.header.set('DATALAB', 'test')
 
         hdus = []
         for i in range(NO_SLITS):
