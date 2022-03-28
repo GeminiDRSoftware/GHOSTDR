@@ -945,7 +945,7 @@ class Extractor(object):
                     elif i != (len(w_ix) - 1) and (
                             np.abs(ix - w_ix[i + 1]) < 1.5 * hw):
                         continue
-                x = np.arange(ix - hw, ix + hw, dtype=np.int)
+                x = np.arange(ix - hw, ix + hw, dtype=int)
                 y = flux[m_ix, x]
                 # Try median absolute deviation for noise characteristics if
                 # Enough pixels are available per cut.

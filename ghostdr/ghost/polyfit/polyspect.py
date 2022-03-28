@@ -166,7 +166,7 @@ class Polyspect(object):
         # However, we should just use the orders as a single array.
         if orders.ndim > 1:
             orders = orders[:, 0]
-        mprime = np.float(self.m_ref) / orders - 1
+        mprime = float(self.m_ref) / orders - 1
         # In case of a single polynomial, this solves the index problem.
         if params.ndim == 1:
             polyp = np.poly1d(params)

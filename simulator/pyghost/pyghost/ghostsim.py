@@ -684,7 +684,7 @@ class SlitViewer(object):
             np.arange(n_ypix) - n_ypix // 2 + yoffset + self.slitcam_ysz // 2)
 
         for image, profile in zip(self.images, self.flux_profile):
-            image[xy] += np.random.poisson(profile * slit_camera_image)
+            image[tuple(xy)] += np.random.poisson(profile * slit_camera_image)
 
 
 class Arm(object):
