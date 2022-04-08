@@ -1979,7 +1979,7 @@ class GHOSTSpect(GHOST):
 
         # Re-grid the standard reference spectrum onto the wavelength grid of
         # the observed standard
-        regrid_std_ref = np.zeros(std[0].data.shape[:-1], dtype=np.float32)
+        regrid_std_ref = np.zeros(std[0].data.shape[:-1])
         for od in range(std[0].data.shape[0]):
             regrid_std_ref[od] = self._regrid_spect(
                 std_spec[1].data['FLUX'],
@@ -2075,9 +2075,8 @@ class GHOSTSpect(GHOST):
                 # in-depth, flux-conserving regrid because:
                 # (a) The sensitivity curve units do not depend on wavelength;
                 # (b) The wavelength shifts involved are very small
-                sens_func_regrid = np.zeros(ext.data.shape, dtype=np.float32)
-                # sens_func_regrid_var = np.inf * np.ones(ad[0].data.shape,
-                #                                         dtype=np.float32)
+                sens_func_regrid = np.zeros(ext.data.shape)
+                #sens_func_regrid_var = np.inf * np.ones(ext.data.shape)
                 for ob in range(ext.data.shape[-1]):
                     for od in range(ext.data.shape[0]):
                         # import pdb; pdb.set_trace();
@@ -2101,17 +2100,12 @@ class GHOSTSpect(GHOST):
 
 
                 sens_func_ad[i].data = sens_func_regrid
-                # sens_func_ad[0].variance = sens_func_regrid_var
-                # sens_func_ad[0].variance = None
-                try:
-                    sens_func_ad[i].variance = None
-                except AttributeError:
-                    pass
-
+                sens_func_ad[i].variance = None
 
             # Do the response correction
             ad /= ad[0].hdr['EXPTIME']  # Should be the same for all exts
             ad /= sens_func_ad
+
             # Make the relevant header update
             ad.hdr['BUNIT'] = bunit
 
@@ -2133,9 +2127,6 @@ class GHOSTSpect(GHOST):
             # Timestamp & suffix updates
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
-
-            # import pdb;
-            # pdb.set_trace()
 
         return adinputs
 
