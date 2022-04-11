@@ -53,9 +53,9 @@ for p in ADLIB_PACKAGES:
         if os.path.isdir(os.path.join('astrodata_'+p, 'ADCONFIG_'+p, 'lookups')):
             ADCONFIG_MODULES.append('astrodata_'+p+'.ADCONFIG_'+p+'.lookups')
             LUTROOT = os.path.join('astrodata_'+p,'ADCONFIG_'+p,'lookups')
-            print LUTROOT
+            print(LUTROOT)
             for root, dirs, files in os.walk(LUTROOT):
-                print root, dirs, files
+                print(root, dirs, files)
                 if not svndir.search(root) and len(files) > 0:
                     lutmodules = map((lambda d: slash.sub('.','/'.join([root,d]))),\
                                      filter((lambda d: not svndir.search(d)), dirs))
