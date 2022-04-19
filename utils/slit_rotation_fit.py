@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """A script to manually adjust tramlines and wavelength scale for Ghost data.
 
 """

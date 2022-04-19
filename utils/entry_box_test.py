@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import wx
 import numpy as np
  

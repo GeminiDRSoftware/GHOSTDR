@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """A script to do diagnostic checks on reduced ghost data.
 
 It displays several windows showing how good the fits are and a few other things

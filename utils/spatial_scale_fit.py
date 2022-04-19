@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 This is an engineering (i.e. commissioning) script to solve for the varying
 magnification in the spatial direction between the slit as seen in the slit

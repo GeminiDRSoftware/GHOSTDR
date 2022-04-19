@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """ A script containing the basic principles of the 2D extraction"""
 
 from __future__ import division, print_function

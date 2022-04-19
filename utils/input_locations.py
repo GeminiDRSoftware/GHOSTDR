@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """ 
 Python file containing the location of all necessary files to run
 the various util scripts that either test aspect of the pipeline, 

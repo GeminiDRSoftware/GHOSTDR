@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """A script to manually adjust tramlines and wavelength scale for Ghost data.
 
 This is a handy tool for users to visualise (via model superposition) the xmod
@@ -28,7 +30,7 @@ plt.ioff()
 
 
 # Ask user what they want to adjust.
-model = raw_input('What would you like to adjust? The (X) position model or \
+model = input('What would you like to adjust? The (X) position model or \
     the (W)avelength scale?')
 model = model.upper()
 
@@ -156,7 +158,7 @@ if model == 'X':
                                                 xparams=xparams,
                                                 percentage_variation=10)
 
-    q = raw_input('Would you like to fit the adjusted parameters? Y or N: ')
+    q = input('Would you like to fit the adjusted parameters? Y or N: ')
     if q.upper() == 'Y':
         # Re-fit. Make fit return new model.
         adjusted_params = ghost.fit_x_to_image(flat_conv,
@@ -172,7 +174,7 @@ elif model == 'W':
                                                 percentage_variation=1)
 
 
-q = raw_input(
+q = input(
     'Would you like to write the adjusted parameters to disk? Y or N: ')
 if q.upper() == 'Y':
     # Optionally write this intermediate model to disk

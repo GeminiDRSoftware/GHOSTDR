@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """ A script containing the basic principles of the extraction primitive inner 
 workings"""
 

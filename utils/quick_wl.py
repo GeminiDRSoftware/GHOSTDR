@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """A script to fit tramlines and arcs for Ghost data.
 
 This script is used to make sure the wavelength scale is working properly. 
