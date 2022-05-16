@@ -47,8 +47,14 @@ class TestGhostBundle:
         print(tmpsubdir)
 
         # Create the AstroData object
-        phu = fits.PrimaryHDU()
-        hdus = []
+        header = fits.Header()
+        header['GEMPRGID'] = 'GS-2016B-Q-20'
+        header['OBSID'] = 'GS-2016B-Q-20-8'
+        header['DATALAB'] = 'GS-2016B-Q-20-8-001'
+        header['DATE-OBS'] = '2016-11-20'
+        header['INSTRUME'] = 'GHOST'
+        phu = fits.PrimaryHDU(header = header)
+        hdus = fits.HDUList()
         for key, value in BUNDLE_STRUCTURE.items():
             for i in range(value):
                 hdu = fits.ImageHDU(data=np.zeros((10, 10, )), name='SCI')
