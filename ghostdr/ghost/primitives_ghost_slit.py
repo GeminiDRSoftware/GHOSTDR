@@ -223,6 +223,7 @@ class GHOSTSlit(GHOST):
 
                 # compute the offset (the value to be weighted), in seconds,
                 # from the start of the science exposure
+                # FIXME remove magic number (and comment where it's from)
                 offset = 42.0  # init value: overridden if overlap, else 0-scaled
                 if sc_start <= sv_start and sv_end <= sc_end:
                     offset = (sv_start - sc_start).seconds + sv_duration / 2.0
