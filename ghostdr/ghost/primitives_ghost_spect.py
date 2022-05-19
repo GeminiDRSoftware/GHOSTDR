@@ -570,7 +570,7 @@ class GHOSTSpect(GHOST):
         for ad, dark in zip(*gt.make_lists(adinputs, dark_list,
                                            force_ad=True)):
             if dark is None:
-                if 'qa' in self.context:
+                if 'qa' in self.mode:
                     log.warning("No changes will be made to {}, since no "
                                 "dark was specified".format(ad.filename))
                     dark_list_out.append(None)
@@ -778,7 +778,8 @@ class GHOSTSpect(GHOST):
 
             arm.spectral_format_with_matrix(flat[0].XMOD, wpars[0].data,
                         spatpars[0].data, specpars[0].data, rotpars[0].data)
-            sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
+            sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode,
+                    microns_pix = 4.54 * 180 / 50 * slit.detector_x_bin())
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
                         
@@ -1166,7 +1167,8 @@ class GHOSTSpect(GHOST):
             xx, wave, blaze = ghost_arm.spectral_format(xparams=xpars[0].data)
 
             slitview = SlitView(slit_flat[0].data, slit_flat[0].data,
-                                mode=res_mode)
+                                mode=res_mode,
+                                microns_pix=4.54*180/50 * slit_flat.detector_x_bin())
 
             # This is an attempt to remove the worse cosmic rays
             # in the hope that the convolution is not affected by them.
@@ -1469,7 +1471,8 @@ class GHOSTSpect(GHOST):
                                             rotpars[0].data,
                                             )
 
-            sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode)
+            sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode,
+                    microns_pix=4.54*180/50 * slit.detector_x_bin())
 
             extractor = Extractor(arm, sview)
 
