@@ -87,12 +87,13 @@ class GHOSTSlit(GHOST):
             sv_med = np.median(ext_stack, axis=0)
             sigma = _mad(ext_stack, axis=0) * 20
             res = ad.res_mode()
+            binning = ad.detector_x_bin() # x and y are equal
 
             for ext in ad:
                 addata = ext.data
 
                 # pre-CR-corrected flux computation
-                flux_before = _total_obj_flux(res, addata, None)
+                flux_before = _total_obj_flux(res, addata, None, binning=binning)
 
                 # replace CR-affected pixels with those from the median slit
                 # viewer image (subtract the median slit frame and threshold
@@ -103,7 +104,7 @@ class GHOSTSlit(GHOST):
                 addata[indices] = sv_med[indices]
 
                 # post-CR-corrected flux computation
-                flux_after = _total_obj_flux(res, addata, None)
+                flux_after = _total_obj_flux(res, addata, None, binning=binning)
 
                 # CJS: since addata is a reference, the CR fix changes the data
                 # in place and there's no need to reassign ad[0].data = addata
@@ -193,6 +194,11 @@ class GHOSTSlit(GHOST):
             sum_of_weights = 0.0
             accum_weighted_time = 0.0
 
+            # check that the binning is equal in x and y
+            if ad.detector_x_bin() != ad.detector_y_bin():
+                raise ValueError("slit viewer images must have equal binning \
+                        in x and y directions")
+
             # Check the inputs have matching binning and SCI shapes.
             try:
                 gt.check_inputs_match(adinput1=ad, adinput2=slitflat,
@@ -209,6 +215,8 @@ class GHOSTSlit(GHOST):
             sc_end = parse_timestr(ad.phu['UTEND'])
 
             res = ad.res_mode()
+            binning = ad.detector_x_bin() # x and y are equal
+
             for ext in ad:
                 sv_start = parse_timestr(ext.hdr['EXPUTST'])
                 sv_end = parse_timestr(ext.hdr['EXPUTEND'])
@@ -234,7 +242,7 @@ class GHOSTSlit(GHOST):
                     offset += (sv_start - sc_start).seconds
 
                 # add flux-weighted offset (plus weight itself) to accumulators
-                flux = _total_obj_flux(res, ext.data, sv_flat)
+                flux = _total_obj_flux(res, ext.data, sv_flat, binning=binning)
                 weight = flux * overlap
                 sum_of_weights += weight
                 accum_weighted_time += weight * offset
@@ -347,7 +355,7 @@ def _mad(data, axis=None, keepdims=False):
                                                   keepdims=True)), axis=axis,
                      keepdims=keepdims)
 
-def _total_obj_flux(res, data, flat_data=None):
+def _total_obj_flux(res, data, flat_data=None, binning=2):
     """
     Combined red/blue object flux calculation.
 
@@ -375,7 +383,7 @@ def _total_obj_flux(res, data, flat_data=None):
         The object flux, summed, and potentially sky-subtracted.
     """
     sky_correction = flat_data is not None
-    svobj = SlitView(data, flat_data, mode=res)  # OK to pass None for flat
+    svobj = SlitView(data, flat_data, mode=res, microns_pix=4.54*180/50*binning)  # OK to pass None for flat
     reds = svobj.object_slit_profiles(
         'red', correct_for_sky=sky_correction, append_sky=False,
         normalise_profiles=False)

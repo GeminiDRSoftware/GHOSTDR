@@ -1,13 +1,21 @@
 import numpy as np
+from skimage import transform
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
+# Rotation of slit on camera
+ROTANGLE = 90.0-9.04
+
+# Point around which to rotate
+ROT_CENTER = [900.0, 780.0]
 
 SLITVIEW_PARAMETERS = {
     'std': {
         'central_pix': {
-            'red': [77, 65],
-            'blue': [77, 156]
+            'red': [781, 985],
+            'blue': [771, 946]
+            #'red': [77, 65],
+            #'blue': [77, 156]
         },
         'extract_half_width': 3,
         'sky_pix_only_boundaries': {
@@ -25,8 +33,10 @@ SLITVIEW_PARAMETERS = {
     },
     'high': {
         'central_pix': {
-            'red': [78, 95],
-            'blue': [78, 4]
+            'red': [770, 857],
+            'blue': [760, 819],
+            #'red': [78, 95],
+            #'blue': [78, 4]
         },
         'extract_half_width': 2,
         'sky_pix_only_boundaries': {
@@ -76,8 +86,8 @@ class SlitView(object):
     """
     def __init__(self, slit_image, flat_image, microns_pix=4.54*180/50*2,
                  mode='std', slit_length=3600., reverse_profile=True):
-        self.slit_image = slit_image
-        self.flat_image = flat_image
+        self.slit_image = transform.rotate(slit_image, ROTANGLE, center=ROT_CENTER)
+        self.flat_image = transform.rotate(flat_image, ROTANGLE, center=ROT_CENTER)
         self.mode = mode
         self.slit_length = slit_length
         self.microns_pix = microns_pix
@@ -91,7 +101,7 @@ class SlitView(object):
             for attr, value in SLITVIEW_PARAMETERS[mode].items():
                 setattr(self, attr, value)
         else:
-            raise ValueError("Invalid Mode")
+            raise ValueError("Invalid Mode: " + str(mode))
 
     def cutout(self, arm='red', use_flat=False):
         """

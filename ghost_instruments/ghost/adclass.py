@@ -122,7 +122,8 @@ class AstroDataGhost(AstroDataGemini):
         """
         Define the tagset for GHOST data of different resolutions.
         """
-        if self.phu.get('SMPNAME') == 'HI_ONLY':
+        mode = self.phu.get('SMPNAME')
+        if mode.endswith('HI_ONLY'):
             return TagSet(['HIGH'])
         else:
             return TagSet(['STD'])
@@ -412,7 +413,7 @@ class AstroDataGhost(AstroDataGemini):
         try:
             if mode.endswith('HI_ONLY'):
                 return 'high'
-            elif mode.endswith('LO_ONLY'):
+            elif (mode.endswith('LO_ONLY') or mode.endswith('STD_ONLY')):
                 return 'std'
         except Exception:
             pass
