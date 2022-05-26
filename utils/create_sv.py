@@ -2,47 +2,19 @@ from astropy.table import Table
 from astropy.io import fits
 import astrodata
 
-'''
-rota, rotyc, rotxc, yc, xc, extract_hw, skypix0, skypix1, obj0pix0, obj0pix1, obj1pix0, obj1pix1
-std,  red,  80.96, 900, 780, 781, 985, 3, 47, 63,   3, 46, 64, 107
-std,  blue, 80.96, 900, 780, 771, 946, 3, 47, 63,   3, 46, 64, 107
-high, red,  80.96, 900, 780, 770, 857, 2, 82, 106, 11, 81, 4,  9  
-high, blue, 80.96, 900, 780, 760, 819, 3, 82, 106, 11, 81, 4,  9  
-'''
-
-'''
-Restructure into two files:
-GHOST_1_1_slitv_std_220501.fits and
-GHOST_1_1_slitv_high_220501.fits
-
-Each will contain
-rota
-rotyc
-rotxc
-center_y_red
-center_x_red
-center_y_blue
-center_x_blue
-ext_hw
-skypix0
-skypix1
-obj0pix0
-obj0pix1
-obj1pix0
-obj1pix1
-'''
-
 std = {
+          # For simulated data
           'rota':          [0.0,],
           'rotyc':         [0,],
           'rotxc':         [0,],
+          'center_y_red':  [154,],
+          'center_x_red':  [130,],
+          'center_y_blue': [154,],
+          'center_x_blue': [312,],
+          # For lab data 20220501
           #'rota':          [80.96,],
           #'rotyc':         [900,],
           #'rotxc':         [780,],
-          'center_y_red':  [77,],
-          'center_x_red':  [65,],
-          'center_y_blue': [77,],
-          'center_x_blue': [156,],
           #'center_y_red':  [781,],
           #'center_x_red':  [985,],
           #'center_y_blue': [771,],
@@ -57,18 +29,18 @@ std = {
       }
 
 high = {
+          # For simulated data
           'rota':          [0.0,],
           'rotyc':         [0,],
           'rotxc':         [0,],
+          'center_y_red':  [156,],
+          'center_x_red':  [190,],
+          'center_y_blue': [156],
+          'center_x_blue': [8],
+          # For lab data 20220501
           #'rota':          [80.96,],
           #'rotyc':         [900,],
           #'rotxc':         [780,],
-            #'red': [78, 95],
-            #'blue': [78, 4]
-          'center_y_red':  [78,],
-          'center_x_red':  [95,],
-          'center_y_blue': [78],
-          'center_x_blue': [4],
           #'center_y_red':  [770,],
           #'center_x_red':  [857,],
           #'center_y_blue': [760],

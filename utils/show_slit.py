@@ -23,7 +23,8 @@ for fname in sys.argv[1:]:
 
     sview = SlitView(ad[0].data, None,
                      slitvpars.TABLE[0], mode=res_mode,
-                     microns_pix = 4.54 * 180 / 50 * ad.detector_x_bin())
+                     microns_pix = 4.54 * 180 / 50,
+                     binning = ad.detector_x_bin())
     rcutout = sview.cutout('red')
     rprofile = sview.slit_profile('red')
     bcutout = sview.cutout('blue')

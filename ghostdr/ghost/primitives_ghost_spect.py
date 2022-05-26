@@ -782,7 +782,8 @@ class GHOSTSpect(GHOST):
                         spatpars[0].data, specpars[0].data, rotpars[0].data)
             sview = SlitView(slit[0].data, slitflat[0].data,
                              slitvpars.TABLE[0], mode=res_mode,
-                             microns_pix = 4.54 * 180 / 50 * slit.detector_x_bin())
+                             microns_pix = 4.54 * 180 / 50,
+                             binning = slit.detector_x_bin())
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
                         
@@ -1174,7 +1175,8 @@ class GHOSTSpect(GHOST):
 
             slitview = SlitView(slit_flat[0].data, slit_flat[0].data,
                                 slitvpars.TABLE[0], mode=res_mode,
-                                microns_pix=4.54*180/50 * slit_flat.detector_x_bin())
+                                microns_pix=4.54*180/50,
+                                binning=slit_flat.detector_x_bin())
 
             # This is an attempt to remove the worse cosmic rays
             # in the hope that the convolution is not affected by them.
@@ -1481,7 +1483,8 @@ class GHOSTSpect(GHOST):
 
             sview = SlitView(slit[0].data, slitflat[0].data,
                              slitvpars.TABLE[0], mode=res_mode,
-                             microns_pix=4.54*180/50 * slit.detector_x_bin())
+                             microns_pix=4.54*180/50,
+                             binning = slit.detector_x_bin())
 
             extractor = Extractor(arm, sview)
 

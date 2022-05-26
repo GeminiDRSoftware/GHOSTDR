@@ -394,7 +394,7 @@ def _total_obj_flux(log, res, ut_date, filename, data, flat_data=None, binning=2
                                                  'slitvmod')
     slitvpars = astrodata.open(slitv_fn)
     svobj = SlitView(data, flat_data, slitvpars.TABLE[0], mode=res,
-                     microns_pix=4.54*180/50*binning)  # OK to pass None for flat
+                     microns_pix=4.54*180/50, binning=binning)  # OK to pass None for flat
     reds = svobj.object_slit_profiles(
         'red', correct_for_sky=sky_correction, append_sky=False,
         normalise_profiles=False)
