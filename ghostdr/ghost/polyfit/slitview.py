@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from skimage import transform
+from skimage import transform, util
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
@@ -128,11 +128,11 @@ class SlitView(object):
         if slit_image is None or rota == 0.0:
             self.slit_image = slit_image
         else:
-            self.slit_image = transform.rotate(slit_image, rota, center=center)
+            self.slit_image = transform.rotate(util.img_as_float64(slit_image), rota, center=center)
         if flat_image is None or rota == 0.0:
             self.flat_image = flat_image
         else:
-            self.flat_image = transform.rotate(flat_image, rota, center=center)
+            self.flat_image = transform.rotate(util.img_as_float64(flat_image), rota, center=center)
         self.mode = mode
         self.slit_length = slit_length
         self.microns_pix = microns_pix * binning
