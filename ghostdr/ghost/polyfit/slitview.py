@@ -3,6 +3,7 @@ from skimage import transform
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
+'''
 # Rotation of slit on camera
 ROTANGLE = 90.0-9.04
 
@@ -51,6 +52,7 @@ SLITVIEW_PARAMETERS = {
             'red': [11, 106], 'blue': [11, 106]},
     }
 }
+'''
 
 
 class SlitView(object):
@@ -84,10 +86,38 @@ class SlitView(object):
         the slit viewer and the CCD, to be determined through testing on 
         real data.
     """
-    def __init__(self, slit_image, flat_image, microns_pix=4.54*180/50*2,
+    def __init__(self, slit_image, flat_image, slitvpars, microns_pix=4.54*180/50*2,
                  mode='std', slit_length=3600., reverse_profile=True):
-        self.slit_image = transform.rotate(slit_image, ROTANGLE, center=ROT_CENTER)
-        self.flat_image = transform.rotate(flat_image, ROTANGLE, center=ROT_CENTER)
+        rota = slitvpars['rota']
+        center = [slitvpars['rotyc'], slitvpars['rotxc']]
+        self.central_pix = {
+            'red': [slitvpars['center_y_red'], slitvpars['center_x_red']],
+            'blue': [slitvpars['center_y_blue'], slitvpars['center_x_blue']]
+        }
+        self.sky_pix_only_boundaries = {
+            'red': [slitvpars['skypix0'], slitvpars['skypix1']],
+            'blue': [slitvpars['skypix0'], slitvpars['skypix1']]
+        }
+        self.object_boundaries = {
+            'red': [[slitvpars['obj0pix0'], slitvpars['obj0pix1']],
+                    [slitvpars['obj1pix0'], slitvpars['obj1pix1']]],
+            'blue': [[slitvpars['obj0pix0'], slitvpars['obj0pix1']],
+                    [slitvpars['obj1pix0'], slitvpars['obj1pix1']]]
+        }
+        self.sky_pix_boundaries = {
+            'red': [slitvpars['obj0pix0'], slitvpars['skypix1']],
+            'blue': [slitvpars['obj0pix0'], slitvpars['skypix1']]
+        }
+                            
+        self.extract_half_width = slitvpars['ext_hw']
+        if slit_image is None or rota == 0.0:
+            self.slit_image = slit_image
+        else:
+            self.slit_image = transform.rotate(slit_image, rota, center=center)
+        if flat_image is None or rota == 0.0:
+            self.flat_image = flat_image
+        else:
+            self.flat_image = transform.rotate(flat_image, rota, center=center)
         self.mode = mode
         self.slit_length = slit_length
         self.microns_pix = microns_pix
@@ -97,11 +127,13 @@ class SlitView(object):
         # profile offset, i.e. it interacts directly with the tramline fitting
         # and a change to one is a change to the other.
         # Co-ordinates are in standard python co-ordinates, i.e. y then x
+        '''
         if mode in SLITVIEW_PARAMETERS.keys():
             for attr, value in SLITVIEW_PARAMETERS[mode].items():
                 setattr(self, attr, value)
         else:
             raise ValueError("Invalid Mode: " + str(mode))
+        '''
 
     def cutout(self, arm='red', use_flat=False):
         """
