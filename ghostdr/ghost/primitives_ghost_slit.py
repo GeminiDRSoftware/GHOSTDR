@@ -14,9 +14,12 @@ from .polyfit import SlitView
 from .primitives_ghost import GHOST
 from .primitives_ghost import filename_updater
 from . import parameters_ghost_slit
+from .lookups import polyfit_dict
 
 from recipe_system.utils.decorators import parameter_override
 from functools import reduce
+
+import astrodata
 
 def parse_timestr(timestr):
     """
@@ -87,13 +90,15 @@ class GHOSTSlit(GHOST):
             sv_med = np.median(ext_stack, axis=0)
             sigma = _mad(ext_stack, axis=0) * 20
             res = ad.res_mode()
+            ut_date = ad.ut_date()
+            filename = ad.filename
             binning = ad.detector_x_bin() # x and y are equal
 
             for ext in ad:
                 addata = ext.data
 
                 # pre-CR-corrected flux computation
-                flux_before = _total_obj_flux(res, addata, None, binning=binning)
+                flux_before = _total_obj_flux(log, res, ut_date, filename, addata, None, binning=binning)
 
                 # replace CR-affected pixels with those from the median slit
                 # viewer image (subtract the median slit frame and threshold
@@ -104,7 +109,7 @@ class GHOSTSlit(GHOST):
                 addata[indices] = sv_med[indices]
 
                 # post-CR-corrected flux computation
-                flux_after = _total_obj_flux(res, addata, None, binning=binning)
+                flux_after = _total_obj_flux(log, res, ut_date, filename, addata, None, binning=binning)
 
                 # CJS: since addata is a reference, the CR fix changes the data
                 # in place and there's no need to reassign ad[0].data = addata
@@ -215,6 +220,8 @@ class GHOSTSlit(GHOST):
             sc_end = parse_timestr(ad.phu['UTEND'])
 
             res = ad.res_mode()
+            ut_date = ad.ut_date()
+            filename = ad.filename
             binning = ad.detector_x_bin() # x and y are equal
 
             for ext in ad:
@@ -242,7 +249,7 @@ class GHOSTSlit(GHOST):
                     offset += (sv_start - sc_start).seconds
 
                 # add flux-weighted offset (plus weight itself) to accumulators
-                flux = _total_obj_flux(res, ext.data, sv_flat, binning=binning)
+                flux = _total_obj_flux(log, res, ut_date, filename, ext.data, sv_flat, binning=binning)
                 weight = flux * overlap
                 sum_of_weights += weight
                 accum_weighted_time += weight * offset
@@ -355,7 +362,7 @@ def _mad(data, axis=None, keepdims=False):
                                                   keepdims=True)), axis=axis,
                      keepdims=keepdims)
 
-def _total_obj_flux(res, data, flat_data=None, binning=2):
+def _total_obj_flux(log, res, ut_date, filename, data, flat_data=None, binning=2):
     """
     Combined red/blue object flux calculation.
 
@@ -383,7 +390,12 @@ def _total_obj_flux(res, data, flat_data=None, binning=2):
         The object flux, summed, and potentially sky-subtracted.
     """
     sky_correction = flat_data is not None
-    svobj = SlitView(data, flat_data, mode=res, microns_pix=4.54*180/50*binning)  # OK to pass None for flat
+    slitv_fn = polyfit_dict.get_polyfit_filename(log, 'slitv',
+                                                 res, ut_date, filename,
+                                                 'slitvmod')
+    slitvpars = astrodata.open(slitv_fn)
+    svobj = SlitView(data, flat_data, slitvpars.TABLE[0], mode=res,
+                     microns_pix=4.54*180/50, binning=binning)  # OK to pass None for flat
     reds = svobj.object_slit_profiles(
         'red', correct_for_sky=sky_correction, append_sky=False,
         normalise_profiles=False)

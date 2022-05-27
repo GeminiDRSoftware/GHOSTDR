@@ -39,11 +39,11 @@ if (model != 'W') and (model != 'X'):
     sys.exit()
 
 # Regardless, need to initialise a few things.
-mode = 'std' # The spectrograph resolution mode.
+mode = 'high' # The spectrograph resolution mode.
 cam = 'blue'  # The camera
 # This variable makes it easy for each user (currently only Joao) to
 # have all file locations defined without overwriting.
-user = 'mike'
+user = 'jon'
 mike_hacking_wave_soln=False
 overwrite_extension_table=True
 
@@ -171,7 +171,7 @@ elif model == 'W':
                                                 wparams=wparams,
                                                 xparams=xparams,
                                                 thar_spectrum=thar_spec,
-                                                percentage_variation=1)
+                                                percentage_variation=3)
 
 
 q = input(

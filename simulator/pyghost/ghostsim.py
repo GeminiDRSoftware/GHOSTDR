@@ -527,7 +527,10 @@ class SlitViewer(object):
             .strftime("%H:%M:%S.%f")[:-3], 'UT time at observation end')
 
         # resolution-related keywords
-        if obstype != 'BIAS' and obstype != 'DARK':
+        if obstype == 'BIAS' or obstype == 'DARK':
+            header['SMPNAME'] = 'SMP_OPEN'
+            header['SMPPOS'] = 0
+        else:
             header['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
             header['SMPPOS'] = (1 if res == 'high' else 2)
 
@@ -1862,7 +1865,10 @@ class Arm(object):
             'Local time at start of observation')  # noqa
 
         # resolution-related keywords
-        if obstype != 'BIAS' and obstype != 'DARK':
+        if obstype == 'BIAS' or obstype == 'DARK':
+            hdr['SMPNAME'] = 'SMP_OPEN'
+            hdr['SMPPOS'] = 0
+        else:
             hdr['SMPNAME'] = ('HI_ONLY' if res == 'high' else 'LO_ONLY')
             hdr['SMPPOS'] = (1 if res == 'high' else 2)
 

@@ -767,10 +767,12 @@ class GHOSTSpect(GHOST):
                 poly_spat = self._get_polyfit_filename(ad, 'spatmod')
                 poly_spec = self._get_polyfit_filename(ad, 'specmod')
                 poly_rot = self._get_polyfit_filename(ad, 'rotmod')
+                slitv_fn = self._get_slitv_polyfit_filename(ad)
                 wpars = astrodata.open(poly_wave)
                 spatpars = astrodata.open(poly_spat)
                 specpars = astrodata.open(poly_spec)
                 rotpars = astrodata.open(poly_rot)
+                slitvpars = astrodata.open(slitv_fn)
             except IOError:
                 log.warning("Cannot open required initial model files for {};"
                             " skipping".format(ad.filename))
@@ -778,8 +780,10 @@ class GHOSTSpect(GHOST):
 
             arm.spectral_format_with_matrix(flat[0].XMOD, wpars[0].data,
                         spatpars[0].data, specpars[0].data, rotpars[0].data)
-            sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode,
-                    microns_pix = 4.54 * 180 / 50 * slit.detector_x_bin())
+            sview = SlitView(slit[0].data, slitflat[0].data,
+                             slitvpars.TABLE[0], mode=res_mode,
+                             microns_pix = 4.54 * 180 / 50,
+                             binning = slit.detector_x_bin())
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
                         
@@ -1152,8 +1156,11 @@ class GHOSTSpect(GHOST):
                 log.stdinfo('Found xmod: {}'.format(poly_xmod))
                 poly_spat = self._get_polyfit_filename(ad, 'spatmod')
                 log.stdinfo('Found spatmod: {}'.format(poly_spat))
+                slitv_fn = self._get_slitv_polyfit_filename(ad)
+                log.stdinfo('Found slitvmod: {}'.format(slitv_fn))
                 xpars = astrodata.open(poly_xmod)
                 spatpars = astrodata.open(poly_spat)
+                slitvpars = astrodata.open(slitv_fn)
             except IOError:
                 log.warning("Cannot open required initial model files for {};"
                             " skipping".format(ad.filename))
@@ -1167,8 +1174,9 @@ class GHOSTSpect(GHOST):
             xx, wave, blaze = ghost_arm.spectral_format(xparams=xpars[0].data)
 
             slitview = SlitView(slit_flat[0].data, slit_flat[0].data,
-                                mode=res_mode,
-                                microns_pix=4.54*180/50 * slit_flat.detector_x_bin())
+                                slitvpars.TABLE[0], mode=res_mode,
+                                microns_pix=4.54*180/50,
+                                binning=slit_flat.detector_x_bin())
 
             # This is an attempt to remove the worse cosmic rays
             # in the hope that the convolution is not affected by them.
@@ -1450,10 +1458,12 @@ class GHOSTSpect(GHOST):
                 poly_spat = self._get_polyfit_filename(ad, 'spatmod')
                 poly_spec = self._get_polyfit_filename(ad, 'specmod')
                 poly_rot = self._get_polyfit_filename(ad, 'rotmod')
+                slitv_fn = self._get_slitv_polyfit_filename(ad)
                 wpars = astrodata.open(poly_wave)
                 spatpars = astrodata.open(poly_spat)
                 specpars = astrodata.open(poly_spec)
                 rotpars = astrodata.open(poly_rot)
+                slitvpars = astrodata.open(slitv_fn)
             except IOError:
                 log.warning("Cannot open required initial model files for {};"
                             " skipping".format(ad.filename))
@@ -1471,8 +1481,10 @@ class GHOSTSpect(GHOST):
                                             rotpars[0].data,
                                             )
 
-            sview = SlitView(slit[0].data, slitflat[0].data, mode=res_mode,
-                    microns_pix=4.54*180/50 * slit.detector_x_bin())
+            sview = SlitView(slit[0].data, slitflat[0].data,
+                             slitvpars.TABLE[0], mode=res_mode,
+                             microns_pix=4.54*180/50,
+                             binning = slit.detector_x_bin())
 
             extractor = Extractor(arm, sview)
 
@@ -2252,45 +2264,15 @@ class GHOSTSpect(GHOST):
         str/None:
             Filename (including path) of the required polyfit file
         """
-        log = self.log
-        polyfit_dir = os.path.join(os.path.dirname(polyfit_dict.__file__),
-                                   'Polyfit')
 
-        # CJS: This is a method that only exists *if* the input is of type
-        # GHOST, so no need to check
-        arm = ad.arm()
-        res_mode = ad.res_mode()
-        key = 'GHOST_1_1_{}_{}'.format(arm, res_mode)
+        return polyfit_dict.get_polyfit_filename(self.log, ad.arm(),
+                                                 ad.res_mode(), ad.ut_date(),
+                                                 ad.filename, caltype)
 
-        try:
-            poly_dict = getattr(polyfit_dict, '{}_dict'.format(caltype))
-        except AttributeError:
-            log.warning("Invalid polyfit calibration type ({}) requested for "
-                        "{}".format(caltype, ad.filename))
-            return None
-
-        #FIXME: Restrict search to correct res and arm (all not necessarily
-        #updated at once!)
-        dates_avail = set([k.split('_')[-1] for k in poly_dict.keys()])
-        
-        # Safe to assume instrument won't be used after 2099...
-        dates_avail = [datetime.strptime('20{}'.format(x),
-                                            '%Y%m%d').date() for x in dates_avail]
-        dates_avail.sort()
-
-        # Determine the latest data that precedes the observing date
-        date_obs = ad.ut_date()
-        try:
-            date_req = [_ for _ in dates_avail if _ <= date_obs][-1]
-        except IndexError:
-            log.warning("No polyfit available for {}".format(ad.filename))
-            return None
-        key += '_{}'.format(date_req.strftime('%y%m%d'))
-
-        polyfit_file = poly_dict[key]
-        # Prepend standard path if the filename doesn't start with '/'
-        return polyfit_file if polyfit_file.startswith(os.path.sep) else \
-            os.path.join(polyfit_dir, polyfit_file)
+    def _get_slitv_polyfit_filename(self, ad):
+        return polyfit_dict.get_polyfit_filename(self.log, 'slitv',
+                                                 ad.res_mode(), ad.ut_date(),
+                                                 ad.filename, 'slitvmod')
 
     def _compute_barycentric_correction(self, ad, return_wavl=True,
                                         loc=GEMINI_SOUTH_LOC):

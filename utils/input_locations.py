@@ -105,6 +105,60 @@ class Files():
             
             self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/flat95_'+self.mode+'_2_MEF_2x2_slit_slitflat.fits'
             self.slit_arc_image = self.basedir + 'calibrations/processed_slit/arcBefore95_'+self.mode+'_MEF_2x2_slit_slit.fits'
+        elif self.user == 'jon':
+            # This is the directory containing the raw (and recently reduced)
+            # files.
+            self.basedir = '/Volumes/ghost_data/mod/'
+
+            self.arclinefile_ar_only = '/Users/jon/gemini/GHOSTDR/simulator/pyghost/data/mnras_ar_only.txt'
+            self.arclinefile = '/Users/jon/gemini/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ThXe.txt'
+
+            # Now define locations of actual images for fitting or visualisation.
+            # correct)
+            if self.cam == 'blue':
+                if self.mode == 'high':
+                    self.arc_image_file = self.basedir + "arc300s_hr100004_arraysTiled.fits"
+                    #self.arc_image_file = self.basedir + "blue_hg_hr100012_arraysTiled.fits"
+                    #self.arc_reduced_file = self.basedir + 'calibrations/processed_arc/arcBefore95_'+self.mode+'_MEF_1x1_'+self.cam+'1_arc.fits'
+                    self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/cont10s_hr100035_flat.fits'
+                    self.flat_image_file = self.basedir + 'calibrations/processed_flat/cont10s_hr100035_flat.fits'
+                    #self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
+                    self.default_wmod = '/Users/jon/gemini/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/high/220501/wavemod.fits'
+                    self.default_xmod = '/Users/jon/gemini/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/high/220501/xmod.fits'
+                else:
+                    self.arc_image_file = self.basedir + "arc300s_lr100008_arraysTiled.fits"
+                    #self.arc_image_file = self.basedir + "blue_hg_lr100009_arraysTiled.fits"
+                    #self.arc_reduced_file = self.basedir + 'calibrations/processed_arc/arcBefore95_'+self.mode+'_MEF_1x1_'+self.cam+'1_arc.fits'
+                    self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/cont10s_lr100032_flat.fits'
+                    self.flat_image_file = self.basedir + 'calibrations/processed_flat/cont10s_lr100032_flat.fits'
+                    #self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
+                    self.default_wmod = '/Users/jon/gemini/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/std/220501/wavemod.fits'
+                    self.default_xmod = '/Users/jon/gemini/GHOSTDR/ghostdr/ghost/lookups/Polyfit/blue/std/220501/xmod.fits'
+            else:
+                if self.mode == 'high':
+                    self.arc_image_file = self.basedir + "arc120s_hr110004_arraysTiled.fits"
+                    #self.arc_image_file = self.basedir + "red_hg_hr110015_arraysTiled.fits"
+                    #self.arc_reduced_file = self.basedir + 'calibrations/processed_arc/arcBefore95_'+self.mode+'_MEF_1x1_'+self.cam+'1_arc.fits'
+                    self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/cont10s_hr210038_flat.fits'
+                    self.flat_image_file = self.basedir + 'calibrations/processed_flat/cont10s_hr210038_flat.fits'
+                    #self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
+                    self.default_wmod = '/Users/jon/gemini/GHOSTDR/ghostdr/ghost/lookups/Polyfit/red/high/220501/wavemod.fits'
+                    self.default_xmod = '/Users/jon/gemini/GHOSTDR/ghostdr/ghost/lookups/Polyfit/red/high/220501/xmod.fits'
+                else:
+                    self.arc_image_file = self.basedir + "arc120s_lr110011_arraysTiled.fits"
+                    #self.arc_image_file = self.basedir + "red_hg_lr110012_arraysTiled.fits"
+                    #self.arc_reduced_file = self.basedir + 'calibrations/processed_arc/arcBefore95_'+self.mode+'_MEF_1x1_'+self.cam+'1_arc.fits'
+                    self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/cont10s_lr210035_flat.fits'
+                    self.flat_image_file = self.basedir + 'calibrations/processed_flat/cont10s_lr210035_flat.fits'
+                    #self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
+                    self.default_wmod = '/Users/jon/gemini/GHOSTDR/ghostdr/ghost/lookups/Polyfit/red/std/220501/wavemod.fits'
+                    self.default_xmod = '/Users/jon/gemini/GHOSTDR/ghostdr/ghost/lookups/Polyfit/red/std/220501/xmod.fits'
+            if self.mode == 'high':
+                self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/sv-20220507.205620-20000_slitflat.fits'
+                self.slit_arc_image = self.basedir + 'calibrations/processed_slit/sv-20220507.205620-arc_slit.fits'
+            else:
+                self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/sv-20220507.205923-20000_slitflat.fits'
+                self.slit_arc_image = self.basedir + 'calibrations/processed_slit/sv-20220507.205923-arc_slit.fits'
         elif self.user=='mike':
             # This is the directory containing the raw (and recently reduced)
             # files.

@@ -20,7 +20,7 @@ $DELINT || INTERMED=`mktemp -d intermediates.XXXXXXXXXX`
 
 SHORTSPEC=hd200654
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-LONGSPEC=$DIR/../simulator/pyghost/pyghost/data/standards/${SHORTSPEC}.fits
+LONGSPEC=$DIR/../simulator/pyghost/data/standards/${SHORTSPEC}.fits
 
 allow_inspection() {
 	builtin echo 'You can now check the reduction at this step.'

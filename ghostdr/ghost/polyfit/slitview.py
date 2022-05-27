@@ -1,8 +1,10 @@
+import math
 import numpy as np
-from skimage import transform
+from skimage import transform, util
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
+'''
 # Rotation of slit on camera
 ROTANGLE = 90.0-9.04
 
@@ -51,7 +53,11 @@ SLITVIEW_PARAMETERS = {
             'red': [11, 106], 'blue': [11, 106]},
     }
 }
+'''
 
+# A quick counterpoint to the existing floordiv (which is just a // b)
+def ceildiv(a, b):
+    return -(a // -b)
 
 class SlitView(object):
     """
@@ -84,24 +90,65 @@ class SlitView(object):
         the slit viewer and the CCD, to be determined through testing on 
         real data.
     """
-    def __init__(self, slit_image, flat_image, microns_pix=4.54*180/50*2,
-                 mode='std', slit_length=3600., reverse_profile=True):
-        self.slit_image = transform.rotate(slit_image, ROTANGLE, center=ROT_CENTER)
-        self.flat_image = transform.rotate(flat_image, ROTANGLE, center=ROT_CENTER)
+    def __init__(self, slit_image, flat_image, slitvpars, microns_pix=4.54*180/50,
+                 binning=2, mode='std', slit_length=3600., reverse_profile=True):
+        self.binning = binning
+        rota = slitvpars['rota']
+        center = [slitvpars['rotyc'] // binning, slitvpars['rotxc'] // binning]
+        self.central_pix = {
+            'red': [slitvpars['center_y_red'] // binning,
+                    slitvpars['center_x_red'] // binning],
+            'blue': [slitvpars['center_y_blue'] // binning,
+                     slitvpars['center_x_blue'] // binning]
+        }
+        self.sky_pix_only_boundaries = {
+            'red': [slitvpars['skypix0'] // binning,
+                    ceildiv(slitvpars['skypix1'], binning)],
+            'blue': [slitvpars['skypix0'] // binning,
+                     ceildiv(slitvpars['skypix1'], binning)]
+        }
+        self.object_boundaries = {
+            'red': [[slitvpars['obj0pix0'] // binning,
+                     ceildiv(slitvpars['obj0pix1'], binning)],
+                    [slitvpars['obj1pix0'] // binning,
+                     ceildiv(slitvpars['obj1pix1'], binning)]],
+            'blue': [[slitvpars['obj0pix0'] // binning,
+                     ceildiv(slitvpars['obj0pix1'], binning)],
+                     [slitvpars['obj1pix0'] // binning,
+                      ceildiv(slitvpars['obj1pix1'], binning)]],
+        }
+        self.sky_pix_boundaries = {
+            'red': [slitvpars['obj0pix0'] // binning,
+                    ceildiv(slitvpars['skypix1'], binning)],
+            'blue': [slitvpars['obj0pix0'] // binning,
+                    ceildiv(slitvpars['skypix1'], binning)]
+        }
+                            
+        self.extract_half_width = ceildiv(slitvpars['ext_hw'], binning)
+        if slit_image is None or rota == 0.0:
+            self.slit_image = slit_image
+        else:
+            self.slit_image = transform.rotate(util.img_as_float64(slit_image), rota, center=center)
+        if flat_image is None or rota == 0.0:
+            self.flat_image = flat_image
+        else:
+            self.flat_image = transform.rotate(util.img_as_float64(flat_image), rota, center=center)
         self.mode = mode
         self.slit_length = slit_length
-        self.microns_pix = microns_pix
+        self.microns_pix = microns_pix * binning
         self.reverse_profile = reverse_profile
         # WARNING: These parameters below should be input from somewhere!!!
         # The central pixel in the y-direction (along-slit) defines the slit
         # profile offset, i.e. it interacts directly with the tramline fitting
         # and a change to one is a change to the other.
         # Co-ordinates are in standard python co-ordinates, i.e. y then x
+        '''
         if mode in SLITVIEW_PARAMETERS.keys():
             for attr, value in SLITVIEW_PARAMETERS[mode].items():
                 setattr(self, attr, value)
         else:
             raise ValueError("Invalid Mode: " + str(mode))
+        '''
 
     def cutout(self, arm='red', use_flat=False):
         """

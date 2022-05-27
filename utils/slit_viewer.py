@@ -7,7 +7,10 @@ import numpy as np
 import astropy.io.fits as pf
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
+from ghostdr.ghost.lookups import polyfit_dict
 from ghostdr.ghost.polyfit import SlitView as sv
+import astrodata
+import ghost_instruments
 
 # pylint: disable=invalid-name
 
@@ -25,13 +28,13 @@ args = parser.parse_args()
 try:
     hdus = pf.open(args.path)
 except:
-    print "Cannot open file: " + args.path
+    print("Cannot open file: " + args.path)
     sys.exit()
 
 try:
     res = 'high' if hdus[0].header['SMPNAME'] == 'HI_ONLY' else 'std'
 except:
-    print "File resolution cannot be determined"
+    print("File resolution cannot be determined")
     sys.exit()
 
 try:
@@ -47,14 +50,28 @@ for h in hdus[1:]:
             scihdus.append(h)
     except KeyError:
         scihdus.append(h)
+
+ad = astrodata.open(args.path)
+res_mode = ad.res_mode()
+binning=ad.detector_x_bin()
+try:
+    slitv_fn = polyfit_dict.get_polyfit_filename(None, 'slitv', res_mode, ad.ut_date(),
+                                                 ad.filename, 'slitvmod')
+    slitvpars = astrodata.open(slitv_fn)
+    print(f"Using slitvmod {slitv_fn}")
+except IOError:
+    sys.exit(1)
+
 # get the 2d profiles/images
-red2d = [sv(h.data, None, mode=res).cutout('red') for h in scihdus]
-blu2d = [sv(h.data, None, mode=res).cutout('blue') for h in scihdus]
+red2d = [sv(h.data, None, slitvpars.TABLE[0], mode=res, binning=binning).cutout('red')
+         for h in scihdus]
+blu2d = [sv(h.data, None, slitvpars.TABLE[0], mode=res, binning=binning).cutout('blue')
+         for h in scihdus]
 
 # zero the simultaneous arc fibre pixels if requested and
 # file is a high res object frame
 if args.no_simult and res == 'high' and objtype:
-    svo = sv(h.data, None, mode=res)
+    svo = sv(h.data, None, slitvpars.TABLE[0], mode=res, binning=binning)
     # get location of simultaneous arc (identically located
     # regardless of arm so just use red)
     bounds = svo.object_boundaries['red'][-1]
@@ -80,7 +97,7 @@ for arm, im, lines in zip(['red', 'blue'], [reds, blues], [red1d, blu1d]):
 
     # image goes to the left
     axp = plt.subplot(gs[0])
-    axp.imshow(im, origin='lower', aspect='auto')
+    axp.imshow(im, origin='lower', aspect=1) #'auto')
     axp.set(ylim=[0, im.shape[0]])
     axp.get_xaxis().set_visible(False)
 
