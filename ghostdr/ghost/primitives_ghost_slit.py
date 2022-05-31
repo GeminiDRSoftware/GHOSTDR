@@ -41,6 +41,28 @@ class GHOSTSlit(GHOST):
         super(GHOSTSlit, self).__init__(adinputs, **kwargs)
         self._param_update(parameters_ghost_slit)
 
+    def darkCorrect(self, adinputs=None, **params):
+        """
+        Dark-correct GHOST slit observations.
+
+        This primitive only exists to allow skipping the underlying primitive
+        from DRAGONS.
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        skip : bool
+            Set to ``True`` to skip this primitive. Defaults to ``False``.
+        dark: str/list
+            name(s) of the dark file(s) to be subtracted
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        # Call the underlying primitive that does the real work.
+        return super().darkCorrect(adinputs, params)
+
     def CRCorrect(self, adinputs=None, **params):
         """
         Cosmic-ray correct slit viewer images.

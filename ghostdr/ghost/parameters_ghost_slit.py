@@ -2,8 +2,13 @@
 # in the primitives_ghost_slit.py file, in alphabetical order.
 
 from gempy.library import config
-from geminidr.core import parameters_stack
+from geminidr.core import parameters_stack, parameters_preprocess
 
+class darkCorrectConfig(parameters_preprocess.darkCorrectConfig):
+    def setDefaults(self):
+        self.suffix = "_darkCorrected"
+        self.dark = None
+        self.do_cal = "skip"
 
 class CRCorrectConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_CRCorrected",

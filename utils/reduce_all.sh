@@ -112,9 +112,9 @@ for CAM in SLITV BLUE RED; do
     
     # process everything else
 	BIN=$BINNING; [ $CAM = SLITV ] && BIN=  # binning modes for objects and standards
-	reduce_list "Reducing $CAM darks" $CAM DARK
-	
-	echo "Darks Reduced for Cam " + $CAM
+	# reduce_list "Reducing $CAM darks" $CAM DARK
+	# echo "Darks Reduced for Cam " + $CAM
+
 	for MODE in HIGH STD; do
 		reduce_list "Reducing $CAM $MODE flats" $CAM $MODE FLAT
 		reduce_each "Reducing $CAM $MODE arc" $CAM $MODE ARC
