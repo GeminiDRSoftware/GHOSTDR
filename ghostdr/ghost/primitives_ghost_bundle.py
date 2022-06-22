@@ -115,10 +115,21 @@ def _get_common_hdr_value(base, extns, key):
     if len(c) == 0:
         return base.phu.get(key)
     # Check that every extension has the same value for the keyword
-    if len(c.most_common()) != 1:
-        raise KeyError('multiple values for ' + key + " " + str(vals))
-    val, cnt = c.most_common()[0]
-    return val
+    most_common = c.most_common()
+    base = most_common[0]
+    if len(most_common) != 1:
+        # Ignore single errors in this header, as long as the most common
+        # value is more than half
+        if base[1] < len(vals) // 2:
+          raise KeyError('multiple values for ' + key + " " + str(vals))
+
+        for val in most_common[1:]:
+          if val[1] == 1:
+            print('Ignoring single error in', key, 'header')
+          else:
+            raise KeyError('multiple values for ' + key + " " + str(vals))
+
+    return base[0]
 
 def _get_hdr_values(extns, key):
     """
@@ -161,6 +172,7 @@ def _write_newfile(extns, suffix, base, log):
     assert extns and len(extns) > 0
     # Start with a copy of the base PHU
     n = astrodata.create(copy.deepcopy(base.phu))
+
     # But also look for the extension with an empty data array,
     # because this is the real PHU from the original file before
     # it was mashed into a giant MEF.
@@ -168,14 +180,29 @@ def _write_newfile(extns, suffix, base, log):
         if (x.hdr.get('NAXIS') == 0) or (x.data.size == 0):
             phu = PrimaryHDU(data=None, header=copy.deepcopy(x.hdr))
             n = astrodata.create(phu)
+
+    # Copy some important keywords into each separate file if they
+    # aren't already there
+    for kw in ['INSTRUME', 'TELESCOP', 'DATALAB', 'GEMPRGID', 'OBSID', 'UTC-OBS']:
+        try:
+            if not n.phu.get(kw):
+                n.phu[kw] = base.phu.get(kw)
+        except KeyError:
+            pass
+
+    # Remove some keywords that are only relevant to the bundle
     for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:
         try:
             del n.phu[kw]
         except KeyError:
             pass
+
+    # Append the extensions that contain pixel data
     for x in extns:
         if (x.hdr.get('NAXIS') > 0) and (x.data.size > 0):
             n.append(x)
+
+    # Collate headers into the new PHU
     for kw in ['CAMERA', 'CCDNAME', 'CCDSUM', 'OBSTYPE', 'SMPNAME']:
         n.phu.set(kw, _get_common_hdr_value(base, extns, kw))
     vals = _get_hdr_values(extns, 'DATE-OBS')
@@ -184,8 +211,10 @@ def _write_newfile(extns, suffix, base, log):
     n.phu.set('UTSTART', vals[min(vals.keys())])
     vals = _get_hdr_values(extns, 'UTEND')
     n.phu.set('UTEND', vals[max(vals.keys())])
+
+    # Construct a filename
     n.filename = base.filename
-    ccdsum = _get_common_hdr_value(base, extns, 'CCDSUM')
+    ccdsum = n.phu.get('CCDSUM')
     binning = '_' + 'x'.join(ccdsum.split())
     n.update_filename(suffix=binning+suffix)
 

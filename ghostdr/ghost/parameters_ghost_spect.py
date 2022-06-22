@@ -3,7 +3,7 @@
 
 from gempy.library import config
 
-from geminidr.core import parameters_ccd, parameters_visualize
+from geminidr.core import parameters_ccd, parameters_visualize, parameters_preprocess
 
 from astrodata import AstroData as ad
 
@@ -48,12 +48,11 @@ class clipSigmaBPMConfig(config.Config):
     bpm_value = config.Field("BPM value to give to clipped pixels", int, 1)
 
 
-class darkCorrectConfig(config.Config):
-    suffix = config.Field("Filename suffix", str, "_darkCorrected",
-                          optional=True)
-    dark = config.ListField("Dark frame to use", (str, ad), None,
-                            optional=True)
-
+class darkCorrectConfig(parameters_preprocess.darkCorrectConfig):
+    def setDefaults(self):
+        self.suffix = "_darkCorrected"
+        self.dark = None
+        self.do_cal = "skip"
 
 
 class extractProfileConfig(config.Config):
