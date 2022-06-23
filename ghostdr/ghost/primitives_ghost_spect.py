@@ -514,10 +514,17 @@ class GHOSTSpect(GHOST):
             suffix to be added to output files
         dark: str/list
             name(s) of the dark file(s) to be subtracted
+        do_cal: str
+            controls the behaviour of this primitive
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+
+        if params['do_cal'] == 'skip':
+            log.warning("Dark correction has been turned off.")
+            return adinputs
+
         sfx = params["suffix"]
 
         # Check if all the inputs have matching detector_x_bin and

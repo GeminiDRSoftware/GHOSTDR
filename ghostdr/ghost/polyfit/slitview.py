@@ -312,7 +312,12 @@ class SlitView(object):
         # you're after, e.g. for an mean exposure epoch calculation)
         if normalise_profiles:
             for prof in profiles:
-                prof /= np.sum(prof)
+                profsum = np.sum(prof)
+                if math.isclose(profsum, 0.0, abs_tol=1e-9):
+                    # FIXME what to do here?
+                    raise ZeroDivisionError('Sum of profile is too close to zero')
+                else:
+                    prof /= np.sum(prof)
 
         if self.reverse_profile:
             return profiles[:,::-1]

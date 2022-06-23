@@ -598,12 +598,15 @@ class Polyspect(object):
         for i in range(x_values.shape[0]):  # Go through each order...
             for j in range(x_values.shape[1]): # pylint: disable=maybe-no-member
                 xind = int(np.round(x_values[i, j]))
-                peakpix = image_med[j, self.szx // 2 + xind -
-                                       search_pix:self.szx // 2 +
-                                                  xind + search_pix + 1]
-                x_values[i, j] += np.argmax(peakpix) - search_pix
-                # Put a sigma for weighted fit purposes
-                sigma[i, j] = 1. / np.max(peakpix)
+                lpix = max(0, self.szx // 2 + xind - search_pix)
+                rpix = min(self.szx // 2 + xind + search_pix + 1, image_med.shape[1] - 1)
+                peakpix = image_med[j, lpix:rpix]
+                if len(peakpix) > 0:
+                    x_values[i, j] += np.argmax(peakpix) - search_pix
+                    # Put a sigma for weighted fit purposes
+                    sigma[i, j] = 1. / np.max(peakpix)
+                else:
+                    sigma[i, j] = 1E5
         # Down weight any regions where the flux peak was less than 0.
         sigma[sigma < 0] = 1E5
 
