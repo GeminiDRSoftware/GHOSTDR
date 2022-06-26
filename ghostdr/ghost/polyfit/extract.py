@@ -336,7 +336,14 @@ class Extractor(object):
                 x_ix = int(np.round(
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
-                phi = np.interp(
+                # Depending on the slit orientation, we have to make sure 
+                # that np.interp is fed a monotonically increasing x vector.
+                if matrices[i, j, 0, 0] < 0:
+                    phi = np.interp(
+                        x_ix - x_map[i, j] - nx // 2, profile_y_pix[::-1],
+                        profile[::-1])
+                else:
+                    phi = np.interp(
                         x_ix - x_map[i, j] - nx // 2, profile_y_pix,
                         profile)
                         

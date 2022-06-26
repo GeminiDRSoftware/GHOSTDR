@@ -73,6 +73,8 @@ slitvmod_dict = {
     'GHOST_1_1_slitv_high_161120': 'slitv/high/161120/slitvmod.fits',
     'GHOST_1_1_slitv_std_220501': 'slitv/std/220501/slitvmod.fits',
     'GHOST_1_1_slitv_high_220501': 'slitv/high/220501/slitvmod.fits',
+    'GHOST_1_1_slitv_std_220620': 'slitv/std/220620/slitvmod.fits',
+    'GHOST_1_1_slitv_high_220620': 'slitv/high/220620/slitvmod.fits',
 }
 
 def get_polyfit_filename(log, arm, mode, date_obs, filename, caltype):

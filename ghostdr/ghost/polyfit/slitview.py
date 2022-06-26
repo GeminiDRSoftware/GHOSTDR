@@ -16,8 +16,8 @@ SLITVIEW_PARAMETERS = {
         'central_pix': {
             'red': [781, 985],
             'blue': [771, 946]
-            #'red': [77, 65],
-            #'blue': [77, 156]
+            #'red': [77, 65],    #
+            #'blue': [77, 156]   #
         },
         'extract_half_width': 3,
         'sky_pix_only_boundaries': {
@@ -37,8 +37,8 @@ SLITVIEW_PARAMETERS = {
         'central_pix': {
             'red': [770, 857],
             'blue': [760, 819],
-            #'red': [78, 95],
-            #'blue': [78, 4]
+            #'red': [78, 95], #
+            #'blue': [78, 4]  #
         },
         'extract_half_width': 2,
         'sky_pix_only_boundaries': {
@@ -117,12 +117,20 @@ class SlitView(object):
                      [slitvpars['obj1pix0'] // binning,
                       ceildiv(slitvpars['obj1pix1'], binning)]],
         }
-        self.sky_pix_boundaries = {
-            'red': [slitvpars['obj0pix0'] // binning,
-                    ceildiv(slitvpars['skypix1'], binning)],
-            'blue': [slitvpars['obj0pix0'] // binning,
-                    ceildiv(slitvpars['skypix1'], binning)]
-        }
+        if mode == 'std':
+            self.sky_pix_boundaries = {
+                'red': [slitvpars['obj0pix0'] // binning,
+                        ceildiv(slitvpars['obj1pix1'], binning)],
+                'blue': [slitvpars['obj0pix0'] // binning,
+                        ceildiv(slitvpars['obj1pix1'], binning)]
+            }
+        else:
+            self.sky_pix_boundaries = {
+                'red': [slitvpars['obj0pix0'] // binning,
+                        ceildiv(slitvpars['skypix1'], binning)],
+                'blue': [slitvpars['obj0pix0'] // binning,
+                        ceildiv(slitvpars['skypix1'], binning)]
+            }
                             
         self.extract_half_width = ceildiv(slitvpars['ext_hw'], binning)
         if slit_image is None or rota == 0.0:
@@ -137,6 +145,7 @@ class SlitView(object):
         self.slit_length = slit_length
         self.microns_pix = microns_pix * binning
         self.reverse_profile = reverse_profile
+        
         # WARNING: These parameters below should be input from somewhere!!!
         # The central pixel in the y-direction (along-slit) defines the slit
         # profile offset, i.e. it interacts directly with the tramline fitting
@@ -219,6 +228,7 @@ class SlitView(object):
         profile = np.sum(cutout, axis=1)
         if reverse_profile:
             profile = profile[::-1]
+        
         if return_centroid:
             xcoord = np.arange(
                 -self.extract_half_width, self.extract_half_width+1)
