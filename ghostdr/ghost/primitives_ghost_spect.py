@@ -725,8 +725,8 @@ class GHOSTSpect(GHOST):
             slitflat_list = [self._get_cal(ad, 'processed_slitflat')
                              for ad in adinputs]
 
-        flat = params['flat']
-        if flat is None:
+        flat_list = params['flat']
+        if flat_list is None:
             self.getProcessedFlat(adinputs, refresh=False)
             flat_list = [self._get_cal(ad, 'processed_flat')
                          for ad in adinputs]
@@ -1280,8 +1280,8 @@ class GHOSTSpect(GHOST):
         # Make no attempt to check if primitive has already been run - may
         # have new calibrators we wish to apply.
 
-        flat = params['flat']
-        if not flat:
+        flat_list = params['flat']
+        if not flat_list:
             self.getProcessedFlat(adinputs, refresh=False)
             flat_list = [self._get_cal(ad, 'processed_flat') for ad in adinputs]
 

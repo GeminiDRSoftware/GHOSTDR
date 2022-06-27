@@ -16,6 +16,10 @@ xmod_dict = {
     'GHOST_1_1_red_high_220501': 'red/high/220501/xmod.fits',
     'GHOST_1_1_blue_std_220501': 'blue/std/220501/xmod.fits',
     'GHOST_1_1_blue_high_220501': 'blue/high/220501/xmod.fits',
+    'GHOST_1_1_red_std_220620': 'red/std/220620/xmod.fits',
+    'GHOST_1_1_red_high_220620': 'red/high/220620/xmod.fits',
+    'GHOST_1_1_blue_std_220620': 'blue/std/220620/xmod.fits',
+    'GHOST_1_1_blue_high_220620': 'blue/high/220620/xmod.fits',
     #'GHOST_1_1_blue_high_170801': 'blue/high/170801/xmod.fits',
 }
 
@@ -29,6 +33,10 @@ wavemod_dict = {
     'GHOST_1_1_red_high_220501': 'red/high/220501/wavemod.fits',
     'GHOST_1_1_blue_std_220501': 'blue/std/220501/wavemod.fits',
     'GHOST_1_1_blue_high_220501': 'blue/high/220501/wavemod.fits',
+    'GHOST_1_1_red_std_220620': 'red/std/220620/wavemod.fits',
+    'GHOST_1_1_red_high_220620': 'red/high/220620/wavemod.fits',
+    'GHOST_1_1_blue_std_220620': 'blue/std/220620/wavemod.fits',
+    'GHOST_1_1_blue_high_220620': 'blue/high/220620/wavemod.fits',
 }
 
 spatmod_dict = {
@@ -41,6 +49,10 @@ spatmod_dict = {
     'GHOST_1_1_red_high_220501': 'red/high/220501/spatmod.fits',
     'GHOST_1_1_blue_std_220501': 'blue/std/220501/spatmod.fits',
     'GHOST_1_1_blue_high_220501': 'blue/high/220501/spatmod.fits',
+    'GHOST_1_1_red_std_220620': 'red/std/220620/spatmod.fits',
+    'GHOST_1_1_red_high_220620': 'red/high/220620/spatmod.fits',
+    'GHOST_1_1_blue_std_220620': 'blue/std/220620/spatmod.fits',
+    'GHOST_1_1_blue_high_220620': 'blue/high/220620/spatmod.fits',
 }
 
 specmod_dict = {
@@ -53,6 +65,10 @@ specmod_dict = {
     'GHOST_1_1_red_high_220501': 'red/high/220501/specmod.fits',
     'GHOST_1_1_blue_std_220501': 'blue/std/220501/specmod.fits',
     'GHOST_1_1_blue_high_220501': 'blue/high/220501/specmod.fits',
+    'GHOST_1_1_red_std_220620': 'red/std/220620/specmod.fits',
+    'GHOST_1_1_red_high_220620': 'red/high/220620/specmod.fits',
+    'GHOST_1_1_blue_std_220620': 'blue/std/220620/specmod.fits',
+    'GHOST_1_1_blue_high_220620': 'blue/high/220620/specmod.fits',
 }
 
 rotmod_dict = {
@@ -65,6 +81,10 @@ rotmod_dict = {
     'GHOST_1_1_red_high_220501': 'red/high/220501/rotmod.fits',
     'GHOST_1_1_blue_std_220501': 'blue/std/220501/rotmod.fits',
     'GHOST_1_1_blue_high_220501': 'blue/high/220501/rotmod.fits',
+    'GHOST_1_1_red_std_220620': 'red/std/220620/rotmod.fits',
+    'GHOST_1_1_red_high_220620': 'red/high/220620/rotmod.fits',
+    'GHOST_1_1_blue_std_220620': 'blue/std/220620/rotmod.fits',
+    'GHOST_1_1_blue_high_220620': 'blue/high/220620/rotmod.fits',
 }
 
 slitvmod_dict = {
@@ -76,6 +96,7 @@ slitvmod_dict = {
     'GHOST_1_1_slitv_std_220620': 'slitv/std/220620/slitvmod.fits',
     'GHOST_1_1_slitv_high_220620': 'slitv/high/220620/slitvmod.fits',
 }
+
 
 def get_polyfit_filename(log, arm, mode, date_obs, filename, caltype):
     """
