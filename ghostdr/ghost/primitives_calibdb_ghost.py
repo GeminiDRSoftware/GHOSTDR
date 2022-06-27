@@ -33,22 +33,28 @@ class CalibDBGHOST(CalibDB):
         self._param_update(parameters_calibdb_ghost)
 
     def getProcessedArc(self, adinputs=None, **params):
+        procmode = 'sq' if self.mode == 'sq' else None
         caltype = "processed_arc"
         self.getCalibration(adinputs, caltype=caltype,
+                            procmode=procmode,
                             refresh=params["refresh"],
-                            howmany=params["howmany"], )
+                            howmany=params["howmany"])
         self._assert_calibrations(adinputs, caltype)
         return adinputs
 
     def getProcessedSlit(self, adinputs=None, **params):
+        procmode = 'sq' if self.mode == 'sq' else None
         caltype = "processed_slit"
-        self.getCalibration(adinputs, caltype=caltype)
+        self.getCalibration(adinputs, caltype=caltype, procmode=procmode,
+                            refresh=params["refresh"])
         self._assert_calibrations(adinputs, caltype)
         return adinputs
 
     def getProcessedSlitFlat(self, adinputs=None, **params):
+        procmode = 'sq' if self.mode == 'sq' else None
         caltype = "processed_slitflat"
-        self.getCalibration(adinputs, caltype=caltype)
+        self.getCalibration(adinputs, caltype=caltype, procmode=procmode,
+                            refresh=params["refresh"])
         self._assert_calibrations(adinputs, caltype)
         return adinputs
 
