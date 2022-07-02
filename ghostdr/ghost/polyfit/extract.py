@@ -69,7 +69,7 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
         x_mat[o_ix + n_o] = phi[:, o_ix] * (x_ix - obj_centers[o_ix])
 
     # Now we fit a model to the col_data with var_use, using standard
-    # linear regression. FIXME: Surely there is a reasonably scipy helper
+    # linear regression. FIXME: Surely there is a reasonable scipy helper
     # function???
     x_mat = x_mat.T
     # FIXME: Do we use weights? If so, faster computation is possible as W is
