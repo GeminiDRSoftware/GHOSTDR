@@ -277,12 +277,20 @@ class Extractor(object):
 
         return x_map, w_map, blaze, matrices
 
-    def make_pixel_model(self):
+    def make_pixel_model(self, input_image=None):
         """
         Based on the xmod and the slit viewer image, create a complete model image, 
         where flux versus wavelength pixel is constant. As this is designed for 
         comparing to flats, normalisation is to the median of the non-zero pixels in the
         profile.
+        
+        Parameters
+        ----------
+        input_iage: :obj:`numpy.ndarray`, optional
+            Image data, transposed so that dispersion is in the "y" direction.
+            If this is given, then the pixel model is scaled according to the input flux
+            for every order and wavelength. Note that this isn't designed to reproduce
+            dual-object or object+sky data.
         
         Returns
         -------

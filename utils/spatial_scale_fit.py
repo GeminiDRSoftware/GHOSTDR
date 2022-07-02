@@ -34,6 +34,14 @@ import input_locations
 
 arm = 'blue'
 mode = 'high'
+
+arm = 'blue'
+mode = 'std'
+
+arm = 'red'
+mode = 'std'
+
+
 user='mike'
 
 files = input_locations.Files(user=user, mode=mode, cam=arm)
@@ -97,7 +105,11 @@ ghost = polyfit.GhostArm(arm, mode=mode)
 # The crucial number is the microns_pix_spatial, which is the
 # number of slitviewer microns per spectrograph CCD pixel. 
 # It is also roughly ghost.matrices[:,:,0,0]
-microns_pix_spatial = 51.5 #was 47.2.
+
+if arm == 'blue':
+    microns_pix_spatial = 51.5 #was 47.2.
+else:
+    microns_pix_spatial = 48.0
 microns_step = 0.2
 num_steps = 16
 test_microns = np.linspace(microns_pix_spatial - (microns_step *
