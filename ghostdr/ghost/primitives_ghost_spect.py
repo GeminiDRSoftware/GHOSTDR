@@ -950,6 +950,7 @@ class GHOSTSpect(GHOST):
                 extracted_flux, extracted_var = extractor.two_d_extract(
                     corrected_data,
                     extraction_weights=extracted_weights,
+                    vararray=corrected_var,
                 )
 
                 # CJS: Since you don't use the input AD any more, I'm going to

@@ -684,7 +684,8 @@ class Extractor(object):
 
         return extracted_flux, extracted_var, extraction_weights
 
-    def two_d_extract(self, data=None, fl=None, extraction_weights=None):
+    def two_d_extract(self, data=None, fl=None, extraction_weights=None,
+                      vararray=None):
         """
         Perform two-dimensional flux extraction.
 
@@ -724,7 +725,12 @@ class Extractor(object):
             else:
                 data = pyfits.getdata(fl)
 
-        # Correct for scattered light - a place-holder, to show where it can 
+        # Assuming that the data are in photo-electrons, construct a simple
+        # model for the pixel variance if no variance is provided.
+        if vararray is None:
+            vararray = np.maximum(data, 0) + self.rnoise ** 2
+
+        # Correct for scattered light - a place-holder, to show where it can
         # most easily fit.
         mask = np.sum(extraction_weights, axis=0) == 0
         data = subtract_scattered_light(data, mask)
@@ -763,9 +769,8 @@ class Extractor(object):
         extracted_var = np.zeros((nm, ny, no))
         extracted_covar = np.zeros((nm, ny - 1, no))
 
-        # Assuming that the data are in photo-electrons, construct a simple
-        # model for the pixel inverse variance.
-        pixel_inv_var = 1.0 / (np.maximum(data, 0) + self.rnoise ** 2)
+        # Mask any bad pixels with pixel inverse variance of 0.
+        pixel_inv_var = 1.0 / vararray
         if self.badpixmask is not None:
             pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
 
@@ -858,11 +863,11 @@ class Extractor(object):
                             k, xsub_ix, ysub_ix_hi] * ysub_ix_frac)
                     extracted_var[i, j, k] = np.dot(
                         (1 - ysub_ix_frac) / np.maximum(
-                            col_inv_var[xsub_ix, ysub_ix_lo], 1e-12),
+                            col_inv_var[xsub_ix, ysub_ix_lo], 1e-18),
                         col_weights[k, xsub_ix, ysub_ix_lo] ** 2)
                     extracted_var[i, j, k] += np.dot(
                         ysub_ix_frac / np.maximum(
-                            col_inv_var[xsub_ix, ysub_ix_hi], 1e-12),
+                            col_inv_var[xsub_ix, ysub_ix_hi], 1e-18),
                         col_weights[k, xsub_ix, ysub_ix_hi] ** 2)
 
         return extracted_flux, extracted_var
