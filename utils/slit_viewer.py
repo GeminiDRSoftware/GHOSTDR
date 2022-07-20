@@ -7,7 +7,7 @@ import numpy as np
 import astropy.io.fits as pf
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
-from ghostdr.ghost.lookups import polyfit_dict
+from ghostdr.ghost.lookups import polyfit_lookup
 from ghostdr.ghost.polyfit import SlitView as sv
 import astrodata
 import ghost_instruments
@@ -55,7 +55,7 @@ ad = astrodata.open(args.path)
 res_mode = ad.res_mode()
 binning=ad.detector_x_bin()
 try:
-    slitv_fn = polyfit_dict.get_polyfit_filename(None, 'slitv', res_mode, ad.ut_date(),
+    slitv_fn = polyfit_lookup.get_polyfit_filename(None, 'slitv', res_mode, ad.ut_date(),
                                                  ad.filename, 'slitvmod')
     slitvpars = astrodata.open(slitv_fn)
     print(f"Using slitvmod {slitv_fn}")

@@ -37,7 +37,7 @@ from .primitives_ghost import GHOST, filename_updater
 
 from . import parameters_ghost_spect
 
-from .lookups import polyfit_dict, line_list, keyword_comments, targetn_dict
+from .lookups import polyfit_lookup, line_list, keyword_comments, targetn_dict
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
@@ -1318,7 +1318,7 @@ class GHOSTSpect(GHOST):
                 continue
 
             # CJS: line_list location is now in lookups/__init__.py
-            arclinefile = os.path.join(os.path.dirname(polyfit_dict.__file__),
+            arclinefile = os.path.join(os.path.dirname(polyfit_lookup.__file__),
                                        line_list)
             arcwaves, arcfluxes = np.loadtxt(arclinefile, usecols=[1, 2]).T
 
@@ -2272,14 +2272,14 @@ class GHOSTSpect(GHOST):
             Filename (including path) of the required polyfit file
         """
 
-        return polyfit_dict.get_polyfit_filename(self.log, ad.arm(),
-                                                 ad.res_mode(), ad.ut_date(),
-                                                 ad.filename, caltype)
+        return polyfit_lookup.get_polyfit_filename(self.log, ad.arm(),
+                                                   ad.res_mode(), ad.ut_date(),
+                                                   ad.filename, caltype)
 
     def _get_slitv_polyfit_filename(self, ad):
-        return polyfit_dict.get_polyfit_filename(self.log, 'slitv',
-                                                 ad.res_mode(), ad.ut_date(),
-                                                 ad.filename, 'slitvmod')
+        return polyfit_lookup.get_polyfit_filename(self.log, 'slitv',
+                                                   ad.res_mode(), ad.ut_date(),
+                                                   ad.filename, 'slitvmod')
 
     def _compute_barycentric_correction(self, ad, return_wavl=True,
                                         loc=GEMINI_SOUTH_LOC):
