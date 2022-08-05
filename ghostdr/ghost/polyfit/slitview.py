@@ -285,11 +285,11 @@ class SlitView(object):
                              'used_objects')
 
         # Find the slit profile.
-        full_profile = self.slit_profile(arm=arm, reverse_profile=False)
+        full_profile = self.slit_profile(arm=arm, reverse_profile=True)
 
         if correct_for_sky or append_sky:
             # Get the flat profile from the flat image.
-            flat_profile = self.slit_profile(arm=arm, use_flat=True, reverse_profile=False)
+            flat_profile = self.slit_profile(arm=arm, use_flat=True, reverse_profile=True)
 
         # WARNING: This is done in the extracted profile space. Is there any
         # benefit to doing this in pixel space? Maybe yes for the centroid.
@@ -330,6 +330,6 @@ class SlitView(object):
                     prof /= np.sum(prof)
 
         if self.reverse_profile:
-            return profiles[:,::-1]
-        else:
             return profiles
+        else:
+            return profiles[:,::-1]
