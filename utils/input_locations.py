@@ -13,6 +13,7 @@ import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
 import astropy.io.fits as pyfits
 import os
 import numpy as np
+import astrodata
 
 
 class Files():
@@ -61,31 +62,38 @@ class Files():
 
         # Load all the default parameter files from the lookups. These
         # may need to be overwritten for each individual test with fitted
-        # models in the reduced flat or arc.
+        # models in the reduced flat or arc. By default, use the most recent
+        # parameter file.
         self.xmod_location = [value for key, value in
                polyfit_dict.xmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][0]
-        self.xparams = pyfits.getdata(self.polyfit_lookups_path + self.xmod_location)
+               if cam in key.lower() and mode in key.lower()][-1]
+        self.xparams = astrodata.open(self.polyfit_lookups_path + self.xmod_location)[0].data
 
         self.wavemod_location = [value for key, value in
                polyfit_dict.wavemod_dict.items()
-               if cam in key.lower() and mode in key.lower()][0]
-        self.waveparams = pyfits.getdata(self.polyfit_lookups_path + self.wavemod_location)
+               if cam in key.lower() and mode in key.lower()][-1]
+        self.waveparams = astrodata.open(self.polyfit_lookups_path + self.wavemod_location)[0].data
 
         self.rotmod_location = [value for key, value in
                polyfit_dict.rotmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][0]
-        self.rotparams = pyfits.getdata(self.polyfit_lookups_path + self.rotmod_location)
+               if cam in key.lower() and mode in key.lower()][-1]
+        self.rotparams = astrodata.open(self.polyfit_lookups_path + self.rotmod_location)[0].data
 
         self.specmod_location = [value for key, value in
                polyfit_dict.specmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][0]
-        self.specparams = pyfits.getdata(self.polyfit_lookups_path + self.specmod_location)
+               if cam in key.lower() and mode in key.lower()][-1]
+        self.specparams = astrodata.open(self.polyfit_lookups_path + self.specmod_location)[0].data
 
         self.spatmod_location = [value for key, value in
                polyfit_dict.spatmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][0]
-        self.spatparams = pyfits.getdata(self.polyfit_lookups_path + self.spatmod_location)
+               if cam in key.lower() and mode in key.lower()][-1]
+        self.spatparams = astrodata.open(self.polyfit_lookups_path + self.spatmod_location)[0].data
+        
+        self.slitvmod_location = [value for key, value in
+               polyfit_dict.slitvmod_dict.items()
+               if mode in key.lower()][-1]
+        self.slitvparams = astrodata.open(self.polyfit_lookups_path + self.slitvmod_location).TABLE[0]
+        #import pdb; pdb.set_trace()
 
         if self.user=='joao':
             # This is the directory containing the raw (and recently reduced)
@@ -164,6 +172,7 @@ class Files():
             # files.
             self.basedir = '/Users/mireland/data/ghost/dhs_testdata_10jul/'
             self.basedir = '/Users/mireland/data/ghost/testdata-clean-190814/'
+            self.basedir = '/Users/mireland/data/ghost/reduced_jun22/calibrations/'
             
             self.arclinefile_ar_only = '/Users/mireland/python/GHOSTDR/simulator/pyghost/pyghost/data/mnras_ar_only.txt'
 
@@ -193,6 +202,10 @@ class Files():
                 #Hg file
                 #self.arc_image_file = '/Users/mireland/data/ghost/20sept2019/MONOCHROME/test_Hg_2s_blue_arraysTiled.fits'
                 #self.arclinefile = '/Users/mireland/python/GHOSTDR/utils/Hg.txt'
+                #On-sky commissioning data!
+                self.flat_image_file = self.basedir + 'processed_flat/flats_hr_b6_r6_s01_1x1_20220624_1x1_blue5_flat.fits'
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flats_hr_b6_r6_s01_1x1_20220624_2x2_slit_slitflat.fits'
+                self.arc_reduced_file = self.basedir + 'processed_arc/arcs_hr_b300_r300_s300_1x1_thxe_2022062_1x1_blue1_arc.fits'
             else:
                 self.default_wmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/red/std/161120/wavemod.fits'
                 self.flat_image_file = self.basedir + "processed_flat/flat95_std_1_MEF_1x1_red1_flat.fits"
@@ -201,7 +214,8 @@ class Files():
                 self.flat_image_file = "/Users/mireland/data/ghost/2019-11-01/RED/cont_comb02_arraysTiled.fits"
                 self.arc_image_file = '/Users/mireland/data/ghost/2019-11-01/RED/arc_comb00_arraysTiled.fits'
                 self.arclinefile = '/Users/mireland/python/GHOSTDR/utils/ThXe.txt'
-                
+      
+        
             
             #Override Hacks.
             #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_Xmod.fits'
@@ -210,12 +224,12 @@ class Files():
             #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_red_reversed.fits'
            
             
-            self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
+            #self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
             #self.flat_image_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
-            self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
+            #self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
             
-            self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/flat95_'+self.mode+'_2_MEF_2x2_slit_slitflat.fits'
-            self.slit_arc_image = self.basedir + 'calibrations/processed_slit/arcBefore95_'+self.mode+'_MEF_2x2_slit_slit.fits'
+            #self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/flat95_'+self.mode+'_2_MEF_2x2_slit_slitflat.fits'
+            #self.slit_arc_image = self.basedir + 'calibrations/processed_slit/arcBefore95_'+self.mode+'_MEF_2x2_slit_slit.fits'
         else:
             print('Invalid user, try again.')
         

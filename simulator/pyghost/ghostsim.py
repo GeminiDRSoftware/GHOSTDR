@@ -540,9 +540,10 @@ class SlitViewer(object):
             # Construct a new header
             hdr = pf.Header()
 
-            cosim = self.cosims[expid]
-            cosim = apply_binning(cosim, (self.binning, self.binning))
-            image += to_ushort(cosim)
+            if self.cosmics:
+                cosim = self.cosims[expid]
+                cosim = apply_binning(cosim, (self.binning, self.binning))
+                image += to_ushort(cosim)
 
             # Grab the image data
             data = image / gain
