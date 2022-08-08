@@ -222,7 +222,10 @@ class SlitView(object):
         y_halfwidth = int(self.slit_length/self.microns_pix/2)
         cutout = self.cutout(arm, use_flat)
         if reverse_profile is None:
-            reverse_profile = self.reverse_profile
+            if arm == 'red':
+                reverse_profile = not self.reverse_profile
+            else:
+                reverse_profile = self.reverse_profile
 
         # Sum over the 2nd axis, i.e. the x-coordinate.
         profile = np.sum(cutout, axis=1)
@@ -329,7 +332,12 @@ class SlitView(object):
                 else:
                     prof /= np.sum(prof)
 
-        if self.reverse_profile:
+        if arm == 'red':
+            reverse_profile = not self.reverse_profile
+        else:
+            reverse_profile = self.reverse_profile
+
+        if reverse_profile:
             return profiles
         else:
             return profiles[:,::-1]
