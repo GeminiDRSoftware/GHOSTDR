@@ -206,6 +206,9 @@ class Files():
                 self.flat_image_file = self.basedir + 'processed_flat/flats_hr_b6_r6_s01_1x1_20220624_1x1_blue5_flat.fits'
                 self.slit_flat_image = self.basedir + 'processed_slitflat/flats_hr_b6_r6_s01_1x1_20220624_2x2_slit_slitflat.fits'
                 self.arc_reduced_file = self.basedir + 'processed_arc/arcs_hr_b300_r300_s300_1x1_thxe_2022062_1x1_blue1_arc.fits'
+                self.flat_image_file = self.basedir + 'processed_flat/flats_sr_b6_r6_s01_1x1_20220624_1x1_blue5_flat.fits'
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flats_sr_b6_r6_s01_1x1_20220624_2x2_slit_slitflat.fits'
+                self.arc_reduced_file = self.basedir + 'processed_arc/arcs_sr_b300_r300_s300_1x1_take2_202206_1x1_blue1_arc.fits'
             else:
                 self.default_wmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/red/std/161120/wavemod.fits'
                 self.flat_image_file = self.basedir + "processed_flat/flat95_std_1_MEF_1x1_red1_flat.fits"
@@ -214,6 +217,10 @@ class Files():
                 self.flat_image_file = "/Users/mireland/data/ghost/2019-11-01/RED/cont_comb02_arraysTiled.fits"
                 self.arc_image_file = '/Users/mireland/data/ghost/2019-11-01/RED/arc_comb00_arraysTiled.fits'
                 self.arclinefile = '/Users/mireland/python/GHOSTDR/utils/ThXe.txt'
+                
+                self.flat_image_file = self.basedir + 'processed_flat/flats_sr_b6_r6_s01_1x1_20220624_1x1_red5_flat.fits'
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flats_sr_b6_r6_s01_1x1_20220624_2x2_slit_slitflat.fits'
+                self.arc_reduced_file = self.basedir + 'processed_arc/arcs_sr_b300_r300_s300_1x1_take2_202206_1x1_red1_arc.fits'
       
         
             
