@@ -84,10 +84,10 @@ class SlitView(object):
 
     slit_length: float (optional)
         Physical slit length to be extracted in microns. Default is ``3600.``.
-        
+
     reverse_profile: bool
-        Do we reverse the profile? This is a sign convention issue between 
-        the slit viewer and the CCD, to be determined through testing on 
+        Do we reverse the profile? This is a sign convention issue between
+        the slit viewer and the CCD, to be determined through testing on
         real data.
     """
     def __init__(self, slit_image, flat_image, slitvpars, microns_pix=4.54*180/50,
@@ -131,7 +131,7 @@ class SlitView(object):
                 'blue': [slitvpars['obj0pix0'] // binning,
                         ceildiv(slitvpars['skypix1'], binning)]
             }
-                            
+
         self.extract_half_width = ceildiv(slitvpars['ext_hw'], binning)
         if slit_image is None or rota == 0.0:
             self.slit_image = slit_image
@@ -145,7 +145,7 @@ class SlitView(object):
         self.slit_length = slit_length
         self.microns_pix = microns_pix * binning
         self.reverse_profile = {'red': False, 'blue': True}
-        
+
         # WARNING: These parameters below should be input from somewhere!!!
         # The central pixel in the y-direction (along-slit) defines the slit
         # profile offset, i.e. it interacts directly with the tramline fitting
@@ -205,11 +205,11 @@ class SlitView(object):
 
         return_centroid: bool, optional
             Do we also return the pixel centroid of the slit? Default is False.
-            
+
         use_flat: bool, optional
             Do we use the flat image? False for the object image.
             Default is False.
-            
+
         denom_clamp: float, optional
             Denominator clamp - fluxes below this value are not used when
             computing the centroid. Defaults to ``10``.
@@ -228,7 +228,7 @@ class SlitView(object):
         profile = np.sum(cutout, axis=1)
         if reverse_profile:
             profile = profile[::-1]
-        
+
         if return_centroid:
             xcoord = np.arange(
                 -self.extract_half_width, self.extract_half_width+1)
@@ -258,7 +258,7 @@ class SlitView(object):
 
         normalise_profiles : bool, optional
             Should profiles be normalised? Defaults to True.
-            
+
         used_objects: list of int, indices of used objects
             Denotes which objects should be extracted. Should be a list
             containing the ints 0, 1, or both, or None/the empty list
