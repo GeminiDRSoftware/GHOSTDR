@@ -91,7 +91,7 @@ class SlitView(object):
         real data.
     """
     def __init__(self, slit_image, flat_image, slitvpars, microns_pix=4.54*180/50,
-                 binning=2, mode='std', slit_length=3600., reverse_profile=True):
+                 binning=2, mode='std', slit_length=3600.):
         self.binning = binning
         rota = slitvpars['rota']
         center = [slitvpars['rotyc'] // binning, slitvpars['rotxc'] // binning]
@@ -144,7 +144,7 @@ class SlitView(object):
         self.mode = mode
         self.slit_length = slit_length
         self.microns_pix = microns_pix * binning
-        self.reverse_profile = reverse_profile
+        self.reverse_profile = {'red': False, 'blue': True}
         
         # WARNING: These parameters below should be input from somewhere!!!
         # The central pixel in the y-direction (along-slit) defines the slit
@@ -222,7 +222,7 @@ class SlitView(object):
         y_halfwidth = int(self.slit_length/self.microns_pix/2)
         cutout = self.cutout(arm, use_flat)
         if reverse_profile is None:
-            reverse_profile = self.reverse_profile
+            reverse_profile = self.reverse_profile[arm]
 
         # Sum over the 2nd axis, i.e. the x-coordinate.
         profile = np.sum(cutout, axis=1)
@@ -329,7 +329,7 @@ class SlitView(object):
                 else:
                     prof /= np.sum(prof)
 
-        if self.reverse_profile:
+        if self.reverse_profile[arm]:
             return profiles
         else:
             return profiles[:,::-1]
