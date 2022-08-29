@@ -805,6 +805,16 @@ class GHOSTSpect(GHOST):
             # FIXME: This really could be done as part of flat processing!
             if params['flat_precorrect']:
                 try:
+                    # Bin the flat to the image binning
+                    if flat.detector_x_bin() != ad.detector_x_bin(
+                    ) or flat.detector_y_bin() != ad.detector_y_bin():
+                        xb = ad.detector_x_bin()
+                        yb = ad.detector_y_bin()
+                        flat = self._rebin_ghost_ad(flat, xb, yb)
+
+                    # Recalculate the pixel model with the correct image binning
+                    flat[0].PIXELMODEL = extractor.make_pixel_model()
+
                     pix_to_correct = flat[0].PIXELMODEL > 0
 
                     # Lets find the flat normalisation constant.

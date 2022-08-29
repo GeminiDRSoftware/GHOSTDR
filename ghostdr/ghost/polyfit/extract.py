@@ -344,16 +344,38 @@ class Extractor(object):
                 x_ix = int(np.round(
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
+
+                # CRH 20220825:  Convolve the slit to detector pixels 
+                # by interpolating the slit profile and integrating it 
+                # across the detector pixels
+
+                n_slit_sample = int(np.round(1.0/(profile_y_pix[1] - \
+                    profile_y_pix[0])))*2
+                x_ix_sample = int(np.round(
+                    x_map[i, j])) - nx_cutout // 2 + \
+                       np.arange(nx_cutout*n_slit_sample, 
+                                 dtype=int)/n_slit_sample + nx // 2
+
+                # Remove? These were old interpolations of the slit to the
+                # detector
+
                 # Depending on the slit orientation, we have to make sure 
                 # that np.interp is fed a monotonically increasing x vector.
-                if matrices[i, j, 0, 0] < 0:
-                    phi = np.interp(
-                        x_ix - x_map[i, j] - nx // 2, profile_y_pix[::-1],
-                        profile[::-1])
-                else:
-                    phi = np.interp(
-                        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
-                        profile)
+                #if matrices[i, j, 0, 0] < 0:
+                #    phi = np.interp(
+                #        x_ix - x_map[i, j] - nx // 2, profile_y_pix[::-1],
+                #        profile[::-1])
+                #else:
+                #    phi = np.interp(
+                #        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
+                #        profile)
+
+                interp_prof = np.interp(
+                    x_ix_sample - x_map[i, j] - nx // 2, profile_y_pix,
+                    profile)
+
+                phi = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
+
                         
                 # Normalise to the median of the non-zero pixels. This is neater
                 # if it normalises to the median, but normalisation can occur 
@@ -561,10 +583,34 @@ class Extractor(object):
                 x_ix = int(np.round(
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
+
+                # CRH 20220825:  Convolve the slit to detector pixels 
+                # by interpolating the slit profile and integrating it 
+                # across the detector pixels
+
+                # calculate the integer number of slit profile pixels per
+                # detector pixel
+                n_slit_sample = int(np.round(1.0/(profile_y_pix[1] - \
+                    profile_y_pix[0])))
+
+                x_ix_sample = int(np.round(
+                    x_map[i, j])) - nx_cutout // 2 + \
+                       np.arange(nx_cutout*n_slit_sample, 
+                                 dtype=int)/n_slit_sample + nx // 2
                 for k in range(no):
-                    phi[:, k] = np.interp(
-                        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
+                    interp_prof = np.interp(
+                        x_ix_sample - x_map[i, j] - nx // 2, profile_y_pix,
                         profiles[k])
+
+                    phi[:, k] = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
+
+                    # Remove?:  Old interpolation of the slit profile to
+                    # detector pixels
+
+                    #phi[:, k] = np.interp(
+                    #    x_ix - x_map[i, j] - nx // 2, profile_y_pix,
+                    #    profiles[k])
+
                     phi[:, k] /= np.sum(phi[:, k])
                 # Deal with edge effects...
                 ww = np.where((x_ix >= nx) | (x_ix < 0))[0]
