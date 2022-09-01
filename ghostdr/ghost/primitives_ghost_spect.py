@@ -812,8 +812,19 @@ class GHOSTSpect(GHOST):
                         yb = ad.detector_y_bin()
                         flat = self._rebin_ghost_ad(flat, xb, yb)
 
+                    # Make a slit flat SlitView instance for getting a binned
+                    # pixel mask and then initialize this binned slit extractor
+                    flat_sview = SlitView(slitflat[0].data, slitflat[0].data,
+                        slitvpars.TABLE[0], mode=res_mode,
+                        microns_pix = 4.54 * 180 / 50,
+                        binning = slit.detector_x_bin())
+
+                    binned_flat_extractor = Extractor(arm, flat_sview, 
+                        badpixmask=ad[0].mask,
+                        vararray=flat[0].variance)
+
                     # Recalculate the pixel model with the correct image binning
-                    flat[0].PIXELMODEL = extractor.make_pixel_model()
+                    flat[0].PIXELMODEL = binned_flat_extractor.make_pixel_model()
 
                     pix_to_correct = flat[0].PIXELMODEL > 0
 

@@ -708,7 +708,7 @@ class Extractor(object):
                     pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
                 except:
                     pixel_weights = np.dot(b_mat,
-                        np.diag(1./np.maximum(np.diag(c_mat),1e-12)))
+                        np.diag(1./np.maximum(np.diag(c_mat),1e-18)))
 
                 # FIXME: Some tilted, bright arc lines cause strange
                 # weightings here... Probably OK - only strange weightings in 2D
@@ -734,7 +734,7 @@ class Extractor(object):
                 # variance in the simple explicit way for a linear combination
                 # of independent pixels.
                 extracted_var[i, j, :] = np.dot(
-                    1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights ** 2)
+                    1.0 / np.maximum(col_inv_var, 1e-18), pixel_weights ** 2)
 
         return extracted_flux, extracted_var, extraction_weights
 
