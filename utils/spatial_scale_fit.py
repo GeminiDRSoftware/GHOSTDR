@@ -7,6 +7,15 @@ viewing camera and the slit as seen as a function of order and y pixel on the
 detector. This is stored in spatmod.fits.
 
 As an input, we require a reduced flat field, and requires initial model files.
+
+The current model can be found via:
+
+pyfits.open(flat_file)['PIXELMODEL'].data
+
+To create a model in order to see how well a fit works, 
+
+extractor = polyfit.Extractor(ghost_arm, slitview)
+pixel_model = extractor.make_pixel_model()
 """
 from __future__ import division, print_function
 import fnmatch
@@ -24,8 +33,16 @@ import input_locations
 # pylint: disable=maybe-no-member, invalid-name
 
 arm = 'blue'
+mode = 'high'
+
+arm = 'blue'
 mode = 'std'
-user='joao'
+
+arm = 'red'
+mode = 'std'
+
+
+user='mike'
 
 files = input_locations.Files(user=user, mode=mode, cam=arm)
 
@@ -49,26 +66,50 @@ wparams = pyfits.open(wmodel_file)['WFIT'].data
 spatparams = files.spatparams
 specparams = files.specparams
 rotparams = files.rotparams
+slitvpars = files.slitvparams
 
 # Input the slit arrays.
 slit_array = pyfits.getdata(flat_slit_file).astype(float)
 
 # Get the data
 flat_data = pyfits.getdata(flat_file)
+pmodel = pyfits.open(flat_file)['PIXELMODEL'].data
 
+#Here a hacked way to remove the background. 
+#Much better would be a simple 2D Gaussian fit
+#(e.g. polynomial fit )
+ij = np.meshgrid(np.arange(flat_data.shape[0])-flat_data.shape[0]//2, \
+    np.arange(flat_data.shape[1])-flat_data.shape[1]//2, indexing='ij')
+wbg = np.where((pmodel ==0) & (flat_data > (-20)) & (flat_data < 100))
+fbg = np.log(np.maximum(flat_data[wbg].flatten(),1))
+ibg = ij[0][wbg].flatten()
+jbg = ij[1][wbg].flatten()
+X = np.array([np.ones(len(ibg)), ibg, ibg**2, jbg, jbg**2])
+params = np.linalg.inv(X.dot(X.T)).dot(X.dot(fbg))
+X=None #clear memory
+ii = ij[0].flatten()
+jj = ij[1].flatten()
+ij=None #clear memory
+Xall = np.array([np.ones(len(ii)), ii, ii**2, jj, jj**2])
+bg = np.exp(params.dot(Xall).reshape(flat_data.shape[0],flat_data.shape[1]))
 
+flat_data = np.maximum(flat_data,-20) - np.maximum(bg,0)
 
 # instantiate the ghostsim arm
 ghost = polyfit.GhostArm(arm, mode=mode)
-
 
 # Grab the default values for spatial scale
 # This is the number of microns per pixel to be
 # used in the middle of the test range.
 # This may be adjusted depending on the spectrograph scale.
 # The crucial number is the microns_pix_spatial, which is the
-# number of slitviewer microns per spectrograph CCD pixel.
-microns_pix_spatial = 47.2
+# number of slitviewer microns per spectrograph CCD pixel. 
+# It is also roughly ghost.matrices[:,:,0,0]
+
+if arm == 'blue':
+    microns_pix_spatial = 51.5 #was 47.2.
+else:
+    microns_pix_spatial = 48.0
 microns_step = 0.2
 num_steps = 16
 test_microns = np.linspace(microns_pix_spatial - (microns_step *
@@ -81,7 +122,7 @@ test_microns = np.linspace(microns_pix_spatial - (microns_step *
 # order index and along order. If 1D model remains, this will fail.
 spatpars = np.vstack((np.zeros(3), np.zeros(3), np.array([0, 0, microns_pix_spatial])))
 
-slitview = polyfit.SlitView(slit_array, slit_array, mode=mode)
+slitview = polyfit.SlitView(slit_array, slit_array, slitvpars, mode=mode)
 ghost.spectral_format_with_matrix(xparams, wparams, spatpars, specparams, rotparams)
 
 
@@ -130,15 +171,22 @@ for mic, microns in enumerate(test_microns):
             max_conv = np.median(data_cut, axis=1).max()
             # Find the maximum values.
             conv_maxes[mic, order_index, sec] = max_conv
+            #if (order_index==30) and (sec == 4):
+            #    import pdb; pdb.set_trace() #!!! should not be negative. Is this the problem?
 
 
-# Now we must fit.
-# prepare the arrays for fitting
-max_values = np.max(conv_maxes, axis=0)
+
 # Now find which scale the maximum value of the convolution corresponds to
 scales = test_microns[np.argmax(conv_maxes, axis=0)]
-sigma = 1 / (max_values)**2
-sigma[max_values < 0] = 1E30
+
+# Now we must fit.
+# The key is assigning a sigma. At low SNR (total flux less than ~100), we are readout
+# noise limited and 1/max_values is appropriate, with a cutoff at max_values=1
+# At high SNR, 1/sqrt(max_values) is better.
+max_values = np.max(conv_maxes, axis=0)
+max_values = np.maximum(max_values,1)
+sigma = (10 + max_values + (max_values/100)**2)/(max_values-1+1e-6)**2
+sigma = np.sqrt(sigma)
 
 # Flatten arrays
 orders = np.meshgrid(np.arange(sections), np.arange(
@@ -162,6 +210,15 @@ params = bestp[0].reshape((ydeg + 1, xdeg + 1))
 print(init_resid, final_resid)
 
 print(params)
+
+#Now lets check... but creating a new pixel model:
+extractor = polyfit.Extractor(ghost, slitview)
+ghost.spectral_format_with_matrix(xparams, wparams, params, specparams, rotparams)
+new_pixel_model = extractor.make_pixel_model()
+
+#... and also the spatial fit:
+spatfit = ghost.evaluate_poly(params, (collapsed_y_values, orders))
+spatfit = spatfit.reshape((ghost.m_max - ghost.m_min + 1, sections))
 
 if write_to_file:
     # Now write the output to a file, in whatever format suits the recipe

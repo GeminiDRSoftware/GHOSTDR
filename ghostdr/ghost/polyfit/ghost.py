@@ -106,11 +106,11 @@ class GhostArm(Polyspect):
         if arm == 'red':
             Polyspect.__init__(self, m_ref=50,
                                szx=GHOST_RED_SZX, szy=GHOST_RED_SZY,
-                               m_min=34, m_max=64, transpose=True)
+                               m_min=33, m_max=66, transpose=True)
         elif arm == 'blue':
             Polyspect.__init__(self, m_ref=80,
                                szx=GHOST_BLUE_SZX, szy=GHOST_BLUE_SZY,
-                               m_min=63, m_max=95, transpose=True) #was 63 and 95, or 62 and 92 for shifted NRC data.
+                               m_min=64, m_max=98, transpose=True) #was 63 and 95, or 62 and 92 for shifted NRC data.
         else:
             print("Unknown spectrograph arm!")
             raise UserWarning
@@ -342,6 +342,8 @@ class GhostArm(Polyspect):
 
         # If a profile is given, do this instead.
         else:
+            slit_profile_cor = slit_profile.copy()
+            
             flat_conv = np.zeros_like(flat)
             flat_conv_cube = np.zeros((num_conv, flat.shape[0], flat.shape[1]))
 
@@ -368,11 +370,14 @@ class GhostArm(Polyspect):
                 for i in range(im_fft.shape[1]):
                     # Create the slit model.
                     mod_slit = np.interp(profilex * spat_scale[i], slit_coord,
-                                         slit_profile)
+                                         slit_profile, left=0, right=0)
 
                     # Normalise the slit model and Fourier transform for
-                    # convolution
-                    mod_slit /= np.sum(mod_slit)
+                    # convolution. This has to be an l2 norm, in order to 
+                    # work with variable slit lengths and mean that 
+                    # the correlation peak is the least squares fit.
+                    #mod_slit /= np.sum(mod_slit)
+                    mod_slit /= np.sqrt(np.sum(mod_slit**2))
                     mod_slit_ft = np.fft.rfft(np.fft.fftshift(mod_slit))
                     # FIXME: Remove num_conv on next line and see if it makes
                     # a difference!

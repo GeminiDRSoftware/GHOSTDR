@@ -69,7 +69,7 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
         x_mat[o_ix + n_o] = phi[:, o_ix] * (x_ix - obj_centers[o_ix])
 
     # Now we fit a model to the col_data with var_use, using standard
-    # linear regression. FIXME: Surely there is a reasonably scipy helper
+    # linear regression. FIXME: Surely there is a reasonable scipy helper
     # function???
     x_mat = x_mat.T
     # FIXME: Do we use weights? If so, faster computation is possible as W is
@@ -277,12 +277,20 @@ class Extractor(object):
 
         return x_map, w_map, blaze, matrices
 
-    def make_pixel_model(self):
+    def make_pixel_model(self, input_image=None):
         """
         Based on the xmod and the slit viewer image, create a complete model image, 
         where flux versus wavelength pixel is constant. As this is designed for 
         comparing to flats, normalisation is to the median of the non-zero pixels in the
         profile.
+        
+        Parameters
+        ----------
+        input_iage: :obj:`numpy.ndarray`, optional
+            Image data, transposed so that dispersion is in the "y" direction.
+            If this is given, then the pixel model is scaled according to the input flux
+            for every order and wavelength. Note that this isn't designed to reproduce
+            dual-object or object+sky data.
         
         Returns
         -------
@@ -336,7 +344,14 @@ class Extractor(object):
                 x_ix = int(np.round(
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
-                phi = np.interp(
+                # Depending on the slit orientation, we have to make sure 
+                # that np.interp is fed a monotonically increasing x vector.
+                if matrices[i, j, 0, 0] < 0:
+                    phi = np.interp(
+                        x_ix - x_map[i, j] - nx // 2, profile_y_pix[::-1],
+                        profile[::-1])
+                else:
+                    phi = np.interp(
                         x_ix - x_map[i, j] - nx // 2, profile_y_pix,
                         profile)
                         
