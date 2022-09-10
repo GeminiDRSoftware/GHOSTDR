@@ -134,7 +134,7 @@ class CalibrationGHOST(Calibration):
                 self.applicable.append('mask')
 
     @not_imaging
-    def arc(self, processed=False, howmany=2):
+    def arc(self, processed=False, howmany=2, return_query=False):
         """
         This method identifies the best GHOST ARC to use for the target
         dataset.
@@ -189,7 +189,7 @@ class CalibrationGHOST(Calibration):
         # elif self.descriptors['amp_read_area'] is not None:
         #         filters.append(Ghost.amp_read_area.contains(self.descriptors['amp_read_area']))
 
-        return (
+        query = (
             self.get_query()
                 .arc(processed)
                 .add_filters(*filters)
@@ -199,10 +199,13 @@ class CalibrationGHOST(Calibration):
                 .tolerance(central_wavelength=0.001)
                 # Absolute time separation must be within 1 year
                 .max_interval(days=365)
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
 
-    def dark(self, processed=False, howmany=None):
+    def dark(self, processed=False, howmany=None, return_query=False):
         """
         Method to find best GHOST Dark frame for the target dataset.
 
@@ -236,7 +239,7 @@ class CalibrationGHOST(Calibration):
         # Must match exposure time.
 
 
-        return (
+        query = (
             self.get_query()
                 .dark(processed)
                 .add_filters(*filters)
@@ -246,10 +249,13 @@ class CalibrationGHOST(Calibration):
                 .tolerance(exposure_time = 50.0)
                 # Absolute time separation must be within 1 year
                 .max_interval(days=365)
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
 
-    def bias(self, processed=False, howmany=None):
+    def bias(self, processed=False, howmany=None, return_query=False):
         """
         Method to find the best bias frames for the target dataset
 
@@ -298,7 +304,7 @@ class CalibrationGHOST(Calibration):
                 #filters.append(Ghost.overscan_subtracted == True)
                 pass
 
-        return (
+        query = (
             self.get_query()
                 .bias(processed)
                 .add_filters(*filters)
@@ -309,10 +315,13 @@ class CalibrationGHOST(Calibration):
                                   Ghost.gain_setting)
                 # Absolute time separation must be within 3 months
                 .max_interval(days=90)
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
 
-    def imaging_flat(self, processed, howmany, flat_descr, filt, sf=False):
+    def imaging_flat(self, processed, howmany, flat_descr, filt, sf=False, return_query=False):
         """
         Method to find the best imaging flats for the target dataset
 
@@ -356,15 +365,18 @@ class CalibrationGHOST(Calibration):
             # Imaging flats are twilight flats
             # Twilight flats are dayCal OBJECT frames with target Twilight
             query = self.get_query().raw().dayCal().OBJECT().object('Twilight')
-        return (
+        query = (
             query.add_filters(*filt)
                  .match_descriptors(*flat_descr)
                  # Absolute time separation must be within 6 months
                  .max_interval(days=180)
-                 .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
 
-    def spectroscopy_flat(self, processed, howmany, flat_descr, filt):
+    def spectroscopy_flat(self, processed, howmany, flat_descr, filt, return_query=False):
         """
         Method to find the best imaging flats for the target dataset
 
@@ -428,7 +440,7 @@ class CalibrationGHOST(Calibration):
             if crpa_thres == 0: under_85 = False
             if el_thres == 0: ifu = mos_or_ls = False
 
-        return (
+        query = (
             self.get_query()
                 .flat(processed)
                 .add_filters(*filt)
@@ -445,10 +457,13 @@ class CalibrationGHOST(Calibration):
 
             # Absolute time separation must be within 6 months
                 .max_interval(days=180)
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
 
-    def flat(self, processed=False, howmany=None):
+    def flat(self, processed=False, howmany=None, return_query=False):
         """
         Method to find the best GHOST FLAT fields for the target dataset
 
@@ -497,11 +512,12 @@ class CalibrationGHOST(Calibration):
             filters.append(Ghost.amp_read_area.contains(self.descriptors['amp_read_area']))
 
         if self.descriptors['spectroscopy']:
-            return self.spectroscopy_flat(processed, howmany, flat_descriptors, filters)
+            return self.spectroscopy_flat(processed, howmany, flat_descriptors, filters, return_query=return_query)
         else:
-            return self.imaging_flat(processed, howmany, flat_descriptors, filters)
+            return self.imaging_flat(processed, howmany, flat_descriptors, filters, return_query=return_query)
 
-    def processed_slitflat(self, howmany=None):
+
+    def processed_slitflat(self, howmany=None, return_query=False):
         """
         Method to find the best GHOST SLITFLAT for the target dataset
 
@@ -546,9 +562,9 @@ class CalibrationGHOST(Calibration):
             )
 
         return self.imaging_flat(False, howmany, flat_descriptors, filters,
-                                 sf=True)
+                                 sf=True, return_query=return_query)
 
-    def processed_slit(self, howmany=None):
+    def processed_slit(self, howmany=None, return_query=False):
         """
         Method to find the best processed GHOST SLIT for the target dataset
 
@@ -573,15 +589,15 @@ class CalibrationGHOST(Calibration):
             )
 
         filters = (
-            Ghost.detector_name.startswith('Sony-ICX674'),
+            Ghost.detector_name.contains('ICX674'),
         )
 
-        return (
+        query = (
             self.get_query()
                 .reduction(  # this may change pending feedback from Kathleen
                     'PROCESSED_ARC' if
                     self.descriptors['observation_type'] == 'ARC' else
-                    'PREPARED'
+                    'PROCESSED_UNKNOWN'
                 )
                 .spectroscopy(False)
                 .match_descriptors(*descripts)
@@ -589,10 +605,14 @@ class CalibrationGHOST(Calibration):
                 # Need to use the slit image that matches the input observation;
                 # needs to match within 30 seconds!
                 .max_interval(seconds=30)
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
 
-    def processed_fringe(self, howmany=None):
+
+    def processed_fringe(self, howmany=None, return_query=False):
         """
         Method to find the best GHOST processed fringe for the target dataset
 
@@ -622,7 +642,7 @@ class CalibrationGHOST(Calibration):
         elif self.descriptors['amp_read_area'] is not None:
                 filters.append(Ghost.amp_read_area.contains(self.descriptors['amp_read_area']))
 
-        return (
+        query = (
             self.get_query()
                 .PROCESSED_FRINGE()
                 .add_filters(*filters)
@@ -632,13 +652,16 @@ class CalibrationGHOST(Calibration):
                                    Ghost.filter_name)
                 # Absolute time separation must be within 1 year
                 .max_interval(days=365)
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
 
     # We don't handle processed ones (yet)
     @not_processed
     @not_imaging
-    def spectwilight(self, processed=False, howmany=None):
+    def spectwilight(self, processed=False, howmany=None, return_query=False):
         """
         Method to find the best spectwilight - ie spectroscopy twilight
         ie MOS / IFU / LS twilight
@@ -672,7 +695,7 @@ class CalibrationGHOST(Calibration):
         elif self.descriptors['amp_read_area'] is not None:
                 filters.append(Ghost.amp_read_area.contains(self.descriptors['amp_read_area']))
 
-        return (
+        query = (
             self.get_query()
                 # They are OBJECT spectroscopy frames with target twilight
                 .raw().OBJECT().spectroscopy(True).object('Twilight')
@@ -689,13 +712,17 @@ class CalibrationGHOST(Calibration):
                 .tolerance(central_wavelength=0.02)
                 # Absolute time separation must be within 1 year
                 .max_interval(days=365)
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
+
 
     # We don't handle processed ones (yet)
     @not_processed
     @not_imaging
-    def specphot(self, processed=False, howmany=None):
+    def specphot(self, processed=False, howmany=None, return_query=False):
         """
         Method to find the best specphot observation
 
@@ -739,7 +766,7 @@ class CalibrationGHOST(Calibration):
         elif self.descriptors['amp_read_area'] is not None:
                 filters.append(Ghost.amp_read_area.contains(self.descriptors['amp_read_area']))
 
-        return (
+        query = (
             self.get_query()
                 # They are OBJECT partnerCal or progCal spectroscopy frames with target not twilight
                 .raw().OBJECT().spectroscopy(True)
@@ -755,13 +782,16 @@ class CalibrationGHOST(Calibration):
                 .tolerance(central_wavelength=tol)
                 # Absolute time separation must be within 1 year
                 .max_interval(days=365)
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
 
     # We don't handle processed ones (yet)
     @not_processed
     @not_spectroscopy
-    def photometric_standard(self, processed=False, howmany=None):
+    def photometric_standard(self, processed=False, howmany=None, return_query=False):
         """
         Method to find the best phot_std observation
 
@@ -792,12 +822,15 @@ class CalibrationGHOST(Calibration):
                                    Ghost.filter_name)
                 # Absolute time separation must be within 1 days
                 .max_interval(days=1)
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
 
     # We don't handle processed ones (yet)
     @not_processed
-    def mask(self, processed=False, howmany=None):
+    def mask(self, processed=False, howmany=None, return_query=False):
         """
         Method to find the MASK (MDF) file
 
@@ -818,7 +851,7 @@ class CalibrationGHOST(Calibration):
         # Default number to associate
         howmany = howmany if howmany else 1
 
-        return (
+        query = (
             self.get_query()
                 # They are MASK observation type
                 # The focal_plane_mask of the science file must match the data_label of the MASK file (yes, really...)
@@ -826,5 +859,8 @@ class CalibrationGHOST(Calibration):
                 .add_filters(Header.observation_type == 'MASK',
                              Header.data_label == self.descriptors['focal_plane_mask'],
                              Header.instrument.startswith('GHOST'))
-                .all(howmany)
             )
+        if return_query:
+            return query.all(howmany), query
+        else:
+            return query.all(howmany)
