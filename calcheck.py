@@ -118,6 +118,13 @@ def _check_like(val, calval):
         return "fail"
 
 
+def _check_is_null(val, calval):
+    if calval is None:
+        return "pass"
+    else:
+        return "fail"
+
+
 _re_equals_true = re.compile(r'\w+ = true')
 _re_equals_false = re.compile(r'\w+ = false')
 _re_equals = re.compile(r'\w+ = :\w+')
@@ -127,6 +134,7 @@ _re_less_than = re.compile(r'\w+ < :\w+')
 _re_greater_than_or_equal = re.compile(r'\w+ >= :\w+')
 _re_less_than_or_equal = re.compile(r'\w+ <= :\w+')
 _re_like = re.compile(r'\w+ LIKE :\w+')
+_re_is_null = re.compile(r'\w+ IS NULL')
 
 _checks = [
     (_re_equals_false, _check_equals_false),
@@ -138,6 +146,7 @@ _checks = [
     (_re_greater_than_or_equal, _check_greater_than_or_equal),
     (_re_less_than_or_equal, _check_less_than_or_equal),
     (_re_like, _check_like),
+    (_re_is_null, _check_is_null)
 ]
 
 
