@@ -311,7 +311,16 @@ def why_not_matching(filename, processed, cal_type, calibration):
         if processed:
             args["processed"] = True
 
+        found = True
         if not hasattr(cal_obj, method):
+            if processed:
+                method = "processed_%s" % method
+                del args["processed"]
+                if not hasattr(cal_obj, method):
+                    found = False
+            else:
+                found = False
+        if not found:
             print(f"Instrument {calad.instrument()} has no matching rule for {cal_type}")
         else:
             cals, query_result = getattr(cal_obj, method)(**args)

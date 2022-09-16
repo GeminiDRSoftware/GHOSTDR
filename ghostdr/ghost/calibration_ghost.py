@@ -133,7 +133,7 @@ class CalibrationGHOST(Calibration):
             if 'MOS' in self.types:
                 self.applicable.append('mask')
 
-    @not_imaging
+    # @not_imaging
     def arc(self, processed=False, howmany=2, return_query=False):
         """
         This method identifies the best GHOST ARC to use for the target
@@ -194,8 +194,10 @@ class CalibrationGHOST(Calibration):
                 .arc(processed)
                 .add_filters(*filters)
                 .match_descriptors(Header.instrument,
+                                   Header.camera,
                                    Ghost.disperser,
-                                   Ghost.filter_name)
+                                   Ghost.filter_name,
+                                   Ghost.res_mode)
                 .tolerance(central_wavelength=0.001)
                 # Absolute time separation must be within 1 year
                 .max_interval(days=365)
@@ -309,6 +311,7 @@ class CalibrationGHOST(Calibration):
                 .bias(processed)
                 .add_filters(*filters)
                 .match_descriptors(Header.instrument,
+                                   Header.camera,
                                   Ghost.detector_x_bin,
                                   Ghost.detector_y_bin,
                                   Ghost.read_speed_setting,
@@ -492,6 +495,7 @@ class CalibrationGHOST(Calibration):
         # Must totally match instrument, detector_x_bin, detector_y_bin, filter
         flat_descriptors = (
             Header.instrument,
+            Header.camera,
             Ghost.filter_name,
             Ghost.read_speed_setting,
             Ghost.gain_setting,
@@ -502,14 +506,15 @@ class CalibrationGHOST(Calibration):
             Ghost.disperser, # this can be common-mode as imaging is always 'MIRROR'
             )
 
-        # The science amp_read_area must be equal or substring of the cal amp_read_area
-        # If the science frame uses all the amps, then they must be a direct match as all amps must be there
-        # - this is more efficient for the DB as it will use the index. Otherwise, the science frame could
-        # have a subset of the amps thus we must do the substring match
-        if self.descriptors['detector_roi_setting'] in ['Full Frame', 'Central Spectrum']:
-            flat_descriptors = flat_descriptors + (Ghost.amp_read_area,)
-        elif self.descriptors['amp_read_area'] is not None:
-            filters.append(Ghost.amp_read_area.contains(self.descriptors['amp_read_area']))
+        # Not needed for GMOS?!
+        # # The science amp_read_area must be equal or substring of the cal amp_read_area
+        # # If the science frame uses all the amps, then they must be a direct match as all amps must be there
+        # # - this is more efficient for the DB as it will use the index. Otherwise, the science frame could
+        # # have a subset of the amps thus we must do the substring match
+        # if self.descriptors['detector_roi_setting'] in ['Full Frame', 'Central Spectrum']:
+        #     flat_descriptors = flat_descriptors + (Ghost.amp_read_area,)
+        # elif self.descriptors['amp_read_area'] is not None:
+        #     filters.append(Ghost.amp_read_area.contains(self.descriptors['amp_read_area']))
 
         if self.descriptors['spectroscopy']:
             return self.spectroscopy_flat(processed, howmany, flat_descriptors, filters, return_query=return_query)
@@ -545,7 +550,7 @@ class CalibrationGHOST(Calibration):
             list of :class:`fits_storage.orm.header.Header` records that match the criteria
         """
         if 'SLITV' in self.types:
-            return self.flat(True, howmany)
+            return self.flat(True, howmany, return_query=return_query)
 
         filters = []
         filters.append(Header.spectroscopy == False)
