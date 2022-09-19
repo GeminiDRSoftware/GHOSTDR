@@ -368,9 +368,17 @@ class GhostArm(Polyspect):
                 x_map[j] = self.evaluate_poly(xpars)[orders[j] - self.m_min]
                 
                 for i in range(im_fft.shape[1]):
-                    # Create the slit model.
-                    mod_slit = np.interp(profilex * spat_scale[i], slit_coord,
-                                         slit_profile, left=0, right=0)
+                    #CRH 20220901 Old Create the slit model.
+                    #mod_slit = np.interp(profilex * spat_scale[i], slit_coord,
+                    #                     slit_profile, left=0, right=0)
+
+                    # Create the slit model and convolve it to the detector pixels
+                    n_slit_sample = int(np.round(spat_scale[i]/microns_pix))
+                    profilex_sample = np.arange(xbase*n_slit_sample)/n_slit_sample - xbase // 2
+
+                    mod_slit_sample = np.interp(profilex_sample * spat_scale[i], 
+                        slit_coord, slit_profile, left=0, right=0)
+                    mod_slit = mod_slit_sample.reshape(xbase,n_slit_sample).sum(axis=1)
 
                     # Normalise the slit model and Fourier transform for
                     # convolution. This has to be an l2 norm, in order to 
