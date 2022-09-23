@@ -805,6 +805,27 @@ class GHOSTSpect(GHOST):
             # FIXME: This really could be done as part of flat processing!
             if params['flat_precorrect']:
                 try:
+                    # Bin the flat to the image binning
+                    if flat.detector_x_bin() != ad.detector_x_bin(
+                    ) or flat.detector_y_bin() != ad.detector_y_bin():
+                        xb = ad.detector_x_bin()
+                        yb = ad.detector_y_bin()
+                        flat = self._rebin_ghost_ad(flat, xb, yb)
+
+                    # Make a slit flat SlitView instance for getting a binned
+                    # pixel mask and then initialize this binned slit extractor
+                    flat_sview = SlitView(slitflat[0].data, slitflat[0].data,
+                        slitvpars.TABLE[0], mode=res_mode,
+                        microns_pix = 4.54 * 180 / 50,
+                        binning = slit.detector_x_bin())
+
+                    binned_flat_extractor = Extractor(arm, flat_sview, 
+                        badpixmask=ad[0].mask,
+                        vararray=flat[0].variance)
+
+                    # Recalculate the pixel model with the correct image binning
+                    flat[0].PIXELMODEL = binned_flat_extractor.make_pixel_model()
+
                     pix_to_correct = flat[0].PIXELMODEL > 0
 
                     # Lets find the flat normalisation constant.
@@ -950,6 +971,7 @@ class GHOSTSpect(GHOST):
                 extracted_flux, extracted_var = extractor.two_d_extract(
                     corrected_data,
                     extraction_weights=extracted_weights,
+                    vararray=corrected_var,
                 )
 
                 # CJS: Since you don't use the input AD any more, I'm going to

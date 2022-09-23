@@ -206,6 +206,9 @@ class Files():
                 self.flat_image_file = self.basedir + 'processed_flat/flats_hr_b6_r6_s01_1x1_20220624_1x1_blue5_flat.fits'
                 self.slit_flat_image = self.basedir + 'processed_slitflat/flats_hr_b6_r6_s01_1x1_20220624_2x2_slit_slitflat.fits'
                 self.arc_reduced_file = self.basedir + 'processed_arc/arcs_hr_b300_r300_s300_1x1_thxe_2022062_1x1_blue1_arc.fits'
+                self.flat_image_file = self.basedir + 'processed_flat/flats_sr_b6_r6_s01_1x1_20220624_1x1_blue5_flat.fits'
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flats_sr_b6_r6_s01_1x1_20220624_2x2_slit_slitflat.fits'
+                self.arc_reduced_file = self.basedir + 'processed_arc/arcs_sr_b300_r300_s300_1x1_take2_202206_1x1_blue1_arc.fits'
             else:
                 self.default_wmod = '/Users/mireland/python/GHOSTDR/ghostdr/ghost/lookups/Polyfit/red/std/161120/wavemod.fits'
                 self.flat_image_file = self.basedir + "processed_flat/flat95_std_1_MEF_1x1_red1_flat.fits"
@@ -214,8 +217,63 @@ class Files():
                 self.flat_image_file = "/Users/mireland/data/ghost/2019-11-01/RED/cont_comb02_arraysTiled.fits"
                 self.arc_image_file = '/Users/mireland/data/ghost/2019-11-01/RED/arc_comb00_arraysTiled.fits'
                 self.arclinefile = '/Users/mireland/python/GHOSTDR/utils/ThXe.txt'
+                
+                self.flat_image_file = self.basedir + 'processed_flat/flats_sr_b6_r6_s01_1x1_20220624_1x1_red5_flat.fits'
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flats_sr_b6_r6_s01_1x1_20220624_2x2_slit_slitflat.fits'
+                self.arc_reduced_file = self.basedir + 'processed_arc/arcs_sr_b300_r300_s300_1x1_take2_202206_1x1_red1_arc.fits'
       
-        
+
+
+        elif self.user=='hayescr':
+            # This is the directory containing the raw (and recently reduced)
+            # files.
+            self.basedir = '/Users/hayesc/research/commissioning/live_reduce/calibrations/'
+            
+            if (self.cam == 'blue') and (self.mode == 'high'):
+
+                self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
+
+                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_hr_br6s02_20220630_1x1_blue1_flat.fits'
+
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_hr_br6s02_20220630_2x2_slit_slitflat.fits'
+
+                self.arc_reduced_file = self.basedir + 'processed_arc/arc_hr_1x1_brs900_morning_20220630_1x1_blue1_arc.fits'
+
+            elif (self.cam == 'blue') and (self.mode == 'std'):
+
+                self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
+
+                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_sr_br6s02_set2_20220630_1x1_blue1_flat.fits'
+
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_sr_br6s02_set2_20220630_2x2_slit_slitflat.fits'
+
+                self.arc_reduced_file = self.basedir + 'processed_arc/arc_1x1_sr_br300s150_20220630_1x1_blue1_arc.fits'
+
+            elif (self.cam == 'red') and (self.mode == 'std'):
+
+                self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
+
+                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_sr_br6s02_set2_20220630_1x1_red1_flat.fits'
+
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_sr_br6s02_set2_20220630_2x2_slit_slitflat.fits'
+
+                self.arc_reduced_file = self.basedir + 'processed_arc/arc_1x1_sr_br300s150_20220630_1x1_red1_arc.fits'
+
+                self.slit_arc_image = self.basedir + 'processed_slit/arc_1x1_sr_br300s150_20220630_2x2_slit_slit.fits'
+
+                self.arc_image_file = self.basedir + '../arc_1x1_sr_br300s150_20220630_1x1_red1_arraysTiled.fits'
+
+
+            else:
+                self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
+
+                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_hr_br6s02_20220630_1x1_red1_flat.fits'
+
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_hr_br6s02_20220630_2x2_slit_slitflat.fits'
+
+                self.arc_reduced_file = self.basedir + 'processed_arc/arc_hr_1x1_brs900_morning_20220630_1x1_red1_arc.fits'
+
+              
             
             #Override Hacks.
             #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_Xmod.fits'
@@ -224,12 +282,6 @@ class Files():
             #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_red_reversed.fits'
            
             
-            #self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
-            #self.flat_image_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
-            #self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
-            
-            #self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/flat95_'+self.mode+'_2_MEF_2x2_slit_slitflat.fits'
-            #self.slit_arc_image = self.basedir + 'calibrations/processed_slit/arcBefore95_'+self.mode+'_MEF_2x2_slit_slit.fits'
         else:
             print('Invalid user, try again.')
         

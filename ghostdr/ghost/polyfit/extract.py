@@ -277,12 +277,20 @@ class Extractor(object):
 
         return x_map, w_map, blaze, matrices
 
-    def make_pixel_model(self):
+    def make_pixel_model(self, input_image=None):
         """
         Based on the xmod and the slit viewer image, create a complete model image, 
         where flux versus wavelength pixel is constant. As this is designed for 
         comparing to flats, normalisation is to the median of the non-zero pixels in the
         profile.
+        
+        Parameters
+        ----------
+        input_iage: :obj:`numpy.ndarray`, optional
+            Image data, transposed so that dispersion is in the "y" direction.
+            If this is given, then the pixel model is scaled according to the input flux
+            for every order and wavelength. Note that this isn't designed to reproduce
+            dual-object or object+sky data.
         
         Returns
         -------
@@ -336,16 +344,38 @@ class Extractor(object):
                 x_ix = int(np.round(
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
+
+                # CRH 20220825:  Convolve the slit to detector pixels 
+                # by interpolating the slit profile and integrating it 
+                # across the detector pixels
+
+                n_slit_sample = int(np.round(1.0/(profile_y_pix[1] - \
+                    profile_y_pix[0])))*2
+                x_ix_sample = int(np.round(
+                    x_map[i, j])) - nx_cutout // 2 + \
+                       np.arange(nx_cutout*n_slit_sample, 
+                                 dtype=int)/n_slit_sample + nx // 2
+
+                # Remove? These were old interpolations of the slit to the
+                # detector
+
                 # Depending on the slit orientation, we have to make sure 
                 # that np.interp is fed a monotonically increasing x vector.
-                if matrices[i, j, 0, 0] < 0:
-                    phi = np.interp(
-                        x_ix - x_map[i, j] - nx // 2, profile_y_pix[::-1],
-                        profile[::-1])
-                else:
-                    phi = np.interp(
-                        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
-                        profile)
+                #if matrices[i, j, 0, 0] < 0:
+                #    phi = np.interp(
+                #        x_ix - x_map[i, j] - nx // 2, profile_y_pix[::-1],
+                #        profile[::-1])
+                #else:
+                #    phi = np.interp(
+                #        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
+                #        profile)
+
+                interp_prof = np.interp(
+                    x_ix_sample - x_map[i, j] - nx // 2, profile_y_pix,
+                    profile)
+
+                phi = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
+
                         
                 # Normalise to the median of the non-zero pixels. This is neater
                 # if it normalises to the median, but normalisation can occur 
@@ -553,10 +583,34 @@ class Extractor(object):
                 x_ix = int(np.round(
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
+
+                # CRH 20220825:  Convolve the slit to detector pixels 
+                # by interpolating the slit profile and integrating it 
+                # across the detector pixels
+
+                # calculate the integer number of slit profile pixels per
+                # detector pixel
+                n_slit_sample = int(np.round(1.0/(profile_y_pix[1] - \
+                    profile_y_pix[0])))
+
+                x_ix_sample = int(np.round(
+                    x_map[i, j])) - nx_cutout // 2 + \
+                       np.arange(nx_cutout*n_slit_sample, 
+                                 dtype=int)/n_slit_sample + nx // 2
                 for k in range(no):
-                    phi[:, k] = np.interp(
-                        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
+                    interp_prof = np.interp(
+                        x_ix_sample - x_map[i, j] - nx // 2, profile_y_pix,
                         profiles[k])
+
+                    phi[:, k] = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
+
+                    # Remove?:  Old interpolation of the slit profile to
+                    # detector pixels
+
+                    #phi[:, k] = np.interp(
+                    #    x_ix - x_map[i, j] - nx // 2, profile_y_pix,
+                    #    profiles[k])
+
                     phi[:, k] /= np.sum(phi[:, k])
                 # Deal with edge effects...
                 ww = np.where((x_ix >= nx) | (x_ix < 0))[0]
@@ -654,7 +708,7 @@ class Extractor(object):
                     pixel_weights = np.dot(b_mat, np.linalg.inv(c_mat))
                 except:
                     pixel_weights = np.dot(b_mat,
-                        np.diag(1./np.maximum(np.diag(c_mat),1e-12)))
+                        np.diag(1./np.maximum(np.diag(c_mat),1e-18)))
 
                 # FIXME: Some tilted, bright arc lines cause strange
                 # weightings here... Probably OK - only strange weightings in 2D
@@ -680,11 +734,12 @@ class Extractor(object):
                 # variance in the simple explicit way for a linear combination
                 # of independent pixels.
                 extracted_var[i, j, :] = np.dot(
-                    1.0 / np.maximum(col_inv_var, 1e-12), pixel_weights ** 2)
+                    1.0 / np.maximum(col_inv_var, 1e-18), pixel_weights ** 2)
 
         return extracted_flux, extracted_var, extraction_weights
 
-    def two_d_extract(self, data=None, fl=None, extraction_weights=None):
+    def two_d_extract(self, data=None, fl=None, extraction_weights=None,
+                      vararray=None):
         """
         Perform two-dimensional flux extraction.
 
@@ -724,7 +779,12 @@ class Extractor(object):
             else:
                 data = pyfits.getdata(fl)
 
-        # Correct for scattered light - a place-holder, to show where it can 
+        # Assuming that the data are in photo-electrons, construct a simple
+        # model for the pixel variance if no variance is provided.
+        if vararray is None:
+            vararray = np.maximum(data, 0) + self.rnoise ** 2
+
+        # Correct for scattered light - a place-holder, to show where it can
         # most easily fit.
         mask = np.sum(extraction_weights, axis=0) == 0
         data = subtract_scattered_light(data, mask)
@@ -763,9 +823,8 @@ class Extractor(object):
         extracted_var = np.zeros((nm, ny, no))
         extracted_covar = np.zeros((nm, ny - 1, no))
 
-        # Assuming that the data are in photo-electrons, construct a simple
-        # model for the pixel inverse variance.
-        pixel_inv_var = 1.0 / (np.maximum(data, 0) + self.rnoise ** 2)
+        # Mask any bad pixels with pixel inverse variance of 0.
+        pixel_inv_var = 1.0 / vararray
         if self.badpixmask is not None:
             pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
 
@@ -858,11 +917,11 @@ class Extractor(object):
                             k, xsub_ix, ysub_ix_hi] * ysub_ix_frac)
                     extracted_var[i, j, k] = np.dot(
                         (1 - ysub_ix_frac) / np.maximum(
-                            col_inv_var[xsub_ix, ysub_ix_lo], 1e-12),
+                            col_inv_var[xsub_ix, ysub_ix_lo], 1e-18),
                         col_weights[k, xsub_ix, ysub_ix_lo] ** 2)
                     extracted_var[i, j, k] += np.dot(
                         ysub_ix_frac / np.maximum(
-                            col_inv_var[xsub_ix, ysub_ix_hi], 1e-12),
+                            col_inv_var[xsub_ix, ysub_ix_hi], 1e-18),
                         col_weights[k, xsub_ix, ysub_ix_hi] ** 2)
 
         return extracted_flux, extracted_var

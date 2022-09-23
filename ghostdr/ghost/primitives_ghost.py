@@ -23,6 +23,14 @@ _HDR_SIZE_REGEX = re.compile(r'^\[(?P<x1>[0-9]*)\:'
                              r'(?P<y2>[0-9]*)\]$')
 
 
+# For development, let's patch in our calibration_ghost implementation to make life easier.
+# Once it is finalized, we can migrate it back into the Gemini CalMgr code directly, or
+# implement some more formal override option
+from gemini_calmgr.cal import inst_class
+from .calibration_ghost import CalibrationGHOST
+inst_class["GHOST"] = CalibrationGHOST
+
+
 def filename_updater(ad, **kwargs):
     origname = ad.filename
     ad.update_filename(**kwargs)
@@ -215,3 +223,69 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         log.stdinfo('Re-binning complete')
 
         return ad
+
+
+    def validateData(self, adinputs=None, suffix=None):
+        """
+        This is the data validation primitive. It checks that the instrument
+        matches the primitivesClass and that there are the correct number
+        of extensions.
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        """
+        from gempy.gemini import gemini_tools as gt
+
+        log = self.log
+        timestamp_key = self.timestamp_keys[self.myself()]
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        missing_wcs_list = []
+
+        for ad in adinputs:
+            if ad.phu.get(timestamp_key):
+                log.warning("No changes will be made to {}, since it has "
+                            "already been processed by validateData".
+                            format(ad.filename))
+                continue
+
+            # Check that the input is appropriate for this primitivesClass
+            # Only the instrument is checked
+            inst_name = ad.instrument(generic=True)
+            if not inst_name in self.tagset:
+                prim_class_name = self.__class__.__name__
+                raise OSError("Input file {} is {} data and not suitable for "
+                    "{} class".format(ad.filename, inst_name, prim_class_name))
+
+            # Report if this is an image without square binned pixels
+            if 'IMAGE' in ad.tags:
+                xbin = ad.detector_x_bin()
+                ybin = ad.detector_y_bin()
+                if xbin != ybin:
+                    log.warning("Image {} is {} x {} binned data".
+                                format(ad.filename, xbin, ybin))
+
+            if self._has_valid_extensions(ad):
+                log.fullinfo("The input file has been validated: {} contains "
+                             "{} extension(s)".format(ad.filename, len(ad)))
+            else:
+                raise OSError("The {} extension(s) in {} does not match the "
+                              "number of extensions expected in raw {} "
+                              "data.".format(len(ad), ad.filename, inst_name))
+
+            # Check for WCS
+            missing_wcs_list.extend([f"{ad.filename} EXTVER {ext.hdr['EXTVER']}"
+                                     for ext in ad if ext.wcs is None])
+
+            # Timestamp and update filename
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=suffix, strip=True)
+
+        # if missing_wcs_list:
+        #     msg = "The following extensions did not produce a valid WCS:\n    "
+        #     msg += '\n    '.join(extstr for extstr in missing_wcs_list)
+        #     raise ValueError(msg+"\n")
+
+        return adinputs
