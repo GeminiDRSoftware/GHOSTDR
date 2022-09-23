@@ -2174,6 +2174,26 @@ class GHOSTSpect(GHOST):
 
         return adinputs
 
+    def stackArcFrames(self, adinputs=None, **params):
+        """
+        This primitive stacks input arc frames by associating arcs taken in
+        close temporal proximity, and stacking them together.
+
+        This primitive works by 'clustering' the input arcs, and then calling
+        the standard stackFrames primitive on each cluster in turn.
+
+        Parameters
+        ----------
+        time_delta : float
+            The time delta between arcs that will allow for association,
+            expressed in minutes. Note that this time_delta is between
+            two arcs in sequence; e.g., if time_delta is 20 minutes, and arcs
+            are taken with the following gaps:
+            A <- 19m -> B <- 10m -> C <- 30m -> D <- 19m -> E
+            These arcs will be clustered as follows:
+            [A, B, C] and [D, E]
+        """
+
     def standardizeStructure(self, adinputs=None, **params):
         """
         The Gemini-level version of this primitive
