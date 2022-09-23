@@ -14,6 +14,9 @@ import astrodata
 import copy
 import itertools
 from astropy.io.fits import PrimaryHDU, Header
+
+GHOST_SLIT_CAMERA_STARTSWITH = "ghost bigeye"
+
 # ------------------------------------------------------------------------------
 @parameter_override
 class GHOSTBundle(GHOST):
@@ -66,12 +69,13 @@ class GHOSTBundle(GHOST):
             # overlap with the RED/BLUE one in time (check with Jon)
             extns = [x for x in ad if (x.hdr.get(
                 'CAMERA').lower().startswith(
-                'ghost bigeye')) and (len(x.data) > 0)]
+                GHOST_SLIT_CAMERA_STARTSWITH)) and (len(x.data) > 0)]
             if len(extns) > 0:
                 _write_newfile(extns, '_slit', ad, log)
 
             # now do non-slitv extensions
-            extns = [x for x in ad if not x.hdr.get('CAMERA').lower().startswith('slit')]
+            extns = [x for x in ad if not x.hdr.get(
+                'CAMERA').lower().startswith(GHOST_SLIT_CAMERA_STARTSWITH)]
             key = lambda x: '_' + x.hdr.get('CAMERA').lower() + str(
                 x.hdr.get('EXPID'))
             extns = sorted(extns, key=key)

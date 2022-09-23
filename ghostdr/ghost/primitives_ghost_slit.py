@@ -196,7 +196,7 @@ class GHOSTSlit(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        flat_list = params["flat"]
+        flat_list = params.get("flat")
         if flat_list is None:
             self.getProcessedSlitFlat(adinputs)
             flat_list = [self._get_cal(ad, 'processed_slitflat')
