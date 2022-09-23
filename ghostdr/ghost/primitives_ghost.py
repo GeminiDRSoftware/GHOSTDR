@@ -215,3 +215,15 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         log.stdinfo('Re-binning complete')
 
         return ad
+
+    def validateData(self, adinputs=None, suffix=None):
+        """
+        GHOSTBundle-specific version of validateData to ignore the invalid WCS
+        exception.
+        """
+        try:
+            super().validateData(adinputs, suffix=suffix)
+        except ValueError as e:
+            if 'valid WCS' not in str(e):
+                raise
+        return adinputs
