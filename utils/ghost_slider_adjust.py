@@ -21,7 +21,7 @@ import scipy.ndimage as nd
 from ghostdr.ghost import polyfit
 import astropy.io.fits as pyfits
 import ghostdr.ghost.lookups as lookups
-import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
+import ghostdr.ghost.lookups.polyfit_lookup as polyfit_lookup
 import input_locations
 import matplotlib.pyplot as plt
 plt.ioff()

@@ -7,14 +7,14 @@ import sys
 import matplotlib.pylab as plt
 import astrodata
 import ghost_instruments
-from ghostdr.ghost.lookups import polyfit_dict
+from ghostdr.ghost.lookups import polyfit_lookup
 from ghostdr.ghost.polyfit import SlitView
 
 for fname in sys.argv[1:]:
     ad = astrodata.open(fname)
     res_mode = ad.res_mode()
     try:
-        slitv_fn = polyfit_dict.get_polyfit_filename(None, 'slitv', res_mode, ad.ut_date(),
+        slitv_fn = polyfit_lookup.get_polyfit_filename(None, 'slitv', res_mode, ad.ut_date(),
                                                      ad.filename, 'slitvmod')
         slitvpars = astrodata.open(slitv_fn)
         print(f"Using slitvmod {slitv_fn}")
