@@ -11,7 +11,7 @@ but instead for debugging and development purposes.
 from __future__ import division, print_function
 from ghostdr.ghost import polyfit
 import ghostdr.ghost.lookups as lookups
-import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
+import ghostdr.ghost.lookups.polyfit_lookup as polyfit_lookup
 import astropy.io.fits as pyfits
 import numpy as np
 import matplotlib.pyplot as plt

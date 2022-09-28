@@ -37,7 +37,7 @@ from .primitives_ghost import GHOST, filename_updater
 
 from . import parameters_ghost_spect
 
-from .lookups import polyfit_dict, line_list, keyword_comments, targetn_dict
+from .lookups import polyfit_lookup, line_list, keyword_comments, targetn_dict
 
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
@@ -805,6 +805,27 @@ class GHOSTSpect(GHOST):
             # FIXME: This really could be done as part of flat processing!
             if params['flat_precorrect']:
                 try:
+                    # Bin the flat to the image binning
+                    if flat.detector_x_bin() != ad.detector_x_bin(
+                    ) or flat.detector_y_bin() != ad.detector_y_bin():
+                        xb = ad.detector_x_bin()
+                        yb = ad.detector_y_bin()
+                        flat = self._rebin_ghost_ad(flat, xb, yb)
+
+                    # Make a slit flat SlitView instance for getting a binned
+                    # pixel mask and then initialize this binned slit extractor
+                    flat_sview = SlitView(slitflat[0].data, slitflat[0].data,
+                        slitvpars.TABLE[0], mode=res_mode,
+                        microns_pix = 4.54 * 180 / 50,
+                        binning = slit.detector_x_bin())
+
+                    binned_flat_extractor = Extractor(arm, flat_sview, 
+                        badpixmask=ad[0].mask,
+                        vararray=flat[0].variance)
+
+                    # Recalculate the pixel model with the correct image binning
+                    flat[0].PIXELMODEL = binned_flat_extractor.make_pixel_model()
+
                     pix_to_correct = flat[0].PIXELMODEL > 0
 
                     # Lets find the flat normalisation constant.
@@ -950,6 +971,7 @@ class GHOSTSpect(GHOST):
                 extracted_flux, extracted_var = extractor.two_d_extract(
                     corrected_data,
                     extraction_weights=extracted_weights,
+                    vararray=corrected_var,
                 )
 
                 # CJS: Since you don't use the input AD any more, I'm going to
@@ -1318,7 +1340,7 @@ class GHOSTSpect(GHOST):
                 continue
 
             # CJS: line_list location is now in lookups/__init__.py
-            arclinefile = os.path.join(os.path.dirname(polyfit_dict.__file__),
+            arclinefile = os.path.join(os.path.dirname(polyfit_lookup.__file__),
                                        line_list)
             arcwaves, arcfluxes = np.loadtxt(arclinefile, usecols=[1, 2]).T
 
@@ -2272,14 +2294,14 @@ class GHOSTSpect(GHOST):
             Filename (including path) of the required polyfit file
         """
 
-        return polyfit_dict.get_polyfit_filename(self.log, ad.arm(),
-                                                 ad.res_mode(), ad.ut_date(),
-                                                 ad.filename, caltype)
+        return polyfit_lookup.get_polyfit_filename(self.log, ad.arm(),
+                                                   ad.res_mode(), ad.ut_date(),
+                                                   ad.filename, caltype)
 
     def _get_slitv_polyfit_filename(self, ad):
-        return polyfit_dict.get_polyfit_filename(self.log, 'slitv',
-                                                 ad.res_mode(), ad.ut_date(),
-                                                 ad.filename, 'slitvmod')
+        return polyfit_lookup.get_polyfit_filename(self.log, 'slitv',
+                                                   ad.res_mode(), ad.ut_date(),
+                                                   ad.filename, 'slitvmod')
 
     def _compute_barycentric_correction(self, ad, return_wavl=True,
                                         loc=GEMINI_SOUTH_LOC):
