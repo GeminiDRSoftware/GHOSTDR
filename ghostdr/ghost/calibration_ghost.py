@@ -604,7 +604,9 @@ class CalibrationGHOST(Calibration):
                 .add_filters(*filters)
                 # Need to use the slit image that matches the input observation;
                 # needs to match within 30 seconds!
-                .max_interval(seconds=30)
+                # TODO is 30 seconds correct? having trouble with example files and latest GHOSTDR code
+                .max_interval(seconds=900)
+                # .max_interval(seconds=30)
             )
         if return_query:
             return query.all(howmany), query
