@@ -167,6 +167,16 @@ class responseCorrectConfig(config.Config):
                                 optional=True)
 
 
+class stackArcFramesConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_stackedArcFrames",
+                          optional=True)
+    skip = config.Field("No-op this primitive?", bool, False, optional=True)
+    time_delta = config.Field("Max. minutes separating bracketed arcs",
+                              float, 20.0, optional=True)
+    write_result = config.Field("Write primitive output to disk?", bool, True,
+                                optional=True)
+
+
 class tileArraysConfig(parameters_visualize.tileArraysConfig):
     def setDefaults(self):
         self.suffix = "_arraysTiled"

@@ -2194,6 +2194,54 @@ class GHOSTSpect(GHOST):
             [A, B, C] and [D, E]
         """
 
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = "STCKARCS"  # FIXME - Needs to go into timestamp_keywords
+
+        time_obs = []
+
+        # import pdb; pdb.set_trace()
+
+        # Sort the input arc files by DATE-OBS/UTSTART
+        adinputs.sort(key=lambda x: _construct_datetime(x.phu))
+
+        # Cluster the inputs
+        clusters = []
+        for ad in adinputs:
+            try:
+                ref_time = _construct_datetime(clusters[-1][-1].phu)
+            except IndexError:
+                # Start a new cluster
+                clusters.append([ad, ])
+                continue
+
+            if np.abs(
+                    (_construct_datetime(ad.phu) - ref_time).total_seconds()
+            ) < (params['time_delta'] * 60.):
+                # Append to the last cluster
+                clusters[-1].append(ad)
+            else:
+                # Start a new cluster
+                clusters.append([ad, ])
+
+        # Stack each cluster
+        for i, cluster in enumerate(clusters):
+            if len(cluster) == 0:
+                raise RuntimeError("I've ended up with an empty cluster...")
+
+            if len(cluster) == 1:
+                clusters[i] = cluster[0]
+            else:
+                clusters[i] = self.stackFrames(cluster)
+
+        # Flatten out the list
+        clusters_flat = [item for sublist in clusters for item in sublist]
+
+        import pdb; pdb.set_trace()
+
+        # No-op until complete
+        return clusters_flat
+
     def standardizeStructure(self, adinputs=None, **params):
         """
         The Gemini-level version of this primitive
@@ -2551,3 +2599,13 @@ class GHOSTSpect(GHOST):
         obs = observation.Observation(spec, filt, binset=new_wavl,
                                       force='taper')
         return obs.binflux
+
+
+def _construct_datetime(hdr):
+    """
+    Construct a datetime object from DATE-OBS and UTSTART.
+    """
+    return datetime.combine(
+        datetime.strptime(hdr.get('DATE-OBS'), '%Y-%m-%d').date(),
+        datetime.strptime(hdr.get('UTSTART'), '%H:%M:%S').time(),
+    )
