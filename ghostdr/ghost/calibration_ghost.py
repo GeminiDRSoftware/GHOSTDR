@@ -1,16 +1,12 @@
 """
 This module holds the CalibrationGHOST class
 """
-import datetime
-
-from gemini_calmgr.orm.diskfile import DiskFile
 from gemini_calmgr.orm.header import Header
 from gemini_calmgr.orm.ghost import Ghost
 from gemini_calmgr.cal.calibration import Calibration, not_processed, not_imaging, not_spectroscopy
 
-from sqlalchemy.orm import join
-
 import math
+
 
 class CalibrationGHOST(Calibration):
     """
@@ -133,7 +129,7 @@ class CalibrationGHOST(Calibration):
             if 'MOS' in self.types:
                 self.applicable.append('mask')
 
-    # @not_imaging
+    @not_imaging
     def arc(self, processed=False, howmany=2, return_query=False):
         """
         This method identifies the best GHOST ARC to use for the target
@@ -521,7 +517,6 @@ class CalibrationGHOST(Calibration):
         else:
             return self.imaging_flat(processed, howmany, flat_descriptors, filters, return_query=return_query)
 
-
     def processed_slitflat(self, howmany=None, return_query=False):
         """
         Method to find the best GHOST SLITFLAT for the target dataset
@@ -575,7 +570,7 @@ class CalibrationGHOST(Calibration):
 
         This will find GHOST processed slits with a 'Sony-ICX674' detector.  It matches the observation
         type, res mode, and within 30 seconds.  For 'ARC' observation type it matches
-        'PROCESSED_ARC' data, otherwise it matches 'PREPARED' data.
+        'PROCESSED_UNKNOWN' data, otherwise it matches 'PREPARED' data.
 
         Parameters
         ----------
@@ -818,7 +813,7 @@ class CalibrationGHOST(Calibration):
         # Default number to associate
         howmany = howmany if howmany else 4
 
-        return (
+        query = (
             self.get_query()
                 # They are OBJECT imaging partnerCal frames taken from CAL program IDs
                 .photometric_standard(OBJECT=True, partnerCal=True)

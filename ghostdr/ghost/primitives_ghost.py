@@ -23,13 +23,6 @@ _HDR_SIZE_REGEX = re.compile(r'^\[(?P<x1>[0-9]*)\:'
                              r'(?P<y2>[0-9]*)\]$')
 
 
-# For development, let's patch in our calibration_ghost implementation to make life easier.
-# Once it is finalized, we can migrate it back into the Gemini CalMgr code directly, or
-# implement some more formal override option
-from gemini_calmgr.cal import inst_class
-from .calibration_ghost import CalibrationGHOST
-inst_class["GHOST"] = CalibrationGHOST
-
 
 def filename_updater(ad, **kwargs):
     origname = ad.filename
