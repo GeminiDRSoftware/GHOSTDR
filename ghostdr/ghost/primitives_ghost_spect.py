@@ -2237,9 +2237,11 @@ class GHOSTSpect(GHOST):
         # Flatten out the list
         clusters_flat = [item for sublist in clusters for item in sublist]
 
-        import pdb; pdb.set_trace()
+        # For each cluster, run the stackFrames primitive
+        for i, cluster in enumerate(clusters_flat):
+            if len(clusters_flat[i]) > 1:
+                clusters_flat[i] = self.stackFrames(adinputs=clusters_flat[i])
 
-        # No-op until complete
         return clusters_flat
 
     def standardizeStructure(self, adinputs=None, **params):
