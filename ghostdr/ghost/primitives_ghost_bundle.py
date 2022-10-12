@@ -90,6 +90,19 @@ class GHOSTBundle(GHOST):
         # the question: why then bother updating the timestamp & filename?
         return []#adinputs
 
+    def validateData(self, adinputs=None, suffix=None):
+        """
+        GHOSTBundle-specific version of validateData to ignore the invalid WCS
+        exception.
+        """
+        try:
+            super().validateData(adinputs, suffix=suffix)
+        except ValueError as e:
+            if 'valid WCS' not in str(e):
+                raise
+        return adinputs
+
+
 ##############################################################################
 # Below are the helper functions for the primitives in this module           #
 ##############################################################################
