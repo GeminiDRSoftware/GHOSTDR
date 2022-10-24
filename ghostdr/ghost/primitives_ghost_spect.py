@@ -1366,6 +1366,12 @@ class GHOSTSpect(GHOST):
             fitted_params, wave_and_resid = arm.read_lines_and_fit(
                 wpars[0].data, lines_out)
 
+            if params['return_residuals']:
+                with open(f'wave_resid_{ad.res_mode()}_{ad.arm()}.txt', 'w') as resid_file:
+                    print('# wave order resid', file=resid_file)
+                    for line in wave_and_resid:
+                        print(f'{line[0]} {line[1]} {line[2]}', file=resid_file)
+
             # CJS: Append the WFIT as an extension. It will inherit the
             # header from the science plane (including irrelevant/wrong
             # keywords like DATASEC) but that's not really a big deal.

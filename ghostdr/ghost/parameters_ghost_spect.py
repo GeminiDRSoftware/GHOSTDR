@@ -109,6 +109,8 @@ class fitWavelengthConfig(config.Config):
     #                            False, optional=True)
     plot_fit = config.Field("Use matplotlib to inspect fit quality?", bool,
                             False, optional=True)
+    return_residuals = config.Field("Return arc line fit residuals?", 
+                                    bool, False, optional=True)
 
 
 class flatCorrectConfig(config.Config):
