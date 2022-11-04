@@ -14,6 +14,9 @@ import astrodata
 import copy
 import itertools
 from astropy.io.fits import PrimaryHDU, Header
+
+GHOST_SLIT_CAMERA_STARTSWITH = "ghost bigeye"
+
 # ------------------------------------------------------------------------------
 @parameter_override
 class GHOSTBundle(GHOST):
@@ -61,14 +64,18 @@ class GHOSTBundle(GHOST):
 
             # as a special case, write all slitv extns to a single file
             # TODO: may need to make multiple SV files, not one per SV exposure
+            # FIXME: better way to detect slit exposures than by camera?
             # but one per RED/BLUE exposure which contains all SV exposures that
             # overlap with the RED/BLUE one in time (check with Jon)
-            extns = [x for x in ad if (x.hdr.get('CAMERA').lower().startswith('slit')) and (len(x.data) > 0)]
+            extns = [x for x in ad if (x.hdr.get(
+                'CAMERA').lower().startswith(
+                GHOST_SLIT_CAMERA_STARTSWITH)) and (len(x.data) > 0)]
             if len(extns) > 0:
                 _write_newfile(extns, '_slit', ad, log)
 
             # now do non-slitv extensions
-            extns = [x for x in ad if not x.hdr.get('CAMERA').lower().startswith('slit')]
+            extns = [x for x in ad if not x.hdr.get(
+                'CAMERA').lower().startswith(GHOST_SLIT_CAMERA_STARTSWITH)]
             key = lambda x: '_' + x.hdr.get('CAMERA').lower() + str(
                 x.hdr.get('EXPID'))
             extns = sorted(extns, key=key)
@@ -121,7 +128,8 @@ def _get_common_hdr_value(base, extns, key):
     # Get the keyword from every extension
     vals = [x.hdr.get(key) for x in extns]
     c = Counter(vals)
-    # Not all extensions may not contain the keyword, but we don't care about blanks
+    # Not all extensions may not contain the keyword,
+    # but we don't care about blanks
     del c[None]
     # If the keyword doesn't exist at all in the extensions,
     # then use the base value instead
@@ -216,7 +224,9 @@ def _write_newfile(extns, suffix, base, log):
             n.append(x)
 
     # Collate headers into the new PHU
-    for kw in ['CAMERA', 'CCDNAME', 'CCDSUM', 'OBSTYPE', 'SMPNAME']:
+    for kw in ['CAMERA', 'CCDNAME',
+               'CCDSUM',
+               'OBSTYPE', 'SMPNAME']:
         n.phu.set(kw, _get_common_hdr_value(base, extns, kw))
     vals = _get_hdr_values(extns, 'DATE-OBS')
     n.phu.set('DATE-OBS', vals[min(vals.keys())])

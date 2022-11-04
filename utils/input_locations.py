@@ -9,7 +9,7 @@ This is designed to include a function input to determine which user is
 running this. Perhaps a better option will present itself in the future....
 """
 import ghostdr.ghost.lookups as lookups
-import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
+import ghostdr.ghost.lookups.polyfit_lookup as polyfit_lookup
 import astropy.io.fits as pyfits
 import os
 import numpy as np
@@ -65,33 +65,33 @@ class Files():
         # models in the reduced flat or arc. By default, use the most recent
         # parameter file.
         self.xmod_location = [value for key, value in
-               polyfit_dict.xmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                              polyfit_lookup.xmod_dict.items()
+                              if cam in key.lower() and mode in key.lower()][-1]
         self.xparams = astrodata.open(self.polyfit_lookups_path + self.xmod_location)[0].data
 
         self.wavemod_location = [value for key, value in
-               polyfit_dict.wavemod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                                 polyfit_lookup.wavemod_dict.items()
+                                 if cam in key.lower() and mode in key.lower()][-1]
         self.waveparams = astrodata.open(self.polyfit_lookups_path + self.wavemod_location)[0].data
 
         self.rotmod_location = [value for key, value in
-               polyfit_dict.rotmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                                polyfit_lookup.rotmod_dict.items()
+                                if cam in key.lower() and mode in key.lower()][-1]
         self.rotparams = astrodata.open(self.polyfit_lookups_path + self.rotmod_location)[0].data
 
         self.specmod_location = [value for key, value in
-               polyfit_dict.specmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                                 polyfit_lookup.specmod_dict.items()
+                                 if cam in key.lower() and mode in key.lower()][-1]
         self.specparams = astrodata.open(self.polyfit_lookups_path + self.specmod_location)[0].data
 
         self.spatmod_location = [value for key, value in
-               polyfit_dict.spatmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                                 polyfit_lookup.spatmod_dict.items()
+                                 if cam in key.lower() and mode in key.lower()][-1]
         self.spatparams = astrodata.open(self.polyfit_lookups_path + self.spatmod_location)[0].data
-        
+
         self.slitvmod_location = [value for key, value in
-               polyfit_dict.slitvmod_dict.items()
-               if mode in key.lower()][-1]
+                                  polyfit_lookup.slitvmod_dict.items()
+                                  if mode in key.lower()][-1]
         self.slitvparams = astrodata.open(self.polyfit_lookups_path + self.slitvmod_location).TABLE[0]
         #import pdb; pdb.set_trace()
 
@@ -222,7 +222,58 @@ class Files():
                 self.slit_flat_image = self.basedir + 'processed_slitflat/flats_sr_b6_r6_s01_1x1_20220624_2x2_slit_slitflat.fits'
                 self.arc_reduced_file = self.basedir + 'processed_arc/arcs_sr_b300_r300_s300_1x1_take2_202206_1x1_red1_arc.fits'
       
-        
+
+
+        elif self.user=='hayescr':
+            # This is the directory containing the raw (and recently reduced)
+            # files.
+            self.basedir = '/Users/hayesc/research/commissioning/live_reduce/calibrations/'
+            
+            if (self.cam == 'blue') and (self.mode == 'high'):
+
+                self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
+
+                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_hr_br6s02_20220630_1x1_blue1_flat.fits'
+
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_hr_br6s02_20220630_2x2_slit_slitflat.fits'
+
+                self.arc_reduced_file = self.basedir + 'processed_arc/arc_hr_1x1_brs900_morning_20220630_1x1_blue1_arc.fits'
+
+            elif (self.cam == 'blue') and (self.mode == 'std'):
+
+                self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
+
+                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_sr_br6s02_set2_20220630_1x1_blue1_flat.fits'
+
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_sr_br6s02_set2_20220630_2x2_slit_slitflat.fits'
+
+                self.arc_reduced_file = self.basedir + 'processed_arc/arc_1x1_sr_br300s150_20220630_1x1_blue1_arc.fits'
+
+            elif (self.cam == 'red') and (self.mode == 'std'):
+
+                self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
+
+                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_sr_br6s02_set2_20220630_1x1_red1_flat.fits'
+
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_sr_br6s02_set2_20220630_2x2_slit_slitflat.fits'
+
+                self.arc_reduced_file = self.basedir + 'processed_arc/arc_1x1_sr_br300s150_20220630_1x1_red1_arc.fits'
+
+                self.slit_arc_image = self.basedir + 'processed_slit/arc_1x1_sr_br300s150_20220630_2x2_slit_slit.fits'
+
+                self.arc_image_file = self.basedir + '../arc_1x1_sr_br300s150_20220630_1x1_red1_arraysTiled.fits'
+
+
+            else:
+                self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
+
+                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_hr_br6s02_20220630_1x1_red1_flat.fits'
+
+                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_hr_br6s02_20220630_2x2_slit_slitflat.fits'
+
+                self.arc_reduced_file = self.basedir + 'processed_arc/arc_hr_1x1_brs900_morning_20220630_1x1_red1_arc.fits'
+
+              
             
             #Override Hacks.
             #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_Xmod.fits'
@@ -231,12 +282,6 @@ class Files():
             #self.default_xmod = '/Users/mireland/python/GHOSTDR/utils/new_red_reversed.fits'
            
             
-            #self.flat_reduced_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
-            #self.flat_image_file = self.basedir + 'calibrations/processed_flat/flat95_'+self.mode+'_1_MEF_1x1_'+self.cam+'1_flat.fits'
-            #self.science_file = self.basedir + 'obj95_0.5_'+self.mode+'_MEF_1x1_'+self.cam+'1_extractedProfile.fits'
-            
-            #self.slit_flat_image = self.basedir + 'calibrations/processed_slitflat/flat95_'+self.mode+'_2_MEF_2x2_slit_slitflat.fits'
-            #self.slit_arc_image = self.basedir + 'calibrations/processed_slit/arcBefore95_'+self.mode+'_MEF_2x2_slit_slit.fits'
         else:
             print('Invalid user, try again.')
         

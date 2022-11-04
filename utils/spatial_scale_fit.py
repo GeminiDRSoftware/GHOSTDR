@@ -23,7 +23,7 @@ import os
 import pdb
 from ghostdr.ghost import polyfit
 import ghostdr.ghost.lookups as lookups
-import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
+import ghostdr.ghost.lookups.polyfit_lookup as polyfit_lookup
 import astropy.io.fits as pyfits
 from astropy.modeling import fitting
 import numpy as np
