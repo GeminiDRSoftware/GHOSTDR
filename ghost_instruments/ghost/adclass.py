@@ -15,6 +15,19 @@ from astrodata import (
 from gemini_instruments.gemini import AstroDataGemini
 from gemini_instruments.common import build_group_id
 
+from astrodata.fits import FitsProviderProxy
+
+
+class FitsProviderProxyForGhostBundles(FitsProviderProxy):
+    """A class that acts like a FitsProviderProxy, except it can
+    hold its own PHU. This allows us to slice GHOST bundles"""
+    def __init__(self, proxy, phu):
+        super().__init__(proxy._provider, proxy._mapping, proxy._single)
+        self._phu = phu
+
+    def phu(self):
+        return self._phu
+
 
 def return_dict_for_bundle(desc_fn):
     """
@@ -65,18 +78,18 @@ class AstroDataGhost(AstroDataGemini):
         """
         obj = super().__getitem__(idx)
         if 'BUNDLE' in self.tags:
-            if max(obj.indices) - min(obj.indices) != len(obj.indices) - 1:
+            if max(obj._mapping) - min(obj._mapping) != len(obj._mapping) - 1:
                 raise ValueError("Bundles can only be sliced contiguously")
             if len(set(ext.shape for ext in obj)) > 1:
                 raise ValueError("Bundles must be sliced from the same camera")
-            for i in range(min(obj.indices), -1, -1):
-                ndd = self._all_nddatas[i]
+            for i in range(min(obj._mapping), -1, -1):
+                ndd = self._dataprov._nddata[i]
                 if not ndd.shape:
                     phu = ndd.meta['header']
                     break
             else:
-                phu = self._all_nddatas[min(obj.indices)].meta['header']
-            obj.phu = phu
+                phu = self._dataprov._nddata[min(obj.indices)].meta['header']
+            obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, phu)
         return obj
 
     @astro_data_descriptor
