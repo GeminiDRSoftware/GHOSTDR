@@ -26,8 +26,19 @@ class CalibrationGHOST(Calibration):
         'res_mode',
         'prepared',
         'overscan_trimmed',
-        'overscan_subtracted'
-        'want_before_arc'
+        'overscan_subtracted',
+        'want_before_arc',
+
+        'detector_x_bin_blue',
+        'detector_x_bin_red',
+        'detector_y_bin_blue',
+        'detector_y_bin_red',
+        'exposure_time_blue',
+        'exposure_time_red',
+        'gain_setting_blue',
+        'gain_setting_red',
+        'read_speed_setting_blue',
+        'read_speed_setting_red'
         )
 
     def __init__(self, session, *args, **kwargs):
@@ -41,10 +52,6 @@ class CalibrationGHOST(Calibration):
             query = session.query(iC).filter(
                 iC.header_id == self.descriptors['header_id'])
             inst = query.first()
-
-            # Populate the descriptors dictionary for the instrument
-            for descr in self.instrDescriptors:
-                self.descriptors[descr] = getattr(inst, descr, None)
 
         # Set the list of applicable calibrations
         self.set_applicable()

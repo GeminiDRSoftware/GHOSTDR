@@ -28,6 +28,35 @@ from gemini_calmgr.orm import sessionfactory
 from recipe_system.cal_service.localmanager import extra_descript, args_for_cals
 from gemini_calmgr.cal import get_cal_object
 
+from recipe_system.cal_service import calrequestlib
+
+
+old_gcr = calrequestlib.get_cal_requests
+
+
+def get_cal_requests(inputs, caltype, procmode=None):
+    retval = old_gcr(inputs, caltype, procmode)
+    for rq in retval:
+        if rq.descriptors['instrument'] == 'GHOST':
+            xbin = rq.ad.detector_x_bin()
+            for split_desc in (
+                    'detector_x_bin',
+                    'detector_y_bin',
+                    'exposure_time',
+                    'gain_setting',
+                    'read_speed_setting'):
+                v = rq.descriptors.get(split_desc, None)
+                if v is not None and isinstance(v, dict):
+                    r = v.get('red', None)
+                    b = v.get('blue', None)
+                    rq.descriptors[split_desc + '_red'] = r
+                    rq.descriptors[split_desc + '_blue'] = b
+    return retval
+
+
+calrequestlib.get_cal_requests = lambda inputs, caltype, procmode=None: \
+    get_cal_requests(inputs, caltype, procmode)
+
 
 def _check_equals_true(val, calval):
     if calval is True:
@@ -304,6 +333,8 @@ def why_not_matching(filename, processed, cal_type, calibration):
         types = rq.tags
         cal_obj = get_cal_object(mgr.session, filename=None, header=None,
                                  descriptors=descripts, types=types, procmode=rq.procmode)
+
+        print(f"Applicable: {', '.join(cal_obj.applicable)}")
         method, args = args_for_cals.get(cal_type, (cal_type, {}))
 
         # Obtain a list of calibrations and check if we matched
