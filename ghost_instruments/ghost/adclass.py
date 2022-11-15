@@ -247,6 +247,7 @@ class AstroDataGhost(AstroDataGemini):
         if self.phu.get('OBSCLASS') == 'partnerCal':
             return TagSet(['PARTNER_CAL'])
 
+    @return_dict_for_bundle
     @astro_data_descriptor
     def amp_read_area(self, pretty=False):
         """
@@ -309,7 +310,7 @@ class AstroDataGhost(AstroDataGemini):
         if self.is_single:
             return f"{self.detector_name()}, {self.hdr.get('AMPNAME')}"
         else:
-            return self.detector_name()
+            return [f"{ext.detector_name()}, {ext.hdr.get('AMPNAME')}" for ext in self]
 
     @astro_data_descriptor
     def calibration_key(self):
