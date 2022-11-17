@@ -45,7 +45,7 @@ def return_dict_for_bundle(desc_fn):
         def confirm_single_valued(_list):
             return _list[0] if _list == _list[::-1] else None
 
-        if 'BUNDLE' in self.tags and not self.is_single:
+        if not self.is_single and 'BUNDLE' in self.tags:
             return {k.lower(): confirm_single_valued(
                 [desc_fn(self[i+1:i+1+ext.hdr['NAMPS']], *args, **kwargs)
                  for i, ext in enumerate(self)
@@ -68,6 +68,13 @@ class AstroDataGhost(AstroDataGemini):
                           saturation_level = 'SATURATE',
                           )
 
+    def __iter__(self):
+        if self._single:
+            yield self
+        else:
+            for n in range(len(self)):
+                yield self[n]
+
     def __getitem__(self, idx):
         """
         Override default slicing method for bundles for two reasons:
@@ -88,7 +95,7 @@ class AstroDataGhost(AstroDataGemini):
                     phu = ndd.meta['header']
                     break
             else:
-                phu = self._dataprov._nddata[min(obj.indices)].meta['header']
+                phu = self._dataprov._nddata[min(obj._mapping)].meta['header']
             obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, phu)
         return obj
 
@@ -226,10 +233,14 @@ class AstroDataGhost(AstroDataGemini):
     @astro_data_tag
     def _tag_binning_mode(self):
         """
+        TODO: this should not be a tag
         Define the tagset for GHOST data of different binning modes.
         """
         binnings = self.hdr.get('CCDSUM')
+        if binnings is None:  # CJS hack
+            return TagSet([])
         if isinstance(binnings, list):
+            binnings = [x for x in binnings if x]
             if all(x == binnings[0] for x in binnings):
                 return TagSet([binnings[0].replace(' ', 'x', 1)])
             else:
