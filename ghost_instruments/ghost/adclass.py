@@ -51,6 +51,34 @@ def return_dict_for_bundle(desc_fn):
                  for i, ext in enumerate(self)
                  if ext.hdr.get('CAMERA') == k and not ext.shape])
                 for k in ('BLUE', 'RED')}
+            # This is the debugging version of the above code
+            #final_return = {}
+            #for k in ('BLUE', 'RED'):
+            #    ret_values = []
+            #    for i, ext in enumerate(self):
+            #        if ext.hdr.get('CAMERA') == k and not ext.shape:
+            #            print("BLAH", i)
+            #            tmp = self[i+1:i+1+ext.hdr['NAMPS']]
+            #            print("created tmp", len(tmp), tmp.tags)
+            #            ret_value = desc_fn(tmp, *args, **kwargs)
+            #            print("return_dict", i, ret_value, tmp.detector_name())
+            #            ret_values.append(ret_value)
+            #    final_return[k.lower()] = confirm_single_valued(ret_values)
+            #return final_return
+        return desc_fn(self, *args, **kwargs)
+    return wrapper
+
+
+def use_nascent_phu_for_bundle(desc_fn):
+    """
+    A decorator for bundles (where the PHU is minimal) that will instead
+    provide the first nascent PHU (of a red/blue arm) instead
+    """
+    def wrapper(self, *args, **kwargs):
+        if 'BUNDLE' in self.tags:
+            phu_index = min(i for i, camera in enumerate(self.hdr['CAMERA']) if camera in ('BLUE', 'RED'))
+            nascent_phu = self[phu_index]
+            return desc_fn(nascent_phu, *args, **kwargs)
         return desc_fn(self, *args, **kwargs)
     return wrapper
 
@@ -83,20 +111,39 @@ class AstroDataGhost(AstroDataGemini):
         2) Prevent creation of a new "Frankenstein" AD with data from more
            than one camera, as only original bundles should have this.
         """
+        #print("Entering getitem()", type(self._dataprov), len(self), idx)
         obj = super().__getitem__(idx)
         if 'BUNDLE' in self.tags:
+            #print("BUNDLE", idx, obj._mapping)
             if max(obj._mapping) - min(obj._mapping) != len(obj._mapping) - 1:
                 raise ValueError("Bundles can only be sliced contiguously")
-            if len(set(ext.shape for ext in obj)) > 1:
-                raise ValueError("Bundles must be sliced from the same camera")
+            #print(obj.tags)
+            # Find the nascent PHU if it's not a slit viewer, keep PHU if it is
+            # this copes with CAMERA return a list or a string (single-slice)
+            if obj.hdr.get('CAMERA')[0].startswith('S'):
+                # add in the first SLITV header so keywords are there
+                # (which is explicitly done in debundling)
+                phu = self.phu + (obj.hdr if obj.is_single else obj[0].hdr)
+                obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, phu)
+                return obj
+            #print("Tested", type(self._dataprov), obj._mapping)
             for i in range(min(obj._mapping), -1, -1):
-                ndd = self._dataprov._nddata[i]
+                #print("***", i, obj._mapping, len(self._dataprov.nddata))
+                ndd = self._dataprov.nddata[i]
                 if not ndd.shape:
                     phu = ndd.meta['header']
                     break
             else:
                 phu = self._dataprov._nddata[min(obj._mapping)].meta['header']
             obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, phu)
+            # This has to happen way down here because only by resetting the PHU
+            # can we prevent the 'BUNDLE' tag appearing and hence allow more
+            # slicing to occur
+            if len(set(ext.shape for ext in obj)) > 1:
+                raise ValueError("Bundles must be sliced from the same camera")
+            #print("RETURNING", len(obj))
+        else:
+            obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, self.phu)
         return obj
 
     @astro_data_descriptor
@@ -258,8 +305,8 @@ class AstroDataGhost(AstroDataGemini):
         if self.phu.get('OBSCLASS') == 'partnerCal':
             return TagSet(['PARTNER_CAL'])
 
-    @return_dict_for_bundle
     @astro_data_descriptor
+    @return_dict_for_bundle
     def amp_read_area(self, pretty=False):
         """
         Returns a list of amplifier read areas, one per extension, made by
@@ -469,7 +516,7 @@ class AstroDataGhost(AstroDataGemini):
         gain = self.gain()
         if self.is_single:
             return "low" if gain < 1.0 else "high"
-        low_gain = [g < 1.0 for g in gain]
+        low_gain = [g <= 1.0 for g in gain]
         if all(low_gain):
             return "low"
         elif any(low_gain):
@@ -594,6 +641,11 @@ class AstroDataGhost(AstroDataGemini):
         except Exception:
             pass
         return None
+
+    @astro_data_descriptor
+    @use_nascent_phu_for_bundle
+    def ut_datetime(self, *args, **kwargs):
+        return AstroDataGemini.ut_datetime(self, *args, **kwargs)
 
     @astro_data_descriptor
     def want_before_arc(self):
