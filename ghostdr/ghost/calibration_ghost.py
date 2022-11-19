@@ -1,11 +1,22 @@
 """
 This module holds the CalibrationGHOST class
 """
+from sqlalchemy import or_
+
 from gemini_calmgr.orm.header import Header
 from gemini_calmgr.orm.ghost import Ghost
-from gemini_calmgr.cal.calibration import Calibration, not_processed, not_imaging, not_spectroscopy
+from gemini_calmgr.cal.calibration import Calibration, not_processed, not_imaging, not_spectroscopy, CalQuery
 
 import math
+
+_arm_descriptors = [
+    'detector_x_bin',
+    'detector_y_bin',
+    'exposure_time',
+    'gain_setting',
+    'read_speed_setting',
+]
+_arms = {'red', 'blue', 'slit'}
 
 
 class CalibrationGHOST(Calibration):
@@ -14,7 +25,7 @@ class CalibrationGHOST(Calibration):
     It is a subclass of Calibration
     """
     instrClass = Ghost
-    instrDescriptors = (
+    instrDescriptors = [
         'disperser',
         'filter_name',
         'focal_plane_mask',
@@ -28,30 +39,41 @@ class CalibrationGHOST(Calibration):
         'overscan_trimmed',
         'overscan_subtracted',
         'want_before_arc',
+        ]
+    instrDescriptors.extend(
+        [dsc + '_' + arm for dsc in _arm_descriptors for arm in _arms]
+    )
 
-        'detector_x_bin_blue',
-        'detector_x_bin_red',
-        'detector_y_bin_blue',
-        'detector_y_bin_red',
-        'exposure_time_blue',
-        'exposure_time_red',
-        'gain_setting_blue',
-        'gain_setting_red',
-        'read_speed_setting_blue',
-        'read_speed_setting_red'
-        )
-
-    def __init__(self, session, *args, **kwargs):
+    def __init__(self, session, header, descriptors, *args, **kwargs):
         # Need to super the parent class __init__ to get want_before_arc
         # keyword in
-        super(CalibrationGHOST, self).__init__(session, *args, **kwargs)
+        super(CalibrationGHOST, self).__init__(session, header, descriptors, *args, **kwargs)
 
-        if self.descriptors is None and self.instrClass is not None:
+        if descriptors is None and self.instrClass is not None:
             self.descriptors['want_before_arc'] = self.header.want_before_arc
             iC = self.instrClass
             query = session.query(iC).filter(
                 iC.header_id == self.descriptors['header_id'])
             inst = query.first()
+        if header is None:
+            # non-DB source of data, so we need to parse out dictionaries
+            # if the data came from the header+instrument tables then this was done during ingest and came pre-done
+            for attr in _arm_descriptors:
+                if attr not in self.descriptors:
+                    for arm in _arms:
+                        self.descriptors[attr + '_' + arm] = None
+                else:
+                    val = self.descriptors[attr]
+                    for arm in _arms:
+                        if self.descriptors['arm'] is not None and self.descriptors['arm'] != arm:
+                            # descriptors for other arms should be set None
+                            self.descriptors[attr + '_' + arm] = None
+                        elif isinstance(val, dict):
+                            # we're a bundle, extract the arm specific value from the dict
+                            self.descriptors[attr + '_' + arm] = val[arm] if arm in val else None
+                        else:
+                            # we're a bundle and we assume it's just a pure value
+                            self.descriptors[attr + '_' + arm] = val
 
         # Set the list of applicable calibrations
         self.set_applicable()
@@ -871,3 +893,45 @@ class CalibrationGHOST(Calibration):
             return query.all(howmany), query
         else:
             return query.all(howmany)
+
+    def get_query(self):
+        """
+        Returns an ``CalQuery`` object, populated with the current session,
+        instrument class, descriptors and the setting for full/not-full query.
+
+        """
+        return GHOSTCalQuery(self.session, self.instrClass, self.descriptors, procmode=self.procmode, full_query=self.full_query)
+
+
+class GHOSTCalQuery(CalQuery):
+
+    def match_descriptors(self, *args):
+        """
+        Takes a numbers of expressions (E.g., ``Header.foo``, ``Instrument.bar``),
+        figures out the descriptor to use from the column name, and adds the
+        right filter to the query, replacing boilerplate code like the following:
+        ::
+
+            Header.foo == descriptors['foo']
+            Instrument.bar == descriptors['bar']
+
+        """
+        for arg in args:
+            field = arg.expression.name
+            if field in _arm_descriptors:
+                if 'arm' not in self.descr or self.descr['arm'] is None:
+                    # need to group match any arm
+                    self.query = self.query.filter(or_(
+                        *[getattr(arg.class_, field + arm) == self.descr[field + arm]
+                          for arm in ('_red', '_blue', '_slit')]
+                    ))
+                else:
+                    # need to match arm variant of descriptor
+                    arm = '_' + self.descr['arm']
+                    self.query = self.query.filter(
+                        getattr(arg.class_, field + arm) == self.descr[field + arm]
+                    )
+            else:
+                self.query = self.query.filter(arg == self.descr[field])
+
+        return self
