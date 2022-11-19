@@ -16,17 +16,15 @@ from gemini_instruments.gemini import AstroDataGemini
 from gemini_instruments.common import build_group_id
 
 from astrodata.fits import FitsProviderProxy
+from copy import deepcopy
 
 
 class FitsProviderProxyForGhostBundles(FitsProviderProxy):
     """A class that acts like a FitsProviderProxy, except it can
     hold its own PHU. This allows us to slice GHOST bundles"""
     def __init__(self, proxy, phu):
-        super().__init__(proxy._provider, proxy._mapping, proxy._single)
-        self._phu = phu
-
-    def phu(self):
-        return self._phu
+        super().__init__(deepcopy(proxy._provider), proxy._mapping, proxy._single)
+        self._provider._phu = phu
 
 
 def return_dict_for_bundle(desc_fn):
@@ -54,6 +52,7 @@ def return_dict_for_bundle(desc_fn):
             # This is the debugging version of the above code
             #final_return = {}
             #for k in ('BLUE', 'RED'):
+            #    print(f"Looking for {k}")
             #    ret_values = []
             #    for i, ext in enumerate(self):
             #        if ext.hdr.get('CAMERA') == k and not ext.shape:
@@ -142,8 +141,9 @@ class AstroDataGhost(AstroDataGemini):
             if len(set(ext.shape for ext in obj)) > 1:
                 raise ValueError("Bundles must be sliced from the same camera")
             #print("RETURNING", len(obj))
-        else:
-            obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, self.phu)
+        #else:
+        #    obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, self.phu)
+        #print("Returning", type(obj), obj._dataprov)
         return obj
 
     @astro_data_descriptor
