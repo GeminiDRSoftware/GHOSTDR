@@ -602,7 +602,8 @@ class AstroDataGhost(AstroDataGemini):
         # TODO: get appropriate return values
         _read_mode_dict = {("slow", "low"): "slow",
                            ("medium", "low"): "medium",
-                           ("fast", "low"): "fast"}
+                           ("fast", "low"): "fast",
+                           ("standard", "standard"): "standard"}  # SLITV
         return _read_mode_dict.get((self.read_speed_setting(),
                                     self.gain_setting()), "unknown")
 
@@ -619,6 +620,8 @@ class AstroDataGhost(AstroDataGemini):
         str
             The read speed ("slow"/"medium"/"fast")
         """
+        if 'SLITV' in self.tags:
+            return "standard"
         return ("slow", "medium", "fast", "unknown")[self.phu.get('READMODE', 3)]
 
     @astro_data_descriptor
