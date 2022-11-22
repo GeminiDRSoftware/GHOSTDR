@@ -255,7 +255,8 @@ class GHOSTSlit(GHOST):
                 earliest_end = min(sc_end, sv_end)
                 overlap = (earliest_end - latest_start).seconds
                 overlap = 0.0 if overlap < 0.0 else overlap  # no overlap edge case
-                sv_duration = (sv_end - sv_start).seconds
+                #sv_duration = (sv_end - sv_start).seconds
+                sv_duration = ext.hdr['EXPTIME']
                 overlap /= sv_duration  # convert into a percentage
 
                 # compute the offset (the value to be weighted), in seconds,

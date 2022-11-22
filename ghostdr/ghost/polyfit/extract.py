@@ -891,6 +891,7 @@ class Extractor(object):
                 # matrices[i,j,1,1] coming from "specmod.fits".
                 ysub_pix += np.interp(x_ix - x_map[i, j] - nx // 2, \
                                       slit_ix / matrices[i, j, 0, 0], \
+                                      slit_ix * self.slitview.microns_pix / matrices[i, j, 0, 0], \
                                       centroids / matrices[i, j, 1, 1])
 
                 # Make sure this is within the limits of our subarray.
