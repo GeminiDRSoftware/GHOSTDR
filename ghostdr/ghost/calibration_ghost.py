@@ -16,7 +16,7 @@ _arm_descriptors = [
     'gain_setting',
     'read_speed_setting',
 ]
-_arms = {'red', 'blue', 'slit'}
+_arms = {'red', 'blue', 'slitv'}
 
 
 class CalibrationGHOST(Calibration):
