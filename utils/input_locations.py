@@ -9,7 +9,7 @@ This is designed to include a function input to determine which user is
 running this. Perhaps a better option will present itself in the future....
 """
 import ghostdr.ghost.lookups as lookups
-import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
+import ghostdr.ghost.lookups.polyfit_lookup as polyfit_lookup
 import astropy.io.fits as pyfits
 import os
 import numpy as np
@@ -65,33 +65,33 @@ class Files():
         # models in the reduced flat or arc. By default, use the most recent
         # parameter file.
         self.xmod_location = [value for key, value in
-               polyfit_dict.xmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                              polyfit_lookup.xmod_dict.items()
+                              if cam in key.lower() and mode in key.lower()][-1]
         self.xparams = astrodata.open(self.polyfit_lookups_path + self.xmod_location)[0].data
 
         self.wavemod_location = [value for key, value in
-               polyfit_dict.wavemod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                                 polyfit_lookup.wavemod_dict.items()
+                                 if cam in key.lower() and mode in key.lower()][-1]
         self.waveparams = astrodata.open(self.polyfit_lookups_path + self.wavemod_location)[0].data
 
         self.rotmod_location = [value for key, value in
-               polyfit_dict.rotmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                                polyfit_lookup.rotmod_dict.items()
+                                if cam in key.lower() and mode in key.lower()][-1]
         self.rotparams = astrodata.open(self.polyfit_lookups_path + self.rotmod_location)[0].data
 
         self.specmod_location = [value for key, value in
-               polyfit_dict.specmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                                 polyfit_lookup.specmod_dict.items()
+                                 if cam in key.lower() and mode in key.lower()][-1]
         self.specparams = astrodata.open(self.polyfit_lookups_path + self.specmod_location)[0].data
 
         self.spatmod_location = [value for key, value in
-               polyfit_dict.spatmod_dict.items()
-               if cam in key.lower() and mode in key.lower()][-1]
+                                 polyfit_lookup.spatmod_dict.items()
+                                 if cam in key.lower() and mode in key.lower()][-1]
         self.spatparams = astrodata.open(self.polyfit_lookups_path + self.spatmod_location)[0].data
-        
+
         self.slitvmod_location = [value for key, value in
-               polyfit_dict.slitvmod_dict.items()
-               if mode in key.lower()][-1]
+                                  polyfit_lookup.slitvmod_dict.items()
+                                  if mode in key.lower()][-1]
         self.slitvparams = astrodata.open(self.polyfit_lookups_path + self.slitvmod_location).TABLE[0]
         #import pdb; pdb.set_trace()
 

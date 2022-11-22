@@ -45,7 +45,7 @@ def reduce(p):
                          # option to override canned file used)
     # TODO: define reduce() and reduce_nostack() maybe?
     p.interpolateAndCombine() # Should factor this step into separate recipe
-                                       # MCW 190913 - Skip for now (not right)
+                              # MCW 190913 - Skip for now (not right)
     p.formatOutput()
     return
 
