@@ -23,7 +23,15 @@ class FitsProviderProxyForGhostBundles(FitsProviderProxy):
     """A class that acts like a FitsProviderProxy, except it can
     hold its own PHU. This allows us to slice GHOST bundles"""
     def __init__(self, proxy, phu):
-        super().__init__(deepcopy(proxy._provider), proxy._mapping, proxy._single)
+        super().__init__(proxy._provider, proxy._mapping, proxy._single)
+        # Similar code to FitsProvider.__deepcopy__() except we don't
+        # need to make a deepcopy, references are fine
+        nfp = self._provider.__class__()
+        to_copy = ('_sliced', '_single', '_nddata', '_path',
+                   '_orig_filename', '_tables', '_exposed', '_resetting')
+        for attr in to_copy:
+            nfp.__dict__[attr] = self._provider.__dict__[attr]
+        self._provider = nfp
         self._provider._phu = phu
 
 
