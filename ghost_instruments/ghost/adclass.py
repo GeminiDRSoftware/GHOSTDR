@@ -23,7 +23,15 @@ class FitsProviderProxyForGhostBundles(FitsProviderProxy):
     """A class that acts like a FitsProviderProxy, except it can
     hold its own PHU. This allows us to slice GHOST bundles"""
     def __init__(self, proxy, phu):
-        super().__init__(deepcopy(proxy._provider), proxy._mapping, proxy._single)
+        super().__init__(proxy._provider, proxy._mapping, proxy._single)
+        # Similar code to FitsProvider.__deepcopy__() except we don't
+        # need to make a deepcopy, references are fine
+        nfp = self._provider.__class__()
+        to_copy = ('_sliced', '_single', '_nddata', '_path',
+                   '_orig_filename', '_tables', '_exposed', '_resetting')
+        for attr in to_copy:
+            nfp.__dict__[attr] = self._provider.__dict__[attr]
+        self._provider = nfp
         self._provider._phu = phu
 
 
@@ -44,11 +52,15 @@ def return_dict_for_bundle(desc_fn):
             return _list[0] if _list == _list[::-1] else None
 
         if not self.is_single and 'BUNDLE' in self.tags:
-            return {k.lower(): confirm_single_valued(
+            ret_dict = {k: confirm_single_valued(
                 [desc_fn(self[i+1:i+1+ext.hdr['NAMPS']], *args, **kwargs)
                  for i, ext in enumerate(self)
-                 if ext.hdr.get('CAMERA') == k and not ext.shape])
-                for k in ('BLUE', 'RED')}
+                 if ext.arm() == k and not ext.shape])
+                for k in ('blue', 'red')}
+            ret_dict['slitv'] = confirm_single_valued(
+                [desc_fn(self[i:i+1], *args, **kwargs)
+                 for i, ext in enumerate(self) if ext.arm() == 'slitv'])
+            return ret_dict
             # This is the debugging version of the above code
             #final_return = {}
             #for k in ('BLUE', 'RED'):
@@ -313,6 +325,12 @@ class AstroDataGhost(AstroDataGemini):
         combining the amplifier name and detector section; or, returns a
         string if called on a single-extension slice.
 
+        Note: this descriptor is only used for calibration association
+        purposes in the archive, not during DR, so for pragmatic reasons
+        we will compress a list of identical elements to a single-element list
+        to aid the archive code when matching SLITV calibrations (which will
+        only have one extension)
+
         Returns
         -------
         list/str
@@ -330,9 +348,12 @@ class AstroDataGhost(AstroDataGemini):
             return "'{}':{}".format(ampname,
                         detsec) if ampname and detsec else None
         else:
-            return ["'{}':{}".format(a,d)
-                    if a is not None and d is not None else None
-                    for a,d in zip(ampname, detsec)]
+            ret_value = ["'{}':{}".format(a,d)
+                         if a is not None and d is not None else None
+                         for a,d in zip(ampname, detsec)]
+            if ret_value == ret_value[::-1]:
+                return ret_value[:1]
+            return ret_value
 
     @astro_data_descriptor
     def arm(self):
@@ -602,7 +623,8 @@ class AstroDataGhost(AstroDataGemini):
         # TODO: get appropriate return values
         _read_mode_dict = {("slow", "low"): "slow",
                            ("medium", "low"): "medium",
-                           ("fast", "low"): "fast"}
+                           ("fast", "low"): "fast",
+                           ("standard", "standard"): "standard"}  # SLITV
         return _read_mode_dict.get((self.read_speed_setting(),
                                     self.gain_setting()), "unknown")
 
@@ -619,6 +641,8 @@ class AstroDataGhost(AstroDataGemini):
         str
             The read speed ("slow"/"medium"/"fast")
         """
+        if 'SLITV' in self.tags:
+            return "standard"
         return ("slow", "medium", "fast", "unknown")[self.phu.get('READMODE', 3)]
 
     @astro_data_descriptor

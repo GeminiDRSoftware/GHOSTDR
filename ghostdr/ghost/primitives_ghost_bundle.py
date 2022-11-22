@@ -220,7 +220,7 @@ def _write_newfile(extns, suffix, base, log):
 
     # Collate headers into the new PHU
     for kw in ['CAMERA', 'CCDNAME',
-               'CCDSUM',
+               'CCDSUM', 'DETECTOR',
                'OBSTYPE', 'SMPNAME']:
         n.phu.set(kw, _get_common_hdr_value(base, extns, kw))
     vals = _get_hdr_values(extns, 'DATE-OBS')
