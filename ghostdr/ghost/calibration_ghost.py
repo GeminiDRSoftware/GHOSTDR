@@ -923,7 +923,7 @@ class GHOSTCalQuery(CalQuery):
                     # need to group match any arm
                     self.query = self.query.filter(or_(
                         *[getattr(arg.class_, field + arm) == self.descr[field + arm]
-                          for arm in ('_red', '_blue', '_slit')]
+                          for arm in ('_red', '_blue', '_slitv')]
                     ))
                 else:
                     # need to match arm variant of descriptor
