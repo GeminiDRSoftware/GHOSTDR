@@ -14,10 +14,9 @@ import ghostdr
 
 from gemini_calmgr.orm.header import Header
 from gemini_calmgr.orm.diskfile import DiskFile
-from gemini_calmgr.orm.ghost import Ghost
+from gemini_calmgr.orm.ghost import Ghost, GHOST_ARM_DESCRIPTORS, GHOST_ARMS
 
 import ghostdr.ghost.primitives_ghost
-
 import re
 
 import sys
@@ -38,19 +37,12 @@ def get_cal_requests(inputs, caltype, procmode=None):
     retval = old_gcr(inputs, caltype, procmode)
     for rq in retval:
         if rq.descriptors['instrument'] == 'GHOST':
-            xbin = rq.ad.detector_x_bin()
-            for split_desc in (
-                    'detector_x_bin',
-                    'detector_y_bin',
-                    'exposure_time',
-                    'gain_setting',
-                    'read_speed_setting'):
+            for split_desc in GHOST_ARM_DESCRIPTORS:
                 v = rq.descriptors.get(split_desc, None)
                 if v is not None and isinstance(v, dict):
-                    r = v.get('red', None)
-                    b = v.get('blue', None)
-                    rq.descriptors[split_desc + '_red'] = r
-                    rq.descriptors[split_desc + '_blue'] = b
+                    for arm in GHOST_ARMS:
+                        aval = v.get(arm, None)
+                        rq.descriptors[split_desc + '_' + arm] = aval
     return retval
 
 

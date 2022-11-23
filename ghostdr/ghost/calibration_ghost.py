@@ -4,19 +4,28 @@ This module holds the CalibrationGHOST class
 from sqlalchemy import or_
 
 from gemini_calmgr.orm.header import Header
-from gemini_calmgr.orm.ghost import Ghost
+from gemini_calmgr.orm.ghost import Ghost, ArmFieldDispatcher, GHOST_ARMS, GHOST_ARM_DESCRIPTORS
 from gemini_calmgr.cal.calibration import Calibration, not_processed, not_imaging, not_spectroscopy, CalQuery
 
 import math
 
-_arm_descriptors = [
-    'detector_x_bin',
-    'detector_y_bin',
-    'exposure_time',
-    'gain_setting',
-    'read_speed_setting',
-]
-_arms = {'red', 'blue', 'slitv'}
+
+class DictDictFieldDispatcher(ArmFieldDispatcher):
+    def __init__(self, d):
+        super().__init__()
+        self.d = d
+
+    def arm(self):
+        return self.d.get('arm', None)
+
+    def get_field(self, field_name):
+        return self.d.get(field_name, None)
+
+    def set_field(self, field_name, value):
+        self.d[field_name] = value
+
+
+ARM_DESCRIPTORS = [f"{descr}_{arm}" for descr in GHOST_ARM_DESCRIPTORS for arm in GHOST_ARMS]
 
 
 class CalibrationGHOST(Calibration):
@@ -26,6 +35,7 @@ class CalibrationGHOST(Calibration):
     """
     instrClass = Ghost
     instrDescriptors = [
+        'arm',
         'disperser',
         'filter_name',
         'focal_plane_mask',
@@ -40,9 +50,7 @@ class CalibrationGHOST(Calibration):
         'overscan_subtracted',
         'want_before_arc',
         ]
-    instrDescriptors.extend(
-        [dsc + '_' + arm for dsc in _arm_descriptors for arm in _arms]
-    )
+    instrDescriptors.extend(ARM_DESCRIPTORS)
 
     def __init__(self, session, header, descriptors, *args, **kwargs):
         # Need to super the parent class __init__ to get want_before_arc
@@ -58,22 +66,8 @@ class CalibrationGHOST(Calibration):
         if header is None:
             # non-DB source of data, so we need to parse out dictionaries
             # if the data came from the header+instrument tables then this was done during ingest and came pre-done
-            for attr in _arm_descriptors:
-                if attr not in self.descriptors:
-                    for arm in _arms:
-                        self.descriptors[attr + '_' + arm] = None
-                else:
-                    val = self.descriptors[attr]
-                    for arm in _arms:
-                        if self.descriptors['arm'] is not None and self.descriptors['arm'] != arm:
-                            # descriptors for other arms should be set None
-                            self.descriptors[attr + '_' + arm] = None
-                        elif isinstance(val, dict):
-                            # we're a bundle, extract the arm specific value from the dict
-                            self.descriptors[attr + '_' + arm] = val[arm] if arm in val else None
-                        else:
-                            # we're a bundle and we assume it's just a pure value
-                            self.descriptors[attr + '_' + arm] = val
+            dispatcher = DictDictFieldDispatcher(self.descriptors)
+            dispatcher.populate_arm_fields()
 
         # Set the list of applicable calibrations
         self.set_applicable()
@@ -918,12 +912,12 @@ class GHOSTCalQuery(CalQuery):
         """
         for arg in args:
             field = arg.expression.name
-            if field in _arm_descriptors:
+            if field in GHOST_ARM_DESCRIPTORS:
                 if 'arm' not in self.descr or self.descr['arm'] is None:
                     # need to group match any arm
                     self.query = self.query.filter(or_(
                         *[getattr(arg.class_, field + arm) == self.descr[field + arm]
-                          for arm in ('_red', '_blue', '_slitv')]
+                          for arm in (f'_{arm}' for arm in GHOST_ARMS)]
                     ))
                 else:
                     # need to match arm variant of descriptor
