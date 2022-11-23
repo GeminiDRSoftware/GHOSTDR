@@ -2198,6 +2198,11 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = "STCKARCS"  # FIXME - Needs to go into timestamp_keywords
 
+        if params['skip']:
+            log.stdinfo('Skipping the specialized arc stacking '
+                        'step')
+            return adinputs
+
         time_obs = []
 
         # import pdb; pdb.set_trace()
@@ -2208,6 +2213,12 @@ class GHOSTSpect(GHOST):
         # Cluster the inputs
         clusters = []
         for ad in adinputs:
+            if ad.phu.get(timestamp_key):
+                raise RuntimeError("Some frames provided to "
+                                   "stackArcFrames ({}) have already been "
+                                   "processed by this primitive.".
+                                   format(ad.filename))
+
             try:
                 ref_time = _construct_datetime(clusters[-1][-1].phu)
             except IndexError:
@@ -2230,17 +2241,17 @@ class GHOSTSpect(GHOST):
                 raise RuntimeError("I've ended up with an empty cluster...")
 
             if len(cluster) == 1:
-                clusters[i] = cluster[0]
+                clusters[i] = self.stackFrames(adinputs=cluster)
             else:
-                clusters[i] = self.stackFrames(cluster)
+                clusters[i] = self.stackFrames(adinputs=cluster)
 
         # Flatten out the list
         clusters_flat = [item for sublist in clusters for item in sublist]
 
-        # For each cluster, run the stackFrames primitive
-        for i, cluster in enumerate(clusters_flat):
-            if len(clusters_flat[i]) > 1:
-                clusters_flat[i] = self.stackFrames(adinputs=clusters_flat[i])
+        # Book keeping
+        for i, ad in enumerate(clusters_flat):
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=params["suffix"], strip=True)
 
         return clusters_flat
 
@@ -2411,10 +2422,21 @@ class GHOSTSpect(GHOST):
         """
 
         # Set up a SkyCoord for this ad
-        sc = astrocoord.SkyCoord(ad.phu.get('RA'), ad.phu.get('DEC'),
+        if ad.ra() is None or ad.dec() is None:
+            print("Unable to compute barycentric correction for "
+                  "{} (no sky pos data) - skipping".format(ad.filename))
+            if return_wavl:
+                corr_fact = [1.0, ] * len(ad)
+            else:
+                corr_fact = [0.0, ] * len(ad)
+            return corr_fact
+        print("Computing SkyCoord for {}, {}".format(ad.ra(), ad.dec()))
+        sc = astrocoord.SkyCoord(ad.ra(), ad.dec(),
                                  unit=(u.deg, u.deg, ))
 
         # Compute central time of observation
+        # FIXME should implement descriptors to access these - there don't
+        # appear to be relevant ones in gemini_instruments yet
         dt_start = datetime.combine(
             datetime.strptime(ad.phu.get('DATE-OBS'), '%Y-%m-%d').date(),
             datetime.strptime(ad.phu.get('UTSTART'), '%H:%M:%S.%f').time(),
@@ -2424,7 +2446,7 @@ class GHOSTSpect(GHOST):
         for ext in ad:
 
             dt_midp = dt_start + timedelta(
-                seconds=ext.hdr.get('EXPTIME')/2.0
+                seconds=ext.exptime()/2.0
             )
             dt_midp = Time(dt_midp)
 
