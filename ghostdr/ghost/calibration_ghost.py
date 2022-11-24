@@ -570,7 +570,7 @@ class CalibrationGHOST(Calibration):
         """
         Method to find the best processed GHOST SLIT for the target dataset
 
-        This will find GHOST processed slits with a 'Sony-ICX674' detector.  It matches the observation
+        This will find GHOST processed slits.  It matches the observation
         type, res mode, and within 30 seconds.  For 'ARC' observation type it matches
         'PROCESSED_UNKNOWN' data, otherwise it matches 'PREPARED' data.
 
@@ -590,10 +590,6 @@ class CalibrationGHOST(Calibration):
             Ghost.res_mode,
             )
 
-        filters = (
-            Ghost.detector_name.contains('ICX674'),
-        )
-
         query = (
             self.get_query()
                 .reduction(  # this may change pending feedback from Kathleen
@@ -603,7 +599,6 @@ class CalibrationGHOST(Calibration):
                 )
                 .spectroscopy(False)
                 .match_descriptors(*descripts)
-                .add_filters(*filters)
                 # Need to use the slit image that matches the input observation;
                 # needs to match within 30 seconds!
                 .max_interval(seconds=30)
