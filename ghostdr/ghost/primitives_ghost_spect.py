@@ -2174,6 +2174,87 @@ class GHOSTSpect(GHOST):
 
         return adinputs
 
+    def stackArcFrames(self, adinputs=None, **params):
+        """
+        This primitive stacks input arc frames by associating arcs taken in
+        close temporal proximity, and stacking them together.
+
+        This primitive works by 'clustering' the input arcs, and then calling
+        the standard stackFrames primitive on each cluster in turn.
+
+        Parameters
+        ----------
+        time_delta : float
+            The time delta between arcs that will allow for association,
+            expressed in minutes. Note that this time_delta is between
+            two arcs in sequence; e.g., if time_delta is 20 minutes, and arcs
+            are taken with the following gaps:
+            A <- 19m -> B <- 10m -> C <- 30m -> D <- 19m -> E
+            These arcs will be clustered as follows:
+            [A, B, C] and [D, E]
+        """
+
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = "STCKARCS"  # FIXME - Needs to go into timestamp_keywords
+
+        if params['skip']:
+            log.stdinfo('Skipping the specialized arc stacking '
+                        'step')
+            return adinputs
+
+        time_obs = []
+
+        # import pdb; pdb.set_trace()
+
+        # Sort the input arc files by DATE-OBS/UTSTART
+        adinputs.sort(key=lambda x: _construct_datetime(x.phu))
+
+        # Cluster the inputs
+        clusters = []
+        for ad in adinputs:
+            if ad.phu.get(timestamp_key):
+                raise RuntimeError("Some frames provided to "
+                                   "stackArcFrames ({}) have already been "
+                                   "processed by this primitive.".
+                                   format(ad.filename))
+
+            try:
+                ref_time = _construct_datetime(clusters[-1][-1].phu)
+            except IndexError:
+                # Start a new cluster
+                clusters.append([ad, ])
+                continue
+
+            if np.abs(
+                    (_construct_datetime(ad.phu) - ref_time).total_seconds()
+            ) < (params['time_delta'] * 60.):
+                # Append to the last cluster
+                clusters[-1].append(ad)
+            else:
+                # Start a new cluster
+                clusters.append([ad, ])
+
+        # Stack each cluster
+        for i, cluster in enumerate(clusters):
+            if len(cluster) == 0:
+                raise RuntimeError("I've ended up with an empty cluster...")
+
+            if len(cluster) == 1:
+                clusters[i] = self.stackFrames(adinputs=cluster)
+            else:
+                clusters[i] = self.stackFrames(adinputs=cluster)
+
+        # Flatten out the list
+        clusters_flat = [item for sublist in clusters for item in sublist]
+
+        # Book keeping
+        for i, ad in enumerate(clusters_flat):
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=params["suffix"], strip=True)
+
+        return clusters_flat
+
     def standardizeStructure(self, adinputs=None, **params):
         """
         The Gemini-level version of this primitive
@@ -2341,10 +2422,21 @@ class GHOSTSpect(GHOST):
         """
 
         # Set up a SkyCoord for this ad
-        sc = astrocoord.SkyCoord(ad.phu.get('RA'), ad.phu.get('DEC'),
+        if ad.ra() is None or ad.dec() is None:
+            print("Unable to compute barycentric correction for "
+                  "{} (no sky pos data) - skipping".format(ad.filename))
+            if return_wavl:
+                corr_fact = [1.0, ] * len(ad)
+            else:
+                corr_fact = [0.0, ] * len(ad)
+            return corr_fact
+        print("Computing SkyCoord for {}, {}".format(ad.ra(), ad.dec()))
+        sc = astrocoord.SkyCoord(ad.ra(), ad.dec(),
                                  unit=(u.deg, u.deg, ))
 
         # Compute central time of observation
+        # FIXME should implement descriptors to access these - there don't
+        # appear to be relevant ones in gemini_instruments yet
         dt_start = datetime.combine(
             datetime.strptime(ad.phu.get('DATE-OBS'), '%Y-%m-%d').date(),
             datetime.strptime(ad.phu.get('UTSTART'), '%H:%M:%S.%f').time(),
@@ -2354,7 +2446,7 @@ class GHOSTSpect(GHOST):
         for ext in ad:
 
             dt_midp = dt_start + timedelta(
-                seconds=ext.hdr.get('EXPTIME')/2.0
+                seconds=ext.exptime()/2.0
             )
             dt_midp = Time(dt_midp)
 
@@ -2531,3 +2623,13 @@ class GHOSTSpect(GHOST):
         obs = observation.Observation(spec, filt, binset=new_wavl,
                                       force='taper')
         return obs.binflux
+
+
+def _construct_datetime(hdr):
+    """
+    Construct a datetime object from DATE-OBS and UTSTART.
+    """
+    return datetime.combine(
+        datetime.strptime(hdr.get('DATE-OBS'), '%Y-%m-%d').date(),
+        datetime.strptime(hdr.get('UTSTART'), '%H:%M:%S').time(),
+    )
