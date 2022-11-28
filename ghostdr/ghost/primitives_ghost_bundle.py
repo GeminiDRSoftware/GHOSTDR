@@ -71,8 +71,7 @@ class GHOSTBundle(GHOST):
 
             # now do non-slitv extensions
             extns = [x for x in ad if x.arm() != 'slitv']
-            key = lambda x: '_' + x.hdr.get('CAMERA').lower() + str(
-                x.hdr.get('EXPID'))
+            key = lambda x: f"_{x.hdr['CAMERA'].lower()}{x.hdr['EXPID']:03d}"
             extns = sorted(extns, key=key)
             for k, g in itertools.groupby(extns, key=key):
                 _write_newfile(list(g), k, ad, log)
@@ -241,6 +240,12 @@ def _write_newfile(extns, suffix, base, log):
     # will go back to being the MEF bundle file name, and things will
     # quickly start to overlap each other
     n.phu['ORIGNAME'] = n.filename
+
+    # CJS 20221128: to ensure that processed cals from the different arms
+    # have different data labels before going in the archive
+    n.phu['DATALAB'] += f"-{n.phu['CAMERA']}"
+    if n.phu['CAMERA'] != "SLITV":
+        n.phu['DATALAB'] += f"-{suffix[-3:]}"
 
     log.stdinfo("   Writing {}".format(n.filename))
     n.write(overwrite=True)  # should we always overwrite?
