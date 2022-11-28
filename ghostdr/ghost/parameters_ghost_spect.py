@@ -3,7 +3,7 @@
 
 from gempy.library import config
 
-from geminidr.core import parameters_ccd, parameters_visualize, parameters_preprocess
+from geminidr.core import parameters_ccd, parameters_visualize, parameters_preprocess, parameters_stack
 
 from astrodata import AstroData as ad
 
@@ -167,14 +167,15 @@ class responseCorrectConfig(config.Config):
                                 optional=True)
 
 
-class stackArcFramesConfig(config.Config):
-    suffix = config.Field("Filename suffix", str, "_stackedArcFrames",
-                          optional=True)
-    skip = config.Field("No-op this primitive?", bool, False, optional=True)
-    time_delta = config.Field("Max. minutes separating bracketed arcs",
-                              float, 20.0, optional=True)
+class stackArcsConfig(parameters_stack.core_stacking_config):
+    skip = config.Field("No-op this primitive?", bool, False)
+    time_delta = config.RangeField("Max. time separating bracketed arcs (seconds)",
+                              float, 1200, min=0, optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, True,
                                 optional=True)
+
+    def setDefaults(self):
+        self.operation = "lmedian"
 
 
 class tileArraysConfig(parameters_visualize.tileArraysConfig):

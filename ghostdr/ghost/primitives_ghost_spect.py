@@ -2174,7 +2174,7 @@ class GHOSTSpect(GHOST):
 
         return adinputs
 
-    def stackArcFrames(self, adinputs=None, **params):
+    def stackArcs(self, adinputs=None, **params):
         """
         This primitive stacks input arc frames by associating arcs taken in
         close temporal proximity, and stacking them together.
@@ -2193,57 +2193,62 @@ class GHOSTSpect(GHOST):
             These arcs will be clustered as follows:
             [A, B, C] and [D, E]
         """
-
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = "STCKARCS"  # FIXME - Needs to go into timestamp_keywords
 
         if params['skip']:
-            log.stdinfo('Skipping the specialized arc stacking '
-                        'step')
+            log.stdinfo('Skipping the specialized arc stacking step')
             return adinputs
 
-        time_obs = []
+        time_delta = params['time_delta']
+        stack_params = self._inherit_params(params, "stackFrames")
 
         # import pdb; pdb.set_trace()
 
-        # Sort the input arc files by DATE-OBS/UTSTART
-        adinputs.sort(key=lambda x: _construct_datetime(x.phu))
+        processed = [ad.filename for ad in adinputs if timestamp_key in ad.phu]
+        if processed:
+            raise RuntimeError("The following frames have already been "
+                               "processed by stackArcs\n    " +
+                               "\n    ".join(processed))
 
-        # Cluster the inputs
         clusters = []
-        for ad in adinputs:
-            if ad.phu.get(timestamp_key):
-                raise RuntimeError("Some frames provided to "
-                                   "stackArcFrames ({}) have already been "
-                                   "processed by this primitive.".
-                                   format(ad.filename))
+        if time_delta is None:
+            parent_names = [ad.phu['ORIGNAME'].split('.')[0][:-3]
+                            for ad in adinputs]
+            # Cluster by bundle (i.e. ORIGNAME')
+            for bundle in set(parent_names):
+                clusters.append([ad for ad, parent in zip(adinputs, parent_names)
+                                 if parent == bundle])
+        else:
+            # Sort the input arc files by DATE-OBS/UTSTART
+            adinputs.sort(key=lambda x: _construct_datetime(x.phu))
 
-            try:
-                ref_time = _construct_datetime(clusters[-1][-1].phu)
-            except IndexError:
-                # Start a new cluster
-                clusters.append([ad, ])
-                continue
+            # Cluster the inputs
+            for ad in adinputs:
+                try:
+                    ref_time = _construct_datetime(clusters[-1][-1].phu)
+                except IndexError:
+                    # Start a new cluster
+                    clusters.append([ad, ])
+                    continue
 
-            if np.abs(
-                    (_construct_datetime(ad.phu) - ref_time).total_seconds()
-            ) < (params['time_delta'] * 60.):
-                # Append to the last cluster
-                clusters[-1].append(ad)
-            else:
-                # Start a new cluster
-                clusters.append([ad, ])
+                if np.abs((_construct_datetime(ad.phu) - ref_time).total_seconds()
+                          < time_delta):
+                    # Append to the last cluster
+                    clusters[-1].append(ad)
+                else:
+                    # Start a new cluster
+                    clusters.append([ad, ])
 
         # Stack each cluster
         for i, cluster in enumerate(clusters):
             if len(cluster) == 0:
                 raise RuntimeError("I've ended up with an empty cluster...")
 
-            if len(cluster) == 1:
-                clusters[i] = self.stackFrames(adinputs=cluster)
-            else:
-                clusters[i] = self.stackFrames(adinputs=cluster)
+            # Don't need to touch a cluster with only 1 AD
+            if len(cluster) > 1:
+                clusters[i] = self.stackFrames(adinputs=cluster, **stack_params)
 
         # Flatten out the list
         clusters_flat = [item for sublist in clusters for item in sublist]
