@@ -28,8 +28,6 @@ def makeProcessedFlat(p):
     p.addVAR(poisson_noise=True)
     p.darkCorrect()
     # p.rejectCosmicRays()
-    p.addToList(purpose="forStack")
-    p.getList(purpose="forStack")
     p.stackFrames(operation='median')
     p.tileArrays()
     #p.findApertures(skip_pixel_model=True)

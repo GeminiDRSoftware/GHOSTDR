@@ -17,7 +17,7 @@ import os
 import sys
 import astropy.io.fits as pyfits
 import ghostdr.ghost.lookups as lookups
-import ghostdr.ghost.lookups.polyfit_dict as polyfit_dict
+import ghostdr.ghost.lookups.polyfit_lookup as polyfit_lookup
 import pylab as pl
 from cycler import cycler
 import input_locations

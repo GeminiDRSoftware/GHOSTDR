@@ -14,6 +14,7 @@ import astrodata
 import copy
 import itertools
 from astropy.io.fits import PrimaryHDU, Header
+
 # ------------------------------------------------------------------------------
 @parameter_override
 class GHOSTBundle(GHOST):
@@ -61,16 +62,16 @@ class GHOSTBundle(GHOST):
 
             # as a special case, write all slitv extns to a single file
             # TODO: may need to make multiple SV files, not one per SV exposure
+            # FIXME: better way to detect slit exposures than by camera?
             # but one per RED/BLUE exposure which contains all SV exposures that
             # overlap with the RED/BLUE one in time (check with Jon)
-            extns = [x for x in ad if (x.hdr.get('CAMERA').lower().startswith('slit')) and (len(x.data) > 0)]
+            extns = [x for x in ad if (x.arm() == 'slitv' and x.shape)]
             if len(extns) > 0:
                 _write_newfile(extns, '_slit', ad, log)
 
             # now do non-slitv extensions
-            extns = [x for x in ad if not x.hdr.get('CAMERA').lower().startswith('slit')]
-            key = lambda x: '_' + x.hdr.get('CAMERA').lower() + str(
-                x.hdr.get('EXPID'))
+            extns = [x for x in ad if x.arm() != 'slitv']
+            key = lambda x: f"_{x.hdr['CAMERA'].lower()}{x.hdr['EXPID']:03d}"
             extns = sorted(extns, key=key)
             for k, g in itertools.groupby(extns, key=key):
                 _write_newfile(list(g), k, ad, log)
@@ -121,7 +122,8 @@ def _get_common_hdr_value(base, extns, key):
     # Get the keyword from every extension
     vals = [x.hdr.get(key) for x in extns]
     c = Counter(vals)
-    # Not all extensions may not contain the keyword, but we don't care about blanks
+    # Not all extensions may not contain the keyword,
+    # but we don't care about blanks
     del c[None]
     # If the keyword doesn't exist at all in the extensions,
     # then use the base value instead
@@ -216,7 +218,9 @@ def _write_newfile(extns, suffix, base, log):
             n.append(x)
 
     # Collate headers into the new PHU
-    for kw in ['CAMERA', 'CCDNAME', 'CCDSUM', 'OBSTYPE', 'SMPNAME']:
+    for kw in ['CAMERA', 'CCDNAME',
+               'CCDSUM', 'DETECTOR',
+               'OBSTYPE', 'SMPNAME']:
         n.phu.set(kw, _get_common_hdr_value(base, extns, kw))
     vals = _get_hdr_values(extns, 'DATE-OBS')
     n.phu.set('DATE-OBS', vals[min(vals.keys())])
@@ -236,6 +240,12 @@ def _write_newfile(extns, suffix, base, log):
     # will go back to being the MEF bundle file name, and things will
     # quickly start to overlap each other
     n.phu['ORIGNAME'] = n.filename
+
+    # CJS 20221128: to ensure that processed cals from the different arms
+    # have different data labels before going in the archive
+    n.phu['DATALAB'] += f"-{n.phu['CAMERA']}"
+    if n.phu['CAMERA'] != "SLITV":
+        n.phu['DATALAB'] += f"-{suffix[-3:]}"
 
     log.stdinfo("   Writing {}".format(n.filename))
     n.write(overwrite=True)  # should we always overwrite?

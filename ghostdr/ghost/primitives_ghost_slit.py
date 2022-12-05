@@ -14,7 +14,7 @@ from .polyfit import SlitView
 from .primitives_ghost import GHOST
 from .primitives_ghost import filename_updater
 from . import parameters_ghost_slit
-from .lookups import polyfit_dict
+from .lookups import polyfit_lookup
 
 from recipe_system.utils.decorators import parameter_override
 from functools import reduce
@@ -196,7 +196,7 @@ class GHOSTSlit(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        flat_list = params["flat"]
+        flat_list = params.get("flat")
         if flat_list is None:
             self.getProcessedSlitFlat(adinputs)
             flat_list = [self._get_cal(ad, 'processed_slitflat')
@@ -412,9 +412,9 @@ def _total_obj_flux(log, res, ut_date, filename, data, flat_data=None, binning=2
         The object flux, summed, and potentially sky-subtracted.
     """
     sky_correction = flat_data is not None
-    slitv_fn = polyfit_dict.get_polyfit_filename(log, 'slitv',
-                                                 res, ut_date, filename,
-                                                 'slitvmod')
+    slitv_fn = polyfit_lookup.get_polyfit_filename(log, 'slitv',
+                                                   res, ut_date, filename,
+                                                   'slitvmod')
     slitvpars = astrodata.open(slitv_fn)
     svobj = SlitView(data, flat_data, slitvpars.TABLE[0], mode=res,
                      microns_pix=4.54*180/50, binning=binning)  # OK to pass None for flat
