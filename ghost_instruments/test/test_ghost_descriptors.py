@@ -66,7 +66,7 @@ def test_descriptor(fn, ad, descriptor, value):
             mvalue = method()
     else:
         mvalue = method()
-        if float in (type(value), type(mvalue)):
+        if float in (type(value), type(mvalue)) and value is not None and mvalue is not None:
             assert abs(mvalue - value) < 0.0001
         else:
             assert mvalue == value
