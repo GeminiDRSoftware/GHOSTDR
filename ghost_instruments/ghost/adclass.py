@@ -15,6 +15,85 @@ from astrodata import (
 from gemini_instruments.gemini import AstroDataGemini
 from gemini_instruments.common import build_group_id
 
+from astrodata.fits import FitsProviderProxy
+from copy import deepcopy
+
+
+class FitsProviderProxyForGhostBundles(FitsProviderProxy):
+    """A class that acts like a FitsProviderProxy, except it can
+    hold its own PHU. This allows us to slice GHOST bundles"""
+    def __init__(self, proxy, phu):
+        super().__init__(proxy._provider, proxy._mapping, proxy._single)
+        # Similar code to FitsProvider.__deepcopy__() except we don't
+        # need to make a deepcopy, references are fine
+        nfp = self._provider.__class__()
+        to_copy = ('_sliced', '_single', '_nddata', '_path',
+                   '_orig_filename', '_tables', '_exposed', '_resetting')
+        for attr in to_copy:
+            nfp.__dict__[attr] = self._provider.__dict__[attr]
+        self._provider = nfp
+        self._provider._phu = phu
+
+
+def return_dict_for_bundle(desc_fn):
+    """
+    A decorator that will return a dict with keys "blue" and "red" and values
+    equal to the descriptor return if it was sent the split files. A check is
+    made that all the returns are equal, and None is returned otherwise.
+
+    This works by splitting the bundle and evaluating the descriptor on all of
+    the blue and then red arms in turn. It therefore works regardless of whether
+    the required information is in the extensions or the nascent PHU.
+
+    Its behaviour on multi-extension slices is unclear.
+    """
+    def wrapper(self, *args, **kwargs):
+        def confirm_single_valued(_list):
+            return _list[0] if _list == _list[::-1] else None
+
+        if not self.is_single and 'BUNDLE' in self.tags:
+            ret_dict = {k: confirm_single_valued(
+                [desc_fn(self[i+1:i+1+ext.hdr['NAMPS']], *args, **kwargs)
+                 for i, ext in enumerate(self)
+                 if ext.arm() == k and not ext.shape])
+                for k in ('blue', 'red')}
+            ret_dict['slitv'] = confirm_single_valued(
+                [desc_fn(self[i:i+1], *args, **kwargs)
+                 for i, ext in enumerate(self) if ext.arm() == 'slitv'])
+            return ret_dict
+            # This is the debugging version of the above code
+            #final_return = {}
+            #for k in ('BLUE', 'RED'):
+            #    print(f"Looking for {k}")
+            #    ret_values = []
+            #    for i, ext in enumerate(self):
+            #        if ext.hdr.get('CAMERA') == k and not ext.shape:
+            #            print("BLAH", i)
+            #            tmp = self[i+1:i+1+ext.hdr['NAMPS']]
+            #            print("created tmp", len(tmp), tmp.tags)
+            #            ret_value = desc_fn(tmp, *args, **kwargs)
+            #            print("return_dict", i, ret_value, tmp.detector_name())
+            #            ret_values.append(ret_value)
+            #    final_return[k.lower()] = confirm_single_valued(ret_values)
+            #return final_return
+        return desc_fn(self, *args, **kwargs)
+    return wrapper
+
+
+def use_nascent_phu_for_bundle(desc_fn):
+    """
+    A decorator for bundles (where the PHU is minimal) that will instead
+    provide the first nascent PHU (of a red/blue arm) instead
+    """
+    def wrapper(self, *args, **kwargs):
+        if 'BUNDLE' in self.tags:
+            phu_index = min(i for i, camera in enumerate(self.hdr['CAMERA']) if camera in ('BLUE', 'RED'))
+            nascent_phu = self[phu_index]
+            return desc_fn(nascent_phu, *args, **kwargs)
+        return desc_fn(self, *args, **kwargs)
+    return wrapper
+
+
 class AstroDataGhost(AstroDataGemini):
     """
     Class for adding tags and descriptors to GHOST data.
@@ -25,7 +104,59 @@ class AstroDataGhost(AstroDataGemini):
                           overscan_section = 'BIASSEC',
                           res_mode = 'SMPNAME',
                           exposure_time = 'EXPTIME',
+                          saturation_level = 'SATURATE',
                           )
+
+    def __iter__(self):
+        if self._single:
+            yield self
+        else:
+            for n in range(len(self)):
+                yield self[n]
+
+    def __getitem__(self, idx):
+        """
+        Override default slicing method for bundles for two reasons:
+        1) Prevent creation of a new AD from non-contiguous extensions, as
+           this doesn't make sense.
+        2) Prevent creation of a new "Frankenstein" AD with data from more
+           than one camera, as only original bundles should have this.
+        """
+        #print("Entering getitem()", type(self._dataprov), len(self), idx)
+        obj = super().__getitem__(idx)
+        if 'BUNDLE' in self.tags:
+            #print("BUNDLE", idx, obj._mapping)
+            if max(obj._mapping) - min(obj._mapping) != len(obj._mapping) - 1:
+                raise ValueError("Bundles can only be sliced contiguously")
+            #print(obj.tags)
+            # Find the nascent PHU if it's not a slit viewer, keep PHU if it is
+            # this copes with CAMERA return a list or a string (single-slice)
+            if obj.hdr.get('CAMERA')[0].startswith('S'):
+                # add in the first SLITV header so keywords are there
+                # (which is explicitly done in debundling)
+                phu = self.phu + (obj.hdr if obj.is_single else obj[0].hdr)
+                obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, phu)
+                return obj
+            #print("Tested", type(self._dataprov), obj._mapping)
+            for i in range(min(obj._mapping), -1, -1):
+                #print("***", i, obj._mapping, len(self._dataprov.nddata))
+                ndd = self._dataprov.nddata[i]
+                if not ndd.shape:
+                    phu = ndd.meta['header']
+                    break
+            else:
+                phu = self._dataprov._nddata[min(obj._mapping)].meta['header']
+            obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, phu)
+            # This has to happen way down here because only by resetting the PHU
+            # can we prevent the 'BUNDLE' tag appearing and hence allow more
+            # slicing to occur
+            if len(set(ext.shape for ext in obj)) > 1:
+                raise ValueError("Bundles must be sliced from the same camera")
+            #print("RETURNING", len(obj))
+        #else:
+        #    obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, self.phu)
+        #print("Returning", type(obj), obj._dataprov)
+        return obj
 
     @astro_data_descriptor
     def data_label(self):
@@ -161,10 +292,14 @@ class AstroDataGhost(AstroDataGemini):
     @astro_data_tag
     def _tag_binning_mode(self):
         """
+        TODO: this should not be a tag
         Define the tagset for GHOST data of different binning modes.
         """
         binnings = self.hdr.get('CCDSUM')
+        if binnings is None:  # CJS hack
+            return TagSet([])
         if isinstance(binnings, list):
+            binnings = [x for x in binnings if x]
             if all(x == binnings[0] for x in binnings):
                 return TagSet([binnings[0].replace(' ', 'x', 1)])
             else:
@@ -183,11 +318,18 @@ class AstroDataGhost(AstroDataGemini):
             return TagSet(['PARTNER_CAL'])
 
     @astro_data_descriptor
+    @return_dict_for_bundle
     def amp_read_area(self, pretty=False):
         """
         Returns a list of amplifier read areas, one per extension, made by
         combining the amplifier name and detector section; or, returns a
         string if called on a single-extension slice.
+
+        Note: this descriptor is only used for calibration association
+        purposes in the archive, not during DR, so for pragmatic reasons
+        we will compress a list of identical elements to a single-element list
+        to aid the archive code when matching SLITV calibrations (which will
+        only have one extension)
 
         Returns
         -------
@@ -206,9 +348,12 @@ class AstroDataGhost(AstroDataGemini):
             return "'{}':{}".format(ampname,
                         detsec) if ampname and detsec else None
         else:
-            return ["'{}':{}".format(a,d)
-                    if a is not None and d is not None else None
-                    for a,d in zip(ampname, detsec)]
+            ret_value = ["'{}':{}".format(a,d)
+                         if a is not None and d is not None else None
+                         for a,d in zip(ampname, detsec)]
+            if ret_value == ret_value[::-1]:
+                return ret_value[:1]
+            return ret_value
 
     @astro_data_descriptor
     def arm(self):
@@ -230,6 +375,21 @@ class AstroDataGhost(AstroDataGemini):
         elif 'SLITV' in tags:
             return 'slitv'
         return None
+
+    @astro_data_descriptor
+    @return_dict_for_bundle
+    def array_name(self):
+        """
+        Return the arr
+
+        Returns
+        -------
+        str: a concatenated string of the detector name and amplifier
+        """
+        if self.is_single:
+            return f"{self.detector_name()}, {self.hdr.get('AMPNAME')}"
+        else:
+            return [f"{ext.detector_name()}, {ext.hdr.get('AMPNAME')}" for ext in self]
 
     @astro_data_descriptor
     def calibration_key(self):
@@ -269,15 +429,15 @@ class AstroDataGhost(AstroDataGemini):
         return float(val)
 
     @astro_data_descriptor
+    @return_dict_for_bundle
     def detector_name(self, pretty=False):
         """
         Returns the detector (CCD) name.
         """
-        if self.phu.get('CCDNAME') is not None:
-            return self.phu.get('CCDNAME')
-        return self.phu.get('DETTYPE')
+        return self.phu.get('DETECTOR')
 
     @astro_data_descriptor
+    @return_dict_for_bundle
     def detector_x_bin(self):
         """
         Returns the detector binning in the x-direction.
@@ -302,6 +462,7 @@ class AstroDataGhost(AstroDataGemini):
             return xbin_list[0] if xbin_list == xbin_list[::-1] else None
 
     @astro_data_descriptor
+    @return_dict_for_bundle
     def detector_y_bin(self):
         """
         Returns the detector binning in the y-direction.
@@ -328,40 +489,60 @@ class AstroDataGhost(AstroDataGemini):
     # TODO: GHOST descriptor returns no values if data are unprepared
 
     @astro_data_descriptor
+    @return_dict_for_bundle
     def exposure_time(self):
         """
-        Returns the exposure time in seconds.
-
-        This function extends the standard exposure_time() descriptor
-        by allowing the exposure time to exist in the header of the
-        first data extension, as well as the PHU. If the exposure time
-        exists in both places, the PHU value takes precedence.
+        Returns the exposure time. If run on a bundle, it returns the exposure
+        time of a single exposure in each arm, NOT the total exposure time
 
         Returns
         -------
-        float
-            Exposure time.
+        int
+            exposure time of a single exposure
         """
-
-        exp_time_default = super().exposure_time()
+        return super().exposure_time()
 
         # Don't let this special logic happen for bundles
-        if 'BUNDLE' not in self.tags:
-            if exp_time_default is None:
-                exposure_time = self[0].hdr.get(
-                    self._keyword_for('exposure_time'),
-                    -1)
-                if exposure_time == -1:
-                    return None
-                return exposure_time
-
-        return exp_time_default
+        #if 'BUNDLE' not in self.tags:
+        #    if exp_time_default is None:
+        #        exposure_time = self[0].hdr.get(
+        #            self._keyword_for('exposure_time'),
+        #            -1)
+        #        if exposure_time == -1:
+        #            return None
+        #        return exposure_time
+        #
+        #return exp_time_default
 
 
     # The gain() descriptor is inherited from gemini/adclass, and returns
     # the value of the GAIN keyword (as a list if sent a complete AD object,
     # or as a single value if sent a slice). This is what the GHOST version
     # does so one is not needed here.
+
+    @astro_data_descriptor
+    @return_dict_for_bundle
+    def gain_setting(self):
+        """
+        Returns the gain setting for this observation (e.g., 'high', 'low')
+
+        Returns
+        -------
+        str
+            the gain setting
+        """
+        # TODO: confirm returns. Future-proofing for a possible high-gain mode
+        if 'SLITV' in self.tags:
+            return "standard"
+        gain = self.gain()
+        if self.is_single:
+            return "low" if gain < 1.0 else "high"
+        low_gain = [g <= 1.0 for g in gain]
+        if all(low_gain):
+            return "low"
+        elif any(low_gain):
+            raise ValueError("Some gains are low and some are high")
+        return "high"
 
     @astro_data_descriptor
     def group_id(self):
@@ -399,6 +580,73 @@ class AstroDataGhost(AstroDataGemini):
                               additional=additional_item)
 
     @astro_data_descriptor
+    def non_linear_level(self):
+        """
+        Returns the level at which the data become non-linear. This is
+        the same as the saturation level for the GHOST CCDs.
+
+        Returns
+        -------
+        int/list
+            non-linearity level
+        """
+        return self.saturation_level()
+
+    @astro_data_descriptor
+    def number_of_exposures(self):
+        """
+        Return the number of individual exposures
+
+        Returns
+        -------
+        int/dict
+            number of exposures
+        """
+        if 'BUNDLE' not in self.tags:
+            return len(self) if 'SLITV' in self.tags else 1  # probably
+        return {k.lower(): sum(ext.hdr.get('CAMERA') == k and not ext.shape
+                               for ext in self) for k in ('BLUE', 'RED')}
+
+    @astro_data_descriptor
+    @return_dict_for_bundle
+    def read_mode(self):
+        """
+        Returns a string describing the read mode, matching that offered
+        in the OT. Only the readout speed will be configurable, so that
+        is what is returned, albeit in a circuitous way to future-proof.
+
+        Returns
+        -------
+        str
+            The read mode
+        """
+        # TODO: get appropriate return values
+        _read_mode_dict = {("slow", "low"): "slow",
+                           ("medium", "low"): "medium",
+                           ("fast", "low"): "fast",
+                           ("fast", "high"): "bright",
+                           ("standard", "standard"): "standard"}  # SLITV
+        return _read_mode_dict.get((self.read_speed_setting(),
+                                    self.gain_setting()), "unknown")
+
+    # TODO: read_noise(): see comments on gain()
+
+    @astro_data_descriptor
+    @return_dict_for_bundle
+    def read_speed_setting(self):
+        """
+        Returns the setting for the readout speed (slow or fast)
+
+        Returns
+        -------
+        str
+            The read speed ("slow"/"medium"/"fast")
+        """
+        if 'SLITV' in self.tags:
+            return "standard"
+        return ("slow", "medium", "fast", "unknown")[self.phu.get('READMODE', 3)]
+
+    @astro_data_descriptor
     def res_mode(self):
         """
         Get the GHOST resolution mode of this dataset
@@ -419,18 +667,10 @@ class AstroDataGhost(AstroDataGemini):
             pass
         return None
 
-    # TODO: read_noise(): see comments on gain()
-
     @astro_data_descriptor
-    def read_speed_setting(self):
-        """
-        GHOST does not require a read speed settings - returns `None`
-
-        Returns
-        -------
-        `None`
-        """
-        return None
+    @use_nascent_phu_for_bundle
+    def ut_datetime(self, *args, **kwargs):
+        return AstroDataGemini.ut_datetime(self, *args, **kwargs)
 
     @astro_data_descriptor
     def want_before_arc(self):

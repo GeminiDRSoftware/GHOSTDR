@@ -15,8 +15,6 @@ import copy
 import itertools
 from astropy.io.fits import PrimaryHDU, Header
 
-GHOST_SLIT_CAMERA_STARTSWITH = "ghost bigeye"
-
 # ------------------------------------------------------------------------------
 @parameter_override
 class GHOSTBundle(GHOST):
@@ -67,17 +65,13 @@ class GHOSTBundle(GHOST):
             # FIXME: better way to detect slit exposures than by camera?
             # but one per RED/BLUE exposure which contains all SV exposures that
             # overlap with the RED/BLUE one in time (check with Jon)
-            extns = [x for x in ad if (x.hdr.get(
-                'CAMERA').lower().startswith(
-                GHOST_SLIT_CAMERA_STARTSWITH)) and (len(x.data) > 0)]
+            extns = [x for x in ad if (x.arm() == 'slitv' and x.shape)]
             if len(extns) > 0:
                 _write_newfile(extns, '_slit', ad, log)
 
             # now do non-slitv extensions
-            extns = [x for x in ad if not x.hdr.get(
-                'CAMERA').lower().startswith(GHOST_SLIT_CAMERA_STARTSWITH)]
-            key = lambda x: '_' + x.hdr.get('CAMERA').lower() + str(
-                x.hdr.get('EXPID'))
+            extns = [x for x in ad if x.arm() != 'slitv']
+            key = lambda x: f"_{x.hdr['CAMERA'].lower()}{x.hdr['EXPID']:03d}"
             extns = sorted(extns, key=key)
             for k, g in itertools.groupby(extns, key=key):
                 _write_newfile(list(g), k, ad, log)
@@ -225,7 +219,7 @@ def _write_newfile(extns, suffix, base, log):
 
     # Collate headers into the new PHU
     for kw in ['CAMERA', 'CCDNAME',
-               'CCDSUM',
+               'CCDSUM', 'DETECTOR',
                'OBSTYPE', 'SMPNAME']:
         n.phu.set(kw, _get_common_hdr_value(base, extns, kw))
     vals = _get_hdr_values(extns, 'DATE-OBS')
@@ -246,6 +240,12 @@ def _write_newfile(extns, suffix, base, log):
     # will go back to being the MEF bundle file name, and things will
     # quickly start to overlap each other
     n.phu['ORIGNAME'] = n.filename
+
+    # CJS 20221128: to ensure that processed cals from the different arms
+    # have different data labels before going in the archive
+    n.phu['DATALAB'] += f"-{n.phu['CAMERA']}"
+    if n.phu['CAMERA'] != "SLITV":
+        n.phu['DATALAB'] += f"-{suffix[-3:]}"
 
     log.stdinfo("   Writing {}".format(n.filename))
     n.write(overwrite=True)  # should we always overwrite?
