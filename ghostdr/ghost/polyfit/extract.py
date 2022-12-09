@@ -901,7 +901,9 @@ class Extractor(object):
                 # PRV: This is only absolutely needed for PRV mode, with 
                 # matrices[i,j,1,1] coming from "specmod.fits".
                 ysub_pix += np.interp(x_ix - x_map[i, j] - nx // 2, \
-                                      slit_ix / matrices[i, j, 0, 0], \
+                                      # CRH:  below was the original version but I think it's
+                                      # missing a factor of the microns/pix
+                                      # slit_ix / matrices[i, j, 0, 0], \
                                       slit_ix * self.slitview.microns_pix / matrices[i, j, 0, 0], \
                                       centroids / matrices[i, j, 1, 1])
 
