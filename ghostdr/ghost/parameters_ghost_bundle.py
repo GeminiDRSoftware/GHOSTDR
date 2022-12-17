@@ -4,4 +4,4 @@
 from gempy.library import config
 
 class splitBundleConfig(config.Config):
-    suffix = config.Field("Filename suffix", str, "_unbundled", optional=True)
+    pass

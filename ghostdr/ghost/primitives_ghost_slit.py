@@ -4,10 +4,11 @@
 #                                                       primitives_ghost_slit.py
 # ------------------------------------------------------------------------------
 import numpy as np
-from copy import deepcopy
 from datetime import datetime, timedelta
+import dateutil
 
 from gempy.gemini import gemini_tools as gt
+from geminidr.gemini.lookups import DQ_definitions as DQ
 
 from .polyfit import SlitView
 
@@ -69,17 +70,17 @@ class GHOSTSlit(GHOST):
 
         This primitive replaces CR-affected pixels in each individual slit
         viewer image (taken from the current stream) with their equivalents
-        from the median frame of those images.
+        from the mean of the unaffected images.
 
         Cosmic rays are detected via the following algorithm:
 
+        - Images are scaled by the total image flux
         - The median and 'median absolute deviation' (:func:`_mad <_mad>`) is
-          computed  for each pixel across all slit viewer frames in the stream;
+          computed for each pixel across all slit viewer frames in the stream;
         - For each slit viewer frame in the stream, a pixel is replaced by the
-          corresponding median value if the pixel's deviation from the
-          corresponding median is greater than some threshold (currently,
-          this is hard-coded to be 20 times the median absolute deviation
-          for that pixel).
+          corresponding mean value of the unaffected images if the pixel's
+          deviation from the corresponding median is greater than some
+          threshold  times the median absolute deviation for that pixel.
 
         Total image fluxes (computed by
         :func:`_total_obj_func <_total_obj_func>`)
@@ -90,70 +91,66 @@ class GHOSTSlit(GHOST):
         ----------
         suffix: str
             suffix to be added to output files
+        ndev: float
+            number of median absolute deviations (MADs) for CR identification
+        max_iters: int
+            maximum number of iterations for CR removal
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
-
-        # Check that all SLITV inputs are single-extension images
-        #if any([('SLITV' in ad.tags and len(ad)!=1) for ad in adinputs]):
-        #    raise IOError("All input SLITV images must have a single extension")
+        ndev = params["ndev"]
+        max_iters = params["max_iters"]
 
         for ad in adinputs:
+            filename = ad.filename
             if ad.phu.get(timestamp_key):
-                log.warning("No changes will be made to {}, since it has "
-                            "already been processed by CRCorrect".
-                            format(ad.filename))
+                log.warning(f"No changes will be made to {filename}, since "
+                            "it has already been processed by CRCorrect")
                 continue
 
-            # Make the median slit frame.
-            # ext_stack = np.array([ad[0].data for ad in adinputs])
-            ext_stack = np.array([ext.data for ext in ad])
-            sv_med = np.median(ext_stack, axis=0)
-            sigma = _mad(ext_stack, axis=0) * 20
             res = ad.res_mode()
             ut_date = ad.ut_date()
-            filename = ad.filename
-            binning = ad.detector_x_bin() # x and y are equal
+            binning = ad.detector_x_bin()  # x and y are equal
 
+            fluxes = np.array([_total_obj_flux(log, res, ut_date, filename,
+                                               ext.data, None, binning=binning)
+                               for ext in ad])
+
+            for iter in range(max_iters):
+                total_replaced = 0
+                med_flux = np.median(fluxes)
+                scale_factors = med_flux / fluxes
+
+                # Make the median slit frame by scaling individual images
+                ext_stack = np.ma.masked_array([ext.data * scale for ext, scale
+                                                in zip(ad, scale_factors)])
+                sv_med = np.ma.median(ext_stack, axis=0)
+                threshold = sv_med + ndev * _mad(ext_stack, axis=0)
+                ext_stack.mask = ext_stack > threshold
+                replacement_values = ext_stack.mean(axis=0)
+                for i, (ext, mask) in enumerate(zip(ad, ext_stack.mask)):
+                    nreplaced = mask.sum()
+                    ext.data[mask] = replacement_values[mask]
+                    if ext.mask is None:
+                        ext.mask = np.zeros_like(ext.data, dtype=DQ.datatype)
+                    ext.mask[mask] |= DQ.cosmic_ray
+                    new_flux = _total_obj_flux(log, res, ut_date, filename,
+                                               ext.data, None, binning=binning)
+                    if nreplaced > 0:
+                        log.stdinfo(f"   {filename}:{ext.hdr['EXTVER']}: "
+                                    f"nPixReplaced = {nreplaced:d}, flux = "
+                                    f"{fluxes[i]:.1f} -> {new_flux:.1f}")
+                        fluxes[i] = new_flux
+                        total_replaced += nreplaced
+
+                if total_replaced == 0:
+                    break
+
+            # Record total number of replacements
             for ext in ad:
-                addata = ext.data
-
-                # pre-CR-corrected flux computation
-                flux_before = _total_obj_flux(log, res, ut_date, filename, addata, None, binning=binning)
-
-                # replace CR-affected pixels with those from the median slit
-                # viewer image (subtract the median slit frame and threshold
-                # against the residuals); not sure VAR/DQ planes appropriately
-                # handled here
-                residuals = abs(addata - sv_med)
-                indices = residuals > sigma
-                addata[indices] = sv_med[indices]
-
-                # post-CR-corrected flux computation
-                flux_after = _total_obj_flux(log, res, ut_date, filename, addata, None, binning=binning)
-
-                # CJS: since addata is a reference, the CR fix changes the data
-                # in place and there's no need to reassign ad[0].data = addata
-
-                # # uncomment to output the residuals for debugging
-                # myresid = deepcopy(ad)
-                # myresid[0].data = residuals
-                # myresid.update_filename(suffix='_resid')
-                # myresid.write()
-
-                # # uncomment to output the indices for debugging
-                # myindex = deepcopy(ad)
-                # myindex[0].data = indices.astype(int)
-                # myindex.update_filename(suffix='_index')
-                # myindex.write()
-
-                # Output and record number of pixels replaced
-                nreplaced = indices.sum()
-                log.stdinfo("   {}:{} : nPixReplaced = {:6d}, flux = {:.1f} -> {:.1f}"
-                            "".format(ad.filename, ext.hdr['EXTVER'], nreplaced,
-                                      flux_before, flux_after))
-                ext.hdr['CRPIXREJ'] = (nreplaced, '# of CR pixels replaced by median')
+                ext.hdr['CRPIXREJ'] = ((ext.mask & DQ.cosmic_ray).astype(bool).sum(),
+                                       '# of CR pixels replaced by median')
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -163,26 +160,24 @@ class GHOSTSlit(GHOST):
 
     def processSlits(self, adinputs=None, **params):
         """
-        Compute and record the mean exposure epoch for a slit viewer image
+        Compute the appropriate weights for each slit viewer image created
+        from a bundle, so as to provide the best slit profile for each
+        science exposure.
 
-        The 'slit viewer image' for each observation will almost certainly
-        be a sequence of short exposures of the slit viewer camera,
-        collected together for convenience. However, it cannot be guaranteed
-        that slit viewer exposures will be taken throughout an entire
-        science exposure; therefore, it is necessary to be able to compute
-        the mean exposure epoch (i.e. the effective time that the combined
-        slit viewer exposures were taken at). This allows a single science
-        observation to be calibrated using multiple packets of slit viewer
-        exposures, with appropriate weighting for the time delay between them.
+        The 'slit viewer image' for each observation is a sequence of short
+        exposures of the slit viewer camera, over the entire period of the
+        observation. However, only some of these will overlap each science
+        exposure and it is necessary to combine different subsets in order
+        to produce the best processed_slit calibration for each science frame.
 
-        ``processSlits`` effectively computes a weighted average of the
-        exposure epoch of all constituent slit viewer exposures, taking into
-        account:
-
-        - Length of each exposure;
-        - Whether there is any overlap between the start/end of the
-          exposure and the start/end of the overall 'image';
-        - Time of each exposure, relative to the start of the 'image'.
+        ``processSlits`` determines the appropriate weights to assign to
+        each individual slit exposure, for each science exposure, and adds
+        these to the SCIEXP Table for ``stackFrames`` to interpret. The
+        method is to take the closest slit viewer exposure at every time
+        interval during the science exposure; this is identical mathematically
+        to assuming the exposures are instantaneous at their midpoints at
+        linearly interpolating between them, and so copes with irregular
+        temporal spacing.
 
         Parameters
         ----------
@@ -210,82 +205,86 @@ class GHOSTSlit(GHOST):
                             format(ad.filename))
                 continue
 
-            if slitflat is None:
-                log.warning("Unable to find slitflat calibration for {}; "
-                            "skipping".format(ad.filename))
+            try:
+                sciexp = ad.SCIEXP
+            except AttributeError:
+                log.warning(f"{ad.filename} has no SCIEXP table so all slit "
+                            "viewer exposures will be combined.")
                 continue
-            else:
-                sv_flat = slitflat[0].data
-
-            # accumulators for computing the mean epoch
-            sum_of_weights = 0.0
-            accum_weighted_time = 0.0
 
             # check that the binning is equal in x and y
             if ad.detector_x_bin() != ad.detector_y_bin():
-                raise ValueError("slit viewer images must have equal binning \
-                        in x and y directions")
+                raise ValueError("slit viewer images must have equal binning "
+                                 "in x and y directions")
 
-            # Check the inputs have matching binning and SCI shapes.
-            try:
-                gt.check_inputs_match(adinput1=ad, adinput2=slitflat,
-                                      check_filter=False)
-            except ValueError:
-                # This is most likely because the science frame has multiple
-                # extensions and the slitflat needs to be copied
-                slitflat = gt.clip_auxiliary_data(ad, slitflat, aux_type='cal')
-                # An Error will be raised if they don't match now
-                gt.check_inputs_match(ad, slitflat, check_filter=False)
+            # We should process even without a slitflat; AVGEPOCH will be wrong
+            # if the flux varies but we'll know which slit images to combine
+            if slitflat is None:
+                msg = f"Unable to find slitflat calibration for {ad.filename}"
+                if self.mode == "sq":
+                    raise RuntimeError(msg)
+                log.warning(f"{msg}; calculations may be in error")
+                sv_flat = None
+            else:
+                sv_flat = slitflat[0].data
+                # Check the inputs have matching binning and SCI shapes.
+                try:
+                    gt.check_inputs_match(adinput1=ad, adinput2=slitflat,
+                                          check_filter=False)
+                except ValueError:
+                    # This is most likely because the science frame has multiple
+                    # extensions and the slitflat needs to be copied
+                    slitflat = gt.clip_auxiliary_data(ad, slitflat, aux_type='cal')
+                    # An Error will be raised if they don't match now
+                    gt.check_inputs_match(ad, slitflat, check_filter=False)
 
-            # get science start/end times
-            sc_start = parse_timestr(ad.phu['UTSTART'])
-            sc_end = parse_timestr(ad.phu['UTEND'])
-
+            nslitv = len(ad)
             res = ad.res_mode()
             ut_date = ad.ut_date()
-            filename = ad.filename
             binning = ad.detector_x_bin() # x and y are equal
+            sv_duration = ad.exposure_time()
+            sv_starts = [dateutil.parser.parse(f"{d}T{t}") for d, t in
+                         zip(ad.hdr['DATE-OBS'], ad.hdr['UTSTART'])]
+            # Relevance start and end times for each slitv image
+            sv_relevant = ([datetime(2001, 1, 1)] +
+                           [sv_starts[i] + 0.5 * (sv_starts[i+1] - sv_starts[i] +
+                                                  timedelta(seconds=sv_duration))
+                            for i in range(nslitv-1)] +
+                           [datetime(3001, 1, 1)])
 
-            for ext in ad:
-                sv_start = parse_timestr(ext.hdr['EXPUTST'])
-                sv_end = parse_timestr(ext.hdr['EXPUTEND'])
+            fluxes = [_total_obj_flux(log, res, ut_date, ad.filename,
+                                      ext.data, sv_flat, binning=binning)
+                      for ext in ad]
 
-                # compute overlap percentage and slit view image duration
-                latest_start = max(sc_start, sv_start)
-                earliest_end = min(sc_end, sv_end)
-                overlap = (earliest_end - latest_start).seconds
-                overlap = 0.0 if overlap < 0.0 else overlap  # no overlap edge case
-                sv_duration = (sv_end - sv_start).seconds
-                overlap /= sv_duration  # convert into a percentage
+            weights = np.zeros((len(sciexp), nslitv))
+            avg_epochs = []
+            for i, times in enumerate(sciexp['UTSTART', 'UTEND']):
+                sc_start, sc_end = [dateutil.parser.parse(t) for t in times]
+                accum_weighted_time = 0
+                for j, (rel_start, rel_end, flux) in enumerate(
+                        zip(sv_relevant[:-1], sv_relevant[1:], fluxes)):
+                    # compute overlap fraction
+                    latest_start = max(sc_start, rel_start)
+                    earliest_end = min(sc_end, rel_end)
+                    overlap = max((earliest_end - latest_start).total_seconds(), 0)
 
-                # compute the offset (the value to be weighted), in seconds,
-                # from the start of the science exposure
-                # FIXME remove magic number (and comment where it's from)
-                offset = 42.0  # init value: overridden if overlap, else 0-scaled
-                if sc_start <= sv_start and sv_end <= sc_end:
-                    offset = (sv_start - sc_start).seconds + sv_duration / 2.0
-                elif sv_start < sc_start:
-                    offset = overlap * sv_duration / 2.0
-                elif sv_end > sc_end:
-                    offset = overlap * sv_duration / 2.0
-                    offset += (sv_start - sc_start).seconds
+                    if overlap > 0:
+                        weights[i, j] = flux * overlap
+                        effective_time = latest_start + 0.5 * (earliest_end -
+                                                               latest_start)
+                        offset = (effective_time - sc_start).total_seconds()
+                        accum_weighted_time += weights[i, j] * offset
 
-                # add flux-weighted offset (plus weight itself) to accumulators
-                flux = _total_obj_flux(log, res, ut_date, filename, ext.data, sv_flat, binning=binning)
-                weight = flux * overlap
-                sum_of_weights += weight
-                accum_weighted_time += weight * offset
+                sum_of_weights = weights[i].sum()
+                avg_epochs.append(sc_start + timedelta(
+                    seconds=accum_weighted_time / sum_of_weights))
+                weights[i] /= sum_of_weights
 
-            # final mean exposure epoch computation
-            if sum_of_weights > 0.0:
-                mean_offset = accum_weighted_time / sum_of_weights
-                mean_offset = timedelta(seconds=mean_offset)
-                # write the mean exposure epoch into the PHU
-                sc_start = parse_timestr(ad.phu['UTSTART'])
-                mean_epoch = sc_start + mean_offset
-                ad.phu['AVGEPOCH'] = (  # hope this keyword string is ok
-                    mean_epoch.strftime("%H:%M:%S.%f")[:-3],
-                    'Mean Exposure Epoch')
+            sciexp['AVGEPOCH'] = [t.isoformat() for t in avg_epochs]
+            for i, flux in enumerate(fluxes):
+                sciexp[f"ext{i}"] = weights[:, i]
+                # This could be useful for debugging purposes
+                ad[i].hdr['SLITFLUX'] = (flux, "Measured slit viewer flux")
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -294,56 +293,95 @@ class GHOSTSlit(GHOST):
 
     def stackFrames(self, adinputs=None, **params):
         """
-        Combines all the extensions in a slit-viewer frame(s) into a single-
-        extension AD instance.
+        Combines the extensions in a slit-viewer frame into one or more
+        single-extension AD instances. This is a straight weighted addition
+        according to information stored in each row of the SCIEXP table.
 
-        This primitive wraps the higher level
-        :meth:`geminidr.core.primitives_stack.Stack.stackFrames` primitive,
-        but rather than stacking separate files to form a combined file,
-        it is used to stack the extensions within each slit viewer 'image'
-        (collection of exposures).
-
-        This primitive can accept the same parameter set as
-        :meth:`geminidr.core.primitives_stack.Stack.stackFrames`.
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        create_multiple_stacks: bool
+            create multiple output frames based on an attached SCIEXP table?
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        # Keep hold of the first SLITV input's filename so the stacked
-        # output has a sensible name.
-        first_filename = None
+        create_multiple = params.pop("create_multiple_stacks")
 
-        # CJS: This could be rewritten to produce one output AD for each
-        # input AD by combining the extensions from each input separately.
-        # That behaviour would not need the addToList/getList primitives.
-        # But this is a better match to how the original code behaved.
         adoutputs = []
-        extinputs = []
         for ad in adinputs:
             # CJS: Worth doing this check, I feel
             if 'SLITV' not in ad.tags:
-                log.warning("{} is not a slit-viewer image. Continuing.".
-                            format(ad.filename))
+                log.warning(f"{ad.filename} is not a slit-viewer image. Continuing.")
                 adoutputs.append(ad)
                 continue
 
-            if not first_filename:
-                first_filename = ad.phu['ORIGNAME'] or ad.filename
-            # DQ plane is still needed so call stackFrames for ease
-            # CJS: This is ugly but should go with pythonic stacking
-            for index, ext in enumerate(ad, start=1):
-                adext = deepcopy(ext)
-                filename = filename_updater(ad, suffix='{:04d}'.format(index))
-                adext.filename = filename
-                adext.phu['ORIGNAME'] = filename
-                extinputs.append(adext)
+            exptime = ad.exposure_time()
+            next = len(ad)
+            hdr = ad[0].hdr
+            on_sky = 'CAL' not in ad.tags or 'STD' in ad.tags
+            # Want extension number to be last axis for broadcasting
+            all_data = np.moveaxis(np.array([ext.data for ext in ad]), 0, 2)
+            if any(ext.mask is None for ext in ad):
+                all_mask = None
+            else:
+                all_mask = np.moveaxis(np.array([ext.mask for ext in ad]), 0, 2)
+            if any(ext.variance is None for ext in ad):
+                all_var = None
+            else:
+                all_var = np.moveaxis(np.array([ext.variance for ext in ad]), 0, 2)
 
-        adout = super(GHOSTSlit, self).stackFrames(extinputs, **params)[0]
-        if first_filename:
-            adout.phu['ORIGNAME'] = first_filename
-        gt.mark_history(adout, primname=self.myself(), keyword=timestamp_key)
-        adoutputs.append(adout)
+            # extract_multiple is ignored if not an on-sky observation
+            if create_multiple and on_sky:
+                try:
+                    sciexp_table = ad.SCIEXP
+                except AttributeError:
+                    log.warning("create_multiple_stacks is set to True but "
+                                f"there is no SCIEXP table in {ad.filename}")
+                else:
+                    log.stdinfo(f"Processing {ad.filename}:")
+                    hdr = ad[0].hdr
+                    for i, row in enumerate(sciexp_table, start=1):
+                        adout = astrodata.create(ad.phu)
+                        scale_factors = np.array(list(row.values())[-next:])
+                        use_for = row['for']
+                        log.stdinfo("  Stacking extensions for spectrograph "
+                                    f"exposure(s) {use_for}")
+                        log.debug(f"  Scale factors for {use_for}: {scale_factors}")
+                        data, var, mask = _scale_and_stack(
+                            all_data, all_var, all_mask, scale_factors)
+                        adout.append(astrodata.NDAstroData(
+                            data=data, mask=mask, meta={'header': hdr.copy()}))
+                        adout[0].nddata.variance = var  # FIXME: can instantiate in 3.1
+                        # Update keywords for calibration association purposes
+                        for kw, value in zip(('DATE-OBS', 'UTSTART'),
+                                             row['UTSTART'].split("T")):
+                            adout.phu[kw] = value
+                        adout.phu.set('ORIGTEXP', exptime, "Original exposure time")
+                        adout.phu[ad._keyword_for('exposure_time')] = row['exptime']
+                        adout.filename = filename_updater(
+                            ad, suffix=f"_{use_for.replace(',', '_')}", strip=True)
+                        adout.phu['ORIGNAME'] = adout.filename
+                        adoutputs.append(adout)
+                    continue
+
+            # Regular stacking of all extensions (bypassed if SCIEXP is used)
+            adout = astrodata.create(ad.phu)
+            data, var, mask = _scale_and_stack(
+                all_data, all_var, all_mask, np.full((next,), 1./next))
+            adout.append(astrodata.NDAstroData(
+                data=data, mask=mask, meta={'header': hdr.copy()}))
+            adout[0].nddata.variance = var  # FIXME: can instantiate in 3.1
+            adout.phu['ORIGNAME'] = ad.phu['ORIGNAME'] or ad.filename
+            adoutputs.append(adout)
+
+        for ad in adoutputs:
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            # This stuff is in the PHU so delete vestigial info from extensions
+            for kw in ('DATE-OBS', 'UTSTART', 'UTEND', 'EXPUTST', 'EXPUTEND'):
+                del ad[0].hdr[kw]
         return adoutputs
 
 ##############################################################################
@@ -379,10 +417,50 @@ def _mad(data, axis=None, keepdims=False):
     float
         The MAD of the data, along the requested axis.
     """
-    return np.median(np.absolute(data - np.median(data,
-                                                  axis=axis,
-                                                  keepdims=True)), axis=axis,
-                     keepdims=keepdims)
+    return np.ma.median(np.absolute(data - np.ma.median(
+        data, axis=axis, keepdims=True)), axis=axis, keepdims=keepdims)
+
+
+def _scale_and_stack(all_data, all_var=None, all_mask=None, scale_factors=None):
+    """
+    Stacks multiple data planes with predetermined scalings. The variance
+    and masks are propagated if they exists: in the case of the mask, the
+    bitwise_or operation is performed on all data planes with non-zero scale
+    factors.
+
+    Parameters
+    ----------
+    all_data: float array (ny, nx, next)
+        array of data from all extensions
+    all_data: variance array (ny, nx, next) or None
+        array of variance from all extensions
+    all_mask: uint16 array (ny, nx, next) or None
+        array of masks from all extensions
+    scale_factors: float array (next)
+        array of scale factors to apply to each extension
+
+    Returns
+    -------
+    out_data: float array (ny, nx)
+        output data array
+    out_var: float array (ny, nx) or None
+        output variance array
+    out_mask: uint16 array (ny, nx) or None
+        output mask
+    """
+    out_data = np.sum(all_data * scale_factors, axis=-1)
+    if all_var is None:
+        out_var = None
+    else:
+        out_var = np.sum(all_var * scale_factors**2, axis=-1)
+    if all_mask is None:
+        out_mask = None
+    else:
+        out_mask = np.bitwise_or.reduce(
+            all_mask & np.where(scale_factors > 0, -1, 0),
+            axis=-1).astype(all_mask.dtype)
+    return out_data, out_var, out_mask
+
 
 def _total_obj_flux(log, res, ut_date, filename, data, flat_data=None, binning=2):
     """
