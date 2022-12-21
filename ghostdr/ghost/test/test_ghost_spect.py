@@ -75,7 +75,6 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Needs Checking')
     @pytest.fixture(scope='class')
     def data_applyFlatBPM(self, tmpdir_factory):
         """
@@ -116,6 +115,7 @@ class TestGhost:
         except OSError:
             pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_applyFlatBPM(self, data_applyFlatBPM):
         """
         Checks to make:
@@ -186,6 +186,7 @@ class TestGhost:
         ad[0].WAVL = np.random.rand(*ad[0].data.shape)
         return ad, copy.deepcopy(ad[0].WAVL), tmpsubdir
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_barycentricCorrect(self, data_barycentricCorrect):
         """
         Checks to make:
@@ -605,6 +606,7 @@ class TestGhost:
 
         assert polyfit_file is not None, "Could not find polyfit file"
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test__get_polyfit_filename_errors(self, data__get_polyfit_filename):
         """
         Check passing an invalid calib. type throws an error
