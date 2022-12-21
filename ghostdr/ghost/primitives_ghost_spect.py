@@ -1050,7 +1050,6 @@ class GHOSTSpect(GHOST):
         timestamp_key = self.timestamp_keys[self.myself()]
 
         for ad in adinputs:
-
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by interpolateAndCombine".
@@ -1063,12 +1062,7 @@ class GHOSTSpect(GHOST):
                 ))
                 continue
 
-            # MCW, 180501 - Keep initial data, append interp'd data
-
-            ad_interp = deepcopy(ad)
-
-            for i, ext in enumerate(ad):
-
+            for ext in ad:
                 # Determine the wavelength bounds of the file
                 min_wavl, max_wavl = np.min(ext.WAVL), np.max(ext.WAVL)
                 logspacing = np.median(
@@ -1123,17 +1117,12 @@ class GHOSTSpect(GHOST):
                 # pdb.set_trace()
 
                 # Can't use .reset without looping through extensions
-                ad_interp[0].data = spec_final
-                ad_interp[0].variance = var_final
-                ad_interp[0].WAVL = wavl_grid
-                try:
-                    del ad_interp[0].WGT
-                except AttributeError:
-                    pass
-                ad_interp[0].hdr['DATADESC'] = (
-                    'Interpolated data',
-                    self.keyword_comments['DATADESC'], )
-                ad.append(ad_interp[i])
+                ad.append(astrodata.NDAstroData(data=spec_final,
+                                                meta={'header': deepcopy(ext.hdr)}))
+                ad[-1].variance = var_final
+                ad[-1].WAVL = wavl_grid
+                ad[-1].hdr['DATADESC'] = ('Interpolated data',
+                                          self.keyword_comments['DATADESC'])
 
             # Timestamp & update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
