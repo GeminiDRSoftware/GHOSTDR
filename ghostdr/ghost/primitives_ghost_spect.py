@@ -1226,7 +1226,8 @@ class GHOSTSpect(GHOST):
                 xpars=xpars[0].data
             )
 
-            flat_conv = signal.medfilt2d(flat_conv, (5, 5))
+            #flat_conv = signal.medfilt2d(flat_conv, (5, 5))
+            flat_conv = nd.gaussian_filter(flat_conv, (5, 0))
 
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
