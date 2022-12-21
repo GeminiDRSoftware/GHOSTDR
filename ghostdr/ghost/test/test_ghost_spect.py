@@ -75,6 +75,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     @pytest.fixture(scope='class')
     def data_applyFlatBPM(self, tmpdir_factory):
         """
@@ -168,6 +169,7 @@ class TestGhost:
                                                 "timestamp-mark the " \
                                                 "output file"
 
+    @pytest.mark.skip(reason='Needs Checking')
     @pytest.fixture(scope='class')
     def data_barycentricCorrect(self, tmpdir_factory):
         """
@@ -217,6 +219,7 @@ class TestGhost:
                                                       "timestamp-mark the " \
                                                       "output file"
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_clipSigmaBPM(self, tmpdir):
         """
         Checks to make:
@@ -268,6 +271,8 @@ class TestGhost:
                                  [1, 2, 4, 8, ],  # y binning
                              ]))
                              )
+
+    @pytest.mark.skip(reason='Needs Checking')
     def test_darkCorrect_rebin(self, xbin, ybin, tmpdir):
         """
         Checks to make:
@@ -308,6 +313,7 @@ class TestGhost:
         except OSError:
             pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_darkCorrect_errors(self, tmpdir):
         tmpsubdir = tmpdir.mkdir('ghost_dcerrors')
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
@@ -340,6 +346,7 @@ class TestGhost:
         except OSError:
             pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_darkCorrect(self, tmpdir):
         tmpsubdir = tmpdir.mkdir('ghost_darkcorr')
         os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
@@ -513,6 +520,7 @@ class TestGhost:
         except OSError:
             pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_standardizeStructure(self, tmpdir):
         """
         Checks to make:
@@ -555,6 +563,7 @@ class TestGhost:
         """
         pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     @pytest.fixture(scope='class')
     def data__get_polyfit_filename(self, tmpdir_factory):
         """
@@ -629,6 +638,7 @@ class TestGhost:
         ad = self.generate_minimum_file()
         return ad, tmpsubdir
 
+    @pytest.mark.skip(reason='Needs Checking')
     @pytest.mark.parametrize('ra,dec,dt,known_corr', [
         (90., -30., '2018-01-03 15:23:32', 0.999986388827),
         (180., -60., '2018-11-12 18:35:15', 1.00001645007),
@@ -666,6 +676,7 @@ class TestGhost:
                 known_corr, corr_fact,
             )
 
+    @pytest.mark.skip(reason='Needs Checking')
     @pytest.mark.parametrize('return_wavl,units', [
         (True, u.dimensionless_unscaled,),
         (False, u.m / u.s,),

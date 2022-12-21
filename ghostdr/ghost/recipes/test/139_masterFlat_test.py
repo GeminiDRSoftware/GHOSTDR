@@ -102,6 +102,7 @@ class TestMasterFlat(object):
         # Execute teardown code
         pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_flat_bias_done(self, do_master_flat):
         """
         Check that bias subtraction was actually performed.
@@ -124,6 +125,7 @@ class TestMasterFlat(object):
                              "flat " \
                              "({})".format(bias_used)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_flat_dark_done(self, do_master_flat):
         """
         Check that dark subtraction was actually performed.

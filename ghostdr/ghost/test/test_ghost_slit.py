@@ -94,6 +94,7 @@ class TestGhostSlit:
         except OSError:
             pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_CRCorrect(self, create_slit_package):
         """
         Checks to make:
