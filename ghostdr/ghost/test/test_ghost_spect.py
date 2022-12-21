@@ -9,7 +9,7 @@ from __future__ import division
 import os
 import numpy as np
 import astrodata
-import gemini_instruments
+import ghost_instruments
 from gempy.utils import logutils
 from six.moves import range
 
