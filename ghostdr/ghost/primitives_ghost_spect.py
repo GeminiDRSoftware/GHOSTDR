@@ -19,6 +19,7 @@ from astropy.time import Time
 from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
+from astropy.modeling import fitting
 from scipy import interpolate
 import scipy.ndimage as nd
 from pysynphot import observation, spectrum
@@ -32,6 +33,7 @@ from gempy.gemini import gemini_tools as gt
 
 from .polyfit import GhostArm, Extractor, SlitView
 from .polyfit.ghost import GhostArm
+from .polyfit.polyspect import WaveModel
 
 from .primitives_ghost import GHOST, filename_updater
 
@@ -1352,8 +1354,23 @@ class GHOSTSpect(GHOST):
             #lines_out is now a long vector of many parameters, including the 
             #x and y position on the chip of each line, the order, the expected 
             #wavelength, the measured line strength and the measured line width.
-            fitted_params, wave_and_resid = arm.read_lines_and_fit(
-                wpars[0].data, lines_out)
+            #fitted_params, wave_and_resid = arm.read_lines_and_fit(
+            #    wpars[0].data, lines_out)
+            y_values, waves, orders = lines_out[:, 1], lines_out[:, 0], lines_out[:, 3]
+            m_init = WaveModel(model=wpars[0].data, arm=arm)
+            fit_it = fitting.FittingWithOutlierRemoval(
+                fitting.LevMarLSQFitter(), sigma_clip, maxiters=1)
+            m_final, mask = fit_it(m_init, y_values, orders, waves)
+            rms = np.std((m_final(y_values, orders) - waves)[~mask])
+            print(f"Fit residual RMS (Angstroms): {rms:6.3f}")
+            if np.any(mask):
+                print("The following lines were rejected:")
+                for yval, order, wave, m in zip(y_values, orders, waves, mask):
+                    if m:
+                        print(f"    Order {int(order):2d} pixel {yval:6.1f} wave {wave}")
+
+            fitted_params = m_final.parameters.reshape(wpars[0].data.shape)
+            m_final.plotit(y_values, orders, waves, mask)
 
             # CJS: Append the WFIT as an extension. It will inherit the
             # header from the science plane (including irrelevant/wrong
