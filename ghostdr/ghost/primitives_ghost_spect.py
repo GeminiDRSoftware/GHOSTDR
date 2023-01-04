@@ -1362,7 +1362,7 @@ class GHOSTSpect(GHOST):
                 fitting.LevMarLSQFitter(), sigma_clip, maxiters=1)
             m_final, mask = fit_it(m_init, y_values, orders, waves)
             rms = np.std((m_final(y_values, orders) - waves)[~mask])
-            print(f"Fit residual RMS (Angstroms): {rms:6.3f}")
+            print(f"Fit residual RMS (Angstroms): {rms:7.4f}")
             if np.any(mask):
                 print("The following lines were rejected:")
                 for yval, order, wave, m in zip(y_values, orders, waves, mask):
