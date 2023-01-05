@@ -1287,6 +1287,7 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        sfx = params["suffix"]
 
         # import pdb; pdb.set_trace()
 
@@ -1378,6 +1379,7 @@ class GHOSTSpect(GHOST):
             ad[0].WFIT = fitted_params
 
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=sfx, strip=True)
 
         return adinputs
 
