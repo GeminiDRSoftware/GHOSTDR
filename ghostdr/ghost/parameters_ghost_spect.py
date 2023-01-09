@@ -105,10 +105,9 @@ class fitWavelengthConfig(config.Config):
                           optional=True)
     flat = config.ListField("Flat field", (str, ad), None,
                             optional=True, single=True)
-    # inspect_fit = config.Field("Use matplotlib to inspect fit quality?", bool,
-    #                            False, optional=True)
-    plot_fit = config.Field("Use matplotlib to inspect fit quality?", bool,
-                            False, optional=True)
+    plot1d = config.Field("Produce 1D plots of each order to inspect fit?",
+                          bool, False)
+    plot2d = config.Field("Produce 2D plot to inspect fit?", bool, False)
 
 
 class flatCorrectConfig(config.Config):

@@ -20,6 +20,7 @@ import matplotlib.cm as cm
 from matplotlib.widgets import Slider, Button
 import scipy.optimize as op
 from scipy.interpolate import interp1d
+from matplotlib import pyplot as plt
 
 from astropy.modeling import Fittable2DModel, Parameter
 
@@ -1257,12 +1258,11 @@ class WaveModel(Fittable2DModel):
             evaluation[i] = polyp(y_values[i] - self.szy // 2)
         return evaluation
 
-    def plotit(self, x, y, waves, mask=None):
+    def plotit(self, x, y, waves, mask=None, filename='wavecal.pdf'):
         colors = 'rgbcmk'
         if mask is None:
             mask = np.zeros_like(x, dtype=bool)
         # waves, orders, final_resid
-        from matplotlib import pyplot as plt
         fig, ax = plt.subplots()
         orders = np.unique(y).astype(int)
         residuals = self.evaluate(x, y, *self.parameters) - waves
@@ -1284,4 +1284,4 @@ class WaveModel(Fittable2DModel):
             ax.set_ylim(max(orders) + 2, min(orders) - 2)
         else:
             ax.set_ylim(min(orders) - 2, max(orders) + 2)
-        fig.savefig('wavecal.pdf', bbox_inches='tight')
+        fig.savefig(filename, bbox_inches='tight')
