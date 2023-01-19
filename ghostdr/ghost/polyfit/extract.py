@@ -90,14 +90,17 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
 
     y_hat = np.maximum(np.dot(x_mat, beta), 0)
 
-    new_bad = np.where(col_data > y_hat + nsigma * np.sqrt(var_use))[0]
+    # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
+    limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),
+                                   size=3, mode='constant')
+    new_bad = np.where(col_data > limit)[0]
     if debug and len(new_bad) > 0:
         plt.clf()
         plt.plot(y_hat, label='exp')
         plt.plot(col_data, label='data')
-        plt.plot(y_hat + nsigma * np.sqrt(var_use), label='limit')
+        plt.plot(limit, label='limit')
         plt.pause(.001)
-        
+
     return new_bad
 
 
@@ -634,7 +637,7 @@ class Extractor(object):
                 # look different to the model.
                 additional_crs = find_additional_crs(phi, slitim_offsets,
                                                      col_data, col_inv_var,
-                                                     debug=debug_crs)
+                                                     debug=False)
                 self.num_additional_crs += len(additional_crs)
                                                      
                 #Insist that variance if physical. If the model has a significant error

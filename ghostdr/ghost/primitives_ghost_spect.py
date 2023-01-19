@@ -1291,6 +1291,10 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
         sfx = params["suffix"]
+        min_snr = params["min_snr"]
+        sigma = params["sigma"]
+        max_iters = params["max_iters"]
+        radius = params["radius"]
         plot1d = params["plot1d"]
         plot2d = params["plot2d"]
 
@@ -1344,28 +1348,32 @@ class GHOSTSpect(GHOST):
             arm = GhostArm(arm=ad.arm(), mode=ad.res_mode())
 
             # Find locations of all significant peaks in all orders
-            hw = 12
             nm, ny, _ = ad[0].data.shape
             all_peaks = []
             pixels = np.arange(ny)
             for m_ix, flux in enumerate(ad[0].data[:, :, 0]):
-                nmad = median_filter(
-                    abs(flux - median_filter(flux, size=2 * hw + 1)),
-                    size=2 * hw + 1)
-                peaks = tracing.find_peaks(flux.copy(), widths=np.arange(3, 5, 0.1),
-                                           variance=nmad * nmad, min_snr=20, min_sep=5,
+                try:
+                    variance = ad[0].variance[m_ix, :, 0]
+                except TypeError:  # variance is None
+                    nmad = median_filter(
+                        abs(flux - median_filter(flux, size=2*radius+1)),
+                        size=2*radius+1)
+                    variance = nmad * nmad
+                peaks = tracing.find_peaks(flux.copy(), widths=np.arange(2.5, 4.5, 0.1),
+                                           variance=variance, min_snr=min_snr, min_sep=5,
                                            pinpoint_index=None, reject_bad=False)
                 fit_g = fitting.LevMarLSQFitter()
                 these_peaks = []
                 for x in peaks[0]:
-                    good = np.zeros_like(nmad, dtype=bool)
-                    good[int(x - hw):int(x + hw + 1)] = True
+                    good = np.zeros_like(flux, dtype=bool)
+                    good[int(x - radius):int(x + radius + 1)] = True
                     g_init = models.Gaussian1D(mean=x, amplitude=flux[good].max(),
                                                stddev=1.5)
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         g = fit_g(g_init, pixels[good], flux[good])
-                    these_peaks.append(g)
+                    if g.stddev.value < 5:  # avoid clearly bad fits
+                        these_peaks.append(g)
                 all_peaks.append(these_peaks)
 
             # Find lines based on the extracted flux and the arc wavelengths.
@@ -1384,7 +1392,8 @@ class GHOSTSpect(GHOST):
 
             for iter in (0, 1):
                 # Only cross-correlate on the first pass
-                lines_out = extractor.match_lines(all_peaks, arcwaves, hw=hw, xcor=not bool(iter))
+                lines_out = extractor.match_lines(all_peaks, arcwaves,
+                                                  hw=radius, xcor=not bool(iter))
                 #lines_out is now a long vector of many parameters, including the
                 #x and y position on the chip of each line, the order, the expected
                 #wavelength, the measured line strength and the measured line width.
@@ -1392,7 +1401,8 @@ class GHOSTSpect(GHOST):
                 #    wpars[0].data, lines_out)
                 y_values, waves, orders = lines_out[:, 1], lines_out[:, 0], lines_out[:, 3]
                 fit_it = fitting.FittingWithOutlierRemoval(
-                    fitting.LevMarLSQFitter(), sigma_clip, maxiters=1)
+                    fitting.LevMarLSQFitter(), sigma_clip, sigma=sigma,
+                    maxiters=max_iters)
                 m_final, mask = fit_it(m_init, y_values, orders, waves)
                 arm.spectral_format_with_matrix(
                     flat[0].XMOD, m_final.parameters.reshape(wmod_shape),
@@ -2723,7 +2733,7 @@ def plot_extracted_spectra(ad, arm, all_peaks, lines_out, mask=None, nrows=4):
             ax.plot(pixels, flux, color='darkgrey', linestyle='-', linewidth=1)
             ymax = flux.max()
             for g in peaks:
-                x = g.mean.value + np.arange(-10, 11)
+                x = g.mean.value + np.arange(-3, 3.01, 0.1) * g.stddev.value
                 ax.plot(x, g(x), 'k-', linewidth=1)
                 ymax = max(ymax, g.amplitude.value)
             for (wave, yval, xval, ord, amp, fwhm), m in zip(lines_out, mask):
