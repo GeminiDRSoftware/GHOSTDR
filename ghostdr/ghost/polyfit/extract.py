@@ -658,7 +658,6 @@ class Extractor(object):
                 # mathematics assumes that pixel variance is the same for all objects.
                 # A sanity check is needed, but this isn't quite it, as 
                 # minimum_variance can't be object-dependent.
-                col_inv_var_mat = np.reshape(col_inv_var.repeat(no), (nx_cutout, no))
                 if False:
                     good_pix = np.where(col_inv_var != 0)[0]
                     
@@ -678,6 +677,8 @@ class Extractor(object):
                         else:
                             self.badpixmask[x_ix[additional_crs], j] |= \
                                 self.cr_flag
+
+                col_inv_var_mat = np.reshape(col_inv_var.repeat(no), (nx_cutout, no))
 
                 # Fill in the "c" matrix and "b" vector from Sharp and Birchall
                 # equation 9 Simplify things by writing the sum in the
