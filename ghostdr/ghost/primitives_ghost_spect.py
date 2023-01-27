@@ -2440,14 +2440,14 @@ class GHOSTSpect(GHOST):
         # appear to be relevant ones in gemini_instruments yet
         dt_start = datetime.combine(
             datetime.strptime(ad.phu.get('DATE-OBS'), '%Y-%m-%d').date(),
-            datetime.strptime(ad.phu.get('UTSTART'), '%H:%M:%S.%f').time(),
+            datetime.strptime(ad.phu.get('UTSTART'), '%H:%M:%S%f').time(),
         )
 
         corr_facts = []
         for ext in ad:
 
             dt_midp = dt_start + timedelta(
-                seconds=ext.exptime()/2.0
+                seconds=ad.phu.get('EXPOSED')/2.0
             )
             dt_midp = Time(dt_midp)
 
