@@ -295,12 +295,16 @@ class GHOSTSlit(GHOST):
         """
         Combines the extensions in a slit-viewer frame into one or more
         single-extension AD instances. This is a straight weighted addition
-        according to information stored in each row of the SCIEXP table.
+        according to information stored in each row of the SCIEXP table. If
+        there is no SCIEXP table, or create_multiple_stacks is False, then
+        all the extensions are combined, with a "median" option.
 
         Parameters
         ----------
         suffix: str
             suffix to be added to output files
+        operation: str (mean|median)
+            combining operation ("median" is not allowed for a weighted combne)
         create_multiple_stacks: bool
             create multiple output frames based on an attached SCIEXP table?
         """
@@ -308,7 +312,8 @@ class GHOSTSlit(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        create_multiple = params.pop("create_multiple_stacks")
+        operation = params["operation"]
+        create_multiple = params["create_multiple_stacks"]
 
         adoutputs = []
         for ad in adinputs:
@@ -321,7 +326,7 @@ class GHOSTSlit(GHOST):
             exptime = ad.exposure_time()
             next = len(ad)
             hdr = ad[0].hdr
-            on_sky = 'CAL' not in ad.tags or 'STD' in ad.tags
+            on_sky = 'CAL' not in ad.tags or 'STANDARD' in ad.tags
             # Want extension number to be last axis for broadcasting
             all_data = np.moveaxis(np.array([ext.data for ext in ad]), 0, 2)
             if any(ext.mask is None for ext in ad):
@@ -341,6 +346,9 @@ class GHOSTSlit(GHOST):
                     log.warning("create_multiple_stacks is set to True but "
                                 f"there is no SCIEXP table in {ad.filename}")
                 else:
+                    if operation == "median":
+                        log.warning("operation='median' is invalid when "
+                                    "creating multiple stacks")
                     log.stdinfo(f"Processing {ad.filename}:")
                     hdr = ad[0].hdr
                     for i, row in enumerate(sciexp_table, start=1):
@@ -371,6 +379,9 @@ class GHOSTSlit(GHOST):
             adout = astrodata.create(ad.phu)
             data, var, mask = _scale_and_stack(
                 all_data, all_var, all_mask, np.full((next,), 1./next))
+            if operation == "median":  # we keep mask but modify data and var
+                data = np.median(all_data, axis=2)
+                var *= 0.5 * np.pi  # according to Laplace (see nddops.py)
             adout.append(astrodata.NDAstroData(
                 data=data, mask=mask, meta={'header': hdr.copy()}))
             adout[0].nddata.variance = var  # FIXME: can instantiate in 3.1

@@ -25,5 +25,9 @@ class processSlitsConfig(config.Config):
 
 class stackFramesConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_stack", optional=True)
+    operation = config.ChoiceField("Averaging operation", str,
+                                   allowed={"mean": "arithmetic mean",
+                                            "median": "median"},
+                                   default="mean", optional=False)
     create_multiple_stacks = config.Field(
         "Create a stack for each spectrograph observation? (ignored for calibrations)", bool, True)

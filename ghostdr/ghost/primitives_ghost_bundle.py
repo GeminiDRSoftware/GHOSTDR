@@ -59,7 +59,7 @@ class GHOSTBundle(GHOST):
             log.stdinfo(f"Unbundling {ad.filename}")
 
             # No SCIEXP table for biases or observations of lamps
-            on_sky = 'CAL' not in ad.tags or 'STD' in ad.tags
+            on_sky = 'CAL' not in ad.tags or 'STANDARD' in ad.tags
             sci_exposures = []
             extns = [x for x in ad if (x.arm() == 'slitv' and x.shape)]
             if len(extns) > 0:
