@@ -392,6 +392,14 @@ class AstroDataGhost(AstroDataGemini):
             return [f"{ext.detector_name()}, {ext.hdr.get('AMPNAME')}" for ext in self]
 
     @astro_data_descriptor
+    @return_dict_for_bundle
+    def binning(self):
+        """
+        Returns an "MxN"-style string because CJS is fed up with not having this!
+        """
+        return f"{self.detector_x_bin()}x{self.detector_y_bin()}"
+
+    @astro_data_descriptor
     def calibration_key(self):
         """
         Returns a suitable calibration key for GHOST, which includes the arm.
