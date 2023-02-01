@@ -20,7 +20,7 @@ from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
 from specutils import Spectrum1D
-from specutils.manipulation import FluxConservingResampler, LinearInterpolatedResampler
+from specutils.manipulation import FluxConservingResampler
 from scipy import interpolate
 import scipy.ndimage as nd
 
@@ -2634,6 +2634,7 @@ class GHOSTSpect(GHOST):
         new_wavl_u = new_wavl * waveunits
         fluxcon = FluxConservingResampler(extrapolation_treatment='zero_fill')
         new_spec_fluxcon = fluxcon(input_spec, new_wavl_u)
+        import pdb; pdb.set_trace()
         return np.asarray(new_spec_fluxcon.flux.data)
 
 
