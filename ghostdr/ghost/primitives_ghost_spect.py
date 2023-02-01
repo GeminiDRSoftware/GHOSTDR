@@ -19,9 +19,10 @@ from astropy.time import Time
 from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
+from specutils import Spectrum1D
+from specutils.manipulation import FluxConservingResampler, LinearInterpolatedResampler
 from scipy import interpolate
 import scipy.ndimage as nd
-from pysynphot import observation, spectrum
 
 import astrodata
 
@@ -2580,7 +2581,8 @@ class GHOSTSpect(GHOST):
 
     @staticmethod
     def _regrid_spect(orig_data, orig_wavl, new_wavl,
-                      waveunits='angstrom'):
+                      dataunits=u.Unit('erg cm^2 s-1 AA-1'),
+                      waveunits=u.Unit('AA')):
         """
         Re-grid a one-dimensional input spectrum so as to conserve total flux.
 
@@ -2588,10 +2590,8 @@ class GHOSTSpect(GHOST):
         designed for data with a wavelength dependence in the data units
         (e.g. erg/cm^2/s/A or similar).
 
-        This function utilises the :any:`pysynphot` package.
-
-        This function has been adapted from:
-        http://www.astrobetter.com/blog/2013/08/12/python-tip-re-sampling-spectra-with-pysynphot/
+        This function is based on:
+        https://specutils.readthedocs.io/en/stable/manipulation.html#resampling
 
         Parameters
         ----------
@@ -2601,22 +2601,40 @@ class GHOSTSpect(GHOST):
             The corresponding wavelength values for the original spectrum data
         new_wavl : 1D numpy array or list
             The new wavelength values to re-grid the spectrum data to
-        waveunits : str
-            The units of the wavelength scale. Defaults to 'angstrom'.
+        dataunits : :any:`astropy.units.Unit`
+            The units of the data array. Defaults to
+            `u.Unit('erg cm^2 s-1 AA-1')`.
+        waveunits : :any:`astropy.units.Unit`
+            The units of the wavelength scale. Defaults to `u.Unit('AA')`.
 
         Returns
         -------
         egrid_data : 1D numpy array
-            The spectrum re-gridded onto the new_wavl wavelength points.
-            Will have the same shape as new_wavl.
+            The spectrum re-gridded onto the `new_wavl` wavelength points.
+            Will have the same shape as `new_wavl`, and the same data type as
+            `dataunits`.
         """
+        # Input checking
+        try:
+            assert isinstance(dataunits, u.UnitBase), "dataunits must be " \
+                                                      "defined using " \
+                                                      "astropy.units"
+            assert isinstance(waveunits, u.UnitBase), "waveunits must be " \
+                                                      "defined using " \
+                                                      "astropy.units"
+        except AssertionError as e:
+            raise ValueError(str(e))
 
-        spec = spectrum.ArraySourceSpectrum(wave=orig_wavl, flux=orig_data)
-        f = np.ones(orig_wavl.shape)
-        filt = spectrum.ArraySpectralElement(orig_wavl, f, waveunits=waveunits)
-        obs = observation.Observation(spec, filt, binset=new_wavl,
-                                      force='taper')
-        return obs.binflux
+        # Create unit-ized input arrays
+        lamb = orig_wavl * waveunits
+        flux = orig_data * dataunits
+        input_spec = Spectrum1D(spectral_axis=lamb, flux=flux)
+
+        # Do the resampling
+        new_wavl_u = new_wavl * waveunits
+        fluxcon = FluxConservingResampler(extrapolation_treatment='zero_fill')
+        new_spec_fluxcon = fluxcon(input_spec, new_wavl_u)
+        return np.asarray(new_spec_fluxcon.flux.data)
 
 
 def _construct_datetime(hdr):

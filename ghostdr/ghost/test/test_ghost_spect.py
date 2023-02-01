@@ -775,7 +775,7 @@ class TestGhost:
 
         gs = GHOSTSpect([])
         new_data = gs._regrid_spect(data, wavl, new_wavl,
-                                    waveunits='angstrom')
+                                    waveunits=u.Unit('angstrom'))
 
         assert new_data.shape == new_wavl.shape, "Data was not successfully " \
                                                  "reshaped to the new " \
