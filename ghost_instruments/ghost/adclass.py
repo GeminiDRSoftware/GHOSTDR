@@ -108,7 +108,7 @@ class AstroDataGhost(AstroDataGemini):
                           )
 
     def __iter__(self):
-        if self._single:
+        if self.is_single:
             yield self
         else:
             for n in range(len(self)):
