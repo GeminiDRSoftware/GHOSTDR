@@ -204,9 +204,8 @@ def _write_newfile(extns, suffix, base, log):
         If the ``extns`` parameter is :any:`None`, or empty
     """
     assert extns and len(extns) > 0
-    # Start with a copy of the base PHU
-    n = astrodata.create(copy.deepcopy(base.phu))
 
+    # Start with a copy of the base PHU
     # But also look for the extension with an empty data array,
     # because this is the real PHU from the original file before
     # it was mashed into a giant MEF.
@@ -214,10 +213,13 @@ def _write_newfile(extns, suffix, base, log):
         if (x.hdr.get('NAXIS') == 0) or (x.data.size == 0):
             phu = PrimaryHDU(data=None, header=copy.deepcopy(x.hdr))
             n = astrodata.create(phu)
+            break
+    else:
+        n = astrodata.create(copy.deepcopy(base.phu))
 
     # Copy some important keywords into each separate file if they
     # aren't already there
-    for kw in ['INSTRUME', 'TELESCOP', 'DATALAB', 'GEMPRGID', 'OBSID', 'UTC-OBS']:
+    for kw in ['INSTRUME', 'TELESCOP', 'DATALAB', 'GEMPRGID', 'OBSID', 'UTC-OBS', 'OBJECT']:
         try:
             if not n.phu.get(kw):
                 n.phu[kw] = base.phu.get(kw)
