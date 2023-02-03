@@ -63,8 +63,12 @@ class GHOSTBundle(GHOST):
             sci_exposures = []
             extns = [x for x in ad if (x.arm() == 'slitv' and x.shape)]
             if len(extns) > 0:
+                slit_images = True
                 ad_slit = _write_newfile(extns, 'slit', ad, log)
                 adoutputs.append(ad_slit)
+            else:
+                log.warning(f"{ad.filename} has no slit viewer images")
+                slit_images = False
 
             # now do non-slitv extensions
             extns = [x for x in ad if x.arm() != 'slitv']
@@ -77,7 +81,7 @@ class GHOSTBundle(GHOST):
                 # We want to attach a Table to the slitviewer file, that
                 # provides the start and end times of all science exposures
                 # to enable stacking of contemporaneous slit images later
-                if on_sky:
+                if on_sky and slit_images:
                     arm_exptime = ad_arm.exposure_time()
                     ut_start = ad_arm.ut_datetime()
                     ut_end = ut_start + timedelta(seconds=arm_exptime)
@@ -93,7 +97,7 @@ class GHOSTBundle(GHOST):
                         sci_exposures.append(exp_data)
 
             # Format and attach the table
-            if sci_exposures:
+            if sci_exposures and slit_images:
                 sci_exposures = [xtr[:2] + [x.isoformat() for x in xtr[2:]]
                                     for xtr in sci_exposures]
                 exposure_table = Table(names=("for", "exptime", "UTSTART", "UTEND"),
