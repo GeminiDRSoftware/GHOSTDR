@@ -1216,9 +1216,26 @@ class Polyspect(object):
 
 
 class WaveModel(Fittable2DModel):
+    """An astropy.modeling.Model subclass to hold the WAVEMOD"""
     _param_names = ()
 
     def __init__(self, name=None, meta=None, model=None, arm=None):
+        """
+        Set up a WAVEMOD for later fitting. It must be instantiated with an
+        initial set of parameters (they could be all zeros) so that the
+        degrees of the polynomials are known.
+
+        Parameters
+        ----------
+        name: str/None
+            name of model
+        meta: dict-like/None
+            additional items for the model
+        model: array
+            starting parameters for the WAVEMOD
+        arm: GhostArm instance
+            for the arm being fit
+        """
         self.y_degree, self.x_degree = model.shape
         self.m_ref = arm.m_ref
         self.szy = arm.szy
