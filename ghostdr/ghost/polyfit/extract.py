@@ -91,8 +91,9 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
     y_hat = np.maximum(np.dot(x_mat, beta), 0)
 
     # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
-    limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),
-                                   size=3, mode='constant')
+    #limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),
+    #                               size=3, mode='constant')
+    limit = y_hat + nsigma * np.sqrt(var_use)
     new_bad = np.where(col_data > limit)[0]
     if debug and len(new_bad) > 0:
         plt.clf()
@@ -394,8 +395,8 @@ class Extractor(object):
         return pixel_model
 
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,
-                      debug_crs=False, used_objects=[0,1], use_sky=True,
-                      vararray=None):
+                      use_sky=True, find_crs=True, debug_crs=False,
+                      used_objects=[0,1], vararray=None):
         """
         Extract flux by integrating down columns.
 
@@ -425,6 +426,9 @@ class Extractor(object):
             
         use_sky: book, optional
             In extraction, do we use sky (and therefore self-subtract)?
+
+        find_crs : bool
+            whether or not to call :any:`find_additional_crs`
 
         debug_crs : bool, optional
             Passed along as the ``debug`` parameter to
@@ -635,10 +639,13 @@ class Extractor(object):
 
                 # Search for additional cosmic rays here, by seeing if the data
                 # look different to the model.
-                additional_crs = find_additional_crs(phi, slitim_offsets,
-                                                     col_data, col_inv_var,
-                                                     debug=False)
-                self.num_additional_crs += len(additional_crs)
+                if find_crs:
+                    additional_crs = find_additional_crs(phi, slitim_offsets,
+                                                         col_data, col_inv_var,
+                                                         debug=False)
+                    self.num_additional_crs += len(additional_crs)
+                else:
+                    additional_crs = []
                                                      
                 #Insist that variance if physical. If the model has a significant error
                 #on any pixel, we don't want the weights to be completely wrong - this

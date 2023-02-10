@@ -926,9 +926,11 @@ class GHOSTSpect(GHOST):
             # - arcs require either "sky only" or "skyless" extraction;
             # - standards should only extract the actual profile in single
             #   object mode.
+            find_crs = True
             if 'ARC' in ad.tags:
                 objs_to_use = [[], [0, 1], ]
                 use_sky = [True, False, ]
+                find_crs = False
             elif 'PARTNER_CAL' in ad.tags:
                 objs_to_use = [[0, ],[1, ], ]
                 use_sky = [True, True, ]
@@ -956,7 +958,7 @@ class GHOSTSpect(GHOST):
                 DUMMY, _, extracted_weights = extractor.one_d_extract(
                     data=corrected_data, vararray=corrected_var,
                     correct_for_sky=params['sky_correct'],
-                    use_sky=s, used_objects=o,
+                    use_sky=s, used_objects=o, find_crs=find_crs
                 )
 
                 # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
@@ -1409,14 +1411,17 @@ class GHOSTSpect(GHOST):
                     spatpars[0].data, specpars[0].data, rotpars[0].data)
                 m_init = m_final
 
-            rms = np.std((m_final(y_values, orders) - waves)[~mask])
+            fitted_waves = m_final(y_values, orders)
+            rms = np.std((fitted_waves - waves)[~mask])
             nlines = y_values.size - mask.sum()
-            print(f"Fit residual RMS (Angstroms): {rms:7.4f} ({nlines} lines)")
+            log.stdinfo(f"Fit residual RMS (Angstroms): {rms:7.4f} ({nlines} lines)")
             if np.any(mask):
                 print("The following lines were rejected:")
-                for yval, order, wave, m in zip(y_values, orders, waves, mask):
+                for yval, order, wave, fitted, m in zip(
+                        y_values, orders, waves, fitted_waves, mask):
                     if m:
-                        print(f"    Order {int(order):2d} pixel {yval:6.1f} wave {wave}")
+                        log.stdinfo(f"    Order {int(order):2d} pixel {yval:6.1f} "
+                                    f"wave {wave:10.4f} (fitted wave {fitted:10.4f})")
 
             if plot2d:
                 fig, ax = plt.subplots()
@@ -2738,13 +2743,13 @@ def plot_extracted_spectra(ad, arm, all_peaks, lines_out, mask=None, nrows=4):
                 ymax = max(ymax, g.amplitude.value)
             for (wave, yval, xval, ord, amp, fwhm), m in zip(lines_out, mask):
                 if ord == order:
+                    kwargs = {"fontsize": 5, "rotation": 90,
+                              "color": "red" if m else "blue"}
                     if amp > 0.5 * ymax:
-                        ax.text(yval, amp, str(wave),
-                                rotation=90, verticalalignment='top',
-                                color='red', fontsize=5)
+                        ax.text(yval, amp, str(wave), verticalalignment='top',
+                                **kwargs)
                     else:
-                        ax.text(yval, ymax * 0.05, str(wave),
-                                rotation=90, color='red' if m else 'blue', fontsize=5)
+                        ax.text(yval, ymax*0.05, str(wave), **kwargs)
             ax.set_ylim(0, ymax * 1.05)
             ax.set_xlim(0, arm.szy - 1)
             ax.text(20, ymax * 0.8, f'order {order}')
