@@ -20,7 +20,9 @@ import matplotlib.cm as cm
 from matplotlib.widgets import Slider, Button
 import scipy.optimize as op
 from scipy.interpolate import interp1d
+from matplotlib import pyplot as plt
 
+from astropy.modeling import Fittable2DModel, Parameter
 
 # pylint: disable=maybe-no-member, too-many-instance-attributes
 
@@ -309,7 +311,7 @@ class Polyspect(object):
         xdeg = init_mod.shape[1] - 1
         # For weighted fitting purposes, use the maximum of the Gaussian fit.
         sigma = 1. / lines[:, 4]
-        
+
         # Now we proceed to the least squares minimization.
         # We provide the fit_resid function as the minimization function
         # and the initial model. All required arguments are also provided.
@@ -323,6 +325,7 @@ class Polyspect(object):
         print("Fit residual RMS (Angstroms): {0:6.3f}".format(
             np.std(final_resid)))
         params = bestp[0].reshape((ydeg + 1, xdeg + 1))
+
         return params, wave_and_resid
 
     def spectral_format(self, wparams=None, xparams=None, img=None):
@@ -1210,3 +1213,75 @@ class Polyspect(object):
         plt.show()
         print(params)
         return params
+
+
+class WaveModel(Fittable2DModel):
+    _param_names = ()
+
+    def __init__(self, name=None, meta=None, model=None, arm=None):
+        self.y_degree, self.x_degree = model.shape
+        self.m_ref = arm.m_ref
+        self.szy = arm.szy
+        self._param_names = self._generate_coeff_names()
+
+        for param_name in self._param_names:
+            self._parameters_[param_name] = Parameter(param_name,
+                                                      default=np.array(0.))
+        super().__init__(name=name, meta=meta,
+                         **dict(zip(self._param_names, model.flatten())))
+
+    @property
+    def param_names(self):
+        return self._param_names
+
+    def _generate_coeff_names(self):
+        names = []
+        for j in range(self.y_degree):
+            for i in range(self.x_degree):
+                names.append(f'c{i}_{j}')
+        return tuple(names)
+
+    def evaluate(self, x, y, *parameters):
+        # x is pixel positions, y is orders
+        y_values, orders = x, y
+        params = np.array(parameters).reshape(self.y_degree, self.x_degree)
+        mprime = float(self.m_ref) / orders - 1
+        polynomials = np.empty((len(orders), self.y_degree))
+        # Find the polynomial coefficients for each order.
+        for i in range(self.y_degree):
+            polyq = np.poly1d(params[i, :])
+            polynomials[:, i] = polyq(mprime)
+        evaluation = np.empty(y_values.shape)
+        # The evaluate as a function of position.
+        for i in range(len(orders)):
+            polyp = np.poly1d(polynomials[i, :])
+            evaluation[i] = polyp(y_values[i] - self.szy // 2)
+        return evaluation
+
+    def plotit(self, x, y, waves, mask=None, filename='wavecal.pdf'):
+        colors = 'rgbcmk'
+        if mask is None:
+            mask = np.zeros_like(x, dtype=bool)
+        # waves, orders, final_resid
+        fig, ax = plt.subplots()
+        orders = np.unique(y).astype(int)
+        residuals = self.evaluate(x, y, *self.parameters) - waves
+        rms = np.std(residuals[~mask])
+        for i, order in enumerate(orders):
+            col = colors[i % len(colors)]
+            indices = np.where(y == order)[0]
+            px = x[indices]
+            py = residuals[indices]
+            pm = mask[indices]
+            #print(order, np.median(lines[indices,2]), [(pix, resid) for pix, resid in zip(x, y)])
+            ax.plot([0, 4096], [order, order], f'{col}-', linewidth=1)
+            for pix, resid, m in zip(px, py, pm):
+                symb = f"{col}:" if m else f"{col}-"
+                ax.plot([pix, pix], [order, order + resid / (3 * rms)], symb, linewidth=2)
+            #ax.plot(x, [order] * x.size + y / 0.002, 'bo')
+        ax.set_xlim(0, 4096)
+        if self.m_ref < 60:
+            ax.set_ylim(max(orders) + 2, min(orders) - 2)
+        else:
+            ax.set_ylim(min(orders) - 2, max(orders) + 2)
+        fig.savefig(filename, bbox_inches='tight')
