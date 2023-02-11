@@ -269,16 +269,16 @@ class GHOSTSlit(GHOST):
                     overlap = max((earliest_end - latest_start).total_seconds(), 0)
 
                     if overlap > 0:
-                        weights[i, j] = flux * overlap
+                        weights[i, j] = overlap
                         effective_time = latest_start + 0.5 * (earliest_end -
                                                                latest_start)
                         offset = (effective_time - sc_start).total_seconds()
-                        accum_weighted_time += weights[i, j] * offset
+                        accum_weighted_time += weights[i, j] * flux * offset
 
-                sum_of_weights = weights[i].sum()
+                sum_of_weights = (weights[i] * fluxes).sum()
                 avg_epochs.append(sc_start + timedelta(
                     seconds=accum_weighted_time / sum_of_weights))
-                weights[i] /= sum_of_weights
+                weights[i] /= weights[i].sum()
 
             sciexp['AVGEPOCH'] = [t.isoformat() for t in avg_epochs]
             for i, flux in enumerate(fluxes):
