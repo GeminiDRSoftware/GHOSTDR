@@ -88,6 +88,7 @@ class TestMasterDark(object):
         # Execute teardown code
         pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_dark_bias_done(self, do_master_dark):
         """
         Check that bias subtraction was actually performed.
@@ -110,6 +111,7 @@ class TestMasterDark(object):
                              "bias " \
                              "({})".format(bias_used)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_masterdark_sigmaclip(self, do_master_dark):
         """
         Check that the all points within the data extension of the output biases

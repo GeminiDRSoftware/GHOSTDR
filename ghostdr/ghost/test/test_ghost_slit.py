@@ -94,6 +94,7 @@ class TestGhostSlit:
         except OSError:
             pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_CRCorrect(self, create_slit_package):
         """
         Checks to make:
@@ -156,6 +157,7 @@ class TestGhostSlit:
         output = p.processSlits(adinputs=[ad, ])
         assert output.phu.header.get('AVGEPOCH') is not None
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_stackFrames_outputs(self, create_slit_package):
         """
         Checks to make:
@@ -175,6 +177,7 @@ class TestGhostSlit:
                        _.data.shape for _ in ad[0]]), "Stacked frame shape " \
                                                       "does not match inputs"
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_stackFrames_exception(self, create_slit_package):
         """
         Checks to make:

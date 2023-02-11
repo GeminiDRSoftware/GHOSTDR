@@ -22,17 +22,15 @@ def makeProcessedArc(p):
     p.addDQ()
     p.addVAR(read_noise=True)
     p.overscanCorrect()
-    #p.tileArrays()
     p.biasCorrect()
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
-    # TODO? p.ADUToElectrons()
     p.darkCorrect()
     #p.rejectCosmicRays(
     # )
     p.tileArrays()
     p.stackArcs()
-    p.extractProfile(sky_correct=False, write_result=True)
+    p.extractProfile(sky_correct=False, flat_precorrect=False, write_result=True)
     p.fitWavelength()
     p.storeProcessedArc()
     return

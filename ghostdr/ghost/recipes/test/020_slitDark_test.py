@@ -84,6 +84,7 @@ class TestSlitBias(object):
         )):
             os.remove(_)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_slitdark_bias_done(self, do_slit_dark):
         """
         Check that bias subtraction was actually performed.

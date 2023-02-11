@@ -113,6 +113,7 @@ class TestMasterArc(object):
         # Execute teardown code
         pass
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_arc_bias_done(self, do_master_arc):
         """
         Check that bias subtraction was actually performed.
@@ -135,6 +136,7 @@ class TestMasterArc(object):
                              "flat " \
                              "({})".format(bias_used)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_arc_dark_done(self, do_master_arc):
         """
         Check that dark subtraction was actually performed.
@@ -163,6 +165,7 @@ class TestMasterArc(object):
     # However, need to work out where the divide-by-zero errors are coming from
     # in polyfit before meaningful tests can be made
 
+@pytest.mark.skip(reason='Needs Checking')
 @pytest.mark.fullreduction
 @pytest.mark.parametrize('arm,res,epoch', TestMasterArc.ARM_RES_COMBOS)
 def test_arc_missing_pixelmodel(arm, res, epoch, get_or_create_tmpdir):

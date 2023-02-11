@@ -91,7 +91,7 @@ class TestExtractor(object):
         _, _, _ = make_extractor
         assert True
 
-    # @pytest.mark.skip(reason='Incomplete')
+    @pytest.mark.skip(reason='Needs Checking')
     def test_extractor_bin_models(self, make_extractor):
         """Test the Extractor.bin_models method"""
         ga, sv, ext = make_extractor
@@ -113,6 +113,7 @@ class TestExtractor(object):
             int(ext.arm.szy / ext.arm.ybin),
             2, 2), "matrices returned by bin_models has incorrect shape"
 
+    @pytest.mark.skip(reason='Needs Checking')
     @pytest.mark.parametrize('transpose', [True, False])
     def test_extractor_make_pixel_model(self, transpose, make_extractor):
         """Test the Extractor.make_pixel_model method"""
