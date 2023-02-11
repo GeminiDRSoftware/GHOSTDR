@@ -22,7 +22,7 @@ def makeProcessedBias(p):
     p.addVAR(read_noise=True)
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackFrames(operation='median', reject_method='none')
+    p.stackFrames(operation='median')
     p.storeProcessedBias()
     return
 
