@@ -95,6 +95,8 @@ slitvmod_dict = {
     'GHOST_1_1_slitv_high_220501': 'slitv/high/220501/slitvmod.fits',
     'GHOST_1_1_slitv_std_220620': 'slitv/std/220620/slitvmod.fits',
     'GHOST_1_1_slitv_high_220620': 'slitv/high/220620/slitvmod.fits',
+    'GHOST_1_1_slitv_std_230101': 'slitv/std/230101/slitvmod.fits',
+    'GHOST_1_1_slitv_high_230101': 'slitv/high/230101/slitvmod.fits',
 }
 
 
