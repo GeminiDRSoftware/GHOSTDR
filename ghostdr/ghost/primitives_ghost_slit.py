@@ -42,6 +42,24 @@ class GHOSTSlit(GHOST):
         super(GHOSTSlit, self).__init__(adinputs, **kwargs)
         self._param_update(parameters_ghost_slit)
 
+    def biasCorrect(self, adinputs=None, **params):
+        """
+        Temporary(?) wrapper to enable zeroing the background level in
+        slitviewer images in case a bias is missing/bad
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        zero_background = params["do_cal"] == "skip"
+        adinputs = super().biasCorrect(adinputs, **params)
+        if zero_background:
+            for ad in adinputs:
+                for i, ext in enumerate(ad, start=1):
+                    bg = gt.measure_bg_from_image(
+                        ext, value_only=True, sampling=1)
+                    ext.data -= bg
+                    log.stdinfo(f"Subtracting {bg} from {ad.filename}:{i}")
+        return adinputs
+
     def darkCorrect(self, adinputs=None, **params):
         """
         Dark-correct GHOST slit observations.
