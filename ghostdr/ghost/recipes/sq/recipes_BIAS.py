@@ -22,7 +22,7 @@ def makeProcessedBias(p):
     p.addVAR(read_noise=True)
     p.overscanCorrect()
     #p.tileArrays()
-    p.stackFrames()
+    p.stackFrames(operation="median")
     p.storeProcessedBias()
     return
 
