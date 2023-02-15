@@ -223,7 +223,7 @@ def _write_newfile(extns, suffix, base, log):
 
     # Copy some important keywords into each separate file if they
     # aren't already there
-    for kw in ['INSTRUME', 'TELESCOP', 'DATALAB', 'GEMPRGID', 'OBSID', 'UTC-OBS', 'OBJECT']:
+    for kw in ['INSTRUME', 'TELESCOP', 'DATALAB', 'GEMPRGID', 'OBSID', 'UTC-OBS', 'RA', 'DEC']:
         try:
             if not n.phu.get(kw):
                 n.phu[kw] = base.phu.get(kw)

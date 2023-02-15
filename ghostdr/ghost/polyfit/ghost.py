@@ -106,11 +106,11 @@ class GhostArm(Polyspect):
         if arm == 'red':
             Polyspect.__init__(self, m_ref=50,
                                szx=GHOST_RED_SZX, szy=GHOST_RED_SZY,
-                               m_min=33, m_max=66, transpose=True)
+                               m_min=33, m_max=65, transpose=True)
         elif arm == 'blue':
             Polyspect.__init__(self, m_ref=80,
                                szx=GHOST_BLUE_SZX, szy=GHOST_BLUE_SZY,
-                               m_min=64, m_max=98, transpose=True) #was 63 and 95, or 62 and 92 for shifted NRC data.
+                               m_min=64, m_max=97, transpose=True) #was 63 and 95, or 62 and 92 for shifted NRC data.
         else:
             print("Unknown spectrograph arm!")
             raise UserWarning
