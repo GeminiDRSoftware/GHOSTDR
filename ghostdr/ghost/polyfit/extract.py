@@ -910,7 +910,7 @@ class Extractor(object):
 
                 # Make sure this is within the limits of our subarray.
                 ysub_pix = np.maximum(ysub_pix, 0)
-                ysub_pix = np.minimum(ysub_pix, ny_cutout - 1e-6)
+                ysub_pix = np.minimum(ysub_pix, ny_cutout - 1 - 1e-6)
 
                 # Create the arrays needed for interpolation.
                 ysub_ix_lo = ysub_pix.astype(int)
