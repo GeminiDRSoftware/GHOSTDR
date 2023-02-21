@@ -682,6 +682,18 @@ class GHOSTSpect(GHOST):
             Denotes whether or not to correct for the sky profile during the
             object extraction. Defaults to True, although it should be altered
             to False when processing flats or arcs.
+        extract_ifu1: bool/None
+            Denotes whether or not to extract the spectra in IFU1.  Defaults to
+            None in which case the code will read whether or not there was an
+            object in IFU1 from the header.
+        extract_ifu2: bool/None
+            Denotes whether or not to extract the spectra in IFU2.  Defaults to
+            None in which case the code will read whether or not there was an
+            object in IFU2 from the header.
+        sky_subtraction: bool
+            Denotes whether or not to perform sky subtraction during extraction.
+            Only used for object spectra and is ignored for flats or arcs.
+            Defaults to True.
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
@@ -768,6 +780,15 @@ class GHOSTSpect(GHOST):
             arm = GhostArm(arm=ad.arm(), mode=res_mode,
                            detector_x_bin=ad.detector_x_bin(),
                            detector_y_bin=ad.detector_y_bin())
+
+            if params['extract_ifu1'] is None:
+                extract_ifu1 = ad.phu.get('TARGET1') == 2
+            else:
+                extract_ifu1 = params['extract_ifu1']
+            if params['extract_ifu2'] is None:
+                extract_ifu2 = (ad.phu.get('TARGET2') == 2) | ((ad.phu.get('THXE') == 1) & (res_mode == 'high'))
+            else:
+                extract_ifu2 = params['extract_ifu2']
 
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
@@ -935,12 +956,19 @@ class GHOSTSpect(GHOST):
                 objs_to_use = [[0, ],[1, ], ]
                 use_sky = [True, True, ]
             else:
-                objs_to_use = [
-                    [0, ], [0, ], [1, ], [1, ], [0, 1], [0, 1], [],
-                ]
-                use_sky = [
-                    False, True, False, True, False, True, True,
-                ]
+                ifu_selection = []
+
+                if extract_ifu1:
+                    ifu_selection += [0]
+                if extract_ifu2:
+                    ifu_selection += [1]
+
+                if extract_ifu1 or extract_ifu2:
+                    objs_to_use = [ifu_selection, ifu_selection]
+                    use_sky = [False, True]
+                else:
+                    objs_to_use = [ifu_selection]
+                    use_sky = [True]
             
             # MJI - Uncomment the lines below for testing in the simplest possible case.
             #objs_to_use = [[0], ]

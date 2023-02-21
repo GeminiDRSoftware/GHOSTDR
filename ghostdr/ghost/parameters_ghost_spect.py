@@ -66,6 +66,10 @@ class extractProfileConfig(config.Config):
                             optional=True, single=True)
     sky_correct = config.Field("Correct for sky?", bool, True,
                                optional=True)
+    extract_ifu1 = config.Field("Is there an object in IFU1?", bool, None,
+                               optional=True)
+    extract_ifu2 = config.Field("Is there an object in IFU2?", bool, None,
+                               optional=True)
     smooth_flat_spatially = config.Field(
         "Smooth the flat field image before applying?", bool, False,
         optional=True
