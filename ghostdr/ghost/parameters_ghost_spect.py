@@ -89,7 +89,7 @@ class interpolateAndCombineConfig(config.Config):
     }, default='loglinear')
     skip = config.Field("No-op this primitive?", bool, False, optional=True)
     oversample = config.Field("(Approx.) oversampling of output wavelength "
-                              "scale", float, 2.0)
+                              "scale", float, 1.0)
 
 
 class findAperturesConfig(config.Config):

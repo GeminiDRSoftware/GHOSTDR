@@ -227,37 +227,37 @@ class Files():
         elif self.user=='hayescr':
             # This is the directory containing the raw (and recently reduced)
             # files.
-            self.basedir = '/Users/hayesc/research/commissioning/live_reduce/calibrations/'
+            self.basedir = '/Users/hayesc/research/commissioning/'
             
             if (self.cam == 'blue') and (self.mode == 'high'):
 
                 self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
 
-                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_hr_br6s02_20220630_1x1_blue1_flat.fits'
+                self.flat_image_file = self.basedir + 'hd122563_reduce/flat_1x1_hr_br6s02_20220630_1x1_blue001_flat.fits'
 
-                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_hr_br6s02_20220630_2x2_slit_slitflat.fits'
+                self.slit_flat_image = self.basedir + 'hd122563_reduce/flat_1x1_hr_br6s02_20220630_2x2_slit_slitflat.fits'
 
-                self.arc_reduced_file = self.basedir + 'processed_arc/arc_hr_1x1_brs900_morning_20220630_1x1_blue1_arc.fits'
+                self.arc_reduced_file = self.basedir + 'hd122563_reduce/arcs_1x1_hr_brs300_morn_20220629_1x1_blue001_arc.fits'
 
             elif (self.cam == 'blue') and (self.mode == 'std'):
 
                 self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
 
-                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_sr_br6s02_set2_20220630_1x1_blue1_flat.fits'
+                self.flat_image_file = self.basedir + 'ret2_reduce/20220914_flat_rb6s03_1x1_sr_1x1_blue001_flat.fits'
 
-                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_sr_br6s02_set2_20220630_2x2_slit_slitflat.fits'
+                self.slit_flat_image = self.basedir + 'ret2_reduce/20220914_flat_rb6s03_1x1_sr_2x2_slit_slitflat.fits'
 
-                self.arc_reduced_file = self.basedir + 'processed_arc/arc_1x1_sr_br300s150_20220630_1x1_blue1_arc.fits'
+                self.arc_reduced_file = self.basedir + 'ret2_reduce/20220914_arcs_br300s330_1x1_sr_1x1_blue001_arc.fits'
 
             elif (self.cam == 'red') and (self.mode == 'std'):
 
                 self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
 
-                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_sr_br6s02_set2_20220630_1x1_red1_flat.fits'
+                self.flat_image_file = self.basedir + 'ret2_reduce/20220916_flat_1x1_sr_slow_correct_1x1_red001_flat.fits'
 
-                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_sr_br6s02_set2_20220630_2x2_slit_slitflat.fits'
+                self.slit_flat_image = self.basedir + 'ret2_reduce/20220914_flat_rb6s03_1x1_sr_2x2_slit_slitflat.fits'
 
-                self.arc_reduced_file = self.basedir + 'processed_arc/arc_1x1_sr_br300s150_20220630_1x1_red1_arc.fits'
+                self.arc_reduced_file = self.basedir + 'ret2_reduce/20220916_arc_1x1_sr_slow_1x1_red001_arc.fits'
 
                 self.slit_arc_image = self.basedir + 'processed_slit/arc_1x1_sr_br300s150_20220630_2x2_slit_slit.fits'
 
@@ -267,11 +267,11 @@ class Files():
             else:
                 self.arclinefile = '/Users/hayesc/research/GHOSTDR/ghostdr/ghost/lookups/Polyfit/ghost_thar_linelist_20220718.txt '
 
-                self.flat_image_file = self.basedir + 'processed_flat/flat_1x1_hr_br6s02_20220630_1x1_red1_flat.fits'
+                self.flat_image_file = self.basedir + 'hd122563_reduce/flat_1x1_hr_br6s02_20220630_1x1_red001_flat.fits'
 
-                self.slit_flat_image = self.basedir + 'processed_slitflat/flat_1x1_hr_br6s02_20220630_2x2_slit_slitflat.fits'
+                self.slit_flat_image = self.basedir + 'hd122563_reduce/flat_1x1_hr_br6s02_20220630_2x2_slit_slitflat.fits'
 
-                self.arc_reduced_file = self.basedir + 'processed_arc/arc_hr_1x1_brs900_morning_20220630_1x1_red1_arc.fits'
+                self.arc_reduced_file = self.basedir + 'hd122563_reduce/arcs_1x1_hr_brs300_morn_20220629_1x1_red001_arc.fits'
 
               
             
