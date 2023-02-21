@@ -275,6 +275,18 @@ class Extractor(object):
         rescale_mat = np.array([[self.arm.xbin, 0], [0, self.arm.ybin]])
         matrices = np.dot(matrices, rescale_mat)
 
+        # Set up convenience local variables
+        ny = x_map.shape[1]
+        nm = x_map.shape[0]
+
+        self.slit_tilt = np.zeros((nm, ny))
+        for i in range(nm):
+            for j in range(ny):
+                invmat = np.linalg.inv(matrices[i, j])
+                # What happens to the +x direction?
+                x_dir_map = np.dot(invmat, [1, 0])
+                self.slit_tilt[i, j] = x_dir_map[1] / x_dir_map[0]
+
         return x_map, w_map, blaze, matrices
 
     def make_pixel_model(self, input_image=None):
