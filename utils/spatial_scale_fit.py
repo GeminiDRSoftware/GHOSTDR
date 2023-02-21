@@ -23,7 +23,7 @@ import os
 import pdb
 from ghostdr.ghost import polyfit
 import ghostdr.ghost.lookups as lookups
-import ghostdr.ghost.lookups.polyfit_lookup as polyfit_lookup
+import ghostdr.ghost.lookups.polyfit_lookup as polyfit_dict
 import astropy.io.fits as pyfits
 from astropy.modeling import fitting
 import numpy as np
@@ -39,10 +39,10 @@ arm = 'blue'
 mode = 'std'
 
 arm = 'red'
-mode = 'std'
+mode = 'high'
 
 
-user='mike'
+user='hayescr'
 
 files = input_locations.Files(user=user, mode=mode, cam=arm)
 
@@ -109,9 +109,9 @@ ghost = polyfit.GhostArm(arm, mode=mode)
 if arm == 'blue':
     microns_pix_spatial = 51.5 #was 47.2.
 else:
-    microns_pix_spatial = 48.0
-microns_step = 0.2
-num_steps = 16
+    microns_pix_spatial = 50.0
+microns_step = 0.025
+num_steps = 64
 test_microns = np.linspace(microns_pix_spatial - (microns_step *
                                                   (num_steps / 2.)),
                            microns_pix_spatial +
@@ -120,7 +120,7 @@ test_microns = np.linspace(microns_pix_spatial - (microns_step *
 
 # Creating a 3x3 parameter for fitting. Assume quadractic variation in both
 # order index and along order. If 1D model remains, this will fail.
-spatpars = np.vstack((np.zeros(3), np.zeros(3), np.array([0, 0, microns_pix_spatial])))
+spatpars = np.vstack((np.zeros(5), np.zeros(5), np.zeros(5), np.zeros(5), np.array([0, 0, 0, 0, microns_pix_spatial])))
 
 slitview = polyfit.SlitView(slit_array, slit_array, slitvpars, mode=mode)
 ghost.spectral_format_with_matrix(xparams, wparams, spatpars, specparams, rotparams)
@@ -128,7 +128,7 @@ ghost.spectral_format_with_matrix(xparams, wparams, spatpars, specparams, rotpar
 
 # This is the number of separate sections of each order that will be looked at.
 # This should be a multiple of 8
-sections = 8
+sections = 16
 
 orders = np.arange(ghost.m_min, ghost.m_max + 1)
 # Created an array with values along order, then collapse to find the centre of
@@ -152,7 +152,7 @@ for mic, microns in enumerate(test_microns):
     # function of the ghost class, to avoid code repetition.
     flat_conv = ghost.slit_flat_convolve(flat_data,
                                          slit_profile=slitview.slit_profile(),
-                                         spatpars=np.array([0, 0, microns]),
+                                         spatpars=np.array([0, 0, 0, microns]),
                                          microns_pix=slitview.microns_pix,
                                          xpars=xparams)
     # Now cut the convolution result into a small section in the middle for
@@ -196,8 +196,8 @@ collapsed_y_values = np.meshgrid(
 scales = scales.flatten()
 sigma = sigma.flatten()
 
-ydeg = spatparams.shape[0] - 1
-xdeg = spatparams.shape[1] - 1
+ydeg = spatpars.shape[0] - 1
+xdeg = spatpars.shape[1] - 1
 # Do the fit!
 print("Fitting")
 init_resid = ghost.fit_resid(spatpars, orders, collapsed_y_values, scales,

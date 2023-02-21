@@ -866,12 +866,12 @@ class Extractor(object):
                 y_ix = j + np.arange(ny_cutout, dtype=int) - ny_cutout // 2
 
                 # Deal with edge effects...
-                ww = np.where((x_ix >= nx) | (x_ix < 0))[0]
-                x_ix[ww] = 0
+                ww_x = np.where((x_ix >= nx) | (x_ix < 0))[0]
+                x_ix[ww_x] = 0
                 # phi[:, ww, :] = 0.0
                 # phi1d[:, ww, :] = 0.0
-                ww = np.where((y_ix >= ny) | (y_ix < 0))[0]
-                y_ix[ww] = 0
+                ww_y = np.where((y_ix >= ny) | (y_ix < 0))[0]
+                y_ix[ww_y] = 0
                 # phi[ww, :, :] = 0.0
                 xy = np.meshgrid(x_ix, y_ix, indexing='ij')
 
@@ -880,6 +880,8 @@ class Extractor(object):
                 col_inv_var = pixel_inv_var[tuple(xy)]
                 col_weights = np.array([ew[tuple(xy)] for ew in extraction_weights])
 
+                col_weights[:, ww_x, :] = 0.0
+                col_weights[:, :, ww_y] = 0.0
                 # Find the pixel (including fractional pixels) within our
                 # cutout that we'll use for extraction. First - find the pixel
                 # coordinates according to slit tilt:

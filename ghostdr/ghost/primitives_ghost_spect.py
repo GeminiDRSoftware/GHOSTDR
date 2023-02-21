@@ -1068,7 +1068,7 @@ class GHOSTSpect(GHOST):
             Set to ``True`` to skip this primitive. Defaults to ``False``.
         oversample : int or float
             The factor by which to (approximately) oversample the final output
-            spectrum, as compared to the input spectral orders. Defaults to 2.
+            spectrum, as compared to the input spectral orders. Defaults to 1.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
