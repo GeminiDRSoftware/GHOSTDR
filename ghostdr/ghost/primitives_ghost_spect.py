@@ -690,10 +690,6 @@ class GHOSTSpect(GHOST):
             Denotes whether or not to extract the spectra in IFU2.  Defaults to
             None in which case the code will read whether or not there was an
             object in IFU2 from the header.
-        sky_subtraction: bool
-            Denotes whether or not to perform sky subtraction during extraction.
-            Only used for object spectra and is ignored for flats or arcs.
-            Defaults to True.
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
