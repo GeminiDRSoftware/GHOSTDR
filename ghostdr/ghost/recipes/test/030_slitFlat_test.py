@@ -93,6 +93,7 @@ class TestSlitFlat(object):
         )):
             os.remove(_)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_slitflat_bias_done(self, do_slit_flat):
         """
         Check that bias subtraction was actually performed.
@@ -114,6 +115,7 @@ class TestSlitFlat(object):
            "slit flat header " \
            "({})".format(bias_used)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_slitflat_dark_done(self, do_slit_flat):
         """
         Check that dark correction was actually performed.

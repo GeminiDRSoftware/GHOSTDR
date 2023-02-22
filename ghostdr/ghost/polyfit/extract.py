@@ -10,6 +10,7 @@ from astropy.modeling import models, fitting
 import matplotlib.cm as cm
 import warnings
 import scipy.ndimage as ndimage
+from gempy.library import matching
 
 
 def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
@@ -89,14 +90,18 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
 
     y_hat = np.maximum(np.dot(x_mat, beta), 0)
 
-    new_bad = np.where(col_data > y_hat + nsigma * np.sqrt(var_use))[0]
+    # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
+    #limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),
+    #                               size=3, mode='constant')
+    limit = y_hat + nsigma * np.sqrt(var_use)
+    new_bad = np.where(col_data > limit)[0]
     if debug and len(new_bad) > 0:
         plt.clf()
         plt.plot(y_hat, label='exp')
         plt.plot(col_data, label='data')
-        plt.plot(y_hat + nsigma * np.sqrt(var_use), label='limit')
+        plt.plot(limit, label='limit')
         plt.pause(.001)
-        
+
     return new_bad
 
 
@@ -402,8 +407,8 @@ class Extractor(object):
         return pixel_model
 
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,
-                      debug_crs=False, used_objects=[0,1], use_sky=True,
-                      vararray=None):
+                      use_sky=True, find_crs=True, debug_crs=False,
+                      used_objects=[0,1], vararray=None):
         """
         Extract flux by integrating down columns.
 
@@ -433,6 +438,9 @@ class Extractor(object):
             
         use_sky: book, optional
             In extraction, do we use sky (and therefore self-subtract)?
+
+        find_crs : bool
+            whether or not to call :any:`find_additional_crs`
 
         debug_crs : bool, optional
             Passed along as the ``debug`` parameter to
@@ -643,10 +651,13 @@ class Extractor(object):
 
                 # Search for additional cosmic rays here, by seeing if the data
                 # look different to the model.
-                additional_crs = find_additional_crs(phi, slitim_offsets,
-                                                     col_data, col_inv_var,
-                                                     debug=debug_crs)
-                self.num_additional_crs += len(additional_crs)
+                if find_crs:
+                    additional_crs = find_additional_crs(phi, slitim_offsets,
+                                                         col_data, col_inv_var,
+                                                         debug=False)
+                    self.num_additional_crs += len(additional_crs)
+                else:
+                    additional_crs = []
                                                      
                 #Insist that variance if physical. If the model has a significant error
                 #on any pixel, we don't want the weights to be completely wrong - this
@@ -913,7 +924,7 @@ class Extractor(object):
 
                 # Make sure this is within the limits of our subarray.
                 ysub_pix = np.maximum(ysub_pix, 0)
-                ysub_pix = np.minimum(ysub_pix, ny_cutout - 1e-6)
+                ysub_pix = np.minimum(ysub_pix, ny_cutout - 1 - 1e-6)
 
                 # Create the arrays needed for interpolation.
                 ysub_ix_lo = ysub_pix.astype(int)
@@ -963,9 +974,6 @@ class Extractor(object):
         arclines: float array
             Array containing the wavelength of the arc lines.
 
-        hw: int, optional
-            Number of pixels from each order end to be ignored due to proximity
-            with the edge of the chip. Default was 10.
 
         arcfile: float array
             Arc file data.
@@ -1090,5 +1098,73 @@ class Extractor(object):
         if inspect:
             plt.axis([0, nx, ny, 0])
             plt.show()
+
+        return np.array(lines_out)
+
+    def match_lines(self, all_peaks, arclines, hw=12, xcor=False):
+        """
+        Match peaks in data to arc lines based on proximity
+
+        Parameters
+        ----------
+        all_peaks: list of :obj:`numpy.ndarray`
+            Locations of peaks in each order
+
+        arclines: float array
+            Array containing the wavelength of the arc lines.
+
+        hw: int, optional
+            Number of pixels from each order end to be ignored due to proximity
+            with the edge of the chip. Default was 10.
+
+        xcor: bool
+            Perform initial cross-correlation to find gross shift?
+
+        Returns
+        -------
+        lines_out: 2D array
+            arc line wavelength, fitted position, position along orthogonal
+            direction, order, amplitude, FWHM
+        """
+        nx, ny = self.arm.szx, self.arm.szy
+        pixels = np.arange(ny)
+        lines_out = []
+
+        for m_ix, peaks in enumerate(all_peaks):
+            filtered_arclines = arclines[
+                (arclines >= self.arm.w_map[m_ix].min())
+                & (arclines <= self.arm.w_map[m_ix].max())]
+            # This line interpolates between filtered lines and w_map on a
+            # linear array, to find the expected pixel locations of the lines.
+            w_ix = np.interp(filtered_arclines, self.arm.w_map[m_ix, :], pixels)
+            # Ensure that lines close to the edges of the chip are not
+            # considered
+            ww = np.where((w_ix >= hw) & (w_ix < ny - hw))[0]
+            if ww.size * len(peaks) == 0:
+                continue
+
+            w_ix = w_ix[ww]
+            arclines_to_fit = filtered_arclines[ww]
+            print(f'order {m_ix:2d} with {len(peaks):2d} peaks and {ww.size:2d} arc lines')
+
+            # Perform cross-correlation if requested
+            if xcor:
+                expected = np.zeros((ny,)) + np.sum([np.exp(-(cntr - pixels) ** 2 / 18)
+                                   for cntr in w_ix], axis=0)  # stddev=3
+                synth = np.zeros((ny,)) + np.sum([np.exp(-(g.mean.value - pixels) ** 2 / 18)
+                                for g in peaks], axis=0)  # stddev=3
+                # -ve means line peaks are "ahead" of expected
+                shift = np.correlate(expected, synth, mode='full')[ny-hw-1:ny+hw].argmax() - hw
+            else:
+                shift = 0
+
+            xpos = lambda g: nx // 2 + np.interp(g.mean.value, pixels,
+                                                 self.arm.x_map[m_ix])
+            matched = matching.match_sources([g.mean.value for g in peaks],
+                                             w_ix - shift, radius=hw)
+            new_lines = [(arclines_to_fit[m], g.mean.value, xpos(g), m_ix + self.arm.m_min,
+                          g.amplitude.value, g.stddev.value * 2.3548)
+                         for i, (m, g) in enumerate(zip(matched, peaks)) if m > -1]
+            lines_out.extend(new_lines)
 
         return np.array(lines_out)

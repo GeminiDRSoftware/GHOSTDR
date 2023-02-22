@@ -15,13 +15,13 @@ from recipe_system.utils.decorators import parameter_override
 
 import re
 import astrodata
+from gempy.gemini import gemini_tools as gt
 import numpy as np
 # ------------------------------------------------------------------------------
 _HDR_SIZE_REGEX = re.compile(r'^\[(?P<x1>[0-9]*)\:'
                              r'(?P<x2>[0-9]*),'
                              r'(?P<y1>[0-9]*)\:'
                              r'(?P<y2>[0-9]*)\]$')
-
 
 
 def filename_updater(ad, **kwargs):
@@ -217,7 +217,6 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
         return ad
 
-
     def validateData(self, adinputs=None, suffix=None):
         """
         This is the data validation primitive. It checks that the instrument
@@ -229,8 +228,6 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         suffix: str
             suffix to be added to output files
         """
-        from gempy.gemini import gemini_tools as gt
-
         log = self.log
         timestamp_key = self.timestamp_keys[self.myself()]
         log.debug(gt.log_message("primitive", self.myself(), "starting"))

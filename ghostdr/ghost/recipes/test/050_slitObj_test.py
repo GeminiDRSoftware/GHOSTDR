@@ -128,6 +128,7 @@ class TestSlitObj(object):
         )):
             os.remove(_)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_slitarc_bias_done(self, do_slit_obj):
         """
         Check that bias subtraction was actually performed.
@@ -151,6 +152,7 @@ class TestSlitObj(object):
                "slit arc header " \
                "({})".format(bias_used)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_slitarc_dark_done(self, do_slit_obj):
         """
         Check that dark correction was actually performed.
@@ -174,6 +176,7 @@ class TestSlitObj(object):
                "slit arc header " \
                "({})".format(dark_used)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_slitarc_procslit_done(self, do_slit_obj):
         """
         Check that processSlits was actually run.

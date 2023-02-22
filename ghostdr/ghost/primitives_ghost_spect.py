@@ -6,6 +6,7 @@
 import os
 import numpy as np
 import math
+import warnings
 from copy import deepcopy
 import scipy
 import scipy.signal as signal
@@ -19,19 +20,23 @@ from astropy.time import Time
 from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
+from astropy.modeling import fitting, models
 from scipy import interpolate
 import scipy.ndimage as nd
 from pysynphot import observation, spectrum
+from matplotlib import pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 import astrodata
 
 from geminidr.gemini.lookups import DQ_definitions as DQ
-
+from gempy.library import tracing
 from gempy.gemini import gemini_tools as gt
 # from gempy.mosaic.mosaicAD import MosaicAD
 
 from .polyfit import GhostArm, Extractor, SlitView
 from .polyfit.ghost import GhostArm
+from .polyfit.polyspect import WaveModel
 
 from .primitives_ghost import GHOST, filename_updater
 
@@ -650,7 +655,7 @@ class GHOSTSpect(GHOST):
         - Extract the profile from the input AstroData, using calls to
           :meth:`polyfit.Extractor.one_d_extract` and
           :meth:`polyfit.Extractor.two_d_extract`.
-        
+
         Parameters
         ----------
         suffix: str
@@ -684,7 +689,7 @@ class GHOSTSpect(GHOST):
         extract_ifu2: bool/None
             Denotes whether or not to extract the spectra in IFU2.  Defaults to
             None in which case the code will read whether or not there was an
-            object in IFU2 from the header.        
+            object in IFU2 from the header.
         sky_subtraction: bool
             Denotes whether or not to perform sky subtraction during extraction.
             Only used for object spectra and is ignored for flats or arcs.
@@ -814,7 +819,7 @@ class GHOSTSpect(GHOST):
                              binning = slit.detector_x_bin())
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
-                        
+
             # FIXED - MCW 190906
             # Added a kwarg to one_d_extract (the only Extractor method which
             # uses Extractor.vararray), allowing an update to the instance's
@@ -840,7 +845,7 @@ class GHOSTSpect(GHOST):
                         microns_pix = 4.54 * 180 / 50,
                         binning = slit.detector_x_bin())
 
-                    binned_flat_extractor = Extractor(arm, flat_sview, 
+                    binned_flat_extractor = Extractor(arm, flat_sview,
                         badpixmask=ad[0].mask,
                         vararray=flat[0].variance)
 
@@ -869,9 +874,9 @@ class GHOSTSpect(GHOST):
                     # Extra bad pixels are where the normalied flat differs from the
                     # PIXELMODEL, where PIXELMODEL is non-zero and there is a
                     # non-negligible amount of smoothed flat flux.
-                    
+
                     # FIXME: the 0.7 on the next line should be significantly lower, but
-                    # requires a model that fits the data well. Re-examine with real 
+                    # requires a model that fits the data well. Re-examine with real
                     # data.
                     extra_bad = (
                         np.abs(
@@ -900,13 +905,13 @@ class GHOSTSpect(GHOST):
 
                     # This is where we add the new bad pixels in. It is needed for
                     # computing correct weights.
-                    
+
                     #TODO: These 4 lines (and possibly correction= BLAH) can stay.
                     #the rest to go to findApertures
                     extractor.vararray[extra_bad] = np.inf
                     extractor.badpixmask[extra_bad] |= BAD_FLAT_FLAG
-                    
-                    # MJI: Pre-correct the data here. 
+
+                    # MJI: Pre-correct the data here.
                     corrected_data[pix_to_correct] *= correction
                     corrected_var[pix_to_correct] *= correction**2
 
@@ -942,9 +947,11 @@ class GHOSTSpect(GHOST):
             # - arcs require either "sky only" or "skyless" extraction;
             # - standards should only extract the actual profile in single
             #   object mode.
+            find_crs = True
             if 'ARC' in ad.tags:
                 objs_to_use = [[], [0, 1], ]
                 use_sky = [True, False, ]
+                find_crs = False
             else:
                 ifu_selection = []
 
@@ -952,14 +959,14 @@ class GHOSTSpect(GHOST):
                     ifu_selection += [0]
                 if extract_ifu2:
                     ifu_selection += [1]
-                
+
                 if extract_ifu1 or extract_ifu2:
                     objs_to_use = [ifu_selection, ifu_selection]
                     use_sky = [False, True]
                 else:
                     objs_to_use = [ifu_selection]
                     use_sky = [True]
-            
+
             # MJI - Uncomment the lines below for testing in the simplest possible case.
             #objs_to_use = [[0], ]
             #use_sky = [False, ]
@@ -969,14 +976,14 @@ class GHOSTSpect(GHOST):
                 print("SKY:" + str(s))
                 # CJS: Makes it clearer that you're throwing the first two
                 # returned objects away (get replaced in the two_d_extract call)
-                
+
                 # Need to use corrected_data here; the data in ad[0] is
                 # overwritten with the first extraction pass of this loop
                 # (see the try-except statement at line 925)
                 DUMMY, _, extracted_weights = extractor.one_d_extract(
                     data=corrected_data, vararray=corrected_var,
                     correct_for_sky=params['sky_correct'],
-                    use_sky=s, used_objects=o,
+                    use_sky=s, used_objects=o, find_crs=find_crs
                 )
 
                 # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
@@ -1163,7 +1170,7 @@ class GHOSTSpect(GHOST):
         and inserts a :any:`polyfit` model into a new extension on each data
         frame. This model is placed into a new ``.XMOD`` attribute on the
         extension.
-        
+
         Parameters
         ----------
         slitflat: str or :class:`astrodata.AstroData` or None
@@ -1277,7 +1284,7 @@ class GHOSTSpect(GHOST):
                                 "for {}; skipping".format(ad.filename))
                     continue
 
-                #Create an extractor instance, so that we can add the pixel model to the 
+                #Create an extractor instance, so that we can add the pixel model to the
                 #data.
                 ghost_arm.spectral_format_with_matrix(ad[0].XMOD, wpars[0].data,
                             spatpars[0].data, specpars[0].data, rotpars[0].data)
@@ -1311,6 +1318,13 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        sfx = params["suffix"]
+        min_snr = params["min_snr"]
+        sigma = params["sigma"]
+        max_iters = params["max_iters"]
+        radius = params["radius"]
+        plot1d = params["plot1d"]
+        plot2d = params["plot2d"]
 
         # import pdb; pdb.set_trace()
 
@@ -1360,26 +1374,100 @@ class GHOSTSpect(GHOST):
             arcwaves, arcfluxes = np.loadtxt(arclinefile, usecols=[1, 2]).T
 
             arm = GhostArm(arm=ad.arm(), mode=ad.res_mode())
-            arm.spectral_format_with_matrix(flat[0].XMOD,
-                                            wpars[0].data,
-                                            spatpars[0].data,
-                                            specpars[0].data,
-                                            rotpars[0].data)
 
-            extractor = Extractor(arm, None)  # slitview=None for this usage
+            # Find locations of all significant peaks in all orders
+            nm, ny, _ = ad[0].data.shape
+            all_peaks = []
+            pixels = np.arange(ny)
+            for m_ix, flux in enumerate(ad[0].data[:, :, 0]):
+                try:
+                    variance = ad[0].variance[m_ix, :, 0]
+                except TypeError:  # variance is None
+                    nmad = median_filter(
+                        abs(flux - median_filter(flux, size=2*radius+1)),
+                        size=2*radius+1)
+                    variance = nmad * nmad
+                peaks = tracing.find_peaks(flux.copy(), widths=np.arange(2.5, 4.5, 0.1),
+                                           variance=variance, min_snr=min_snr, min_sep=5,
+                                           pinpoint_index=None, reject_bad=False)
+                fit_g = fitting.LevMarLSQFitter()
+                these_peaks = []
+                for x in peaks[0]:
+                    good = np.zeros_like(flux, dtype=bool)
+                    good[int(x - radius):int(x + radius + 1)] = True
+                    g_init = models.Gaussian1D(mean=x, amplitude=flux[good].max(),
+                                               stddev=1.5)
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        g = fit_g(g_init, pixels[good], flux[good])
+                    if g.stddev.value < 5:  # avoid clearly bad fits
+                        these_peaks.append(g)
+                all_peaks.append(these_peaks)
 
-            # Find lines based on the extracted flux and the arc wavelengths. 
+            # Find lines based on the extracted flux and the arc wavelengths.
             # Note that "inspect=True" also requires and input arc file, which has
             # the non-extracted data. There is also a keyword "plots".
-            lines_out = extractor.find_lines(ad[0].data, arcwaves,
-                                             arcfile=ad[0].data,
-                                             plots=params['plot_fit'])
-            
-            #lines_out is now a long vector of many parameters, including the 
-            #x and y position on the chip of each line, the order, the expected 
-            #wavelength, the measured line strength and the measured line width.
-            fitted_params, wave_and_resid = arm.read_lines_and_fit(
-                wpars[0].data, lines_out)
+            #lines_out = extractor.find_lines(ad[0].data, arcwaves,
+            #                                 arcfile=ad[0].data,
+            #                                 plots=params['plot_fit'])
+
+            wmod_shape = wpars[0].data.shape
+            m_init = WaveModel(model=wpars[0].data, arm=arm)
+            arm.spectral_format_with_matrix(
+                flat[0].XMOD, m_init.parameters.reshape(wmod_shape),
+                spatpars[0].data, specpars[0].data, rotpars[0].data)
+            extractor = Extractor(arm, None)  # slitview=None for this usage
+
+            for iter in (0, 1):
+                # Only cross-correlate on the first pass
+                lines_out = extractor.match_lines(all_peaks, arcwaves,
+                                                  hw=radius, xcor=not bool(iter))
+                #lines_out is now a long vector of many parameters, including the
+                #x and y position on the chip of each line, the order, the expected
+                #wavelength, the measured line strength and the measured line width.
+                #fitted_params, wave_and_resid = arm.read_lines_and_fit(
+                #    wpars[0].data, lines_out)
+                y_values, waves, orders = lines_out[:, 1], lines_out[:, 0], lines_out[:, 3]
+                fit_it = fitting.FittingWithOutlierRemoval(
+                    fitting.LevMarLSQFitter(), sigma_clip, sigma=sigma,
+                    maxiters=max_iters)
+                m_final, mask = fit_it(m_init, y_values, orders, waves)
+                arm.spectral_format_with_matrix(
+                    flat[0].XMOD, m_final.parameters.reshape(wmod_shape),
+                    spatpars[0].data, specpars[0].data, rotpars[0].data)
+                m_init = m_final
+
+            fitted_waves = m_final(y_values, orders)
+            rms = np.std((fitted_waves - waves)[~mask])
+            nlines = y_values.size - mask.sum()
+            log.stdinfo(f"Fit residual RMS (Angstroms): {rms:7.4f} ({nlines} lines)")
+            if np.any(mask):
+                print("The following lines were rejected:")
+                for yval, order, wave, fitted, m in zip(
+                        y_values, orders, waves, fitted_waves, mask):
+                    if m:
+                        log.stdinfo(f"    Order {int(order):2d} pixel {yval:6.1f} "
+                                    f"wave {wave:10.4f} (fitted wave {fitted:10.4f})")
+
+            if plot2d:
+                fig, ax = plt.subplots()
+                xpos = lambda y, ord: arm.szx // 2 + np.interp(
+                    y, pixels, arm.x_map[ord])
+                for m_ix, peaks in enumerate(all_peaks):
+                    for g in peaks:
+                        ax.plot([g.mean.value] * 2, xpos(g.mean.value, m_ix) +
+                                np.array([-30, 30]), color='darkgrey', linestyle='-')
+                for (wave, yval, xval, order, amp, fwhm) in lines_out:
+                    xval = xpos(yval, int(order) - arm.m_min)
+                    ax.plot([yval, yval],  xval + np.array([-30, 30]), 'r-')
+                    ax.text(yval + 10, xval + 30, str(wave), color='blue', fontsize=10)
+                plt.show()
+
+            if plot1d:
+                plot_extracted_spectra(ad, arm, all_peaks, lines_out, mask, nrows=4)
+
+            m_final.plotit(y_values, orders, waves, mask,
+                           filename=ad.filename.replace('.fits', '_2d.pdf'))
 
             if params['return_residuals']:
                 with open(f'wave_resid_{ad.res_mode()}_{ad.arm()}.txt', 'w') as resid_file:
@@ -1390,9 +1478,10 @@ class GHOSTSpect(GHOST):
             # CJS: Append the WFIT as an extension. It will inherit the
             # header from the science plane (including irrelevant/wrong
             # keywords like DATASEC) but that's not really a big deal.
-            ad[0].WFIT = fitted_params
+            ad[0].WFIT = m_final.parameters.reshape(wpars[0].data.shape)
 
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=sfx, strip=True)
 
         return adinputs
 
@@ -1520,7 +1609,7 @@ class GHOSTSpect(GHOST):
                 continue
 
             res_mode = ad.res_mode()
-            arm = GhostArm(arm=ad.arm(), mode=res_mode, 
+            arm = GhostArm(arm=ad.arm(), mode=res_mode,
                            detector_x_bin= ad.detector_x_bin(),
                            detector_y_bin= ad.detector_y_bin()
                            )
@@ -1733,7 +1822,7 @@ class GHOSTSpect(GHOST):
         .. warning::
             This primitive is now deprecated - cosmic ray rejection is now
             handled as part of the profile extraction process.
-        
+
         Parameters
         ----------
         n_steps: int
@@ -1984,7 +2073,7 @@ class GHOSTSpect(GHOST):
           the exposure time (in s), and then by the standard star reference
           spectrum (in some unit of flux, e.g. erg/cm:math:`^2`/s/A) gives a
           sensitivity curve in units of, in this example, counts / erg.
-        - Dividing the object spectrum by the exposure time (i.e. converting 
+        - Dividing the object spectrum by the exposure time (i.e. converting
           to counts per pixel per second) by the sensitivity curve
           (counts / flux unit) yields the object spectrum in the original flux
           units of the standard star reference spectrum.
@@ -2287,7 +2376,7 @@ class GHOSTSpect(GHOST):
         will try to attach an MDF because a GHOST image is
         tagged as SPECT. Rather than set parameters for that primitive to
         stop it from doing so, just override with a no-op primitive.
-        
+
         .. note::
             This could go in primitives_ghost.py if the SLITV version
             also no-ops.
@@ -2659,3 +2748,45 @@ def _construct_datetime(hdr):
         datetime.strptime(hdr.get('DATE-OBS'), '%Y-%m-%d').date(),
         datetime.strptime(hdr.get('UTSTART'), '%H:%M:%S').time(),
     )
+
+
+def plot_extracted_spectra(ad, arm, all_peaks, lines_out, mask=None, nrows=4):
+    """
+    Produce plot of all the extracted orders, located peaks, and matched
+    arc lines. Abstracted here to make the primitive cleaner.
+    """
+    if mask is None:
+        mask = np.zeros(len(lines_out), dtype=bool)
+    pixels = np.arange(arm.szy)
+    with PdfPages(ad.filename.replace('.fits', '.pdf')) as pdf:
+        for m_ix, (flux, peaks) in enumerate(zip(ad[0].data[:, :, 0], all_peaks)):
+            order = m_ix + arm.m_min
+            if m_ix % nrows == 0:
+                if m_ix > 0:
+                    fig.subplots_adjust(hspace=0)
+                    pdf.savefig(bbox_inches='tight')
+                fig, axes = plt.subplots(nrows, 1, sharex=True)
+            ax = axes[m_ix % nrows]
+            ax.plot(pixels, flux, color='darkgrey', linestyle='-', linewidth=1)
+            ymax = flux.max()
+            for g in peaks:
+                x = g.mean.value + np.arange(-3, 3.01, 0.1) * g.stddev.value
+                ax.plot(x, g(x), 'k-', linewidth=1)
+                ymax = max(ymax, g.amplitude.value)
+            for (wave, yval, xval, ord, amp, fwhm), m in zip(lines_out, mask):
+                if ord == order:
+                    kwargs = {"fontsize": 5, "rotation": 90,
+                              "color": "red" if m else "blue"}
+                    if amp > 0.5 * ymax:
+                        ax.text(yval, amp, str(wave), verticalalignment='top',
+                                **kwargs)
+                    else:
+                        ax.text(yval, ymax*0.05, str(wave), **kwargs)
+            ax.set_ylim(0, ymax * 1.05)
+            ax.set_xlim(0, arm.szy - 1)
+            ax.text(20, ymax * 0.8, f'order {order}')
+            ax.set_yticks([])  # we don't care about y scale
+        for i in range(m_ix % nrows + 1, 4):
+            axes[i].axis('off')
+        fig.subplots_adjust(hspace=0)
+        pdf.savefig(bbox_inches='tight')

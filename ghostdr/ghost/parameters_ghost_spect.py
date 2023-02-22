@@ -109,12 +109,13 @@ class fitWavelengthConfig(config.Config):
                           optional=True)
     flat = config.ListField("Flat field", (str, ad), None,
                             optional=True, single=True)
-    # inspect_fit = config.Field("Use matplotlib to inspect fit quality?", bool,
-    #                            False, optional=True)
-    plot_fit = config.Field("Use matplotlib to inspect fit quality?", bool,
-                            False, optional=True)
-    return_residuals = config.Field("Return arc line fit residuals?", 
-                                    bool, False, optional=True)
+    min_snr = config.RangeField("Minimum S/N for peak detection", float, 20, min=10)
+    sigma = config.RangeField("Number of standard deviations for rejecting lines", float, 3, min=1)
+    max_iters = config.RangeField("Maximum number of iterations", int, 1, min=1)
+    radius = config.RangeField("Matching distance for lines", int, 12, min=2)
+    plot1d = config.Field("Produce 1D plots of each order to inspect fit?",
+                          bool, False)
+    plot2d = config.Field("Produce 2D plot to inspect fit?", bool, False)
 
 
 class flatCorrectConfig(config.Config):

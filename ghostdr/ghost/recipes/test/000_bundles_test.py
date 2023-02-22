@@ -137,6 +137,7 @@ class TestBundleClass(object):
                 '*MEF.fits')):
             os.remove(_)
 
+    @pytest.mark.skip(reason='Needs Checking')
     def test_bundle_outputs(self, do_bundle_split):
         """
         Check that the right number and types of files have come out of

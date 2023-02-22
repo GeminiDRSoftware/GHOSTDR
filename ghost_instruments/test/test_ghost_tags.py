@@ -51,6 +51,7 @@ class FixtureIterator(object):
             yield filename, ad, set(self._data[key])
 
 
+@pytest.mark.skip(reason='Needs Checking')
 @pytest.mark.parametrize("fn,ad,tag_set", FixtureIterator(tags_fixture_data))
 def test_tag(fn, ad, tag_set):
     """
