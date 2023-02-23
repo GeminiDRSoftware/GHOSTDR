@@ -148,7 +148,9 @@ class GHOSTSpect(GHOST):
         # CJS: Heavily edited because of the new AD way
         # Get processed slits, slitFlats, and flats (for xmod)
         # slits and slitFlats may be provided as parameters
-        arc_list = params["arcs"]
+        # arc_list = params["arcs"]
+        arc_before_file = params["arc_before"]
+        arc_after_file = params["arc_after"]
         # if arc_list is None:
         #     # CJS: This populates the calibrations cache (dictionary) with
         #     # "processed_slit" filenames for each input AD
@@ -164,12 +166,17 @@ class GHOSTSpect(GHOST):
 
             found_arcs = False
 
-            if arc_list:
-                try:
-                    arc_before, arc_after = arc_list[i]
-                    found_arcs = True
-                except (TypeError, ValueError):
-                    pass
+            #if arc_list:
+            #    try:
+            #        arc_before, arc_after = arc_list[i]
+            #        found_arcs = True
+            #    except (TypeError, ValueError):
+            #        pass
+
+            if arc_before_file or arc_after_file:
+                arc_before = arc_before_file
+                arc_after = arc_after_file
+                found_arcs = True
 
             # self.getProcessedArc(ad, howmany=2)
             # if not found_arcs:
