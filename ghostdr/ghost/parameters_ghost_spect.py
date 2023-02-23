@@ -17,8 +17,10 @@ def arcs_valueCheck(value):
 class addWavelengthSolutionConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_wavelengthAdded",
                           optional=True)
-    arcs = config.ListField("Before & after arcs for each input",
-                            tuple, None, optional=True, single=False)
+    arc_before = config.ListField("Before arc to use for wavelength solution",
+                            (str, ad), None, optional=True, single=True)
+    arc_after = config.ListField("After arc to use for wavelength solution",
+                            (str, ad), None, optional=True, single=True)
 
 
 class applyFlatBPMConfig(config.Config):
