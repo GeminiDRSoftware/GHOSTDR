@@ -4,16 +4,6 @@ Default is "makeProcessedBundle".
 """
 recipe_tags = set(['GHOST', 'BUNDLE', 'RAW', 'UNPREPARED'])
 
-def makeProcessedBundle(p):
-    """
-    This recipe processes GHOST observation bundles.
-
-    Parameters
-    ----------
-    p : Primitives object
-        A primitive set matching the recipe_tags.
-    """
-    p.splitBundle()
-    return
+from ..sq.recipes_BUNDLE import makeProcessedBundle
 
 _default = makeProcessedBundle

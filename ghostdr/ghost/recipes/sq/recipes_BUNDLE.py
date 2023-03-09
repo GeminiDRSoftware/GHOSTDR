@@ -4,6 +4,17 @@ Recipes imported from :any:`qa.recipes_BUNDLE`.
 """
 recipe_tags = set(['GHOST', 'BUNDLE', 'RAW', 'UNPREPARED'])
 
-from ..qa.recipes_BUNDLE import makeProcessedBundle
+def makeProcessedBundle(p):
+    """
+    This recipe processes GHOST observation bundles.
+
+    Parameters
+    ----------
+    p : Primitives object
+        A primitive set matching the recipe_tags.
+    """
+    p.splitBundle()
+    return
+
 
 _default = makeProcessedBundle
