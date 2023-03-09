@@ -3,17 +3,21 @@
 #
 #                                                     primitives_ghost_bundle.py
 # ------------------------------------------------------------------------------
-from .primitives_ghost import GHOST, filename_updater
+from collections import Counter
+import copy
+import itertools
+from datetime import timedelta
+import numpy as np
+
+import astrodata
+from .primitives_ghost import GHOST
 from . import parameters_ghost_bundle
 
 from gempy.gemini import gemini_tools as gt
 from recipe_system.utils.decorators import parameter_override
 
-from collections import Counter
-import astrodata
-import copy
-import itertools
 from astropy.io.fits import PrimaryHDU, Header
+from astropy.table import Table
 
 # ------------------------------------------------------------------------------
 @parameter_override
@@ -31,58 +35,77 @@ class GHOSTBundle(GHOST):
         """
         Break a GHOST observation bundle into individual exposures.
 
-        This primitive breaks up a GHOST observation bundle into 3 files: one
-        containing the Red camera frame, one containing the Blue camera frame,
-        and another containing the Slit Viewer (SV) frames.
+        This primitive breaks up a GHOST observation bundle into multiple
+        files: one for each Red camera exposure, one for each Blue camera
+        exposure, and another containing all the Slit Viewer (SV) frames.
 
-        The Red and Blue
-        output files are MEF because each amp quadrant is in its own extension,
-        while the SV output file will contain all SV exposures taken during the
-        observation run and will thus be single-extension for zero-duration
-        BIAS observations, but it may also be a MEF for other observation types
-        due to their longer exposures.
-
-        Parameters
-        ----------
-        suffix: str
-            suffix to be added to output files
+        If the observation is not tagged as a CAL (calibration), then a
+        Table is attached to the SV file to store the start and end times
+        of all the science exposures from the bundle, ensuring that
+        appropriate stacks can be made to use as processed_slit
+        calibrations for the red/blue reductions.
         """
         log = self.log
         log.debug(gt.log_message('primitive', self.myself(), 'starting'))
         timestamp_key = self.timestamp_keys[self.myself()]
 
+        adoutputs = []
         for ad in adinputs:
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by {}".format(
                             ad.filename, self.myself()))
                 continue
+            log.stdinfo(f"Unbundling {ad.filename}")
 
-            log.stdinfo("Unbundling {}:".format(ad.filename))
-
-            # as a special case, write all slitv extns to a single file
-            # TODO: may need to make multiple SV files, not one per SV exposure
-            # FIXME: better way to detect slit exposures than by camera?
-            # but one per RED/BLUE exposure which contains all SV exposures that
-            # overlap with the RED/BLUE one in time (check with Jon)
+            # No SCIEXP table for biases or observations of lamps
+            on_sky = 'CAL' not in ad.tags or 'STANDARD' in ad.tags
+            sci_exposures = []
             extns = [x for x in ad if (x.arm() == 'slitv' and x.shape)]
             if len(extns) > 0:
-                _write_newfile(extns, '_slit', ad, log)
+                slit_images = True
+                ad_slit = _write_newfile(extns, 'slit', ad, log)
+                adoutputs.append(ad_slit)
+            else:
+                log.warning(f"{ad.filename} has no slit viewer images")
+                slit_images = False
 
             # now do non-slitv extensions
             extns = [x for x in ad if x.arm() != 'slitv']
-            key = lambda x: f"_{x.hdr['CAMERA'].lower()}{x.hdr['EXPID']:03d}"
+            key = lambda x: f"{x.hdr['CAMERA'].lower()}{x.hdr['EXPID']:03d}"
             extns = sorted(extns, key=key)
             for k, g in itertools.groupby(extns, key=key):
-                _write_newfile(list(g), k, ad, log)
+                ad_arm = _write_newfile(list(g), k, ad, log)
+                adoutputs.append(ad_arm)
 
-            # Timestamp and update filename
-            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.update_filename(suffix=params['suffix'], strip=True)
+                # We want to attach a Table to the slitviewer file, that
+                # provides the start and end times of all science exposures
+                # to enable stacking of contemporaneous slit images later
+                if on_sky and slit_images:
+                    arm_exptime = ad_arm.exposure_time()
+                    ut_start = ad_arm.ut_datetime()
+                    ut_end = ut_start + timedelta(seconds=arm_exptime)
+                    exp_data = [k, arm_exptime, ut_start, ut_end]
+                    # If we can use the same set of SLITV images for more than
+                    # one arm exposure, do so
+                    for xtr in sci_exposures:
+                        if (xtr[1] == exp_data[1] and
+                                abs((xtr[2] - exp_data[2]).total_seconds()) < 0.01):
+                            xtr[0] += f",{k}"
+                            break
+                    else:
+                        sci_exposures.append(exp_data)
 
-        # returning [] avoids writing copy of bundle out to CWD, which then begs
-        # the question: why then bother updating the timestamp & filename?
-        return []#adinputs
+            # Format and attach the table
+            if sci_exposures and slit_images:
+                sci_exposures = [xtr[:2] + [x.isoformat() for x in xtr[2:]]
+                                    for xtr in sci_exposures]
+                exposure_table = Table(names=("for", "exptime", "UTSTART", "UTEND"),
+                                       dtype=(str, float, str, str),
+                                       rows=sci_exposures)
+                ad_slit.SCIEXP = exposure_table
+
+        return adoutputs
 
     def validateData(self, adinputs=None, suffix=None):
         """
@@ -185,9 +208,8 @@ def _write_newfile(extns, suffix, base, log):
         If the ``extns`` parameter is :any:`None`, or empty
     """
     assert extns and len(extns) > 0
-    # Start with a copy of the base PHU
-    n = astrodata.create(copy.deepcopy(base.phu))
 
+    # Start with a copy of the base PHU
     # But also look for the extension with an empty data array,
     # because this is the real PHU from the original file before
     # it was mashed into a giant MEF.
@@ -195,6 +217,9 @@ def _write_newfile(extns, suffix, base, log):
         if (x.hdr.get('NAXIS') == 0) or (x.data.size == 0):
             phu = PrimaryHDU(data=None, header=copy.deepcopy(x.hdr))
             n = astrodata.create(phu)
+            break
+    else:
+        n = astrodata.create(copy.deepcopy(base.phu))
 
     # Copy some important keywords into each separate file if they
     # aren't already there
@@ -220,7 +245,7 @@ def _write_newfile(extns, suffix, base, log):
     # Collate headers into the new PHU
     for kw in ['CAMERA', 'CCDNAME',
                'CCDSUM', 'DETECTOR',
-               'OBSTYPE', 'SMPNAME']:
+               'OBSTYPE', 'SMPNAME', 'EXPTIME']:
         n.phu.set(kw, _get_common_hdr_value(base, extns, kw))
     vals = _get_hdr_values(extns, 'DATE-OBS')
     n.phu.set('DATE-OBS', vals[min(vals.keys())])
@@ -233,7 +258,7 @@ def _write_newfile(extns, suffix, base, log):
     n.filename = base.filename
     ccdsum = n.phu.get('CCDSUM')
     binning = '_' + 'x'.join(ccdsum.split())
-    n.update_filename(suffix=binning+suffix)
+    n.update_filename(suffix=binning+"_"+suffix)
 
     # MCW 190813 - Update the ORIGNAME of the file
     # Otherwise, every time we do a 'strip' file rename, the base file name
@@ -247,6 +272,5 @@ def _write_newfile(extns, suffix, base, log):
     if n.phu['CAMERA'] != "SLITV":
         n.phu['DATALAB'] += f"-{suffix[-3:]}"
 
-    log.stdinfo("   Writing {}".format(n.filename))
-    n.write(overwrite=True)  # should we always overwrite?
+    return n
 

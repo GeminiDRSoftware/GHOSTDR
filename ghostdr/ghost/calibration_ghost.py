@@ -584,11 +584,17 @@ class CalibrationGHOST(Calibration):
         -------
             list of :class:`fits_storage.orm.header.Header` records that match the criteria
         """
-        descripts = (
+        descripts = [
             Header.instrument,
             Header.observation_type,
             Ghost.res_mode,
-            )
+            ]
+
+        # We need to match exposure time for on-sky observations
+        # (the exposure time has been munged in the processed_slit to match
+        # the science exposure that needs it)
+        if self.descriptors['observation_type'] not in ('ARC', 'BIAS', 'FLAT'):
+            descripts.append(Header.exposure_time)
 
         query = (
             self.get_query()

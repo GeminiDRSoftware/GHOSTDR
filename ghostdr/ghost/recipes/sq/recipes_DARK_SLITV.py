@@ -23,7 +23,7 @@ def makeProcessedSlitDark(p):
     p.biasCorrect()
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
-    p.stackFrames(operation='median', reject_method='none', apply_dq=True)
+    p.stackFrames(operation='median')
     p.storeProcessedDark()
     return
 

@@ -26,7 +26,7 @@ def makeProcessedSlitFlat(p):
     p.darkCorrect()
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackFrames(operation='median', reject_method='none')
+    p.stackFrames(operation='median')
     p.storeProcessedSlitFlat()
     return
 

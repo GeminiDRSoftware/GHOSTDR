@@ -49,7 +49,10 @@ def return_dict_for_bundle(desc_fn):
     """
     def wrapper(self, *args, **kwargs):
         def confirm_single_valued(_list):
-            return _list[0] if _list == _list[::-1] else None
+            try:
+                return _list[0] if _list == _list[::-1] else None
+            except IndexError:
+                return None
 
         if not self.is_single and 'BUNDLE' in self.tags:
             ret_dict = {k: confirm_single_valued(
@@ -108,7 +111,7 @@ class AstroDataGhost(AstroDataGemini):
                           )
 
     def __iter__(self):
-        if self._single:
+        if self.is_single:
             yield self
         else:
             for n in range(len(self)):
@@ -390,6 +393,14 @@ class AstroDataGhost(AstroDataGemini):
             return f"{self.detector_name()}, {self.hdr.get('AMPNAME')}"
         else:
             return [f"{ext.detector_name()}, {ext.hdr.get('AMPNAME')}" for ext in self]
+
+    @astro_data_descriptor
+    @return_dict_for_bundle
+    def binning(self):
+        """
+        Returns an "MxN"-style string because CJS is fed up with not having this!
+        """
+        return f"{self.detector_x_bin()}x{self.detector_y_bin()}"
 
     @astro_data_descriptor
     def calibration_key(self):
