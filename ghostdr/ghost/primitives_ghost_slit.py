@@ -42,24 +42,6 @@ class GHOSTSlit(GHOST):
         super(GHOSTSlit, self).__init__(adinputs, **kwargs)
         self._param_update(parameters_ghost_slit)
 
-    def biasCorrect(self, adinputs=None, **params):
-        """
-        Temporary(?) wrapper to enable zeroing the background level in
-        slitviewer images in case a bias is missing/bad
-        """
-        log = self.log
-        log.debug(gt.log_message("primitive", self.myself(), "starting"))
-        zero_background = params["do_cal"] == "skip"
-        adinputs = super().biasCorrect(adinputs, **params)
-        if zero_background:
-            for ad in adinputs:
-                for i, ext in enumerate(ad, start=1):
-                    bg = gt.measure_bg_from_image(
-                        ext, value_only=True, sampling=1)
-                    ext.data -= bg
-                    log.stdinfo(f"Subtracting {bg} from {ad.filename}:{i}")
-        return adinputs
-
     def darkCorrect(self, adinputs=None, **params):
         """
         Dark-correct GHOST slit observations.
@@ -79,8 +61,25 @@ class GHOSTSlit(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
 
-        # Call the underlying primitive that does the real work.
-        return super().darkCorrect(adinputs, params)
+        if params["do_cal"] == "skip":
+            log.stdinfo("Correcting for dark current by subtracting "
+                        "background level")
+            dark_current = []
+            for ad in adinputs:
+                for i, ext in enumerate(ad, start=1):
+                    bg = gt.measure_bg_from_image(
+                        ext, value_only=True, sampling=1)
+                    ext.data -= bg
+                    dark_current.append(bg)
+                    log.stdinfo(f"  Subtracting {bg:6.2f} from {ad.filename}:{i}")
+                dark_rate = np.mean(dark_current) / ad.exposure_time()
+                units = "ADU" if ad.is_in_adu() else "electrons"
+                log.stdinfo(f"Mean dark current = {dark_rate:.3f} {units} / s")
+        else:
+            # Call the underlying primitive that does the real work.
+            super().darkCorrect(adinputs, **params)
+        return adinputs
+
 
     def CRCorrect(self, adinputs=None, **params):
         """
