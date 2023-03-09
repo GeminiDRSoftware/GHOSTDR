@@ -66,6 +66,8 @@ class extractProfileConfig(config.Config):
                             optional=True, single=True)
     sky_correct = config.Field("Correct for sky?", bool, True,
                                optional=True)
+    seeing = config.RangeField("FWHM of seeing disc if no processed_slit is "
+                               "available", float, None, min=0.2, optional=True)
     smooth_flat_spatially = config.Field(
         "Smooth the flat field image before applying?", bool, False,
         optional=True
