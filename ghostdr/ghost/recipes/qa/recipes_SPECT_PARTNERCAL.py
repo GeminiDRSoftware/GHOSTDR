@@ -4,6 +4,6 @@ Default is "reduce".
 """
 recipe_tags = set(['GHOST', 'SPECT', 'PARTNER_CAL'])
 
-from ..sq.recipes_SPECT_PARTNERCAL import reducePCal
+from ..sq.recipes_SPECT_PARTNERCAL import reduceScience, reduceStandard
 
-_default = reducePCal
+_default = reduceStandard
