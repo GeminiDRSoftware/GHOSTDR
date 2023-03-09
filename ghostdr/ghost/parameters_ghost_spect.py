@@ -72,6 +72,8 @@ class extractProfileConfig(config.Config):
                                optional=True)
     extract_ifu2 = config.Field("Is there an object in IFU2?", bool, None,
                                optional=True)
+    seeing = config.RangeField("FWHM of seeing disc if no processed_slit is "
+                               "available", float, None, min=0.2, optional=True)
     smooth_flat_spatially = config.Field(
         "Smooth the flat field image before applying?", bool, False,
         optional=True

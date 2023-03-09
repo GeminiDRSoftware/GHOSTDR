@@ -697,6 +697,9 @@ class GHOSTSpect(GHOST):
             Denotes whether or not to extract the spectra in IFU2.  Defaults to
             None in which case the code will read whether or not there was an
             object in IFU2 from the header.
+        seeing: float/None
+            can be used to create a synthetic slitviewer image (and synthetic
+            slitflat image) if, for some reason, one is not available
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
@@ -705,6 +708,7 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        seeing = params["seeing"]
 
         # This primitive modifies the input AD structure, so it must now
         # check if the primitive has already been applied. If so, it must be
@@ -768,16 +772,39 @@ class GHOSTSpect(GHOST):
             # CJS: failure to find a suitable auxiliary file (either because
             # there's no calibration, or it's missing) places a None in the
             # list, allowing a graceful continuation.
-            if slit is None or slitflat is None or flat is None:
-                log.warning("Unable to find calibrations for {}; "
-                            "skipping".format(ad.filename))
-                continue
+            if flat is None:  # can't do anything as no XMOD
+                raise RuntimeError(f"No processed flat listed for {ad.filename}")
+
+            if slitflat is None:
+                # TBD: can we use a synthetic slitflat (findApertures in
+                # makeProcessedFlat would need one too)
+                raise RuntimeError(f"No processed slitflat listed for {ad.filename}")
+                if slit is None:
+                    slitflat_filename = "synthetic"
+                    slitflat_data = None
+                else:
+                    raise RuntimeError(f"{ad.filename} has a processed slit "
+                                       "but no processed slitflat")
+            else:
+                slitflat_filename = slitflat.filename
+                slitflat_data = slitflat[0].data
+
+            if slit is None:
+                if seeing is None:
+                    raise RuntimeError(f"No processed slit listed for {ad.filename}"
+                                       "and no seeing estimate has been provided")
+                else:
+                    slit_filename = f"synthetic (seeing {seeing})"
+                    slit_data = None
+            else:
+                slit_filename = slit.filename
+                slit_data = slit[0].data
 
             # CJS: Changed to log.debug() and changed the output
             log.stdinfo("Slit parameters: ")
-            log.stdinfo("   processed_slit: {}".format(slit.filename))
-            log.stdinfo("   processed_slitflat: {}".format(slitflat.filename))
-            log.stdinfo("   processed_flat: {}".format(flat.filename))
+            log.stdinfo(f"   processed_slit: {slit_filename}")
+            log.stdinfo(f"   processed_slitflat: {slitflat_filename}")
+            log.stdinfo(f"   processed_flat: {flat.filename}")
 
             res_mode = ad.res_mode()
             arm = GhostArm(arm=ad.arm(), mode=res_mode,
@@ -816,10 +843,28 @@ class GHOSTSpect(GHOST):
 
             arm.spectral_format_with_matrix(flat[0].XMOD, wpars[0].data,
                         spatpars[0].data, specpars[0].data, rotpars[0].data)
-            sview = SlitView(slit[0].data, slitflat[0].data,
+            sview_kwargs = {} if slit is None else {"binning": slit.detector_x_bin()}
+            sview = SlitView(slit_data, slitflat_data,
                              slitvpars.TABLE[0], mode=res_mode,
-                             microns_pix = 4.54 * 180 / 50,
-                             binning = slit.detector_x_bin())
+                             microns_pix=4.54 * 180 / 50, **sview_kwargs)
+
+            # There's no point in creating a fake slitflat first, since that
+            # will case the code to use it to determine the fibre positions,
+            # but the fibre positions are just the defaults
+            if slit is None:
+                log.stdinfo(f"Creating synthetic slit image for seeing={seeing}")
+                slit_data = sview.fake_slitimage(flat_image=slitflat_data, seeing=seeing)
+            else:
+                slit_models = sview.model_profile(slit_data, slitflat_data)
+                log.stdinfo("")
+                for k, model in slit_models.items():
+                    fwhm, apfrac = model.estimate_seeing()
+                    log.stdinfo(f"Estimated seeing in the {k} arm: {fwhm:5.3f}"
+                                f" ({apfrac*100:.1f}% aperture loss)")
+            if slitflat is None:
+                log.stdinfo("Creating synthetic slitflat image")
+                slitflat_data = sview.fake_slitimage()
+
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
                         
@@ -843,10 +888,9 @@ class GHOSTSpect(GHOST):
 
                     # Make a slit flat SlitView instance for getting a binned
                     # pixel mask and then initialize this binned slit extractor
-                    flat_sview = SlitView(slitflat[0].data, slitflat[0].data,
+                    flat_sview = SlitView(slitflat_data, slitflat_data,
                         slitvpars.TABLE[0], mode=res_mode,
-                        microns_pix = 4.54 * 180 / 50,
-                        binning = slit.detector_x_bin())
+                        microns_pix = 4.54 * 180 / 50, **sview_kwargs)
 
                     binned_flat_extractor = Extractor(arm, flat_sview, 
                         badpixmask=ad[0].mask,
