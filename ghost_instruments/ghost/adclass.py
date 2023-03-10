@@ -525,6 +525,21 @@ class AstroDataGhost(AstroDataGemini):
         #
         #return exp_time_default
 
+    @astro_data_descriptor
+    def focal_plane_mask(self):
+        """
+        Returns the "focal plane mask", primarily to populate the archive's
+        Header table so it can be searched on.
+
+        Returns
+        -------
+        str
+            "HR"/"SR" as appropriate
+        """
+        try:
+            return self.res_mode()[0].upper()+"R"
+        except AttributeError:
+            return None
 
     # The gain() descriptor is inherited from gemini/adclass, and returns
     # the value of the GAIN keyword (as a list if sent a complete AD object,
