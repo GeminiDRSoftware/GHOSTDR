@@ -537,7 +537,7 @@ class AstroDataGhost(AstroDataGemini):
             "HR"/"SR" as appropriate
         """
         try:
-            return self.res_mode()[0].upper()+"R"
+            return self.res_mode().upper()[0]+"R"
         except AttributeError:
             return None
 
