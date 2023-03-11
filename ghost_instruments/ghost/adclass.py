@@ -526,7 +526,7 @@ class AstroDataGhost(AstroDataGemini):
         #return exp_time_default
 
     @astro_data_descriptor
-    def focal_plane_mask(self):
+    def focal_plane_mask(self, *args, **kwargs):
         """
         Returns the "focal plane mask", primarily to populate the archive's
         Header table so it can be searched on.
