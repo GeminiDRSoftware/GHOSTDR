@@ -2157,8 +2157,11 @@ class GHOSTSpect(GHOST):
                         'step')
             return adinputs
 
-        if params['std'] is None:
-            raise ValueError('No standard star provided')
+        if params['std'] is None or params['std_spec'] is None:
+            log.warning(f"{self.myself()} requires that both the parameters "
+                        "'std' and 'std_spec' are defined. They are not so it "
+                        "is not possible to calibrate the spectrum. Continuing.")
+            return adinputs
 
         # Let the astrodata routine handle any issues with actually opening
         # the FITS file
@@ -2167,13 +2170,9 @@ class GHOSTSpect(GHOST):
         # Need to find the reference standard star spectrum
         # Use the one passed by the user in the first instance, otherwise
         # attempt to locate a remote one
-        # Throw an error if none found
-        if params['std_spec']:
-            # TODO Will need to be modified to use Gemini service
-            std_spec = astropyio.open(params['std_spec'])
-            bunit = std_spec[1].header['TUNIT2']
-        else:
-            raise ValueError('No standard reference spectrum found/supplied')
+        # TODO Will need to be modified to use Gemini service
+        std_spec = astropyio.open(params['std_spec'])
+        bunit = std_spec[1].header['TUNIT2']
 
         # Re-grid the standard reference spectrum onto the wavelength grid of
         # the observed standard
