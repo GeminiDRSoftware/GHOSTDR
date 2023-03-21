@@ -23,12 +23,6 @@ pipeline {
 
     stages {
 
-        stage ("Prepare") {
-            steps{
-                sendNotifications 'STARTED'
-            }
-        }
-
         stage ("Tests") {
             environment {
                 MPLBACKEND = "agg"
@@ -52,11 +46,10 @@ pipeline {
 
     post {
         success {
-            sendNotifications 'SUCCESSFUL'
             deleteDir() /* clean up our workspace */
         }
         failure {
-            sendNotifications 'FAILED'
+            deleteDir()
         }
     }
 
