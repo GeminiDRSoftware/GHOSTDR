@@ -4,91 +4,69 @@ Unit tests for :any:`ghostdr.ghost.primitives_ghost`.
 
 This is a suite of tests to be run with pytest.
 """
-import os
-import glob
-import shutil
-import numpy as np
-import astrodata
-import gemini_instruments
-from gempy.utils import logutils
-from astropy.io import fits
+import pytest
 from copy import deepcopy
 
+import numpy as np
+
+import astrodata, gemini_instruments, ghost_instruments
 from ghostdr.ghost.primitives_ghost import GHOST
 
-# from geminidr.core.test import ad_compare
-
-TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
-logfilename = 'test_ghost.log'
+from astropy.io import fits
 
 
-class TestGhost:
+BINNING_OPTIONS = [
+    (1, 1,),
+    (2, 1,),
+    (2, 2,),
+    (4, 1,),
+    (4, 2,),
+    (8, 1,),
+]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("binning", BINNING_OPTIONS)
+def test_rebin_ghost_ad(binning):
     """
-    Suite of tests for the functions in the ghost_primitives module
+    Checks to make:
+
+    - Re-binned data arrays are the correct shape;
+    - Correct keyword headers have been updated;
+
     """
+    # Create a test data frame to operate on
+    phu = fits.PrimaryHDU()
+    hdu = fits.ImageHDU(data=np.zeros((1024, 1024,)), name='SCI')
+    hdu.header['CCDSUM'] = '1 1'
+    hdu.header['DATASEC'] = '[0:1024,0:1024]'
+    hdu.header['TRIMSEC'] = '[0:1024,0:1024]'
+    hdu.header['AMPSIZE'] = '[0:1024,0:1024]'
+    ad = astrodata.create(phu, [hdu, ])
 
-    def test__rebin_ghost_ad(self, tmpdir):
-        """
-        Checks to make:
+    # Rebin the data a bunch of different ways, run tests on each
+    # re-binning
 
-        - Re-binned data arrays are the correct shape;
-        - Correct keyword headers have been updated;
-
-        Loop over each valid binning mode
-        """
-        tmpdir.mkdir('ghost_rebin')
-        os.chdir(tmpdir.dirname)
-
-        # Create a test data frame to operate on
-        phu = fits.PrimaryHDU()
-        hdu = fits.ImageHDU(data=np.zeros((1024, 1024,)), name='SCI')
-        hdu.header['CCDSUM'] = '1 1'
-        hdu.header['DATASEC'] = '[0:1024,0:1024]'
-        hdu.header['TRIMSEC'] = '[0:1024,0:1024]'
-        hdu.header['AMPSIZE'] = '[0:1024,0:1024]'
-        ad = astrodata.create(phu, [hdu, ])
-
-        # Rebin the data a bunch of different ways, run tests on each
-        # re-binning
-        binning_options = [
-            (1, 1,),
-            (2, 1,),
-            (2, 2,),
-            (4, 1,),
-            (4, 2,),
-            (8, 1,),
-        ]
-
-        for opt in binning_options:
-            # Re-bin the data
-            ad_new = deepcopy(ad)
-            p = GHOST(adinputs=[ad_new, ])
-            ad_new = p._rebin_ghost_ad(ad_new, opt[0], opt[1])
-            assert np.all([ad_new[0].data.shape[i] ==
-                           (ad[0].data.shape[i] / opt[abs(i - 1)])
-                           for i in [0, 1]]), 'Rebinned data has incorrect ' \
-                                              'shape (expected {}, ' \
-                                              'have {})'.format(
-                tuple((ad[0].data.shape[i] / opt[abs(i - 1)])
-                 for i in [0, 1]), ad_new[0].data.shape,
-            )
-            assert ad_new[0].hdr['CCDSUM'] == '{0} {1}'.format(*opt), \
-                'Incorrect value of CCDSUM recorded'
-            assert ad_new[0].hdr['DATASEC'] == '[1:{1},1:{0}]'.format(
-                int(1024/opt[1]), int(1024/opt[0])), 'Incorrect value for DATASEC ' \
-                                           'recorded'
-            assert ad_new[0].hdr['TRIMSEC'] == '[1:{1},1:{0}]'.format(
-                int(1024 / opt[1]), int(1024 / opt[0])), 'Incorrect value for TRIMSEC ' \
-                                               'recorded'
-            assert ad_new[0].hdr['AMPSIZE'] == '[1:{1},1:{0}]'.format(
-                int(1024 / opt[1]), int(1024 / opt[0])), 'Incorrect value for AMPSIZE ' \
-                                               'recorded'
-
-        # Teardown code - remove files in this tmpdir
-        for _ in glob.glob(os.path.join(tmpdir.dirname, '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpdir.dirname, 'calibrations'))
-        except OSError:
-            pass
+    # Re-bin the data
+    ad_new = deepcopy(ad)
+    p = GHOST(adinputs=[ad_new])
+    ad_new = p._rebin_ghost_ad(ad_new, binning[0], binning[1])
+    assert np.all([ad_new[0].data.shape[i] ==
+                   (ad[0].data.shape[i] / binning[abs(i - 1)])
+                   for i in [0, 1]]), 'Rebinned data has incorrect ' \
+                                      'shape (expected {}, ' \
+                                      'have {})'.format(
+        tuple((ad[0].data.shape[i] / binning[abs(i - 1)])
+              for i in [0, 1]), ad_new[0].data.shape,
+    )
+    assert ad_new[0].hdr['CCDSUM'] == '{0} {1}'.format(*binning), \
+        'Incorrect value of CCDSUM recorded'
+    assert ad_new[0].hdr['DATASEC'] == '[1:{1},1:{0}]'.format(
+        int(1024 / binning[1]), int(1024 / binning[0])), 'Incorrect value for DATASEC ' \
+                                                 'recorded'
+    assert ad_new[0].hdr['TRIMSEC'] == '[1:{1},1:{0}]'.format(
+        int(1024 / binning[1]), int(1024 / binning[0])), 'Incorrect value for TRIMSEC ' \
+                                                 'recorded'
+    assert ad_new[0].hdr['AMPSIZE'] == '[1:{1},1:{0}]'.format(
+        int(1024 / binning[1]), int(1024 / binning[0])), 'Incorrect value for AMPSIZE ' \
+                                                 'recorded'

@@ -28,7 +28,7 @@ pipeline {
                 MPLBACKEND = "agg"
                 PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
                 DRAGONS_TEST_OUT = "./unit_tests_outputs/"
-                TOX_ARGS = ""
+                TOX_ARGS = "ghost_instruments ghostdr"
                 TMPDIR = "${env.WORKSPACE}/.tmp/unit/"
             }
             steps {
@@ -38,8 +38,6 @@ pipeline {
                 sh '.jenkins/scripts/setup_agent.sh'
                 echo "Running tests with Python 3.7"
                 sh 'tox -e ghost-unit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
-                echo "Reportint coverage to CodeCov"
-                sh 'tox -e codecov -- -F unit'
             }
 
 

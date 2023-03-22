@@ -10,6 +10,7 @@ import os
 THIS_DIR = os.path.dirname(__file__)
 
 from .lut_tags import fixture_data as tags_fixture_data
+tags_fixture_data = {}
 
 # ---
 # REGRESSION TESTING

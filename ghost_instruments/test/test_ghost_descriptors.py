@@ -12,6 +12,7 @@ import os
 THIS_DIR = os.path.dirname(__file__)
 
 from .lut_descriptors import fixture_data as descriptors_fixture_data
+descriptors_fixture_data = {}
 
 # ---
 # REGRESSION TESTING
