@@ -37,7 +37,7 @@ pipeline {
                 echo "${env.PATH}"
                 sh '.jenkins/scripts/setup_agent.sh'
                 echo "Running tests with Python 3.7"
-                sh 'tox -e ghost-unit -v -r -- --basetemp=${DRAGONS_TEST_OUT} --junit-xml reports/unittests_results.xml ${TOX_ARGS}'
+                sh 'tox -e ghost-unit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
                 echo "Reportint coverage to CodeCov"
                 sh 'tox -e codecov -- -F unit'
             }
