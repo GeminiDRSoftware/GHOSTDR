@@ -256,7 +256,10 @@ class AstroDataGhost(AstroDataGemini):
         """
         Define the tagset for GHOST data of different resolutions.
         """
-        mode = self.phu.get('SMPNAME')
+        try:
+            mode = self.phu['SMPNAME']
+        except KeyError:
+            return None
         if mode.endswith('HI_ONLY'):
             return TagSet(['HIGH'])
         else:

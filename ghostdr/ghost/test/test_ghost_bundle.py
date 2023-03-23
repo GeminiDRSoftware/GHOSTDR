@@ -5,12 +5,8 @@ Unit tests for :any:`ghostdr.ghost.primitives_ghost_bundle`.
 This is a suite of tests to be run with pytest.
 """
 import pytest
-import os
-import shutil
-import glob
 import numpy as np
-import astrodata
-import gemini_instruments
+import astrodata, ghost_instruments
 from gempy.utils import logutils
 
 from astropy.io import fits
@@ -36,7 +32,7 @@ class TestGhostBundle:
     """
 
     @pytest.fixture(scope='class')
-    def create_bundle(self, tmpdir_factory):
+    def create_bundle(self):
         """
         Generate a dummy test bundle.
 
@@ -44,8 +40,6 @@ class TestGhostBundle:
             Fixture.
         """
         rawfilename = 'testbundle.fits'
-        tmpsubdir = tmpdir_factory.mktemp('ghost_bundle')
-        print(tmpsubdir)
 
         # Create the AstroData object
         header = fits.Header()
