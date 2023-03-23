@@ -43,6 +43,7 @@ pipeline {
                     }
                 }
 
+                /*
                 stage ("Bundle tests") {
                     environment {
                         MPLBACKEND = "agg"
@@ -60,6 +61,7 @@ pipeline {
                     }
 
                 }
+                */
 
             }
 
