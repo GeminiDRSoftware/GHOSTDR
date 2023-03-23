@@ -25,7 +25,7 @@ BUNDLE_STRUCTURE = {
 }
 
 
-@pytest.mark.ghost_bundle
+@pytest.mark.ghostbundle
 class TestGhostBundle:
     """
     Suite of tests for the functions in the primitives_ghost_bundle module
