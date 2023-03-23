@@ -18,7 +18,7 @@ from astropy.io import fits
 from ghostdr.ghost.primitives_ghost_bundle import GHOSTBundle
 from six.moves import range
 
-TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
+
 logfilename = 'test_standardize.log'
 
 BUNDLE_STRUCTURE = {
@@ -29,6 +29,7 @@ BUNDLE_STRUCTURE = {
 }
 
 
+@pytest.mark.ghost_bundle
 class TestGhostBundle:
     """
     Suite of tests for the functions in the primitives_ghost_bundle module
@@ -68,58 +69,26 @@ class TestGhostBundle:
         ad = astrodata.create(phu, hdus)
         ad.filename = rawfilename
 
-        # Do things in the tmpdir
-        # import pdb; pdb.set_trace()
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         p = GHOSTBundle([ad, ])
         bundle_output = p.splitBundle(adinputs=[ad, ])
 
-        yield ad, tmpsubdir, bundle_output
+        return ad, bundle_output
 
-        # Teardown code - remove files in this tmpdir
-        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                        '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename, 'calibrations'))
-        except OSError:
-            pass
-
-    @pytest.mark.skip(reason='Needs Checking')
-    def test_splitBundle_output(self, create_bundle):
-        """
-        Check that splitBundle outputs the empty list
-        """
-        dummy_bundle, tmpsubdir, bundle_output = create_bundle
-        assert bundle_output == []
-
-    @pytest.mark.skip(reason='Needs Checking')
     def test_splitBundle_count(self, create_bundle):
         """
         Check that the right number of files have been extracted from the
         bundle
         """
-        dummy_bundle, tmpsubdir, bundle_output = create_bundle
-        # import pdb; pdb.set_trace()
-        file_list = glob.glob(os.path.join(tmpsubdir.dirname,
-                                           tmpsubdir.basename,
-                                           '*.fits'))
-        assert len(file_list) == len(BUNDLE_STRUCTURE.keys())
+        dummy_bundle, bundle_output = create_bundle
+        assert len(bundle_output) == len(BUNDLE_STRUCTURE.keys())
 
-    @pytest.mark.skip(reason='Needs Checking')
     def test_splitBundle_structure(self, create_bundle):
         """
         Check the structure of the output files
         """
-        dummy_bundle, tmpsubdir, bundle_output = create_bundle
-        file_list = glob.glob(os.path.join(tmpsubdir.dirname,
-                                           tmpsubdir.basename,
-                                           '*.fits'))
-        print(tmpsubdir.realpath())
+        dummy_bundle, bundle_output = create_bundle
         # Check files written to disk
-        for o in file_list:
-            ad = astrodata.open(o)
+        for ad in bundle_output:
             assert len(ad) == BUNDLE_STRUCTURE[(ad[0].hdr.get('CAMERA'),
                                                 ad[0].hdr.get('CCDNAME'))]
 
