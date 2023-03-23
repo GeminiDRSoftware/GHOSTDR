@@ -23,42 +23,43 @@ pipeline {
 
     stages {
 
-        stage("Quickis tests") {
-            parallel
+        stage("Quickish tests") {
+            parallel {
 
-            stage ("Unit tests") {
-                environment {
-                    MPLBACKEND = "agg"
-                    PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
-                    DRAGONS_TEST_OUT = "./unit_tests_outputs/"
-                    TOX_ARGS = "ghost_instruments ghostdr"
-                    TMPDIR = "${env.WORKSPACE}/.tmp/unit/"
-                }
-                steps {
-                    echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
-                    checkout scm
-                    echo "${env.PATH}"
-                    sh '.jenkins/scripts/setup_agent.sh'
-                    sh 'tox -e ghost-unit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
-                }
-
-            stage ("Bundle tests") {
-                environment {
-                    MPLBACKEND = "agg"
-                    PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
-                    DRAGONS_TEST_OUT = "./bundle_tests_outputs/"
-                    TOX_ARGS = "ghost_instruments ghostdr"
-                    TMPDIR = "${env.WORKSPACE}/.tmp/bundle/"
-                }
-                steps {
-                    echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
-                    checkout scm
-                    echo "${env.PATH}"
-                    sh '.jenkins/scripts/setup_agent.sh'
-                    sh 'tox -e ghost-ghost_bundle -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+                stage ("Unit tests") {
+                    environment {
+                        MPLBACKEND = "agg"
+                        PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                        DRAGONS_TEST_OUT = "./unit_tests_outputs/"
+                        TOX_ARGS = "ghost_instruments ghostdr"
+                        TMPDIR = "${env.WORKSPACE}/.tmp/unit/"
+                    }
+                    steps {
+                        echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                        checkout scm
+                        echo "${env.PATH}"
+                        sh '.jenkins/scripts/setup_agent.sh'
+                        sh 'tox -e ghost-unit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+                    }
                 }
 
+                stage ("Bundle tests") {
+                    environment {
+                        MPLBACKEND = "agg"
+                        PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                        DRAGONS_TEST_OUT = "./bundle_tests_outputs/"
+                        TOX_ARGS = "ghost_instruments ghostdr"
+                        TMPDIR = "${env.WORKSPACE}/.tmp/bundle/"
+                    }
+                    steps {
+                        echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                        checkout scm
+                        echo "${env.PATH}"
+                        sh '.jenkins/scripts/setup_agent.sh'
+                        sh 'tox -e ghost-ghost_bundle -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+                    }
 
+                }
 
             }
 
