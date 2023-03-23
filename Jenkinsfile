@@ -40,8 +40,9 @@ pipeline {
                     sh '.jenkins/scripts/setup_agent.sh'
                     sh 'tox -e ghost-unit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
                 }
+            }
 
-           stage ("Bundle tests") {
+            stage ("Bundle tests") {
                 environment {
                     MPLBACKEND = "agg"
                     PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
