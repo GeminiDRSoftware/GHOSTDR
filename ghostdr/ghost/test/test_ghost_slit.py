@@ -115,6 +115,7 @@ class TestGhostSlit:
                     ext.data[attempt_coord] += CRFLUX
                     modded_coords.append(attempt_coord)
                     success = True
+            sums.append(ext.data.sum())
 
         p = GHOSTSlit([ad_slit])
         p.CRCorrect()
