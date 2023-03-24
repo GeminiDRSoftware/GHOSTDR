@@ -23,7 +23,6 @@ pipeline {
 
     stages {
 
-        /*
         stage ("Unit tests") {
             environment {
                 MPLBACKEND = "agg"
@@ -40,7 +39,6 @@ pipeline {
                 sh 'tox -e ghost-unit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
             }
         }
-        */
 
         stage ("Bundle tests") {
             environment {

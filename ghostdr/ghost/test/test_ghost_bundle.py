@@ -7,7 +7,6 @@ This is a suite of tests to be run with pytest.
 import pytest
 import astrodata, ghost_instruments
 from astrodata.testing import download_from_archive
-from gempy.utils import logutils
 
 from ghostdr.ghost.primitives_ghost_bundle import GHOSTBundle
 
@@ -15,6 +14,8 @@ from ghostdr.ghost.primitives_ghost_bundle import GHOSTBundle
 @pytest.mark.ghostbundle
 def test_split_bundle(change_working_dir):
     """
+    This test ensures that splitBundle() produces the correct outputs
+
     S20230214S0025 has 1 blue, 3 red, and 5 slit images
     """
     with change_working_dir():
@@ -36,5 +37,6 @@ def test_split_bundle(change_working_dir):
         assert len(ad) == 4
     assert len(slit_files[0]) == 5
 
+    # There should be one entry for each red/blue file
     sciexp = slit_files[0].SCIEXP
     assert len(sciexp) == 4
