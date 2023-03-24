@@ -17,26 +17,30 @@ import datetime
 import random
 
 # from geminidr.core.test import ad_compare
-from ghostdr.ghost.primitives_ghost_slit import GHOSTSlit, _mad, _total_obj_flux
-from six.moves import range
+from ghostdr.ghost.primitives_ghost_slit import GHOSTSlit, _mad
+from ghostdr.ghost.polyfit.slitview import SlitView
+from ghostdr.ghost.lookups import polyfit_lookup
+
 
 TESTDATAPATH = os.getenv('GEMPYTHON_TESTDATA', '.')
 logfilename = 'test_ghost_slit.log'
 
-SLIT_CAMERA_SIZE = (160, 160,)
 NO_SLITS = 10
 EXPTIME_SLITS = 10.
-SLIT_UT_START = datetime.datetime(2018, 6, 1, 0, 0)
+SLIT_UT_START = datetime.datetime(2023, 3, 1, 0, 0)
 STRFTIME = '%H:%M:%S.%f'
+STRFDATE = '%Y-%m-%d'
+CRFLUX = 50000
 
 
+@pytest.mark.ghostslit
 class TestGhostSlit:
     """
     Suite of tests for the functions in the primitives_ghost_slit module
     """
 
     @pytest.fixture(scope='class')
-    def create_slit_package(self, tmpdir_factory):
+    def ad_slit(self, tmpdir_factory):
         """
         Generate a package of dummy slit files.
 
@@ -44,13 +48,12 @@ class TestGhostSlit:
             Fixture.
         """
         rawfilename = 'testslitpackage.fits'
-        tmpsubdir = tmpdir_factory.mktemp('ghost_slit')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         # Create the AstroData object
         phu = fits.PrimaryHDU()
         phu.header.set('CAMERA', 'slit')
         phu.header.set('CCDNAME', 'Sony-ICX674')
+        phu.header.set('DATE-OBS', SLIT_UT_START.strftime(STRFDATE))
         phu.header.set('UTSTART', SLIT_UT_START.strftime(STRFTIME))
         phu.header.set('UTEND', (SLIT_UT_START + datetime.timedelta(
             seconds=(NO_SLITS + 1) * EXPTIME_SLITS)).strftime(STRFTIME))
@@ -59,7 +62,8 @@ class TestGhostSlit:
 
         hdus = []
         for i in range(NO_SLITS):
-            hdu = fits.ImageHDU(data=np.zeros(SLIT_CAMERA_SIZE), name='SCI')
+            # Dummy data plane for now
+            hdu = fits.ImageHDU(data=[0], name='SCI')
             hdu.header.set('CAMERA', phu.header.get('CAMERA'))
             hdu.header.set('CCDNAME', phu.header.get('CCDNAME'))
             hdu.header.set('EXPID', i + 1)
@@ -81,62 +85,53 @@ class TestGhostSlit:
         ad = astrodata.create(phu, hdus)
         ad.filename = rawfilename
 
-        yield ad, tmpsubdir
+        # We need to have a decent-looking slitview image in order to
+        # scale by fluxes
+        slitv_fn = polyfit_lookup.get_polyfit_filename(
+            None, 'slitv', 'std', ad.ut_date(), ad.filename, 'slitvmod')
+        slitvpars = astrodata.open(slitv_fn)
+        sview = SlitView(None, None, slitvpars.TABLE[0], mode=ad.res_mode())
+        slit_data = sview.fake_slitimage(seeing=0.7)
+        for ext in ad:
+            ext.data = slit_data.copy()
 
-        # Teardown code - remove files in this tmpdir
-        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                        '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename,
-                'calibrations'))
-        except OSError:
-            pass
+        return ad
 
-    @pytest.mark.skip(reason='Needs Checking')
-    def test_CRCorrect(self, create_slit_package):
+    def test_CRCorrect(self, ad_slit):
         """
         Checks to make:
 
         - Check that all simulated CR are removed from test data
         - Check shape of output data matches shape of input
         """
-        ad, tmpsubdir = create_slit_package
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-
-        # Set this to be STD mode data
-        ad.phu.set('SMPNAME', 'LO_ONLY')
-
-        modded_coords = []
-        for ext in ad:
+        modded_coords, sums = [], []
+        shapes = ad_slit.shape
+        for ext in ad_slit:
             # Switch on a '1' in the data plane of each slit. With all other
             # values being 0., that should trigger _mad detection
             # Ensure that a different coord pixel is flagged in each ext.
             success = False
             while not success:
-                attempt_coord = (random.randint(0, SLIT_CAMERA_SIZE[0] - 1),
-                                 random.randint(0, SLIT_CAMERA_SIZE[1] - 1), )
+                attempt_coord = tuple(random.randint(0, length-1)
+                                      for length in ext.shape)
                 if attempt_coord not in modded_coords:
-                    ext.data[attempt_coord] = 1.0
+                    ext.data[attempt_coord] += CRFLUX
+                    modded_coords.append(attempt_coord)
                     success = True
 
-        p = GHOSTSlit(adinputs=[ad, ])
-        output = p.CRCorrect(adinputs=[ad, ])[0]
-        # Check CR replacement
-        assert sum([abs(np.sum(ext.data))
-                    < 1e-5 for ext in output]) == \
-               len(output), 'CRCorrect failed to remove all dummy cosmic rays'
+        p = GHOSTSlit([ad_slit])
+        p.CRCorrect()
+        # Check CR replacement. Need a large-ish tolerance because
+        # a CR in the slit region will affect the obj_flux and so
+        # cause a scaling of the affected image
+        np.testing.assert_allclose(sums, [ext.data.sum() + CRFLUX for ext in ad_slit],
+                                   atol=20), 'CRCorrect failed to remove all dummy cosmic rays'
         # Check for replacement header keyword
-        for ext in output:
-            assert ext.hdr.get('CRPIXREJ') == 1, 'Incorrect number of ' \
-                                                 'rejected pixels ' \
-                                                 'recorded in CRPIXREJ'
-        # Check data array shapes
-        for i in range(len(output)):
-            assert output[i].data.shape == ad[i].data.shape, 'CRCorrect has ' \
-                                                             'mangled ' \
-                                                             'data shapes'
+        np.testing.assert_array_equal(ad_slit.hdr['CRPIXREJ'], 1), \
+            'Incorrect number of rejected pixels recorded in CRPIXREJ'
+        np.testing.assert_array_equal(ad_slit.shape, shapes), \
+            'CRCorrect has mangled data shapes'
+
 
     @pytest.mark.skip(reason='Needs to be tested with a reduced slit flat - '
                              'full reduction test required')
