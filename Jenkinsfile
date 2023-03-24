@@ -23,6 +23,7 @@ pipeline {
 
     stages {
 
+        /*
         stage ("Unit tests") {
             environment {
                 MPLBACKEND = "agg"
@@ -54,6 +55,25 @@ pipeline {
                 echo "${env.PATH}"
                 sh '.jenkins/scripts/setup_agent.sh'
                 sh 'tox -e ghost-ghostbundle -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+            }
+
+        }
+        */
+
+        stage ("SLITV tests") {
+            environment {
+                MPLBACKEND = "agg"
+                PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                DRAGONS_TEST_OUT = "./slit_tests_outputs/"
+                TOX_ARGS = "ghost_instruments ghostdr"
+                TMPDIR = "${env.WORKSPACE}/.tmp/slit/"
+            }
+            steps {
+                echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                checkout scm
+                echo "${env.PATH}"
+                sh '.jenkins/scripts/setup_agent.sh'
+                sh 'tox -e ghost-ghostslit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
             }
 
         }

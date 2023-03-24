@@ -1,8 +1,10 @@
 # This parameter file contains the parameters related to the primitives located
 # in the primitives_ghost_slit.py file, in alphabetical order.
+from astrodata import AstroData
 
 from gempy.library import config
 from geminidr.core import parameters_preprocess
+
 
 class darkCorrectConfig(parameters_preprocess.darkCorrectConfig):
     def setDefaults(self):
@@ -21,6 +23,8 @@ class CRCorrectConfig(config.Config):
 class processSlitsConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_slitsProcessed",
                           optional=True)
+    slitflat = config.ListField("Slitflat frame", (str, AstroData), None,
+                                optional=True, single=True)
 
 
 class stackFramesConfig(config.Config):

@@ -208,7 +208,7 @@ class GHOSTSlit(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        flat_list = params.get("flat")
+        flat_list = params.get("slitflat")
         if flat_list is None:
             self.getProcessedSlitFlat(adinputs)
             flat_list = [self._get_cal(ad, 'processed_slitflat')
@@ -409,7 +409,8 @@ class GHOSTSlit(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             # This stuff is in the PHU so delete vestigial info from extensions
             for kw in ('DATE-OBS', 'UTSTART', 'UTEND', 'EXPUTST', 'EXPUTEND'):
-                del ad[0].hdr[kw]
+                if kw in ad[0].hdr:
+                    del ad[0].hdr[kw]
         return adoutputs
 
 ##############################################################################
