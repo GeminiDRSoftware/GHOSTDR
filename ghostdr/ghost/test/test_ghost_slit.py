@@ -5,12 +5,8 @@ Unit tests for :any:`ghostdr.ghost.primitives_ghost_slit`.
 This is a suite of tests to be run with pytest.
 """
 import os
-import shutil
-import glob
 import numpy as np
-import astrodata
-import gemini_instruments
-from gempy.utils import logutils
+import astrodata, ghost_instruments
 import pytest
 from astropy.io import fits
 import datetime
@@ -40,7 +36,7 @@ class TestGhostSlit:
     """
 
     @pytest.fixture(scope='class')
-    def ad_slit(self, tmpdir_factory):
+    def ad_slit(self):
         """
         Generate a package of dummy slit files.
 
@@ -59,6 +55,7 @@ class TestGhostSlit:
             seconds=(NO_SLITS + 1) * EXPTIME_SLITS)).strftime(STRFTIME))
         phu.header.set('INSTRUME', 'GHOST')
         phu.header.set('DATALAB', 'test')
+        phu.header.set('SMPNAME', 'LO_ONLY')
 
         hdus = []
         for i in range(NO_SLITS):
