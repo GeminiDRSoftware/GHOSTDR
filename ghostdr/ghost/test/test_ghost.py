@@ -25,7 +25,7 @@ BINNING_OPTIONS = [
 ]
 
 
-@pytest.mark.unit
+@pytest.mark.ghostunit
 @pytest.mark.parametrize("binning", BINNING_OPTIONS)
 def test_rebin_ghost_ad(binning):
     """
