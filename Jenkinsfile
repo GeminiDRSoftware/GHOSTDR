@@ -23,60 +23,95 @@ pipeline {
 
     stages {
 
-        /*
-        stage ("Unit tests") {
-            environment {
-                MPLBACKEND = "agg"
-                PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
-                DRAGONS_TEST_OUT = "./unit_tests_outputs/"
-                TOX_ARGS = "ghost_instruments ghostdr"
-                TMPDIR = "${env.WORKSPACE}/.tmp/unit/"
-            }
-            steps {
-                echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
-                checkout scm
-                echo "${env.PATH}"
-                sh '.jenkins/scripts/setup_agent.sh'
-                sh 'tox -e ghost-unit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
-            }
-        }
+        stage ("GHOST parallel tests") {
 
-        stage ("Bundle tests") {
-            environment {
-                MPLBACKEND = "agg"
-                PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
-                DRAGONS_TEST_OUT = "./bundle_tests_outputs/"
-                TOX_ARGS = "ghost_instruments ghostdr"
-                TMPDIR = "${env.WORKSPACE}/.tmp/bundle/"
-            }
-            steps {
-                echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
-                checkout scm
-                echo "${env.PATH}"
-                sh '.jenkins/scripts/setup_agent.sh'
-                sh 'tox -e ghost-ghostbundle -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
-            }
+            parallel {
 
-        }
-        */
+                stage ("Unit tests") {
+                    environment {
+                        MPLBACKEND = "agg"
+                        PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                        DRAGONS_TEST_OUT = "./unit_tests_outputs/"
+                        TOX_ARGS = "ghost_instruments ghostdr"
+                        TMPDIR = "${env.WORKSPACE}/.tmp/unit/"
+                    }
+                    steps {
+                        echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                        checkout scm
+                        echo "${env.PATH}"
+                        sh '.jenkins/scripts/setup_agent.sh'
+                        sh 'tox -e ghost-ghostunit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+                    }
+                    post {
+                        always {
+                            echo "Delete temporary folder: ${TMPDIR}"
+                            dir ( '$TMPDIR' ) { deleteDir() }
+                            echo "Delete Tox Environment: .tox/ghost-ghostunit"
+                            dir ( ".tox/ghost-ghostunit" ) { deleteDir() }
+                            echo "Delete Outputs folder: "
+                            dir ( "${DRAGONS_TEST_OUT}" ) { deleteDir() }
+                        }
+                    }
+                }
 
-        stage ("SLITV tests") {
-            environment {
-                MPLBACKEND = "agg"
-                PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
-                DRAGONS_TEST_OUT = "./slit_tests_outputs/"
-                TOX_ARGS = "ghost_instruments ghostdr"
-                TMPDIR = "${env.WORKSPACE}/.tmp/slit/"
-            }
-            steps {
-                echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
-                checkout scm
-                echo "${env.PATH}"
-                sh '.jenkins/scripts/setup_agent.sh'
-                sh 'tox -e ghost-ghostslit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
-            }
+                stage ("Bundle tests") {
+                    environment {
+                        MPLBACKEND = "agg"
+                        PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                        DRAGONS_TEST_OUT = "./bundle_tests_outputs/"
+                        TOX_ARGS = "ghost_instruments ghostdr"
+                        TMPDIR = "${env.WORKSPACE}/.tmp/bundle/"
+                    }
+                    steps {
+                        echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                        sleep 5  // needed to avoid timeout from simultaneous checkout
+                        checkout scm
+                        echo "${env.PATH}"
+                        sh '.jenkins/scripts/setup_agent.sh'
+                        sh 'tox -e ghost-ghostbundle -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+                    }
+                    post {
+                        always {
+                            echo "Delete temporary folder: ${TMPDIR}"
+                            dir ( '$TMPDIR' ) { deleteDir() }
+                            echo "Delete Tox Environment: .tox/ghost-ghostbundle"
+                            dir ( ".tox/ghost-ghostbundle" ) { deleteDir() }
+                            echo "Delete Outputs folder: "
+                            dir ( "${DRAGONS_TEST_OUT}" ) { deleteDir() }
+                        }
+                    }
+                }
 
-        }
+                stage ("SLITV tests") {
+                    environment {
+                        MPLBACKEND = "agg"
+                        PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                        DRAGONS_TEST_OUT = "./slit_tests_outputs/"
+                        TOX_ARGS = "ghost_instruments ghostdr"
+                        TMPDIR = "${env.WORKSPACE}/.tmp/slit/"
+                    }
+                    steps {
+                        echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                        sleep 10  // needed to avoid timeout from simultaneous checkout
+                        checkout scm
+                        echo "${env.PATH}"
+                        sh '.jenkins/scripts/setup_agent.sh'
+                        sh 'tox -e ghost-ghostslit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+                    }
+                    post {
+                        always {
+                            echo "Delete temporary folder: ${TMPDIR}"
+                            dir ( '$TMPDIR' ) { deleteDir() }
+                            echo "Delete Tox Environment: .tox/ghost-ghostslit"
+                            dir ( ".tox/ghost-ghostslit" ) { deleteDir() }
+                            echo "Delete Outputs folder: "
+                            dir ( "${DRAGONS_TEST_OUT}" ) { deleteDir() }
+                        }
+                    }
+                }
+
+            }  // end parallel
+        }  // end stage
 
 
     }
