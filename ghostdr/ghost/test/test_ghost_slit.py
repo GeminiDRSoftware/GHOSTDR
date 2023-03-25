@@ -157,7 +157,6 @@ class TestGhostSlit:
         - Only one file comes out
         - Dimensions of the output image match those of the input image
         """
-
         ad = deepcopy(create_slit_image)
 
         p = GHOSTSlit([ad])
@@ -169,8 +168,6 @@ class TestGhostSlit:
                        _.data.shape for _ in ad]), "Stacked frame shape " \
                                                    "does not match inputs"
 
-    )
-
     def test__total_obj_flux(self, create_slit_image):
         """
         Checks to make
@@ -180,7 +177,7 @@ class TestGhostSlit:
         Measured flux needs to be within -2%/+1% of actual
         (There are slit losses due to restricted width of extraction)
         """
-        ad = deepcopy(create_slit_image)
+        ad = create_slit_image
         sums = [ext.data.sum() for ext in ad]
         fluxes = np.array([_total_obj_flux(None, ad.res_mode(), ad.ut_date(),
                                            ad.filename, ext.data, None,
