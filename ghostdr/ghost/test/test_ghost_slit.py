@@ -5,6 +5,7 @@ Unit tests for :any:`ghostdr.ghost.primitives_ghost_slit`.
 This is a suite of tests to be run with pytest.
 """
 import os
+from copy import deepcopy
 import numpy as np
 import astrodata, ghost_instruments
 import pytest
@@ -13,7 +14,7 @@ import datetime
 import random
 
 # from geminidr.core.test import ad_compare
-from ghostdr.ghost.primitives_ghost_slit import GHOSTSlit, _mad
+from ghostdr.ghost.primitives_ghost_slit import GHOSTSlit, _mad, _total_obj_flux
 from ghostdr.ghost.polyfit.slitview import SlitView
 from ghostdr.ghost.lookups import polyfit_lookup
 
@@ -36,7 +37,7 @@ class TestGhostSlit:
     """
 
     @pytest.fixture(scope='class')
-    def ad_slit(self):
+    def create_slit_image(self):
         """
         Generate a package of dummy slit files.
 
@@ -71,8 +72,7 @@ class TestGhostSlit:
                                        )).strftime(STRFTIME))
             hdu.header.set('EXPUTST', (SLIT_UT_START +
                                        datetime.timedelta(
-                                           seconds=((
-                                                                i * 0.2) + 1) * EXPTIME_SLITS
+                                           seconds=((i * 0.2) + 1) * EXPTIME_SLITS
                                        )).strftime(STRFTIME))
             hdu.header.set('GAIN', 1.0)
             hdu.header.set('RDNOISE', 8.0)
@@ -94,16 +94,17 @@ class TestGhostSlit:
 
         return ad
 
-    def test_CRCorrect(self, ad_slit):
+    def test_CRCorrect(self, create_slit_image):
         """
         Checks to make:
 
         - Check that all simulated CR are removed from test data
         - Check shape of output data matches shape of input
         """
+        ad = deepcopy(create_slit_image)
         modded_coords, sums = [], []
-        shapes = ad_slit.shape
-        for ext in ad_slit:
+        shapes = ad.shape
+        for ext in ad:
             # Switch on a '1' in the data plane of each slit. With all other
             # values being 0., that should trigger _mad detection
             # Ensure that a different coord pixel is flagged in each ext.
@@ -117,23 +118,23 @@ class TestGhostSlit:
                     success = True
             sums.append(ext.data.sum())
 
-        p = GHOSTSlit([ad_slit])
+        p = GHOSTSlit([ad])
         p.CRCorrect()
         # Check CR replacement. Need a large-ish tolerance because
         # a CR in the slit region will affect the obj_flux and so
         # cause a scaling of the affected image
-        np.testing.assert_allclose(sums, [ext.data.sum() + CRFLUX for ext in ad_slit],
+        np.testing.assert_allclose(sums, [ext.data.sum() + CRFLUX for ext in ad],
                                    atol=20), 'CRCorrect failed to remove all dummy cosmic rays'
         # Check for replacement header keyword
-        np.testing.assert_array_equal(ad_slit.hdr['CRPIXREJ'], 1), \
+        np.testing.assert_array_equal(ad.hdr['CRPIXREJ'], 1), \
             'Incorrect number of rejected pixels recorded in CRPIXREJ'
-        np.testing.assert_array_equal(ad_slit.shape, shapes), \
+        np.testing.assert_array_equal(ad.shape, shapes), \
             'CRCorrect has mangled data shapes'
 
 
     @pytest.mark.skip(reason='Needs to be tested with a reduced slit flat - '
                              'full reduction test required')
-    def test_processSlits(self, create_slit_package):
+    def test_processSlits(self, create_slit_image):
         """
         Checks to make:
 
@@ -143,15 +144,13 @@ class TestGhostSlit:
             b) The correct mean exposure epoch - DONE in test_slitarc_avgepoch
         """
 
-        ad, tmpsubdir = create_slit_package
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        ad = deepcopy(create_slit_image)
 
-        p = GHOSTSlit([ad, ])
-        output = p.processSlits(adinputs=[ad, ])
-        assert output.phu.header.get('AVGEPOCH') is not None
+        p = GHOSTSlit([ad])
+        p.processSlits()
+        assert ad.phu.get('AVGEPOCH') is not None
 
-    @pytest.mark.skip(reason='Needs Checking')
-    def test_stackFrames_outputs(self, create_slit_package):
+    def test_stackFrames_outputs(self, create_slit_image):
         """
         Checks to make:
 
@@ -159,110 +158,104 @@ class TestGhostSlit:
         - Dimensions of the output image match those of the input image
         """
 
-        ad, tmpsubdir = create_slit_package
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        ad = deepcopy(create_slit_image)
 
-        p = GHOSTSlit([ad, ])
-        ad = p.prepare(adinputs=[ad, ])
-        output = p.stackFrames(adinputs=ad)
+        p = GHOSTSlit([ad])
+        p.prepare()
+        output = p.stackFrames()
         assert len(output) == 1, 'Output length not 1'
+        assert len(output[0]) == 1, 'Output frame does not have 1 slice'
         assert np.all([output[0][0].data.shape ==
-                       _.data.shape for _ in ad[0]]), "Stacked frame shape " \
-                                                      "does not match inputs"
+                       _.data.shape for _ in ad]), "Stacked frame shape " \
+                                                   "does not match inputs"
 
-    @pytest.mark.skip(reason='Needs Checking')
-    def test_stackFrames_exception(self, create_slit_package):
-        """
-        Checks to make:
-
-        - Stacking frames with different shapes should fail
-        """
-        ad, tmpsubdir = create_slit_package
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-
-        # Re-size every 2nd input AD
-        for i in range(0, len(ad), 2):
-            ad[i].data = np.zeros((10, 10,))
-
-        p = GHOSTSlit([ad, ])
-        ad = p.prepare(adinputs=[ad, ])
-        with pytest.raises(IOError):
-            output = p.stackFrames(adinputs=ad)
-
-    def test__mad_fullarray(self):
-        """
-        Checks to make:
-
-        - Pass in some known data, check the MAD is computed correctly
-        """
-        # Create a simple array where the MAD is easily known
-        test_array = [1., 1., 3., 5., 5.]
-        test_array_mad = 2.
-        assert abs(_mad(test_array) -
-                   test_array_mad) < 1e-5, 'MAD computation failed ' \
-                                           '(expected: {}, ' \
-                                           'computed: {})'.format(
-            test_array_mad, _mad(test_array),
-        )
-
-    def test__mad_cols(self):
-        """
-        Checks to make:
-
-        - Check across axes as well
-        """
-        # Create a simple test array
-        test_array = [
-            [1., 2., 3., ],
-            [4., 6., 8., ],
-            [5., 10., 15., ],
-        ]
-
-        test_array_mad_cols = [1., 4., 5., ]
-        assert sum([abs(_mad(test_array, axis=0)[i] -
-                        test_array_mad_cols[i]) < 1e-5
-                    for i in
-                    range(len(test_array_mad_cols))]) == \
-               len(test_array_mad_cols), 'MAD computation failed ' \
-                                         '(axis 0) ' \
-                                         '(expected: {}, ' \
-                                         'computed: {})'.format(
-            test_array_mad_cols, _mad(test_array, axis=0),
-        )
-
-    def test__mad_rows(self):
-        """
-        Checks to make:
-
-        - Check across axes as well
-        """
-        # Create a simple test array
-        test_array = [
-            [1., 2., 3., ],
-            [4., 6., 8., ],
-            [5., 10., 15., ],
-        ]
-
-        test_array_mad_rows = [1., 2., 5., ]
-        assert sum([abs(_mad(test_array, axis=1)[i] -
-                        test_array_mad_rows[i]) < 1e-5
-                    for i in
-                    range(len(test_array_mad_rows))]
-                   ) == len(test_array_mad_rows), 'MAD computation failed ' \
-                                                  '(axis 1) ' \
-                                                  '(expected: {}, ' \
-                                                  'computed: {})'.format(
-            test_array_mad_rows, _mad(test_array, axis=1),
-        )
-
-    @pytest.mark.skip(
-        reason='FIXME: How should this be tested? The simulator randomizes the '
-               'slit viewer flux, so it is hard to get a proper value to test '
-               'against.'
     )
-    def test__total_obj_flux(self):
+
+    def test__total_obj_flux(self, create_slit_image):
         """
         Checks to make
 
         - Compare against already-known total flux?
+
+        Measured flux needs to be within -2%/+1% of actual
+        (There are slit losses due to restricted width of extraction)
         """
+        ad = deepcopy(create_slit_image)
+        sums = [ext.data.sum() for ext in ad]
+        fluxes = np.array([_total_obj_flux(None, ad.res_mode(), ad.ut_date(),
+                                           ad.filename, ext.data, None,
+                                           binning=ad.detector_x_bin())
+                           for ext in ad])
+        for actual, measured in zip(sums, fluxes):
+            assert 0.98 < measured / actual < 1.01
+
+@pytest.mark.unit
+def test__mad_fullarray():
+    """
+    Checks to make:
+
+    - Pass in some known data, check the MAD is computed correctly
+    """
+    # Create a simple array where the MAD is easily known
+    test_array = [1., 1., 3., 5., 5.]
+    test_array_mad = 2.
+    assert abs(_mad(test_array) -
+               test_array_mad) < 1e-5, 'MAD computation failed ' \
+                                       '(expected: {}, ' \
+                                       'computed: {})'.format(
+        test_array_mad, _mad(test_array),
+    )
+
+
+@pytest.mark.unit
+def test__mad_cols():
+    """
+    Checks to make:
+
+    - Check across axes as well
+    """
+    # Create a simple test array
+    test_array = [
+        [1., 2., 3., ],
+        [4., 6., 8., ],
+        [5., 10., 15., ],
+    ]
+
+    test_array_mad_cols = [1., 4., 5., ]
+    assert sum([abs(_mad(test_array, axis=0)[i] -
+                    test_array_mad_cols[i]) < 1e-5
+                for i in
+                range(len(test_array_mad_cols))]) == \
+           len(test_array_mad_cols), 'MAD computation failed ' \
+                                     '(axis 0) ' \
+                                     '(expected: {}, ' \
+                                     'computed: {})'.format(
+        test_array_mad_cols, _mad(test_array, axis=0),
+    )
+
+
+@pytest.mark.unit
+def test__mad_rows():
+    """
+    Checks to make:
+
+    - Check across axes as well
+    """
+    # Create a simple test array
+    test_array = [
+        [1., 2., 3., ],
+        [4., 6., 8., ],
+        [5., 10., 15., ],
+    ]
+
+    test_array_mad_rows = [1., 2., 5., ]
+    assert sum([abs(_mad(test_array, axis=1)[i] -
+                    test_array_mad_rows[i]) < 1e-5
+                for i in
+                range(len(test_array_mad_rows))]
+               ) == len(test_array_mad_rows), 'MAD computation failed ' \
+                                              '(axis 1) ' \
+                                              '(expected: {}, ' \
+                                              'computed: {})'.format(
+        test_array_mad_rows, _mad(test_array, axis=1),
+    )
