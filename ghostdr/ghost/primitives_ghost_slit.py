@@ -409,7 +409,8 @@ class GHOSTSlit(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             # This stuff is in the PHU so delete vestigial info from extensions
             for kw in ('DATE-OBS', 'UTSTART', 'UTEND', 'EXPUTST', 'EXPUTEND'):
-                del ad[0].hdr[kw]
+                if kw in ad[0].hdr:
+                    del ad[0].hdr[kw]
         return adoutputs
 
 ##############################################################################
