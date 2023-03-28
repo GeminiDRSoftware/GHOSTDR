@@ -1,12 +1,12 @@
-from __future__ import division, print_function
 import pytest
-import ghostdr.ghost.polyfit as polyfit
-import astropy.io.fits as pyfits
-import pdb
-import numpy as np
 import os
-import astrodata as ad
+import datetime
 import itertools
+
+import ghostdr.ghost.polyfit as polyfit
+from ghostdr.ghost.lookups.polyfit_lookup import get_polyfit_filename
+import numpy as np
+import astrodata
 
 # Test suite for polyfit.extract
 from ghostdr.ghost.polyfit import extract, ghost, slitview
@@ -21,6 +21,7 @@ def test_find_additional_crs():
     pass
 
 
+@pytest.mark.ghostunit
 def test_subtract_scattered_light():
     """Test extract.subtract_scattered_light"""
     data_arr = np.ones((2, 2, ))
@@ -34,6 +35,7 @@ def idfn(fixture_value):
     return ','.join([str(_) for _ in fixture_value])
 
 
+@pytest.mark.ghostunit
 class TestExtractor(object):
     """Testing class for polyfit.extract.Extractor"""
 
@@ -56,30 +58,20 @@ class TestExtractor(object):
         # Stand up the GhostArm, and run the necessary functions
         ga = ghost.GhostArm(arm=arm, mode=res, detector_x_bin=1,
                             detector_y_bin=1)
-        ga.spectral_format_with_matrix(
-            xmod=ad.open(os.path.join(TEST_DATA_DIR, 'Polyfit', arm, res,
-                                      '161120',
-                                      'xmod.fits'))[0].data,
-            wavemod=
-            ad.open(os.path.join(TEST_DATA_DIR, 'Polyfit', arm, res, '161120',
-                                 'wavemod.fits'))[0].data,
-            spatmod=
-            ad.open(os.path.join(TEST_DATA_DIR, 'Polyfit', arm, res, '161120',
-                                 'spatmod.fits'))[0].data,
-            specmod=
-            ad.open(os.path.join(TEST_DATA_DIR, 'Polyfit', arm, res, '161120',
-                                 'specmod.fits'))[0].data,
-            rotmod=
-            ad.open(os.path.join(TEST_DATA_DIR, 'Polyfit', arm, res, '161120',
-                                 'rotmod.fits'))[0].data,
-        )
+        fnames = [get_polyfit_filename(None, arm, res,
+                                       datetime.date(2016, 11, 20), None, caltype)
+                  for caltype in ('xmod', 'wavemod', 'spatmod', 'specmod',
+                                  'rotmod')]
+        ga.spectral_format_with_matrix(*[astrodata.open(fn)[0].data
+                                       for fn in fnames])
 
         # Stand up the Slitview, and run necessary functions
+        slitv_fn = get_polyfit_filename(
+            None, 'slitv', res, datetime.date(2016, 11, 20), None, 'slitvmod')
         sv = slitview.SlitView(
             slit_image=np.loadtxt(os.path.join(TEST_DATA_DIR, 'slitimage.txt')),
             flat_image=np.loadtxt(os.path.join(TEST_DATA_DIR, 'slitflat.txt')),
-            mode=res,
-        )
+            slitvpars=astrodata.open(slitv_fn).TABLE[0], mode=res)
 
         ext = extract.Extractor(ga, sv)
 
@@ -91,7 +83,6 @@ class TestExtractor(object):
         _, _, _ = make_extractor
         assert True
 
-    @pytest.mark.skip(reason='Needs Checking')
     def test_extractor_bin_models(self, make_extractor):
         """Test the Extractor.bin_models method"""
         ga, sv, ext = make_extractor
@@ -113,7 +104,6 @@ class TestExtractor(object):
             int(ext.arm.szy / ext.arm.ybin),
             2, 2), "matrices returned by bin_models has incorrect shape"
 
-    @pytest.mark.skip(reason='Needs Checking')
     @pytest.mark.parametrize('transpose', [True, False])
     def test_extractor_make_pixel_model(self, transpose, make_extractor):
         """Test the Extractor.make_pixel_model method"""
