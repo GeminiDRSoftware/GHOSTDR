@@ -855,6 +855,7 @@ class GHOSTSpect(GHOST):
                 log.stdinfo(f"Creating synthetic slit image for seeing={seeing}")
                 slit_data = sview.fake_slitimage(flat_image=slitflat_data, seeing=seeing)
             else:
+                # TODO? This only models IFU0 in SR mode
                 slit_models = sview.model_profile(slit_data, slitflat_data)
                 log.stdinfo("")
                 for k, model in slit_models.items():

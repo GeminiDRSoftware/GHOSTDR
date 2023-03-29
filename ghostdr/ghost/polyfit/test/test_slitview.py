@@ -1,11 +1,18 @@
 import pytest
+import os
 import numpy as np
 import itertools
 import datetime
 
 import astrodata
+import pytest_dragons
 import ghostdr.ghost.polyfit as polyfit
 from ghostdr.ghost.lookups.polyfit_lookup import get_polyfit_filename
+
+SEEING_ESTIMATES = (
+        ("S20220915S0007_2x2_slit_blue006_slit.fits", {"blue": 0.56, "red": 0.53}),
+)
+
 
 # Testing of the polyfit.slitview object, particularly the SlitView object
 
@@ -118,3 +125,9 @@ class TestSlitView():
                                                "not reduced the dimensions " \
                                                "of the cutout by 1"
         assert profile.shape == cutout.shape[:1] + cutout.shape[2:]
+
+
+@pytest.mark.ghostslit
+@pytest.mark.parametrize("filename, results", SEEING_ESTIMATES)
+def test_seeing_estimate(filename, results, path_to_inputs):
+    ad = astrodata.open(os.path.join(path_to_inputs, filename))
