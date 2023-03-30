@@ -23,6 +23,34 @@ pipeline {
 
     stages {
 
+        stage ("New tests") {
+            environment {
+                MPLBACKEND = "agg"
+                PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                DRAGONS_TEST_OUT = "./new_tests_outputs/"
+                TOX_ARGS = "ghost_instruments ghostdr"
+                TMPDIR = "${env.WORKSPACE}/.tmp/new/"
+            }
+            steps {
+                echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                checkout scm
+                echo "${env.PATH}"
+                sh '.jenkins/scripts/setup_agent.sh'
+                sh 'tox -e ghost-ghostnew -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+            }
+            post {
+                always {
+                    echo "Delete temporary folder: ${TMPDIR}"
+                    dir ( '$TMPDIR' ) { deleteDir() }
+                    echo "Delete Tox Environment: .tox/ghost-ghostnew"
+                    dir ( ".tox/ghost-ghostnew" ) { deleteDir() }
+                    echo "Delete Outputs folder: "
+                    dir ( "${DRAGONS_TEST_OUT}" ) { deleteDir() }
+                }
+            }
+        }
+
+        /*
         stage ("GHOST parallel tests") {
 
             parallel {
@@ -112,6 +140,7 @@ pipeline {
 
             }  // end parallel
         }  // end stage
+        */
 
 
     }
