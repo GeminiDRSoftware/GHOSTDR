@@ -10,7 +10,8 @@ import ghostdr.ghost.polyfit as polyfit
 from ghostdr.ghost.lookups.polyfit_lookup import get_polyfit_filename
 
 SEEING_ESTIMATES = (
-        ("S20220915S0007_2x2_slit_blue006_slit.fits", {"blue": 0.56, "red": 0.53}),
+        ("S20220915S0007_2x2_slit_blue006_slit.fits", {"blue": 0.56, "red": 0.53}),  # SR, 2-object
+        ("HIP016085_20220913_b240r60_1x1_hr_2x2_slit_slit.fits", {"blue": 0.66, "red": 0.62}),  # HR
 )
 
 
@@ -131,3 +132,11 @@ class TestSlitView():
 @pytest.mark.parametrize("filename, results", SEEING_ESTIMATES)
 def test_seeing_estimate(filename, results, path_to_inputs):
     ad = astrodata.open(os.path.join(path_to_inputs, filename))
+    slitv_fn = get_polyfit_filename(
+        None, 'slitv', ad.res_mode(), ad.ut_date(), None, 'slitvmod')
+    sv = polyfit.slitview.SlitView(
+        ad[0].data, None, slitvpars=astrodata.open(slitv_fn).TABLE[0],
+        mode=ad.res_mode())
+    m = sv.model_profile(ad[0].data)
+    for k, v in m.items():
+        assert results[k] == pytest.approx(v.estimate_seeing()[0], abs=0.05)
