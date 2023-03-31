@@ -486,6 +486,20 @@ class TestGhost:
                                      "None when asked for a bogus " \
                                      "model type"
 
+    @pytest.fixture(scope='class')
+    def data__compute_barycentric_correction(self):
+        """
+        Generate a minimal data file for
+        :any:`test__compute_barycentric_correction`
+        .. note::
+            Fixture.
+
+        This fixture exists so an AD object with suitable keywords can
+        be propagated between tests.
+        """
+        ad = self.generate_minimum_file()
+        return ad
+
     @pytest.mark.parametrize('ra,dec,dt,known_corr', [
         (90., -30., '2018-01-03 15:23:32', 0.999986388827),
         (180., -60., '2018-11-12 18:35:15', 1.00001645007),
@@ -494,14 +508,14 @@ class TestGhost:
         (101.1, 0., '2018-02-23 17:18:55', 0.999928361662),
     ])
     def test__compute_barycentric_correction_values(
-            self, ra, dec, dt, known_corr):
+            self, ra, dec, dt, known_corr, data__compute_barycentric_correction):
         """
         Checks to make:
 
         - Correct units of return based on input arguments
         - Some regression test values
         """
-        ad = self.generate_minimum_file()
+        ad = data__compute_barycentric_correction
         ad.phu.set('RA', ra)
         ad.phu.set('DEC', dec)
         # Assume a 10 min exposure
@@ -521,7 +535,6 @@ class TestGhost:
                 known_corr, corr_fact,
             )
 
-    @pytest.mark.skip(reason='Needs Checking')
     @pytest.mark.parametrize('return_wavl,units', [
         (True, u.dimensionless_unscaled,),
         (False, u.m / u.s,),
@@ -533,15 +546,14 @@ class TestGhost:
         Check the return units of _compute_barycentric_correction
         """
         # ad should be correctly populated from previous test
-        ad, tmpsubdir = data__compute_barycentric_correction
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        ad = data__compute_barycentric_correction
 
         gs = GHOSTSpect([])
         corr_fact = gs._compute_barycentric_correction(
-            ad, return_wavl=return_wavl)[0]
+            ad, return_wavl=return_wavl)
         assert corr_fact.unit == units, \
             "_compute_barycentric_correction returned incorrect units " \
-            "(expected {}, got {})".format(units, corr_fact.unit, )
+            "(expected {}, got {}) {}".format(units, corr_fact.unit)
 
     @pytest.mark.skip(reason='Requires calibration system - '
                              'will need to be part of all-up testing')
