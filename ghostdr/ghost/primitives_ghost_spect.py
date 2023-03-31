@@ -412,13 +412,13 @@ class GHOSTSpect(GHOST):
             if params['correction_factor'] is None:
                 cf = self._compute_barycentric_correction(ad, return_wavl=True)
             else:
-                cf = [params['correction_factor'], ] * len(ad)
+                cf = params['correction_factor']
 
             # Multiply the wavelength scale by the correction factor
-            for i, ext in enumerate(ad):
-                log.stdinfo('Applying barycentric correction factor of '
-                            '{} to ext {} of {}'.format(cf[i], i, ad.filename))
-                ext.WAVL *= float(cf[i])
+            log.stdinfo('Applying barycentric correction factor of '
+                        f'{cf} to {ad.filename}')
+            for ext in ad:
+                ext.WAVL *= cf
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -2575,9 +2575,8 @@ class GHOSTSpect(GHOST):
 
         Returns
         -------
-        corr_facts: list of float
-            The barycentric correction values, one per extension of the input
-            ad.
+        corr_facts: float
+            The barycentric correction value
         """
 
         # Set up a SkyCoord for this ad
@@ -2585,62 +2584,48 @@ class GHOSTSpect(GHOST):
             print("Unable to compute barycentric correction for "
                   "{} (no sky pos data) - skipping".format(ad.filename))
             if return_wavl:
-                corr_fact = [1.0, ] * len(ad)
+                corr_fact = 1.0
             else:
-                corr_fact = [0.0, ] * len(ad)
+                corr_fact = 0.0
             return corr_fact
         print("Computing SkyCoord for {}, {}".format(ad.ra(), ad.dec()))
         sc = astrocoord.SkyCoord(ad.ra(), ad.dec(),
                                  unit=(u.deg, u.deg, ))
 
         # Compute central time of observation
-        # FIXME should implement descriptors to access these - there don't
-        # appear to be relevant ones in gemini_instruments yet
-        dt_start = datetime.combine(
-            datetime.strptime(ad.phu.get('DATE-OBS'), '%Y-%m-%d').date(),
-            datetime.strptime(ad.phu.get('UTSTART'), '%H:%M:%S%f').time(),
-        )
+        dt_midp = ad.ut_datetime() + timedelta(seconds=ad.exposure_time() / 2.0)
+        dt_midp = Time(dt_midp)
 
-        corr_facts = []
-        for ext in ad:
+        # Jane Rigby implementation
+        # # ICRS position & vel of Earth geocenter
+        # ep, ev = astrocoord.solar_system.get_body_barycentric_posvel(
+        #     'earth', dt_midp
+        # )
+        # # GCRS position & vel of observatory (loc)
+        # op, ov = loc.get_gcrs_posvel(dt_midp)
+        # # Velocities can be simply added (are axes-aligned)
+        # vel = ev + ov
+        #
+        # # Get unit ICRS vector in direction of observation
+        # sc_cart = sc.icrs.represent_as(
+        #     astrocoord.UnitSphericalRepresentation
+        # ).represent_as(
+        #     astrocoord.CartesianRepresentation
+        # )
+        #
+        # corr_fact = sc_cart.dot(vel).to(u.km/u.s)
 
-            dt_midp = dt_start + timedelta(
-                seconds=ad.phu.get('EXPOSED')/2.0
-            )
-            dt_midp = Time(dt_midp)
+        # Vanilla AstroPy Implementation
+        corr_fact = sc.radial_velocity_correction('barycentric',
+                                                  obstime=dt_midp,
+                                                  location=GEMINI_SOUTH_LOC)
 
-            # Jane Rigby implementation
-            # # ICRS position & vel of Earth geocenter
-            # ep, ev = astrocoord.solar_system.get_body_barycentric_posvel(
-            #     'earth', dt_midp
-            # )
-            # # GCRS position & vel of observatory (loc)
-            # op, ov = loc.get_gcrs_posvel(dt_midp)
-            # # Velocities can be simply added (are axes-aligned)
-            # vel = ev + ov
-            #
-            # # Get unit ICRS vector in direction of observation
-            # sc_cart = sc.icrs.represent_as(
-            #     astrocoord.UnitSphericalRepresentation
-            # ).represent_as(
-            #     astrocoord.CartesianRepresentation
-            # )
-            #
-            # corr_fact = sc_cart.dot(vel).to(u.km/u.s)
+        if return_wavl:
+            corr_fact = 1.0 + (corr_fact / const.c)
+        else:
+            corr_fact = corr_fact.to(u.m / u.s)
 
-            # Vanilla AstroPy Implementation
-            corr_fact = sc.radial_velocity_correction('barycentric',
-                                                      obstime=dt_midp,
-                                                      location=GEMINI_SOUTH_LOC)
-
-            if return_wavl:
-                corr_fact = 1.0 + (corr_fact / const.c)
-            else:
-                corr_fact = corr_fact.to(u.m / u.s)
-
-            corr_facts.append(corr_fact)
-
-        return corr_facts
+        return corr_fact
 
     def _request_bracket_arc(self, ad, before=None):
         """

@@ -137,7 +137,7 @@ def get_polyfit_filename(log, arm, mode, date_obs, filename, caltype):
 
     try:
         poly_dict = globals()['{}_dict'.format(caltype)]
-    except AttributeError:
+    except KeyError:
         if not log is None:
             log.warning("Invalid polyfit calibration type ({}) requested for "
                         "{}".format(caltype, filename))
