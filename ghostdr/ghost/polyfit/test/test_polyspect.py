@@ -10,6 +10,7 @@ import numpy as np
 # than trying to work out the minimalist calls required ourselves.
 
 # Assert if all the correct attributes of the Polyspect class needed are there
+@pytest.mark.ghostunit
 def test_polyspect_init():
     with pytest.raises(TypeError):
         # Must provide all init parameters

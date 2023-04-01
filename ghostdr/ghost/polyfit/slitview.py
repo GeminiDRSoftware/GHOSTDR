@@ -410,6 +410,7 @@ class SlitView(object):
             else:
                 slit_cutout = slit_image[_slice]
                 if self.mode == "std":
+                    # Model IFU0 only on the basis that the brightest object is there
                     slit_model = model_class(
                         **init_parameters, shape=slit_cutout.shape, ifus=['ifu0'])
                 else:
@@ -482,7 +483,7 @@ class SlitView(object):
         return image
 
     def fake_slitimage(self, unbinned_shape=(260, 300), amplitude=10000,
-                       flat_image=None, seeing=None, alpha=4):
+                       flat_image=None, ifus=None, seeing=None, alpha=4):
         """
         Construct a fake slit (or slitflat) image and set the appropriate
         attribute to the rotated version of this image.
@@ -507,6 +508,8 @@ class SlitView(object):
             (a tuple should be provided for 2-IFU mode when making a slit image)
         flat_image: 2D ndarray (fake slit only)
             create a slit image based on the fibre positions in this slitflat
+        ifus: list/None
+            ifus with signal
         seeing: float/dict/None
             FWHM in each arm (None => create a slitflat)
         alpha: float
@@ -541,7 +544,7 @@ class SlitView(object):
                 positional_params = {k: getattr(slitflat_models[arm], k)
                                      for k in ('x_center', 'y_center',
                                                'angle', 'separation')}
-            slit_model = model_class(**positional_params, shape=_shape)
+            slit_model = model_class(**positional_params, ifus=ifus, shape=_shape)
             if seeing is None:  # making a synthetic sliflat
                 amp_params = [param for param in slit_model.param_names
                               if 'amplitude' in param]

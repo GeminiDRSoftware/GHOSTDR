@@ -221,27 +221,6 @@ def _write_newfile(extns, suffix, base, log):
     else:
         n = astrodata.create(copy.deepcopy(base.phu))
 
-    # Copy some important keywords into each separate file if they
-    # aren't already there
-    for kw in ['INSTRUME', 'TELESCOP', 'DATALAB', 'GEMPRGID', 'OBSID', 'UTC-OBS', 'RA', 'DEC']:
-        try:
-            if not n.phu.get(kw):
-                n.phu[kw] = base.phu.get(kw)
-        except KeyError:
-            pass
-
-    # Remove some keywords that are only relevant to the bundle
-    for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP']:
-        try:
-            del n.phu[kw]
-        except KeyError:
-            pass
-
-    # Append the extensions that contain pixel data
-    for x in extns:
-        if (x.hdr.get('NAXIS') > 0) and (x.data.size > 0):
-            n.append(x)
-
     # Collate headers into the new PHU
     for kw in ['CAMERA', 'CCDNAME',
                'CCDSUM', 'DETECTOR',
@@ -253,6 +232,27 @@ def _write_newfile(extns, suffix, base, log):
     n.phu.set('UTSTART', vals[min(vals.keys())])
     vals = _get_hdr_values(extns, 'UTEND')
     n.phu.set('UTEND', vals[max(vals.keys())])
+
+    # Copy keywords into each separate file if they aren't already there
+    for kw in base.phu:
+        if kw not in n.phu or n.phu.get(kw) == '':
+            n.phu[kw] = (base.phu[kw], base.phu.comments[kw])
+
+    # Other stuff
+    n.phu['OBSID'] = base.phu['OBSID']
+
+    # Remove some keywords that are only relevant to the bundle
+    for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP', 'UT']:
+        try:
+            del n.phu[kw]
+        except KeyError:
+            pass
+
+    # Append the extensions that contain pixel data
+    for x in extns:
+        if (x.hdr.get('NAXIS') > 0) and (x.data.size > 0):
+            n.append(x)
+
 
     # Construct a filename
     n.filename = base.filename

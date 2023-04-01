@@ -35,6 +35,7 @@ import shutil
 from ghostdr.ghost.primitives_ghost_spect import GHOSTSpect
 
 
+@pytest.mark.ghostspect
 class TestGhost:
     """
     Suite of tests for the functions in the primitives_ghost_slit module
@@ -76,16 +77,13 @@ class TestGhost:
         pass
 
     @pytest.fixture(scope='class')
-    def data_applyFlatBPM(self, tmpdir_factory):
+    def data_applyFlatBPM(self):
         """
         Apply the flat BPM to a minimal test data file.
 
         .. note::
             Fixture.
         """
-        tmpsubdir = tmpdir_factory.mktemp('ghost_applyflatbpm')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-
         ad = self.generate_minimum_file()
 
         bpm = fits.ImageHDU(data=np.zeros((1024, 1024,), dtype=int), name='DQ')
@@ -103,19 +101,8 @@ class TestGhost:
         flat_ad[0].DQ = bpm2
         flat_ad.filename = flatfilename
 
-        yield ad, flat_ad, tmpsubdir
+        yield ad, flat_ad
 
-        # Teardown code - remove files in this tmpdir
-        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                        '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename, 'calibrations'))
-        except OSError:
-            pass
-
-    @pytest.mark.skip(reason='Needs Checking')
     def test_applyFlatBPM(self, data_applyFlatBPM):
         """
         Checks to make:
@@ -125,18 +112,16 @@ class TestGhost:
           of combining and checking)
         - Check before & after data shape
         """
-        ad, flat_ad, tmpsubdir = data_applyFlatBPM
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-
-        gs = GHOSTSpect([ad, ])
+        ad, flat_ad = data_applyFlatBPM
+        gs = GHOSTSpect([ad])
 
         # Check the output when no flat is provided
-        ad_output = gs.applyFlatBPM([ad, ])
+        ad_output = gs.applyFlatBPM([ad])
         assert ad.phu.get(gs.timestamp_keys['applyFlatBPM']) is None, \
                 "applyFlatBPM modified the output file when not passed " \
                 "a flat or flat stream"
 
-        ad_output = gs.applyFlatBPM([ad, ], flat=flat_ad)
+        ad_output = gs.applyFlatBPM([ad], flat=flat_ad).pop()
         # Check that flat BPM is correctly carried over to (blank) ad BPM
         assert np.allclose(ad_output[0].mask,
                            flat_ad[0].mask), "applyFlatBPM failed to " \
@@ -147,7 +132,7 @@ class TestGhost:
         # Double the BPM on the data (i.e. make all the values 2), and ensure
         # that the re-applied values come out as 3
         ad[0].mask *= 2
-        ad_output = gs.applyFlatBPM([ad, ], flat=flat_ad)
+        ad_output = gs.applyFlatBPM([ad], flat=flat_ad).pop()
         assert np.allclose(ad_output[0].mask,
                            flat_ad[0].mask * 3), "applyFlatBPM failed to " \
                                                  "correctly apply a flat BPM " \
@@ -156,7 +141,7 @@ class TestGhost:
 
         # Ensure the correct behaviour when the data file has no BPM
         ad[0].mask = None  # Is this the right way to do this? del doesn't work
-        ad_output = gs.applyFlatBPM([ad, ], flat=flat_ad)
+        ad_output = gs.applyFlatBPM([ad], flat=flat_ad).pop()
         assert np.allclose(ad_output[0].mask,
                            flat_ad[0].mask), "applyFlatBPM failed to " \
                                              "correctly apply a flat BPM " \
@@ -169,9 +154,8 @@ class TestGhost:
                                                 "timestamp-mark the " \
                                                 "output file"
 
-    @pytest.mark.skip(reason='Needs Checking')
     @pytest.fixture(scope='class')
-    def data_barycentricCorrect(self, tmpdir_factory):
+    def data_barycentricCorrect(self):
         """
         Create data for the barycentric correction test.
 
@@ -179,14 +163,11 @@ class TestGhost:
             Fixture.
         """
         ad = self.generate_minimum_file()
-        tmpsubdir = tmpdir_factory.mktemp('ghost_bccorrect')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
 
         # Add a wavl extension - no need to be realistic
         ad[0].WAVL = np.random.rand(*ad[0].data.shape)
-        return ad, copy.deepcopy(ad[0].WAVL), tmpsubdir
+        return ad, copy.deepcopy(ad[0].WAVL)
 
-    @pytest.mark.skip(reason='Needs Checking')
     def test_barycentricCorrect(self, data_barycentricCorrect):
         """
         Checks to make:
@@ -197,13 +178,12 @@ class TestGhost:
         Testing of the helper _compute_barycentric_correction is done
         separately.
         """
-        ad, orig_wavl, tmpsubdir = data_barycentricCorrect
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        ad, orig_wavl = data_barycentricCorrect
         orig_ad = copy.deepcopy(ad)
 
-        gs = GHOSTSpect([ad, ])
+        gs = GHOSTSpect([ad])
         corr_fact = random.uniform(0.5, 1.5)
-        ad_out = gs.barycentricCorrect([ad, ], correction_factor=corr_fact)[0]
+        ad_out = gs.barycentricCorrect([ad], correction_factor=corr_fact).pop()
         assert np.allclose(ad_out[0].WAVL / corr_fact,
                            orig_wavl), "barycentricCorrect appears not to " \
                                        "have made a valid correction " \
@@ -220,17 +200,13 @@ class TestGhost:
                                                       "timestamp-mark the " \
                                                       "output file"
 
-    @pytest.mark.skip(reason='Needs Checking')
-    def test_clipSigmaBPM(self, tmpdir):
+    def test_clipSigmaBPM(self):
         """
         Checks to make:
 
         - Send it dummy file with known number of pixels outside range,
           make sure that many pixels are flagged out
         """
-        tmpsubdir = tmpdir.mkdir('ghost_clipsigma')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-
         ad = self.generate_minimum_file()
         ad[0].DQ = np.zeros(ad[0].data.shape, dtype=int)
         # Insert some very large data points into the otherwise all-1s data
@@ -244,7 +220,7 @@ class TestGhost:
             ad[0].data[ys[i], xs[i]] = 1000.
 
         gs = GHOSTSpect([])
-        ad_out = gs.clipSigmaBPM([ad, ], bpm_value=1)[0]
+        ad_out = gs.clipSigmaBPM([ad], bpm_value=1)[0]
 
         assert np.all([ad_out[0].mask[ys[i], xs[i]] == 1
                        for i in range(10)]), "clipSigmaBPM failed to mask " \
@@ -255,26 +231,13 @@ class TestGhost:
                                                 "timestamp-mark the " \
                                                 "output file"
 
-        # Teardown - remove calibrations and output file
-        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                        '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename,
-                'calibrations'))
-        except OSError:
-            pass
-
     @pytest.mark.parametrize('xbin, ybin',
                              list(itertools.product(*[
                                  [1, 2, ],  # x binning
                                  [1, 2, 4, 8, ],  # y binning
                              ]))
                              )
-
-    @pytest.mark.skip(reason='Needs Checking')
-    def test_darkCorrect_rebin(self, xbin, ybin, tmpdir):
+    def test_darkCorrect_rebin(self, xbin, ybin):
         """
         Checks to make:
 
@@ -285,9 +248,6 @@ class TestGhost:
         - Check for DARKIM in output header
         - Check before & after data shape
         """
-        tmpsubdir = tmpdir.mkdir('ghost_darkcorrect')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-
         ad = self.generate_minimum_file()
         dark = self.generate_minimum_file()
         dark.filename = 'dark.fits'
@@ -298,27 +258,13 @@ class TestGhost:
 
         gs = GHOSTSpect([])
         input_shape = ad[0].data.shape
-        ad_out = gs.darkCorrect([ad, ], dark=[dark, ])[0]
+        ad_out = gs.darkCorrect([ad], dark=dark, do_cal="force")[0]
 
         assert ad_out[0].data.shape == input_shape, "darkCorrect has mangled " \
                                                     "the shape of the input " \
                                                     "data"
-        # Teardown - remove calibrations and output file
-        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                        '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename,
-                'calibrations'))
-        except OSError:
-            pass
 
-    @pytest.mark.skip(reason='Needs Checking')
-    def test_darkCorrect_errors(self, tmpdir):
-        tmpsubdir = tmpdir.mkdir('ghost_dcerrors')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-
+    def test_darkCorrect_errors(self):
         ad = self.generate_minimum_file()
         dark = self.generate_minimum_file()
         dark.filename = 'dark.fits'
@@ -329,35 +275,19 @@ class TestGhost:
         with pytest.raises(IOError):
             ad2 = copy.deepcopy(ad)
             ad2[0].hdr.set('CCDSUM', '2 2')
-            gs.darkCorrect([ad, ad2, ], dark=[dark, dark, ])
+            gs.darkCorrect([ad, ad2, ], dark=[dark, dark, ], do_cal="force")
 
         # Mismatched list lengths
         with pytest.raises(Exception):
-            gs.darkCorrect([ad, ad2, ad, ], dark=[dark, dark, ])
+            gs.darkCorrect([ad, ad2, ad, ], dark=[dark, dark, ], do_cal="force")
 
-        # Teardown - remove calibrations and output file
-        for _ in glob.glob(
-                os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                             '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename,
-                'calibrations'))
-        except OSError:
-            pass
-
-    @pytest.mark.skip(reason='Needs Checking')
-    def test_darkCorrect(self, tmpdir):
-        tmpsubdir = tmpdir.mkdir('ghost_darkcorr')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-
+    def test_darkCorrect(self):
         ad = self.generate_minimum_file()
         dark = self.generate_minimum_file()
         dark.filename = 'dark.fits'
 
         gs = GHOSTSpect([])
-        ad_out = gs.darkCorrect([ad, ], dark=[dark, ])
+        ad_out = gs.darkCorrect([ad, ], dark=[dark, ], do_cal="force")
 
         # import pdb; pdb.set_trace()
 
@@ -372,17 +302,6 @@ class TestGhost:
                                                "timestamp-mark the " \
                                                "output file"
 
-        # Teardown - remove calibrations and output file
-        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                        '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename,
-                'calibrations'))
-        except OSError:
-            pass
-
     @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - save for '
                              'all-up testing')
     def test_extractProfile(self):
@@ -396,7 +315,7 @@ class TestGhost:
         """
         pass
 
-    def test_interpolateAndCombine(self, tmpdir):
+    def test_interpolateAndCombine(self):
         """
         Checks to make:
 
@@ -405,8 +324,6 @@ class TestGhost:
 
         Fuller testing needs to be done 'all-up' in a reduction sequence.
         """
-        tmpsubdir = tmpdir.mkdir('ghost_inc')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad = self.generate_minimum_file()
         gs = GHOSTSpect([])
 
@@ -420,17 +337,6 @@ class TestGhost:
             gs.timestamp_keys['interpolateAndCombine']
         ) is None, "interpolateAndCombine appears to have acted on a file " \
                    "when skip=True"
-
-        # Teardown - remove calibrations and output file
-        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                        '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename,
-                'calibrations'))
-        except OSError:
-            pass
 
     @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - save for '
                              'all-up testing')
@@ -490,7 +396,7 @@ class TestGhost:
         """
         pass
 
-    def test_responseCorrect(self, tmpdir):
+    def test_responseCorrect(self):
         """
         Checks to make:
 
@@ -498,8 +404,6 @@ class TestGhost:
 
         More complete testing to be made in 'all-up' reduction
         """
-        tmpsubdir = tmpdir.mkdir('ghost_responsecorr')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad = self.generate_minimum_file()
         gs = GHOSTSpect([])
 
@@ -510,26 +414,12 @@ class TestGhost:
         ) is None, "responseCorrect appears to have acted on a file " \
                    "when skip=True"
 
-        # Teardown - remove calibrations and output file
-        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                        '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename,
-                'calibrations'))
-        except OSError:
-            pass
-
-    @pytest.mark.skip(reason='Needs Checking')
-    def test_standardizeStructure(self, tmpdir):
+    def test_standardizeStructure(self):
         """
         Checks to make:
 
         - This is a no-op primitive - ensure no change is made
         """
-        tmpsubdir = tmpdir.mkdir('ghost_standstruct')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
         ad = self.generate_minimum_file()
         ad_orig = copy.deepcopy(ad)
         gs = GHOSTSpect([])
@@ -542,17 +432,6 @@ class TestGhost:
             len(ad_orig) == len(ad_out),
         ]), "standardizeStructure is no longer a no-op primitive"
 
-        # Teardown - remove calibrations and output file
-        for _ in glob.glob(os.path.join(tmpsubdir.dirname, tmpsubdir.basename,
-                                        '*.fits')):
-            os.remove(_)
-        try:
-            shutil.rmtree(os.path.join(
-                tmpsubdir.dirname, tmpsubdir.basename,
-                'calibrations'))
-        except OSError:
-            pass
-
     @pytest.mark.skip(reason='All-up testing required - needs full DATASEC, '
                              'CCDSEC, AMPSIZE, CCDSIZE etc. calculations')
     def test_tileArrays(self):
@@ -564,36 +443,19 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Needs Checking')
-    @pytest.fixture(scope='class')
-    def data__get_polyfit_filename(self, tmpdir_factory):
-        """
-        Only need a 'placeholder' AD for this test, can modify on the fly within
-        the test itself.
-
-        .. note::
-            Fixture.
-        """
-        tmpsubdir = tmpdir_factory.mktemp('ghost_pfname')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-        ad = self.generate_minimum_file()
-        return ad, tmpsubdir
-
     @pytest.mark.parametrize('arm,res,caltype', list(itertools.product(*[
         ['BLUE', 'RED'],  # Arm
         ['LO_ONLY', 'HI_ONLY'],  # Res. mode
         ['xmod', 'wavemod', 'spatmod', 'specmod', 'rotmod'],  # Cal. type
     ])))
-    def test__get_polyfit_filename(self, arm, res, caltype,
-                                   data__get_polyfit_filename):
+    def test__get_polyfit_filename(self, arm, res, caltype):
         """
         Checks to make:
 
         - Provide a set of input (arm, res, ) arguments, see if a/ name is
           returned
         """
-        ad, tmpsubdir = data__get_polyfit_filename
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        ad = self.generate_minimum_file()
         ad.phu.set('SMPNAME', res)
         ad.phu.set('CAMERA', arm)
         ad.phu.set('UTSTART', datetime.datetime.now().time().strftime(
@@ -606,13 +468,11 @@ class TestGhost:
 
         assert polyfit_file is not None, "Could not find polyfit file"
 
-    @pytest.mark.skip(reason='Needs Checking')
-    def test__get_polyfit_filename_errors(self, data__get_polyfit_filename):
+    def test__get_polyfit_filename_errors(self):
         """
         Check passing an invalid calib. type throws an error
         """
-        ad, tmpsubdir = data__get_polyfit_filename
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        ad = self.generate_minimum_file()
         ad.phu.set('SMPNAME', 'HI_ONLY')
         ad.phu.set('CAMERA', 'RED')
         ad.phu.set('UTSTART', datetime.datetime.now().time().strftime(
@@ -627,20 +487,19 @@ class TestGhost:
                                      "model type"
 
     @pytest.fixture(scope='class')
-    def data__compute_barycentric_correction(self, tmpdir_factory):
+    def data__compute_barycentric_correction(self):
         """
         Generate a minimal data file for
         :any:`test__compute_barycentric_correction`
-
         .. note::
             Fixture.
-        """
-        tmpsubdir = tmpdir_factory.mktemp('ghost_computebc')
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
-        ad = self.generate_minimum_file()
-        return ad, tmpsubdir
 
-    @pytest.mark.skip(reason='Needs Checking')
+        This fixture exists so an AD object with suitable keywords can
+        be propagated between tests.
+        """
+        ad = self.generate_minimum_file()
+        return ad
+
     @pytest.mark.parametrize('ra,dec,dt,known_corr', [
         (90., -30., '2018-01-03 15:23:32', 0.999986388827),
         (180., -60., '2018-11-12 18:35:15', 1.00001645007),
@@ -649,16 +508,14 @@ class TestGhost:
         (101.1, 0., '2018-02-23 17:18:55', 0.999928361662),
     ])
     def test__compute_barycentric_correction_values(
-            self, ra, dec, dt, known_corr,
-            data__compute_barycentric_correction):
+            self, ra, dec, dt, known_corr, data__compute_barycentric_correction):
         """
         Checks to make:
 
         - Correct units of return based on input arguments
         - Some regression test values
         """
-        ad, tmpsubdir = data__compute_barycentric_correction
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        ad = data__compute_barycentric_correction
         ad.phu.set('RA', ra)
         ad.phu.set('DEC', dec)
         # Assume a 10 min exposure
@@ -667,10 +524,10 @@ class TestGhost:
         dt_start = dt_obs - datetime.timedelta(minutes=exp_time_min)
         ad.phu.set('DATE-OBS', dt_start.date().strftime('%Y-%m-%d'))
         ad.phu.set('UTSTART', dt_start.time().strftime('%H:%M:%S.00'))
-        ad[0].hdr.set('EXPTIME', exp_time_min * 60.)
+        ad.phu.set('EXPTIME', exp_time_min * 60.)
 
         gs = GHOSTSpect([])
-        corr_fact = gs._compute_barycentric_correction(ad, )[0]
+        corr_fact = gs._compute_barycentric_correction(ad, )
         assert abs(corr_fact - known_corr) < 1e-6, \
             "_compute_barycentric_correction " \
             "returned an incorrect value " \
@@ -678,7 +535,6 @@ class TestGhost:
                 known_corr, corr_fact,
             )
 
-    @pytest.mark.skip(reason='Needs Checking')
     @pytest.mark.parametrize('return_wavl,units', [
         (True, u.dimensionless_unscaled,),
         (False, u.m / u.s,),
@@ -690,15 +546,14 @@ class TestGhost:
         Check the return units of _compute_barycentric_correction
         """
         # ad should be correctly populated from previous test
-        ad, tmpsubdir = data__compute_barycentric_correction
-        os.chdir(os.path.join(tmpsubdir.dirname, tmpsubdir.basename))
+        ad = data__compute_barycentric_correction
 
         gs = GHOSTSpect([])
         corr_fact = gs._compute_barycentric_correction(
-            ad, return_wavl=return_wavl)[0]
+            ad, return_wavl=return_wavl)
         assert corr_fact.unit == units, \
             "_compute_barycentric_correction returned incorrect units " \
-            "(expected {}, got {})".format(units, corr_fact.unit, )
+            "(expected {}, got {}) {}".format(units, corr_fact.unit)
 
     @pytest.mark.skip(reason='Requires calibration system - '
                              'will need to be part of all-up testing')

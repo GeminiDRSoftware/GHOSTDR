@@ -23,36 +23,65 @@ pipeline {
 
     stages {
 
+        /*
+        stage ("New tests") {
+            environment {
+                MPLBACKEND = "agg"
+                PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                DRAGONS_TEST_OUT = "./new_tests_outputs/"
+                TOX_ARGS = "ghost_instruments ghostdr"
+                TMPDIR = "${env.WORKSPACE}/.tmp/new/"
+            }
+            steps {
+                echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                checkout scm
+                echo "${env.PATH}"
+                sh '.jenkins/scripts/setup_agent.sh'
+                sh 'tox -e ghost-ghostnew -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+            }
+            post {
+                always {
+                    echo "Delete temporary folder: ${TMPDIR}"
+                    dir ( '$TMPDIR' ) { deleteDir() }
+                    echo "Delete Tox Environment: .tox/ghost-ghostnew"
+                    dir ( ".tox/ghost-ghostnew" ) { deleteDir() }
+                    echo "Delete Outputs folder: "
+                    dir ( "${DRAGONS_TEST_OUT}" ) { deleteDir() }
+                }
+            }
+        }
+        */
+
+        stage ("Unit tests") {
+            environment {
+                MPLBACKEND = "agg"
+                PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                DRAGONS_TEST_OUT = "./unit_tests_outputs/"
+                TOX_ARGS = "ghost_instruments ghostdr"
+                TMPDIR = "${env.WORKSPACE}/.tmp/unit/"
+            }
+            steps {
+                echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                checkout scm
+                echo "${env.PATH}"
+                sh '.jenkins/scripts/setup_agent.sh'
+                sh 'tox -e ghost-ghostunit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+            }
+            post {
+                always {
+                    echo "Delete temporary folder: ${TMPDIR}"
+                    dir ( '$TMPDIR' ) { deleteDir() }
+                    echo "Delete Tox Environment: .tox/ghost-ghostunit"
+                    dir ( ".tox/ghost-ghostunit" ) { deleteDir() }
+                    echo "Delete Outputs folder: "
+                    dir ( "${DRAGONS_TEST_OUT}" ) { deleteDir() }
+                }
+            }
+        }
+
         stage ("GHOST parallel tests") {
 
             parallel {
-
-                stage ("Unit tests") {
-                    environment {
-                        MPLBACKEND = "agg"
-                        PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
-                        DRAGONS_TEST_OUT = "./unit_tests_outputs/"
-                        TOX_ARGS = "ghost_instruments ghostdr"
-                        TMPDIR = "${env.WORKSPACE}/.tmp/unit/"
-                    }
-                    steps {
-                        echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
-                        checkout scm
-                        echo "${env.PATH}"
-                        sh '.jenkins/scripts/setup_agent.sh'
-                        sh 'tox -e ghost-ghostunit -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
-                    }
-                    post {
-                        always {
-                            echo "Delete temporary folder: ${TMPDIR}"
-                            dir ( '$TMPDIR' ) { deleteDir() }
-                            echo "Delete Tox Environment: .tox/ghost-ghostunit"
-                            dir ( ".tox/ghost-ghostunit" ) { deleteDir() }
-                            echo "Delete Outputs folder: "
-                            dir ( "${DRAGONS_TEST_OUT}" ) { deleteDir() }
-                        }
-                    }
-                }
 
                 stage ("Bundle tests") {
                     environment {
@@ -64,7 +93,6 @@ pipeline {
                     }
                     steps {
                         echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
-                        sleep 5  // needed to avoid timeout from simultaneous checkout
                         checkout scm
                         echo "${env.PATH}"
                         sh '.jenkins/scripts/setup_agent.sh'
@@ -82,6 +110,34 @@ pipeline {
                     }
                 }
 
+                stage ("Spect tests") {
+                    environment {
+                        MPLBACKEND = "agg"
+                        PATH = "$JENKINS_CONDA_HOME/bin:$PATH"
+                        DRAGONS_TEST_OUT = "./spect_tests_outputs/"
+                        TOX_ARGS = "ghost_instruments ghostdr"
+                        TMPDIR = "${env.WORKSPACE}/.tmp/spect/"
+                    }
+                    steps {
+                        echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
+                        sleep 10  // needed to avoid timeout from simultaneous checkout
+                        checkout scm
+                        echo "${env.PATH}"
+                        sh '.jenkins/scripts/setup_agent.sh'
+                        sh 'tox -e ghost-ghostspect -v -r -- --basetemp=${DRAGONS_TEST_OUT} ${TOX_ARGS}'
+                    }
+                    post {
+                        always {
+                            echo "Delete temporary folder: ${TMPDIR}"
+                            dir ( '$TMPDIR' ) { deleteDir() }
+                            echo "Delete Tox Environment: .tox/ghost-ghostspect"
+                            dir ( ".tox/ghost-ghostspect" ) { deleteDir() }
+                            echo "Delete Outputs folder: "
+                            dir ( "${DRAGONS_TEST_OUT}" ) { deleteDir() }
+                        }
+                    }
+                }
+
                 stage ("SLITV tests") {
                     environment {
                         MPLBACKEND = "agg"
@@ -92,7 +148,7 @@ pipeline {
                     }
                     steps {
                         echo "Running build #${env.BUILD_ID} on ${env.NODE_NAME}"
-                        sleep 10  // needed to avoid timeout from simultaneous checkout
+                        sleep 20  // needed to avoid timeout from simultaneous checkout
                         checkout scm
                         echo "${env.PATH}"
                         sh '.jenkins/scripts/setup_agent.sh'

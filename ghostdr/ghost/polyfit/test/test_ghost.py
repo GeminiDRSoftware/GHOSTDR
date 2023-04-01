@@ -1,8 +1,6 @@
-from __future__ import division, print_function
 import pytest
 import ghostdr.ghost.polyfit as polyfit
 import astropy.io.fits as pyfits
-import pdb
 import numpy as np
 import os
 import itertools
@@ -20,6 +18,7 @@ def idfn(fixture_value):
     return ','.join([str(_) for _ in fixture_value])
 
 
+@pytest.mark.ghostunit
 class TestGhostArmBasic():
     @pytest.fixture(scope='class',
                     params=list(itertools.product(*[
