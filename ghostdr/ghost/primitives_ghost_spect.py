@@ -994,14 +994,10 @@ class GHOSTSpect(GHOST):
             # - arcs require either "sky only" or "skyless" extraction;
             # - standards should only extract the actual profile in single
             #   object mode.
-            find_crs = True
             if 'ARC' in ad.tags:
                 objs_to_use = [[], [0, 1], ]
                 use_sky = [True, False, ]
-                find_crs = False
-            elif 'PARTNER_CAL' in ad.tags:
-                objs_to_use = [[0, ],[1, ], ]
-                use_sky = [True, True, ]
+                find_crs = [False, False,]
             else:
                 ifu_selection = []
 
@@ -1011,17 +1007,22 @@ class GHOSTSpect(GHOST):
                     ifu_selection += [1]
 
                 if extract_ifu1 or extract_ifu2:
+                    # Need to run use_sky = True first so that the sky profile is
+                    # included during CR identification, otherwise, the CR rejection
+                    # will reject sky lines in the sky fibers.
                     objs_to_use = [ifu_selection, ifu_selection]
-                    use_sky = [False, True]
+                    use_sky = [True, False]
+                    find_crs = [True, False]
                 else:
                     objs_to_use = [ifu_selection]
                     use_sky = [True]
+                    find_crs = [True]
             
             # MJI - Uncomment the lines below for testing in the simplest possible case.
             #objs_to_use = [[0], ]
             #use_sky = [False, ]
 
-            for i, (o, s) in enumerate(zip(objs_to_use, use_sky)):
+            for i, (o, s, cr) in enumerate(zip(objs_to_use, use_sky, find_crs)):
                 print("OBJECTS:" + str(o))
                 print("SKY:" + str(s))
                 # CJS: Makes it clearer that you're throwing the first two
@@ -1033,7 +1034,7 @@ class GHOSTSpect(GHOST):
                 DUMMY, _, extracted_weights = extractor.one_d_extract(
                     data=corrected_data, vararray=corrected_var,
                     correct_for_sky=params['sky_correct'],
-                    use_sky=s, used_objects=o, find_crs=find_crs
+                    use_sky=s, used_objects=o, find_crs=cr
                 )
 
                 # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
