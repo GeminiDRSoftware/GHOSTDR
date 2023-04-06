@@ -239,7 +239,7 @@ def _write_newfile(extns, suffix, base, log):
             n.phu[kw] = (base.phu[kw], base.phu.comments[kw])
 
     # Other stuff
-    n.phu['OBSID'] = base.phu['OBSID']
+    n.phu['OBSID'] = base.phu.get('OBSID', '')
 
     # Remove some keywords that are only relevant to the bundle
     for kw in ['NEXTEND', 'NREDEXP', 'NBLUEEXP', 'NSLITEXP', 'UT']:
