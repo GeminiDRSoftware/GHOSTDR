@@ -3,7 +3,9 @@
 
 from gempy.library import config
 
-from geminidr.core import parameters_ccd, parameters_visualize, parameters_preprocess, parameters_stack
+from geminidr.core import (
+    parameters_ccd, parameters_visualize, parameters_preprocess,
+    parameters_spect, parameters_stack)
 
 from astrodata import AstroData as ad
 
@@ -169,13 +171,16 @@ class rejectCosmicRaysConfig(config.Config):
 class responseCorrectConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_responseCorrected",
                           optional=True)
-    skip = config.Field("No-op this primitive?", bool, False, optional=True)
-    std = config.Field("Standard star (observed)", (str, ad), None,
+    standard = config.Field("Standard star (observed)", (str, ad), None,
                        optional=True)
-    std_spec = config.Field("Standard star reference spectrum", (str, ad), None,
+    specphot_file = config.Field("Filename containing spectrophotometry", str, None,
                             optional=True)
+    units = config.Field("Units for output spectrum", str, "W m-2 nm-1",
+                         check=parameters_spect.flux_units_check)
     write_result = config.Field("Write primitive output to disk?", bool, True,
                                 optional=True)
+    debug_order = config.RangeField("Order of fit to each echelle order", int,
+                                    1, min=1, max=5)
 
 
 class stackArcsConfig(parameters_stack.core_stacking_config):
