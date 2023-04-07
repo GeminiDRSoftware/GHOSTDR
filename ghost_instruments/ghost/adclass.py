@@ -295,25 +295,25 @@ class AstroDataGhost(AstroDataGemini):
         if set(self.phu) & kwords:
             return TagSet(['PROCESSED'])
 
-    @astro_data_tag
-    def _tag_binning_mode(self):
-        """
-        TODO: this should not be a tag
-        Define the tagset for GHOST data of different binning modes.
-        """
-        binnings = self.hdr.get('CCDSUM')
-        if binnings is None:  # CJS hack
-            return TagSet([])
-        if isinstance(binnings, list):
-            binnings = [x for x in binnings if x]
-            if all(x == binnings[0] for x in binnings):
-                return TagSet([binnings[0].replace(' ', 'x', 1)])
-            else:
-                return TagSet(['NxN'])
-        else:
-            # A list should always be returned but it doesn't
-            # hurt to be able to handle a string just in case
-            return TagSet([binnings.replace(' ', 'x', 1)])
+    #@astro_data_tag
+    #def _tag_binning_mode(self):
+    #    """
+    #    TODO: this should not be a tag
+    #    Define the tagset for GHOST data of different binning modes.
+    #    """
+    #    binnings = self.hdr.get('CCDSUM')
+    #    if binnings is None:  # CJS hack
+    #        return TagSet([])
+    #    if isinstance(binnings, list):
+    #        binnings = [x for x in binnings if x]
+    #        if all(x == binnings[0] for x in binnings):
+    #            return TagSet([binnings[0].replace(' ', 'x', 1)])
+    #        else:
+    #            return TagSet(['NxN'])
+    #    else:
+    #        # A list should always be returned but it doesn't
+    #        # hurt to be able to handle a string just in case
+    #        return TagSet([binnings.replace(' ', 'x', 1)])
 
     @astro_data_tag
     def _tag_obsclass(self):
