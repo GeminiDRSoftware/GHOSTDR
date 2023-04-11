@@ -93,7 +93,6 @@ class interpolateAndCombineConfig(config.Config):
         'linear': 'Linear wavelength scale',
         'loglinear': 'Log-linear wavelength scale'
     }, default='loglinear')
-    skip = config.Field("No-op this primitive?", bool, False, optional=True)
     oversample = config.Field("(Approx.) oversampling of output wavelength "
                               "scale", float, 1.0)
 
@@ -192,6 +191,14 @@ class stackArcsConfig(parameters_stack.core_stacking_config):
 
     def setDefaults(self):
         self.operation = "lmedian"
+
+
+class standardizeSpectralFormatConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_dragons",
+                          optional=True)
+
+
+write1DSpectraConfig = parameters_spect.write1DSpectraConfig
 
 
 class tileArraysConfig(parameters_visualize.tileArraysConfig):

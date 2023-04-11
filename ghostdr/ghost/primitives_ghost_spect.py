@@ -23,8 +23,11 @@ from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
 from astropy.modeling import fitting, models
+from astropy.modeling.tabular import Tabular1D
 from scipy import interpolate
 import scipy.ndimage as nd
+from gwcs import coordinate_frames as cf
+from gwcs.wcs import WCS as gWCS
 from pysynphot import observation, spectrum
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -1126,8 +1129,6 @@ class GHOSTSpect(GHOST):
             available are:
             ``'loglinear'``
             Default is ``'loglinear'``.
-        skip : bool
-            Set to ``True`` to skip this primitive. Defaults to ``False``.
         oversample : int or float
             The factor by which to (approximately) oversample the final output
             spectrum, as compared to the input spectral orders. Defaults to 1.
@@ -1136,19 +1137,16 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
+        adoutputs = []
         for ad in adinputs:
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by interpolateAndCombine".
                             format(ad.filename))
+                adoutputs.append(ad)
                 continue
 
-            if params['skip']:
-                log.warning('Skipping interpolateAndCombine for {}'.format(
-                    ad.filename
-                ))
-                continue
-
+            adout = astrodata.create(ad.phu)
             for ext in ad:
                 # Determine the wavelength bounds of the file
                 min_wavl, max_wavl = np.min(ext.WAVL), np.max(ext.WAVL)
@@ -1204,18 +1202,19 @@ class GHOSTSpect(GHOST):
                 # pdb.set_trace()
 
                 # Can't use .reset without looping through extensions
-                ad.append(astrodata.NDAstroData(data=spec_final,
+                adout.append(astrodata.NDAstroData(data=spec_final,
                                                 meta={'header': deepcopy(ext.hdr)}))
-                ad[-1].variance = var_final
-                ad[-1].WAVL = wavl_grid
-                ad[-1].hdr['DATADESC'] = ('Interpolated data',
-                                          self.keyword_comments['DATADESC'])
+                adout[-1].variance = var_final
+                adout[-1].WAVL = wavl_grid
+                adout[-1].hdr['DATADESC'] = ('Interpolated data',
+                                             self.keyword_comments['DATADESC'])
 
             # Timestamp & update filename
-            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.update_filename(suffix=params["suffix"], strip=True)
+            gt.mark_history(adout, primname=self.myself(), keyword=timestamp_key)
+            adout.update_filename(suffix=params["suffix"], strip=True)
+            adoutputs.append(adout)
 
-        return adinputs
+        return adoutputs
 
     def findApertures(self, adinputs=None, **params):
         """
@@ -2413,6 +2412,125 @@ class GHOSTSpect(GHOST):
             This could go in primitives_ghost.py if the SLITV version
             also no-ops.
         """
+        return adinputs
+
+    def standardizeSpectralFormat(self, adinputs=None, suffix=None):
+        """
+        Convert the input file into multiple apertures, each with its own
+        gWCS object to describe the wavelength scale. This allows the
+        spectrum (or each order) to be displayed by the "dgsplot" script
+
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        input_frame = cf.CoordinateFrame(naxes=1, axes_type=['SPATIAL'],
+                                         axes_order=(0,), name="pixels",
+                                         axes_names=['x'], unit=u.pix)
+        output_frame = cf.SpectralFrame(axes_order=(0,), unit=u.nm,
+                                        axes_names=["WAVE"],
+                                        name="Wavelength in vacuo")
+
+        wave_tol = 1e-4  # rms limit for a linear/loglinear wave model
+        adoutputs = []
+        for ad in adinputs:
+            adout = astrodata.create(ad.phu)
+            adout.update_filename(suffix=suffix, strip=True)
+            log.stdinfo(f"Converting {ad.filename} to {adout.filename}")
+            for i, ext in enumerate(ad, start=1):
+                if not hasattr(ext, "WAVL"):
+                    log.warning(f"    EXTVER {i} has no WAVL table. Ignoring.")
+                    continue
+                has_var = ext.variance is not None
+                has_mask = ext.mask is not None
+                npix, nobj = ext.shape[-2:]
+                try:
+                    orders = list(range(ext.shape[-3]))
+                except:
+                    orders = [None]
+                wave_models = []
+                for order in orders:
+                    wave = 0.1 * ext.WAVL[order].ravel()  # because WAVL is always 2D
+                    linear = np.diff(wave).std() < wave_tol
+                    loglinear = (wave[1:] / wave[:-1]).std() < wave_tol
+                    if linear or loglinear:
+                        if linear:
+                            log.debug(f"Linear wavelength solution found for order {order}")
+                            fit_it = fitting.LinearLSQFitter()
+                            m_init = models.Polynomial1D(
+                                degree=1, c0=wave[0], c1=wave[1]-wave[0])
+                        else:
+                            log.debug(f"Loglinear wavelength solution found for order {order}")
+                            fit_it = fitting.LevMarLSQFitter()
+                            m_init = models.Exponential1D(
+                                amplitude=wave[0], tau=1./np.log(wave[1] / wave[0]))
+                        wave_model = fit_it(m_init, np.arange(npix), wave)
+                        log.debug("    "+" ".join([f"{p}: {v}" for p, v in zip(
+                            wave_model.param_names, wave_model.parameters)]))
+                    else:
+                        log.debug(f"Using tabular model for order {order}")
+                        wave_model = Tabular1D(np.arange(npix), wave)
+                    wave_model.name = "WAVE"
+                    wave_models.append(wave_model)
+
+                for spec in range(nobj):
+                    for order, wave_model in zip(orders, wave_models):
+                        ndd = ext.nddata.__class__(data=ext.data[order, :, spec].ravel(),
+                                                   meta={'header': ext.hdr.copy()})
+                        if has_mask:
+                            ndd.mask = ext.mask[order, :, spec].ravel()
+                        if has_var:
+                            ndd.variance = ext.variance[order, :, spec].ravel()
+                        adout.append(ndd)
+                        adout[-1].hdr[ad._keyword_for('data_section')] = f"[1:{npix}]"
+                        adout[-1].wcs = gWCS([(input_frame, wave_model),
+                                              (output_frame, None)])
+
+                log.stdinfo(f"    EXTVER {i} has been converted to EXTVERs "
+                            f"{len(adout) - nobj * len(orders) + 1}-{len(adout)}")
+
+            adoutputs.append(adout)
+
+        return adoutputs
+
+    def write1DSpectra(self, adinputs=None, **params):
+        """
+        Write 1D spectra to files listing the wavelength and data (and
+        optionally variance and mask) in one of a range of possible formats.
+
+        Because Spect.write1DSpectra requires APERTURE numbers, the GHOST
+        version of this primitive adds them before calling the Spect version.
+
+        Parameters
+        ----------
+        adinputs : list of :class:`~astrodata.AstroData`
+            Science data as 2D spectral images.
+        format : str
+            format for writing output files
+        header : bool
+            write FITS header before data values?
+        extension : str
+            extension to be used in output filenames
+        apertures : str
+            comma-separated list of aperture numbers to write
+        dq : bool
+            write DQ (mask) plane?
+        var : bool
+            write VAR (variance) plane?
+        overwrite : bool
+            overwrite existing files?
+        xunits: str
+            units of the x (wavelength/frequency) column
+        yunits: str
+            units of the data column
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        for ad in adinputs:
+            for i, ext in enumerate(ad, start=1):
+                ext.hdr['APERTURE'] = i
+        Spect.write1DSpectra(self, adinputs, **params)
         return adinputs
 
     # CJS: Primitive has been renamed for consistency with other instruments
