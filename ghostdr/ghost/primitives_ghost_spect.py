@@ -823,6 +823,36 @@ class GHOSTSpect(GHOST):
             else:
                 extract_ifu2 = params['extract_ifu2']
 
+            # CJS 20220411: We need to know which IFUs contain an object if
+            # we need to make a synthetic slit profile so this has moved up
+            if 'ARC' in ad.tags:
+                objs_to_use = [[], [0, 1], ]
+                use_sky = [True, False, ]
+                find_crs = [False, False, ]
+            else:
+                ifu_selection = []
+
+                if extract_ifu1:
+                    ifu_selection += [0]
+                if extract_ifu2:
+                    ifu_selection += [1]
+
+                if extract_ifu1 or extract_ifu2:
+                    # Need to run use_sky = True first so that the sky profile is
+                    # included during CR identification, otherwise, the CR rejection
+                    # will reject sky lines in the sky fibers.
+                    objs_to_use = [ifu_selection, ifu_selection]
+                    use_sky = [True, False]
+                    find_crs = [True, False]
+                else:
+                    objs_to_use = [ifu_selection]
+                    use_sky = [True]
+                    find_crs = [True]
+
+            # MJI - Uncomment the lines below for testing in the simplest possible case.
+            # objs_to_use = [[0], ]
+            # use_sky = [False, ]
+
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
             # simultaneously.
@@ -856,7 +886,14 @@ class GHOSTSpect(GHOST):
             # but the fibre positions are just the defaults
             if slit is None:
                 log.stdinfo(f"Creating synthetic slit image for seeing={seeing}")
-                slit_data = sview.fake_slitimage(flat_image=slitflat_data, seeing=seeing)
+                ifus = []
+                if extract_ifu1:
+                    ifus.append('ifu0' if res_mode == 'std' else 'ifu')
+                # "ifu2" is the ThXe cal fiber in HR and has no continuum
+                if extract_ifu2 and res_mode == 'std':
+                    ifus.append('ifu1')
+                slit_data = sview.fake_slitimage(
+                    flat_image=slitflat_data, ifus=ifus, seeing=seeing)
             else:
                 # TODO? This only models IFU0 in SR mode
                 slit_models = sview.model_profile(slit_data, slitflat_data)
@@ -990,41 +1027,6 @@ class GHOSTSpect(GHOST):
                         raise e
                     else:
                         raise
-
-            # MCW 190830
-            # MI wants iteration over all possible combinations of sky and
-            # object(s)
-            # This should only happen for object files, because:
-            # - arcs require either "sky only" or "skyless" extraction;
-            # - standards should only extract the actual profile in single
-            #   object mode.
-            if 'ARC' in ad.tags:
-                objs_to_use = [[], [0, 1], ]
-                use_sky = [True, False, ]
-                find_crs = [False, False,]
-            else:
-                ifu_selection = []
-
-                if extract_ifu1:
-                    ifu_selection += [0]
-                if extract_ifu2:
-                    ifu_selection += [1]
-
-                if extract_ifu1 or extract_ifu2:
-                    # Need to run use_sky = True first so that the sky profile is
-                    # included during CR identification, otherwise, the CR rejection
-                    # will reject sky lines in the sky fibers.
-                    objs_to_use = [ifu_selection, ifu_selection]
-                    use_sky = [True, False]
-                    find_crs = [True, False]
-                else:
-                    objs_to_use = [ifu_selection]
-                    use_sky = [True]
-                    find_crs = [True]
-            
-            # MJI - Uncomment the lines below for testing in the simplest possible case.
-            #objs_to_use = [[0], ]
-            #use_sky = [False, ]
 
             for i, (o, s, cr) in enumerate(zip(objs_to_use, use_sky, find_crs)):
                 print("OBJECTS:" + str(o))
