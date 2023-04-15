@@ -7,14 +7,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
 from astropy.modeling import models, fitting
+from astropy.stats import sigma_clip
 import matplotlib.cm as cm
 import warnings
 import scipy.ndimage as ndimage
+from scipy import optimize
 from gempy.library import matching
+from geminidr.gemini.lookups import DQ_definitions as DQ
 
 
-def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
-                        snoise=0.1, nsigma=6, debug=False):
+def find_additional_crs(phi, col_data, col_inv_var,
+                        snoise=0.1, sigma=6, noise_model=None, debug=False):
     """
     Utility function to search for additional cosmic rays.
 
@@ -36,71 +39,63 @@ def find_additional_crs(phi, slitim_offsets, col_data, col_inv_var,
     Parameters
     ----------
     phi: :obj:`numpy.ndarray`
-        A (npix :math:`\\times` nobj) model PSF array.
+        A (nobj :math:`\\times` npix) model PSF array.
     col_data: :obj:`numpy.ndarray`
         A (npix) data array
     col_inv_var: :obj:`numpy.ndarray`
         A (npix) data variance array
     s_noise : float
         A noise factor to be used in the cosmic ray detection calculation.
-    nsigma : int
+    sigma : int
         Number of standard deviations permitted before a pixel is flagged as
         bad.
     debug : bool, default False
-        If True, show plots of something
+        If True, show plots
         
     Returns
     -------
     new_bad: :obj:`numpy.ndarray`
         Array of indices of bad pixels in ``col_data``.
     """
-    n_o = phi.shape[1]  # Number of objects.
-    n_x = len(col_data)
-
-    var_use = np.inf * np.ones_like(col_inv_var)
     good = col_inv_var > 0
-    var_use[good] = 1 / col_inv_var[good] + (snoise * col_data[good]) ** 2
 
-    # Create a model matrix for linear regression.
-    obj_centers = slitim_offsets[1] + n_x // 2
-    x_ix = np.arange(n_x)
-    x_mat = np.empty((2 * n_o, n_x))
-    for o_ix in range(n_o):
-        x_mat[o_ix] = phi[:, o_ix]
-        x_mat[o_ix + n_o] = phi[:, o_ix] * (x_ix - obj_centers[o_ix])
-
-    # Now we fit a model to the col_data with var_use, using standard
-    # linear regression. FIXME: Surely there is a reasonable scipy helper
-    # function???
-    x_mat = x_mat.T
-    # FIXME: Do we use weights? If so, faster computation is possible as W is
-    # sparse.
-    # performance is improved with no weights.
-    # w_mat = np.diag(1./var_use)
-    # xtw = np.dot(x_mat.T, w_mat) 
-    # beta = np.dot(np.dot(np.linalg.inv(np.dot(xtw, x_mat)), xtw), col_data)
-    try:
-        # Use the pinv function to calculate the pseudoinverse
-        beta = np.dot(np.linalg.pinv(x_mat), col_data)
-        #beta = np.dot(np.dot(np.linalg.inv(np.dot(x_mat.T, x_mat)), x_mat.T), col_data)
-    except Exception as e:
-        print(repr(e))
-        # import pdb; pdb.set_trace()
-        # pass
-
-    y_hat = np.maximum(np.dot(x_mat, beta), 0)
+    while True:
+        A = phi * col_inv_var
+        b = col_data * col_inv_var
+        result = optimize.lsq_linear(A.T[good], b[good], bounds=(0, np.inf))
+        #result = optimize.lsq_linear(phi.T[good], col_data[good], bounds=(0, np.inf))
+        model = np.dot(result.x, phi)
+        var_use = noise_model(model) + (snoise * model) ** 2
+        max_deviation = sigma * np.sqrt(np.maximum(var_use, 0))
+        deviation = (col_data - model) / np.sqrt(np.maximum(var_use, 0))
+        worst_offender = np.argmax(abs(deviation)[good])
+        if abs(deviation[good][worst_offender]) > sigma:
+            good[np.where(good)[0][worst_offender]] = False
+        #new_bad = (abs(col_data - model) > max_deviation) & good
+        #if new_bad.any():
+        #    good &= ~new_bad
+        else:
+            break
+        if good.sum() < phi.shape[0]:
+            break
+    new_bad = np.where((col_inv_var > 0) & (abs(col_data - model) > max_deviation))[0]
 
     # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
     #limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),
     #                               size=3, mode='constant')
-    limit = y_hat + nsigma * np.sqrt(var_use)
-    new_bad = np.where(col_data > limit)[0]
-    if debug and len(new_bad) > 0:
-        plt.clf()
-        plt.plot(y_hat, label='exp')
-        plt.plot(col_data, label='data')
-        plt.plot(limit, label='limit')
-        plt.pause(.001)
+    #limit = y_hat + nsigma * np.sqrt(var_use)
+    #new_bad = np.where(col_data > limit)[0]
+    #if debug and len(new_bad) > 0:
+    if debug:
+        print("BAD", new_bad, phi.shape)
+        plt.ioff()
+        plt.plot(col_data, 'k-', label='data')
+        plt.plot(model + max_deviation, 'r-', label='limit')
+        plt.plot(model, 'b-', label='model')
+        for ppp in phi:
+            plt.plot(ppp * 1000 / ppp.max(), ':')
+        plt.show()
+        plt.ion()
 
     return new_bad
 
@@ -178,7 +173,7 @@ class Extractor(object):
         should we use? Default is ``8``.
     """
     def __init__(self, polyspect_instance, slitview_instance,
-                 gain=1.0, rnoise=3.0, cr_flag=8,
+                 gain=1.0, rnoise=3.0, cr_flag=DQ.cosmic_ray,
                  badpixmask=None, transpose=False,
                  vararray=None):
         self.arm = polyspect_instance
@@ -407,8 +402,10 @@ class Extractor(object):
         return pixel_model
 
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,
-                      use_sky=True, find_crs=True, debug_crs=False,
-                      used_objects=[0,1], vararray=None):
+                      use_sky=True, find_crs=True,
+                      snoise=0.1, sigma=6,
+                      used_objects=[0,1], vararray=None,
+                      debug_cr_pixel=None):
         """
         Extract flux by integrating down columns.
 
@@ -442,9 +439,14 @@ class Extractor(object):
         find_crs : bool
             whether or not to call :any:`find_additional_crs`
 
-        debug_crs : bool, optional
-            Passed along as the ``debug`` parameter to
-            :any:`find_additional_crs`.
+        debug_cr_pixel : 2-tuple
+            (order, pixel) of extraction to plot for debugging purposes
+
+        snoise : float
+            linear fraction of signal to add to noise estimate for CR flagging
+
+        sigma : float
+            number of standard deviations for identifying discrepant pixels
 
         vararray : :obj:`numpy.ndarray` , optional
             If given, the instance's `vararray` attribute will be updated
@@ -494,11 +496,13 @@ class Extractor(object):
         # as well for PRV, as part of slitim_offsets below.
         profiles = self.slitview.object_slit_profiles(
             arm=self.arm.arm, correct_for_sky=correct_for_sky,
-            used_objects=used_objects, append_sky=use_sky
+            used_objects=used_objects, append_sky=use_sky or find_crs
         )
                 
         # Number of "objects" and "slit pixels"
         no = profiles.shape[0]
+        if find_crs and not use_sky:
+            no -= 1
         n_slitpix = profiles.shape[1]
         profile_y_microns = (np.arange(n_slitpix) -
                              n_slitpix // 2) * self.slitview.microns_pix
@@ -507,22 +511,19 @@ class Extractor(object):
         # centroids in the "y" direction. i.e. In principle, we could modify the
         # wavelength scale for each object based on this. If 2D extraction works
         # well, such an approach is not needed, but lets keep the idea of this
-        # code here for now.
-
-        # FIXME: This part doesn't actually do anything. But it's also not used.
-
-        # y_ix = np.arange(n_slitpix) - n_slitpix//2
-        y_centroids = np.empty((no))
-        x_centroids = np.zeros((no))
-        for object_ix, profile in enumerate(profiles):
-            y_centroids[object_ix] = np.sum(profile *
-                                            profile_y_microns) / np.sum(profile)
-        centroids = np.array([x_centroids, y_centroids])
+        # code here for now. (code deleted but comment left as reminder)
 
         # Our extracted arrays, and the weights array
         extracted_flux = np.zeros((nm, ny, no))
         extracted_var = np.zeros((nm, ny, no))
         extraction_weights = np.zeros((no, nx, ny))
+
+        m_init = models.Polynomial1D(degree=1)
+        fit_it = fitting.FittingWithOutlierRemoval(fitting.LinearLSQFitter(), sigma_clip)
+        noise_model, _ = fit_it(m_init, data.ravel(), vararray.ravel())
+        if noise_model.c0 <= 0:
+            print("Problem with read noise estimate!")
+            noise_model.c0 = 4  # just something for now
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
@@ -573,22 +574,9 @@ class Extractor(object):
             # for this order.
             nx_cutout = int(np.ceil(self.slitview.slit_length / np.min(
                 matrices[i, :, 0, 0])))
-            phi = np.empty((nx_cutout, no))
+            phi = np.empty((profiles.shape[0], nx_cutout))
 
             for j in range(ny):
-                # Compute offsets in slit-plane microns directly from the y_
-                # centroid and
-                # the matrix.
-                # FIXME: It is unclear what to DO with this for a 1D extraction,
-                # unless
-                # we were going to output a new wavelength scale associated
-                # with a
-                # 1D extraction. This is currently only used to make the
-                # fitting as
-                # part of the CR rejection neat.
-                slitim_offsets = np.dot(np.linalg.inv(matrices[i, j]),
-                                        centroids)
-
                 profile_y_pix = profile_y_microns / matrices[i, j, 0, 0]
 
                 # Check for NaNs
@@ -604,7 +592,10 @@ class Extractor(object):
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
 
-                # CRH 20220825:  Convolve the slit to detector pixels 
+                if j == 0:
+                    print(x_ix)
+
+                # CRH 20220825:  Convolve the slit to detector pixels
                 # by interpolating the slit profile and integrating it 
                 # across the detector pixels
 
@@ -617,25 +608,25 @@ class Extractor(object):
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout*n_slit_sample, 
                                  dtype=int)/n_slit_sample + nx // 2
-                for k in range(no):
+                for k in range(profiles.shape[0]):
                     interp_prof = np.interp(
                         x_ix_sample - x_map[i, j] - nx // 2, profile_y_pix,
                         profiles[k])
 
-                    phi[:, k] = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
+                    phi[k] = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
 
                     # Remove?:  Old interpolation of the slit profile to
                     # detector pixels
 
-                    #phi[:, k] = np.interp(
+                    #phi[k] = np.interp(
                     #    x_ix - x_map[i, j] - nx // 2, profile_y_pix,
                     #    profiles[k])
 
-                    phi[:, k] /= np.sum(phi[:, k])
+                    phi[k] /= np.sum(phi[k])
                 # Deal with edge effects...
                 ww = np.where((x_ix >= nx) | (x_ix < 0))[0]
                 x_ix[ww] = 0
-                phi[ww, :] = 0.0
+                phi[:, ww] = 0.0
 
                 # Cut out our data and inverse variance. This is where we worry
                 # about whether
@@ -652,17 +643,18 @@ class Extractor(object):
                 # Search for additional cosmic rays here, by seeing if the data
                 # look different to the model.
                 if find_crs:
-                    additional_crs = find_additional_crs(phi, slitim_offsets,
-                                                         col_data, col_inv_var,
-                                                         debug=False)
+                    additional_crs = find_additional_crs(
+                        phi, col_data, col_inv_var,
+                        noise_model=noise_model, snoise=snoise, sigma=sigma,
+                        debug=(i, j) == debug_cr_pixel)
                     self.num_additional_crs += len(additional_crs)
                 else:
                     additional_crs = []
-                                                     
+
                 #Insist that variance if physical. If the model has a significant error
                 #on any pixel, we don't want the weights to be completely wrong - this
                 #check ensures that a reasonable extraction is possible for an imperfect
-                #model. For each of the phi[:,object] arrays, "large" values can't 
+                #model. For each of the phi[object] arrays, "large" values can't
                 #correspond to "small" variances. So set the minimum variance to be 
                 #object shot noise.
                 
@@ -673,9 +665,9 @@ class Extractor(object):
                 if False:
                     good_pix = np.where(col_inv_var != 0)[0]
                     
-                    minimum_variance = phi * np.sum(phi[good_pix,:]/ \
+                    minimum_variance = phi.T * np.sum(phi[:, good_pix]/ \
                         col_inv_var_mat[good_pix,:], axis=0)/ \
-                        np.sum(phi[good_pix,:]**2, axis=0)
+                        np.sum(phi[:, good_pix]**2, axis=0)
                 
                     col_inv_var_mat[good_pix,:] = 1./np.maximum(1./col_inv_var_mat[good_pix,:], \
                         minimum_variance[good_pix,:])
@@ -697,11 +689,12 @@ class Extractor(object):
                 # computation of "b" as a matrix multiplication.
                 # We can do this because we're content to invert the
                 # (small) matrix "c" here. 
-                
-                # FIXME: Transpose matrices appropriately so that multiplication
-                # order is the same as documentation.
-                b_mat = phi * col_inv_var_mat
-                c_mat = np.dot(phi.T, phi * col_inv_var_mat)
+
+                # For extraction weights, we only want the objects if we're
+                # not sky-subtracting (even though we needed the sky for CRrej)
+                phi2 = phi[:no]
+                b_mat = phi2.T * col_inv_var_mat
+                c_mat = np.dot(phi2, phi2.T * col_inv_var_mat)
 
                 # DEBUG - should try several columns...
                 #if (i==10 and j>3000):

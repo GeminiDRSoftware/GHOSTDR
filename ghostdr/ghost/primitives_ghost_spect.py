@@ -691,10 +691,6 @@ class GHOSTSpect(GHOST):
             will attempt to pull a slit flat from the calibrations system (or,
             if specified, the --user_cal processed_flat command-line
             option)
-        sky_correct: bool
-            Denotes whether or not to correct for the sky profile during the
-            object extraction. Defaults to True, although it should be altered
-            to False when processing flats or arcs.
         extract_ifu1: bool/None
             Denotes whether or not to extract the spectra in IFU1.  Defaults to
             None in which case the code will read whether or not there was an
@@ -703,9 +699,17 @@ class GHOSTSpect(GHOST):
             Denotes whether or not to extract the spectra in IFU2.  Defaults to
             None in which case the code will read whether or not there was an
             object in IFU2 from the header.
+        sky_subtract: bool
+            subtract the sky from the object spectra?
         seeing: float/None
             can be used to create a synthetic slitviewer image (and synthetic
             slitflat image) if, for some reason, one is not available
+        flat_precorrect: bool
+            remove the reponse function from each order before extraction?
+        snoise: float
+            linear fraction of signal to add to noise estimate for CR flagging
+        sigma: float
+            number of standard deviations for identifying discrepant pixels
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
@@ -714,7 +718,12 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        ifu1 = params["ifu1"]
+        ifu2 = params["ifu1"]
         seeing = params["seeing"]
+        snoise = params["snoise"]
+        sigma = params["sigma"]
+        debug_cr_pixel = (params["debug_cr_order"], params["debug_cr_pixel"])
 
         # This primitive modifies the input AD structure, so it must now
         # check if the primitive has already been applied. If so, it must be
@@ -817,14 +826,47 @@ class GHOSTSpect(GHOST):
                            detector_x_bin=ad.detector_x_bin(),
                            detector_y_bin=ad.detector_y_bin())
 
-            if params['extract_ifu1'] is None:
-                extract_ifu1 = ad.phu.get('TARGET1') == 2
+            ifu_status = ["stowed", "sky", "object"]
+            if ifu1 is None:
+                try:
+                    ifu1 = ifu_status[ad.phu['TARGET1']]
+                except (KeyError, IndexError):
+                    raise RuntimeError(f"{self.myself()}: ifu1 set to 'None' "
+                                       f"but 'TARGET1' keyword missing/incorrect")
+            if ifu2 is None:
+                if res_mode == 'std':
+                    try:
+                        ifu2 = ifu_status[ad.phu['TARGET2']]
+                    except (KeyError, IndexError):
+                        raise RuntimeError(f"{self.myself()}: ifu2 set to 'None' "
+                                           f"but 'TARGET1' keyword missing/incorrect")
+                else:
+                    ifu2 = "object" if ad.phu.get('THXE') == 1 else "stowed"
+
+            ifu_stowed = [obj for obj, ifu in enumerate([ifu1, ifu2])
+                          if ifu == "stowed"]
+            if ifu_stowed:
+                log.stdinfo(f"Stowed IFUs detected: {ifu_stowed}")
+
+            # CJS 20220411: We need to know which IFUs contain an object if
+            # we need to make a synthetic slit profile so this has moved up
+            if 'ARC' in ad.tags:
+                # Extracts entire slit first, and then the two IFUs separately
+                objs_to_use = [[], [0, 1]]
+                use_sky = [True, False]
+                find_crs = [False, False]
+                sky_correct_profiles = False
             else:
-                extract_ifu1 = params['extract_ifu1']
-            if params['extract_ifu2'] is None:
-                extract_ifu2 = (ad.phu.get('TARGET2') == 2) | ((ad.phu.get('THXE') == 1) & (res_mode == 'high'))
-            else:
-                extract_ifu2 = params['extract_ifu2']
+                ifu_selection = [obj for obj, ifu in enumerate([ifu1, ifu2])
+                                 if ifu == "object"]
+                objs_to_use = [ifu_selection]
+                use_sky = [params["sky_subtract"] if ifu_selection else True]
+                find_crs = [True]
+                sky_correct_profiles = True
+
+            # MJI - Uncomment the lines below for testing in the simplest possible case.
+            # objs_to_use = [[0], ]
+            # use_sky = [False, ]
 
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
@@ -852,14 +894,22 @@ class GHOSTSpect(GHOST):
             sview_kwargs = {} if slit is None else {"binning": slit.detector_x_bin()}
             sview = SlitView(slit_data, slitflat_data,
                              slitvpars.TABLE[0], mode=res_mode,
-                             microns_pix=4.54 * 180 / 50, **sview_kwargs)
+                             microns_pix=4.54 * 180 / 50,
+                             stowed=ifu_stowed, **sview_kwargs)
 
             # There's no point in creating a fake slitflat first, since that
             # will case the code to use it to determine the fibre positions,
             # but the fibre positions are just the defaults
             if slit is None:
                 log.stdinfo(f"Creating synthetic slit image for seeing={seeing}")
-                slit_data = sview.fake_slitimage(flat_image=slitflat_data, seeing=seeing)
+                ifus = []
+                if extract_ifu1:
+                    ifus.append('ifu0' if res_mode == 'std' else 'ifu')
+                # "ifu2" is the ThXe cal fiber in HR and has no continuum
+                if extract_ifu2 and res_mode == 'std':
+                    ifus.append('ifu1')
+                slit_data = sview.fake_slitimage(
+                    flat_image=slitflat_data, ifus=ifus, seeing=seeing)
             else:
                 # TODO? This only models IFU0 in SR mode
                 slit_models = sview.model_profile(slit_data, slitflat_data)
@@ -994,44 +1044,8 @@ class GHOSTSpect(GHOST):
                     else:
                         raise
 
-            # MCW 190830
-            # MI wants iteration over all possible combinations of sky and
-            # object(s)
-            # This should only happen for object files, because:
-            # - arcs require either "sky only" or "skyless" extraction;
-            # - standards should only extract the actual profile in single
-            #   object mode.
-            if 'ARC' in ad.tags:
-                objs_to_use = [[], [0, 1], ]
-                use_sky = [True, False, ]
-                find_crs = [False, False,]
-            else:
-                ifu_selection = []
-
-                if extract_ifu1:
-                    ifu_selection += [0]
-                if extract_ifu2:
-                    ifu_selection += [1]
-
-                if extract_ifu1 or extract_ifu2:
-                    # Need to run use_sky = True first so that the sky profile is
-                    # included during CR identification, otherwise, the CR rejection
-                    # will reject sky lines in the sky fibers.
-                    objs_to_use = [ifu_selection, ifu_selection]
-                    use_sky = [True, False]
-                    find_crs = [True, False]
-                else:
-                    objs_to_use = [ifu_selection]
-                    use_sky = [True]
-                    find_crs = [True]
-            
-            # MJI - Uncomment the lines below for testing in the simplest possible case.
-            #objs_to_use = [[0], ]
-            #use_sky = [False, ]
-
             for i, (o, s, cr) in enumerate(zip(objs_to_use, use_sky, find_crs)):
-                print("OBJECTS:" + str(o))
-                print("SKY:" + str(s))
+                log.stdinfo(f"\nExtracting objects {str(o)}; sky subtraction {str(s)}")
                 # CJS: Makes it clearer that you're throwing the first two
                 # returned objects away (get replaced in the two_d_extract call)
                 
@@ -1040,8 +1054,10 @@ class GHOSTSpect(GHOST):
                 # (see the try-except statement at line 925)
                 DUMMY, _, extracted_weights = extractor.one_d_extract(
                     data=corrected_data, vararray=corrected_var,
-                    correct_for_sky=params['sky_correct'],
-                    use_sky=s, used_objects=o, find_crs=cr
+                    correct_for_sky=sky_correct_profiles,
+                    use_sky=s, used_objects=o, find_crs=cr,
+                    snoise=snoise, sigma=sigma,
+                    debug_cr_pixel=debug_cr_pixel
                 )
 
                 # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
@@ -1079,10 +1095,12 @@ class GHOSTSpect(GHOST):
                     ad[i].reset(extracted_flux, mask=None,
                                 variance=extracted_var)
                 ad[i].WGT = extracted_weights
+                if extractor.badpixmask is not None:
+                    ad[i].CR = extractor.badpixmask & DQ.cosmic_ray
                 ad[i].hdr['DATADESC'] = (
                     'Order-by-order processed science data - '
-                    'objects {}, sky correction = {}'.format(
-                        str(o), str(params['sky_correct'])),
+                    'objects {}, subtration = {}'.format(
+                        str(o), str(use_sky)),
                     self.keyword_comments['DATADESC'])
 
             # Timestamp and update filename
