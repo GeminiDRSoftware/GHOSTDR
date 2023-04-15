@@ -24,7 +24,6 @@ def reduceScience(p):
     p.addVAR(poisson_noise=True)
     p.darkCorrect()
     p.tileArrays()
-    #p.rejectCosmicRays()
     p.applyFlatBPM() # Bitwise combine the flat BPM with the current BPM
                      # for the data. This is necessary because the flat isn't
                      # subtracted in the classical sense - rather, it's profile
@@ -38,11 +37,10 @@ def reduceScience(p):
                                # arcs, e.g. from start and end of night,
                                # and interpolate in time
     p.barycentricCorrect()  # trivial - multiply wavelength scale
-    p.responseCorrect()  # canned standard star correction to the point of
-                         # flatCorrect, plus a model flux
-                         # User should be able to turn off this step
-                         # Possible option for telluric correction (so
-                         # option to override canned file used)
+    p.responseCorrect()
+    p.interpolateAndCombine(outstream="combined")
+    p.normalizeSpectralFormat(stream="combined")
+    p.writeOutputs(stream="combined")
 
 
 def reduceStandard(p):
@@ -75,7 +73,6 @@ def reduceStandard(p):
     #p.flatCorrect() # Need to write our own, NOT USE GMOS - extract the flat profile,
     #                # then simple division
     p.addWavelengthSolution()
-    return
 
 
 _default = reduceScience
