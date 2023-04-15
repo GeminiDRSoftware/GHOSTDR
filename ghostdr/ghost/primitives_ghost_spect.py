@@ -868,6 +868,36 @@ class GHOSTSpect(GHOST):
             # objs_to_use = [[0], ]
             # use_sky = [False, ]
 
+            # CJS 20220411: We need to know which IFUs contain an object if
+            # we need to make a synthetic slit profile so this has moved up
+            if 'ARC' in ad.tags:
+                objs_to_use = [[], [0, 1], ]
+                use_sky = [True, False, ]
+                find_crs = [False, False, ]
+            else:
+                ifu_selection = []
+
+                if extract_ifu1:
+                    ifu_selection += [0]
+                if extract_ifu2:
+                    ifu_selection += [1]
+
+                if extract_ifu1 or extract_ifu2:
+                    # Need to run use_sky = True first so that the sky profile is
+                    # included during CR identification, otherwise, the CR rejection
+                    # will reject sky lines in the sky fibers.
+                    objs_to_use = [ifu_selection, ifu_selection]
+                    use_sky = [True, False]
+                    find_crs = [True, False]
+                else:
+                    objs_to_use = [ifu_selection]
+                    use_sky = [True]
+                    find_crs = [True]
+
+            # MJI - Uncomment the lines below for testing in the simplest possible case.
+            # objs_to_use = [[0], ]
+            # use_sky = [False, ]
+
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
             # simultaneously.
