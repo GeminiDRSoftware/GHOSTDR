@@ -1,3 +1,16 @@
+#
+# This script is used to help verify reqirement 5622.
+# It should be run on unbundled FITS files and is best
+# used with the following data, for which catalog positions
+# are included in this script:
+#
+# https://archive.gemini.edu/file/S20230130S0112.fits.bz2
+# https://archive.gemini.edu/file/S20230130S0116.fits.bz2
+# https://archive.gemini.edu/file/S20230215S0038.fits.bz2
+# https://archive.gemini.edu/file/S20230215S0039.fits.bz2
+# https://archive.gemini.edu/file/S20230215S0051.fits.bz2
+#
+
 import math
 import sys
 import numpy as np
