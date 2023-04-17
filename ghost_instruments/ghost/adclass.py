@@ -137,7 +137,10 @@ class AstroDataGhost(AstroDataGemini):
             if obj.hdr.get('CAMERA')[0].startswith('S'):
                 # add in the first SLITV header so keywords are there
                 # (which is explicitly done in debundling)
-                phu = self.phu + (obj.hdr if obj.is_single else obj[0].hdr)
+                objhdr = obj.hdr if obj.is_single else obj[0].hdr
+                phu = self.phu + objhdr
+                # because people just do things without understanding the ramifications
+                phu['EXPTIME'] = objhdr['EXPTIME']
                 obj._dataprov = FitsProviderProxyForGhostBundles(obj._dataprov, phu)
                 return obj
             #print("Tested", type(self._dataprov), obj._mapping)
@@ -633,8 +636,10 @@ class AstroDataGhost(AstroDataGemini):
         """
         if 'BUNDLE' not in self.tags:
             return len(self) if 'SLITV' in self.tags else 1  # probably
-        return {k.lower(): sum(ext.hdr.get('CAMERA') == k and not ext.shape
-                               for ext in self) for k in ('BLUE', 'RED')}
+        ret_value = {k.lower(): sum(ext.hdr.get('CAMERA') == k and not ext.shape
+                                    for ext in self) for k in ('BLUE', 'RED')}
+        ret_value['slitv'] = sum(ext.hdr.get('CAMERA') == 'SLITV' for ext in self)
+        return ret_value
 
     @astro_data_descriptor
     @return_dict_for_bundle
