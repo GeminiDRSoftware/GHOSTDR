@@ -27,13 +27,12 @@ def makeProcessedArc(p):
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
     p.darkCorrect()
-    #p.rejectCosmicRays(
-    # )
     p.tileArrays()
     p.stackArcs()
-    p.extractProfile(sky_correct=False, flat_precorrect=False, write_result=True)
+    p.extractProfile(flat_precorrect=False, write_result=True)
     p.fitWavelength()
     p.storeProcessedArc()
     return
+
 
 _default = makeProcessedArc

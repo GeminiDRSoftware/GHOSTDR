@@ -93,9 +93,13 @@ class SlitView(object):
         Do we reverse the profile? This is a sign convention issue between
         the slit viewer and the CCD, to be determined through testing on
         real data.
+
+    stowed: list
+        are any IFUs stowed? this is relevant for constructing the object
+        slit profiles as it cannot be discerned from the slit_image
     """
     def __init__(self, slit_image, flat_image, slitvpars, microns_pix=4.54*180/50,
-                 binning=2, mode='std', slit_length=3600.):
+                 binning=2, mode='std', slit_length=3600., stowed=None):
         self.binning = binning
         self.rota = slitvpars['rota']
         self.center = [slitvpars['rotyc'] // binning, slitvpars['rotxc'] // binning]
@@ -150,6 +154,8 @@ class SlitView(object):
             self.flat_image = flat_image
         else:
             self.flat_image = transform.rotate(util.img_as_float64(flat_image), self.rota, center=self.center)
+
+        self.stowed = stowed or []
 
         # WARNING: These parameters below should be input from somewhere!!!
         # The central pixel in the y-direction (along-slit) defines the slit
@@ -323,6 +329,16 @@ class SlitView(object):
             profiles[-1][self.sky_pix_boundaries[arm][1]+1:] = 0
         profiles = np.array(profiles)
 
+        # Blank out any regions where the IFU is said to be stowed
+        # Ensure we get pixels at the end of the slit that might not
+        # be formally within the boundaries
+        for stowed in self.stowed:
+            boundary = self.object_boundaries[arm][stowed]
+            if stowed == 0:
+                profiles[:, :boundary[1]+1] = 0
+            else:
+                profiles[:, boundary[0]:] = 0
+
         # Normalise profiles if requested (not needed if the total flux is what
         # you're after, e.g. for an mean exposure epoch calculation)
         if normalise_profiles:
@@ -330,7 +346,10 @@ class SlitView(object):
                 profsum = np.sum(prof)
                 if math.isclose(profsum, 0.0, abs_tol=1e-9):
                     # FIXME what to do here?
-                    raise ZeroDivisionError('Sum of profile is too close to zero')
+                    # raise ZeroDivisionError('Sum of profile is too close to zero')
+                    # CJS: normalization is only done for profile fitting for
+                    # the extraction and if an IFU is stowed that's OK
+                    pass
                 else:
                     prof /= np.sum(prof)
 
@@ -381,7 +400,6 @@ class SlitView(object):
 
         slit_models = {}
         for arm in ('blue', 'red'):
-            print(f"Fitting {arm} arm")
             _slice, center = self.get_raw_slit_position(arm)
             init_parameters = {'x_center': center[1] - _slice[1].start,
                                'y_center': center[0] - _slice[0].start,

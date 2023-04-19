@@ -11,20 +11,20 @@ import warnings
 from copy import deepcopy
 import scipy
 import scipy.signal as signal
-from scipy.optimize import leastsq
 import functools
 from datetime import datetime, date, time, timedelta
-import re
 import astropy.coordinates as astrocoord
-import astropy.io.fits as astropyio
 from astropy.time import Time
 from astropy.io.ascii.core import InconsistentTableError
 from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
 from astropy.modeling import fitting, models
+from astropy.modeling.tabular import Tabular1D
 from scipy import interpolate
 import scipy.ndimage as nd
+from gwcs import coordinate_frames as cf
+from gwcs.wcs import WCS as gWCS
 from pysynphot import observation, spectrum
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -35,10 +35,8 @@ from geminidr.core.primitives_spect import Spect
 from geminidr.gemini.lookups import DQ_definitions as DQ
 from gempy.library import tracing
 from gempy.gemini import gemini_tools as gt
-# from gempy.mosaic.mosaicAD import MosaicAD
 
 from .polyfit import GhostArm, Extractor, SlitView
-from .polyfit.ghost import GhostArm
 from .polyfit.polyspect import WaveModel
 
 from .primitives_ghost import GHOST, filename_updater
@@ -421,7 +419,7 @@ class GHOSTSpect(GHOST):
             log.stdinfo('Applying barycentric correction factor of '
                         f'{cf} to {ad.filename}')
             for ext in ad:
-                ext.WAVL *= cf
+                ext.WAVL *= float(cf)  # remove u.dimensionless_unscaled
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -688,21 +686,23 @@ class GHOSTSpect(GHOST):
             will attempt to pull a slit flat from the calibrations system (or,
             if specified, the --user_cal processed_flat command-line
             option)
-        sky_correct: bool
-            Denotes whether or not to correct for the sky profile during the
-            object extraction. Defaults to True, although it should be altered
-            to False when processing flats or arcs.
-        extract_ifu1: bool/None
-            Denotes whether or not to extract the spectra in IFU1.  Defaults to
-            None in which case the code will read whether or not there was an
-            object in IFU1 from the header.
-        extract_ifu2: bool/None
-            Denotes whether or not to extract the spectra in IFU2.  Defaults to
-            None in which case the code will read whether or not there was an
-            object in IFU2 from the header.
+        ifu1: str('object'|'sky'|'stowed')/None
+            Denotes the status of IFU1. If None, the status is read from the
+            header.
+        ifu2: str('object'|'sky'|'stowed')/None
+            Denotes the status of IFU2. If None, the status is read from the
+            header.
+        sky_subtract: bool
+            subtract the sky from the object spectra?
         seeing: float/None
             can be used to create a synthetic slitviewer image (and synthetic
             slitflat image) if, for some reason, one is not available
+        flat_precorrect: bool
+            remove the reponse function from each order before extraction?
+        snoise: float
+            linear fraction of signal to add to noise estimate for CR flagging
+        sigma: float
+            number of standard deviations for identifying discrepant pixels
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
@@ -711,7 +711,12 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        ifu1 = params["ifu1"]
+        ifu2 = params["ifu1"]
         seeing = params["seeing"]
+        snoise = params["snoise"]
+        sigma = params["sigma"]
+        debug_cr_pixel = (params["debug_cr_order"], params["debug_cr_pixel"])
 
         # This primitive modifies the input AD structure, so it must now
         # check if the primitive has already been applied. If so, it must be
@@ -814,40 +819,42 @@ class GHOSTSpect(GHOST):
                            detector_x_bin=ad.detector_x_bin(),
                            detector_y_bin=ad.detector_y_bin())
 
-            if params['extract_ifu1'] is None:
-                extract_ifu1 = ad.phu.get('TARGET1') == 2
-            else:
-                extract_ifu1 = params['extract_ifu1']
-            if params['extract_ifu2'] is None:
-                extract_ifu2 = (ad.phu.get('TARGET2') == 2) | ((ad.phu.get('THXE') == 1) & (res_mode == 'high'))
-            else:
-                extract_ifu2 = params['extract_ifu2']
+            ifu_status = ["stowed", "sky", "object"]
+            if ifu1 is None:
+                try:
+                    ifu1 = ifu_status[ad.phu['TARGET1']]
+                except (KeyError, IndexError):
+                    raise RuntimeError(f"{self.myself()}: ifu1 set to 'None' "
+                                       f"but 'TARGET1' keyword missing/incorrect")
+            if ifu2 is None:
+                if res_mode == 'std':
+                    try:
+                        ifu2 = ifu_status[ad.phu['TARGET2']]
+                    except (KeyError, IndexError):
+                        raise RuntimeError(f"{self.myself()}: ifu2 set to 'None' "
+                                           f"but 'TARGET1' keyword missing/incorrect")
+                else:
+                    ifu2 = "object" if ad.phu.get('THXE') == 1 else "stowed"
+
+            log.stdinfo(f"\nIFU status: {ifu1} and {ifu2}")
+            ifu_stowed = [obj for obj, ifu in enumerate([ifu1, ifu2])
+                          if ifu == "stowed"]
 
             # CJS 20220411: We need to know which IFUs contain an object if
             # we need to make a synthetic slit profile so this has moved up
             if 'ARC' in ad.tags:
-                objs_to_use = [[], [0, 1], ]
-                use_sky = [True, False, ]
-                find_crs = [False, False, ]
+                # Extracts entire slit first, and then the two IFUs separately
+                objs_to_use = [[], [0, 1]]
+                use_sky = [True, False]
+                find_crs = [False, False]
+                sky_correct_profiles = False
             else:
-                ifu_selection = []
-
-                if extract_ifu1:
-                    ifu_selection += [0]
-                if extract_ifu2:
-                    ifu_selection += [1]
-
-                if extract_ifu1 or extract_ifu2:
-                    # Need to run use_sky = True first so that the sky profile is
-                    # included during CR identification, otherwise, the CR rejection
-                    # will reject sky lines in the sky fibers.
-                    objs_to_use = [ifu_selection, ifu_selection]
-                    use_sky = [True, False]
-                    find_crs = [True, False]
-                else:
-                    objs_to_use = [ifu_selection]
-                    use_sky = [True]
-                    find_crs = [True]
+                ifu_selection = [obj for obj, ifu in enumerate([ifu1, ifu2])
+                                 if ifu == "object"]
+                objs_to_use = [ifu_selection]
+                use_sky = [params["sky_subtract"] if ifu_selection else True]
+                find_crs = [True]
+                sky_correct_profiles = True
 
             # MJI - Uncomment the lines below for testing in the simplest possible case.
             # objs_to_use = [[0], ]
@@ -879,7 +886,8 @@ class GHOSTSpect(GHOST):
             sview_kwargs = {} if slit is None else {"binning": slit.detector_x_bin()}
             sview = SlitView(slit_data, slitflat_data,
                              slitvpars.TABLE[0], mode=res_mode,
-                             microns_pix=4.54 * 180 / 50, **sview_kwargs)
+                             microns_pix=4.54 * 180 / 50,
+                             stowed=ifu_stowed, **sview_kwargs)
 
             # There's no point in creating a fake slitflat first, since that
             # will case the code to use it to determine the fibre positions,
@@ -894,14 +902,14 @@ class GHOSTSpect(GHOST):
                     ifus.append('ifu1')
                 slit_data = sview.fake_slitimage(
                     flat_image=slitflat_data, ifus=ifus, seeing=seeing)
-            else:
+            elif not ad.tags.intersection({'FLAT', 'ARC'}):
                 # TODO? This only models IFU0 in SR mode
                 slit_models = sview.model_profile(slit_data, slitflat_data)
                 log.stdinfo("")
                 for k, model in slit_models.items():
                     fwhm, apfrac = model.estimate_seeing()
                     log.stdinfo(f"Estimated seeing in the {k} arm: {fwhm:5.3f}"
-                                f" ({apfrac*100:.1f}% aperture loss)")
+                                f" ({apfrac*100:.1f}% aperture throughput)")
             if slitflat is None:
                 log.stdinfo("Creating synthetic slitflat image")
                 slitflat_data = sview.fake_slitimage()
@@ -913,8 +921,11 @@ class GHOSTSpect(GHOST):
             # Added a kwarg to one_d_extract (the only Extractor method which
             # uses Extractor.vararray), allowing an update to the instance's
             # .vararray attribute
+            # Refactor all this for 3.1
             corrected_data = deepcopy(ad[0].data)
             corrected_var = deepcopy(ad[0].variance)
+            safe_data = deepcopy(ad[0].data)
+            safe_variance = deepcopy(ad[0].variance)
 
             # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
@@ -996,7 +1007,7 @@ class GHOSTSpect(GHOST):
                     
                     #TODO: These 4 lines (and possibly correction= BLAH) can stay.
                     #the rest to go to findApertures
-                    extractor.vararray[extra_bad] = np.inf
+                    #extractor.vararray[extra_bad] = np.inf  # CJS: this has no effect
                     extractor.badpixmask[extra_bad] |= BAD_FLAT_FLAG
                     
                     # MJI: Pre-correct the data here. 
@@ -1029,8 +1040,12 @@ class GHOSTSpect(GHOST):
                         raise
 
             for i, (o, s, cr) in enumerate(zip(objs_to_use, use_sky, find_crs)):
-                print("OBJECTS:" + str(o))
-                print("SKY:" + str(s))
+                if o:
+                    log.stdinfo(f"\nExtracting objects {str(o)}; sky subtraction {str(s)}")
+                elif use_sky:
+                    log.stdinfo("\nExtracting entire slit")
+                else:
+                    raise RuntimeError("No objects for extraction and use_sky=False")
                 # CJS: Makes it clearer that you're throwing the first two
                 # returned objects away (get replaced in the two_d_extract call)
                 
@@ -1038,9 +1053,12 @@ class GHOSTSpect(GHOST):
                 # overwritten with the first extraction pass of this loop
                 # (see the try-except statement at line 925)
                 DUMMY, _, extracted_weights = extractor.one_d_extract(
-                    data=corrected_data, vararray=corrected_var,
-                    correct_for_sky=params['sky_correct'],
-                    use_sky=s, used_objects=o, find_crs=cr
+                    #data=corrected_data, vararray=corrected_var,
+                    data=safe_data, vararray=safe_variance,
+                    correct_for_sky=sky_correct_profiles,
+                    use_sky=s, used_objects=o, find_crs=cr,
+                    snoise=snoise, sigma=sigma,
+                    debug_cr_pixel=debug_cr_pixel
                 )
 
                 # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
@@ -1078,10 +1096,12 @@ class GHOSTSpect(GHOST):
                     ad[i].reset(extracted_flux, mask=None,
                                 variance=extracted_var)
                 ad[i].WGT = extracted_weights
+                if extractor.badpixmask is not None:
+                    ad[i].CR = extractor.badpixmask & DQ.cosmic_ray
                 ad[i].hdr['DATADESC'] = (
                     'Order-by-order processed science data - '
-                    'objects {}, sky correction = {}'.format(
-                        str(o), str(params['sky_correct'])),
+                    'objects {}, subtration = {}'.format(
+                        str(o), str(use_sky)),
                     self.keyword_comments['DATADESC'])
 
             # Timestamp and update filename
@@ -1128,8 +1148,6 @@ class GHOSTSpect(GHOST):
             available are:
             ``'loglinear'``
             Default is ``'loglinear'``.
-        skip : bool
-            Set to ``True`` to skip this primitive. Defaults to ``False``.
         oversample : int or float
             The factor by which to (approximately) oversample the final output
             spectrum, as compared to the input spectral orders. Defaults to 1.
@@ -1138,19 +1156,16 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
+        adoutputs = []
         for ad in adinputs:
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by interpolateAndCombine".
                             format(ad.filename))
+                adoutputs.append(ad)
                 continue
 
-            if params['skip']:
-                log.warning('Skipping interpolateAndCombine for {}'.format(
-                    ad.filename
-                ))
-                continue
-
+            adout = astrodata.create(ad.phu)
             for ext in ad:
                 # Determine the wavelength bounds of the file
                 min_wavl, max_wavl = np.min(ext.WAVL), np.max(ext.WAVL)
@@ -1173,8 +1188,9 @@ class GHOSTSpect(GHOST):
                 # Create a final spectrum and (inverse) variance to match
                 # (One plane per object)
                 no_obj = ext.data.shape[-1]
-                spec_final = np.zeros(wavl_grid.shape + (no_obj, ))
-                var_final = np.inf * np.ones(wavl_grid.shape + (no_obj, ))
+                spec_final = np.zeros(wavl_grid.shape + (no_obj, ), dtype=np.float32)
+                var_final = np.full_like(spec_final, np.inf)
+                mask_final = np.zeros_like(spec_final, dtype=DQ.datatype)
 
                 # Loop over each input order, making the output spectrum the
                 # result of the weighted average of itself and the order
@@ -1206,18 +1222,23 @@ class GHOSTSpect(GHOST):
                 # pdb.set_trace()
 
                 # Can't use .reset without looping through extensions
-                ad.append(astrodata.NDAstroData(data=spec_final,
+                mask_final[np.logical_or.reduce([np.isnan(spec_final),
+                                                 np.isinf(var_final),
+                                                 var_final == 0])] = DQ.bad_pixel
+                adout.append(astrodata.NDAstroData(data=spec_final,
+                                                   mask=mask_final,
                                                 meta={'header': deepcopy(ext.hdr)}))
-                ad[-1].variance = var_final
-                ad[-1].WAVL = wavl_grid
-                ad[-1].hdr['DATADESC'] = ('Interpolated data',
-                                          self.keyword_comments['DATADESC'])
+                adout[-1].variance = np.where(np.isinf(var_final), 0, var_final)
+                adout[-1].WAVL = wavl_grid
+                adout[-1].hdr['DATADESC'] = ('Interpolated data',
+                                             self.keyword_comments['DATADESC'])
 
             # Timestamp & update filename
-            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.update_filename(suffix=params["suffix"], strip=True)
+            gt.mark_history(adout, primname=self.myself(), keyword=timestamp_key)
+            adout.update_filename(suffix=params["suffix"], strip=True)
+            adoutputs.append(adout)
 
-        return adinputs
+        return adoutputs
 
     def findApertures(self, adinputs=None, **params):
         """
@@ -1381,7 +1402,8 @@ class GHOSTSpect(GHOST):
         max_iters = params["max_iters"]
         radius = params["radius"]
         plot1d = params["plot1d"]
-        plot2d = params["plot2d"]
+        plotrms = params["plotrms"]
+        plot2d = params["debug_plot2d"]
 
         # import pdb; pdb.set_trace()
 
@@ -1451,7 +1473,7 @@ class GHOSTSpect(GHOST):
                 these_peaks = []
                 for x in peaks[0]:
                     good = np.zeros_like(flux, dtype=bool)
-                    good[int(x - radius):int(x + radius + 1)] = True
+                    good[max(int(x - radius), 0):int(x + radius + 1)] = True
                     g_init = models.Gaussian1D(mean=x, amplitude=flux[good].max(),
                                                stddev=1.5)
                     with warnings.catch_warnings():
@@ -1478,7 +1500,8 @@ class GHOSTSpect(GHOST):
             for iter in (0, 1):
                 # Only cross-correlate on the first pass
                 lines_out = extractor.match_lines(all_peaks, arcwaves,
-                                                  hw=radius, xcor=not bool(iter))
+                                                  hw=radius, xcor=not bool(iter),
+                                                  log=(self.log, None)[iter])
                 #lines_out is now a long vector of many parameters, including the
                 #x and y position on the chip of each line, the order, the expected
                 #wavelength, the measured line strength and the measured line width.
@@ -1499,7 +1522,7 @@ class GHOSTSpect(GHOST):
             nlines = y_values.size - mask.sum()
             log.stdinfo(f"Fit residual RMS (Angstroms): {rms:7.4f} ({nlines} lines)")
             if np.any(mask):
-                print("The following lines were rejected:")
+                log.stdinfo("The following lines were rejected:")
                 for yval, order, wave, fitted, m in zip(
                         y_values, orders, waves, fitted_waves, mask):
                     if m:
@@ -1507,6 +1530,7 @@ class GHOSTSpect(GHOST):
                                     f"wave {wave:10.4f} (fitted wave {fitted:10.4f})")
 
             if plot2d:
+                plt.ioff()
                 fig, ax = plt.subplots()
                 xpos = lambda y, ord: arm.szx // 2 + np.interp(
                     y, pixels, arm.x_map[ord])
@@ -1519,12 +1543,14 @@ class GHOSTSpect(GHOST):
                     ax.plot([yval, yval],  xval + np.array([-30, 30]), 'r-')
                     ax.text(yval + 10, xval + 30, str(wave), color='blue', fontsize=10)
                 plt.show()
+                plt.ion()
 
             if plot1d:
                 plot_extracted_spectra(ad, arm, all_peaks, lines_out, mask, nrows=4)
 
-            m_final.plotit(y_values, orders, waves, mask,
-                           filename=ad.filename.replace('.fits', '_2d.pdf'))
+            if plotrms:
+                m_final.plotit(y_values, orders, waves, mask,
+                               filename=ad.filename.replace('.fits', '_2d.pdf'))
 
             # CJS: Append the WFIT as an extension. It will inherit the
             # header from the science plane (including irrelevant/wrong
@@ -2157,9 +2183,13 @@ class GHOSTSpect(GHOST):
                         f"{self.myself()} cannot calibrate the input spectra.")
             return adinputs
 
+        # Let the astrodata routine handle any issues with actually opening
+        # the FITS file
+        ad_std = astrodata.open(std_filename)
+
         # Code duplication from Spect.calculateSensitivity()
         if specphot_file is None:
-            obj_filename = f"{adinputs[0].object().lower().replace(' ', '')}.dat"
+            obj_filename = f"{ad_std.object().lower().replace(' ', '')}.dat"
             for module in (self.inst_lookups, 'geminidr.gemini.lookups',
                            'geminidr.core.lookups'):
                 try:
@@ -2182,10 +2212,6 @@ class GHOSTSpect(GHOST):
             # Let this crash
             spec_table = Spect._get_spectrophotometry(self, specphot_file,
                                                       in_vacuo=True)
-
-        # Let the astrodata routine handle any issues with actually opening
-        # the FITS file
-        ad_std = astrodata.open(std_filename)
 
         # Re-grid the standard reference spectrum onto the wavelength grid of
         # the observed standard
@@ -2415,6 +2441,125 @@ class GHOSTSpect(GHOST):
             This could go in primitives_ghost.py if the SLITV version
             also no-ops.
         """
+        return adinputs
+
+    def standardizeSpectralFormat(self, adinputs=None, suffix=None):
+        """
+        Convert the input file into multiple apertures, each with its own
+        gWCS object to describe the wavelength scale. This allows the
+        spectrum (or each order) to be displayed by the "dgsplot" script
+
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        input_frame = cf.CoordinateFrame(naxes=1, axes_type=['SPATIAL'],
+                                         axes_order=(0,), name="pixels",
+                                         axes_names=['x'], unit=u.pix)
+        output_frame = cf.SpectralFrame(axes_order=(0,), unit=u.nm,
+                                        axes_names=["WAVE"],
+                                        name="Wavelength in vacuo")
+
+        wave_tol = 1e-4  # rms limit for a linear/loglinear wave model
+        adoutputs = []
+        for ad in adinputs:
+            adout = astrodata.create(ad.phu)
+            adout.update_filename(suffix=suffix, strip=True)
+            log.stdinfo(f"Converting {ad.filename} to {adout.filename}")
+            for i, ext in enumerate(ad, start=1):
+                if not hasattr(ext, "WAVL"):
+                    log.warning(f"    EXTVER {i} has no WAVL table. Ignoring.")
+                    continue
+                has_var = ext.variance is not None
+                has_mask = ext.mask is not None
+                npix, nobj = ext.shape[-2:]
+                try:
+                    orders = list(range(ext.shape[-3]))
+                except:
+                    orders = [None]
+                wave_models = []
+                for order in orders:
+                    wave = 0.1 * ext.WAVL[order].ravel()  # because WAVL is always 2D
+                    linear = np.diff(wave).std() < wave_tol
+                    loglinear = (wave[1:] / wave[:-1]).std() < wave_tol
+                    if linear or loglinear:
+                        if linear:
+                            log.debug(f"Linear wavelength solution found for order {order}")
+                            fit_it = fitting.LinearLSQFitter()
+                            m_init = models.Polynomial1D(
+                                degree=1, c0=wave[0], c1=wave[1]-wave[0])
+                        else:
+                            log.debug(f"Loglinear wavelength solution found for order {order}")
+                            fit_it = fitting.LevMarLSQFitter()
+                            m_init = models.Exponential1D(
+                                amplitude=wave[0], tau=1./np.log(wave[1] / wave[0]))
+                        wave_model = fit_it(m_init, np.arange(npix), wave)
+                        log.debug("    "+" ".join([f"{p}: {v}" for p, v in zip(
+                            wave_model.param_names, wave_model.parameters)]))
+                    else:
+                        log.debug(f"Using tabular model for order {order}")
+                        wave_model = Tabular1D(np.arange(npix), wave)
+                    wave_model.name = "WAVE"
+                    wave_models.append(wave_model)
+
+                for spec in range(nobj):
+                    for order, wave_model in zip(orders, wave_models):
+                        ndd = ext.nddata.__class__(data=ext.data[order, :, spec].ravel(),
+                                                   meta={'header': ext.hdr.copy()})
+                        if has_mask:
+                            ndd.mask = ext.mask[order, :, spec].ravel()
+                        if has_var:
+                            ndd.variance = ext.variance[order, :, spec].ravel()
+                        adout.append(ndd)
+                        adout[-1].hdr[ad._keyword_for('data_section')] = f"[1:{npix}]"
+                        adout[-1].wcs = gWCS([(input_frame, wave_model),
+                                              (output_frame, None)])
+
+                log.stdinfo(f"    EXTVER {i} has been converted to EXTVERs "
+                            f"{len(adout) - nobj * len(orders) + 1}-{len(adout)}")
+
+            adoutputs.append(adout)
+
+        return adoutputs
+
+    def write1DSpectra(self, adinputs=None, **params):
+        """
+        Write 1D spectra to files listing the wavelength and data (and
+        optionally variance and mask) in one of a range of possible formats.
+
+        Because Spect.write1DSpectra requires APERTURE numbers, the GHOST
+        version of this primitive adds them before calling the Spect version.
+
+        Parameters
+        ----------
+        adinputs : list of :class:`~astrodata.AstroData`
+            Science data as 2D spectral images.
+        format : str
+            format for writing output files
+        header : bool
+            write FITS header before data values?
+        extension : str
+            extension to be used in output filenames
+        apertures : str
+            comma-separated list of aperture numbers to write
+        dq : bool
+            write DQ (mask) plane?
+        var : bool
+            write VAR (variance) plane?
+        overwrite : bool
+            overwrite existing files?
+        xunits: str
+            units of the x (wavelength/frequency) column
+        yunits: str
+            units of the data column
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+
+        for ad in adinputs:
+            for i, ext in enumerate(ad, start=1):
+                ext.hdr['APERTURE'] = i
+        Spect.write1DSpectra(self, adinputs, **params)
         return adinputs
 
     # CJS: Primitive has been renamed for consistency with other instruments

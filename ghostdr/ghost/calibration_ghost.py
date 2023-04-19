@@ -403,56 +403,13 @@ class CalibrationGHOST(Calibration):
             list of :class:`fits_storage.orm.header.Header` records that match the criteria
         """
         if howmany is None:
-            howmany = 1 if processed else 2
-
-        ifu = mos_or_ls = False
-        el_thres = 0.0
-        under_85 = False
-        crpa_thres = 0.0
-        # QAP might not give us these for now. Remove this 'if' later when it does
-        if self.descriptors.get('elevation') is not None:
-            # Spectroscopy flats also have to somewhat match telescope position for flexure, as follows
-            # this is from FitsStorage TRAC #43 discussion with KR 20130425. This code defines the
-            # thresholds and the conditions where they apply
-            try:
-                ifu = self.descriptors['focal_plane_mask'].startswith('IFU')
-                # For IFU, elevation must we within 7.5 degrees
-                el_thres = 7.5
-            except AttributeError:
-                # focal_plane_mask came as None. Leave 'ifu' as False
-                pass
-            try:
-                mos_or_ls = self.descriptors['central_wavelength'] > 0.55 or self.descriptors['disperser'].startswith('R150')
-                # For MOS and LS, elevation must we within 15 degrees
-                el_thres = 15.0
-            except AttributeError:
-                # Just in case disperser is None
-                pass
-            under_85 = self.descriptors['elevation'] < 85
-
-            # crpa*cos(el) must be within el_thres degrees, ie crpa must be within el_thres / cos(el)
-            # when el=90, cos(el) = 0 and the range is infinite. Only check at lower elevations
-            if under_85:
-                crpa_thres = el_thres / math.cos(math.radians(self.descriptors['elevation']))
-
-            # unset condition flags if thresholds are zero (bug in calibration.py necessitates this)
-            if crpa_thres == 0: under_85 = False
-            if el_thres == 0: ifu = mos_or_ls = False
+            howmany = 1
 
         query = (
             self.get_query()
                 .flat(processed)
                 .add_filters(*filt)
                 .match_descriptors(*flat_descr)
-            # Central wavelength is in microns (by definition in the DB table).
-                .tolerance(central_wavelength=0.001)
-
-            # Spectroscopy flats also have to somewhat match telescope position for flexure, as follows
-            # this is from FitsStorage TRAC #43 discussion with KR 20130425
-            # See the comments above to explain the thresholds
-                .tolerance(condition = ifu, elevation=el_thres)
-                .tolerance(condition = mos_or_ls, elevation=el_thres)
-                .tolerance(condition = under_85, cass_rotator_pa=crpa_thres)
 
             # Absolute time separation must be within 6 months
                 .max_interval(days=180)

@@ -253,12 +253,9 @@ def _write_newfile(extns, suffix, base, log):
         if (x.hdr.get('NAXIS') > 0) and (x.data.size > 0):
             n.append(x)
 
-
     # Construct a filename
     n.filename = base.filename
-    ccdsum = n.phu.get('CCDSUM')
-    binning = '_' + 'x'.join(ccdsum.split())
-    n.update_filename(suffix=binning+"_"+suffix)
+    n.update_filename(suffix="_"+suffix)
 
     # MCW 190813 - Update the ORIGNAME of the file
     # Otherwise, every time we do a 'strip' file rename, the base file name
@@ -270,7 +267,7 @@ def _write_newfile(extns, suffix, base, log):
     # have different data labels before going in the archive
     n.phu['DATALAB'] += f"-{n.phu['CAMERA']}"
     if n.phu['CAMERA'] != "SLITV":
-        n.phu['DATALAB'] += f"-{suffix[-3:]}"
+        n.phu['DATALAB'] += f"-{suffix[-3:]}"  # sequence number
 
     return n
 

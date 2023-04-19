@@ -1291,12 +1291,12 @@ class WaveModel(Fittable2DModel):
             py = residuals[indices]
             pm = mask[indices]
             #print(order, np.median(lines[indices,2]), [(pix, resid) for pix, resid in zip(x, y)])
-            ax.plot([0, 4096], [order, order], f'{col}-', linewidth=1)
+            ax.plot([0, self.szy], [order, order], f'{col}-', linewidth=1)
             for pix, resid, m in zip(px, py, pm):
                 symb = f"{col}:" if m else f"{col}-"
                 ax.plot([pix, pix], [order, order + resid / (3 * rms)], symb, linewidth=2)
             #ax.plot(x, [order] * x.size + y / 0.002, 'bo')
-        ax.set_xlim(0, 4096)
+        ax.set_xlim(0, self.szy)
         if self.m_ref < 60:
             ax.set_ylim(max(orders) + 2, min(orders) - 2)
         else:

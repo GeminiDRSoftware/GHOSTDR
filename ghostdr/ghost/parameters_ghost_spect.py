@@ -68,22 +68,31 @@ class extractProfileConfig(config.Config):
                                 optional=True, single=True)
     flat = config.ListField("Flat field", (str, ad), None,
                             optional=True, single=True)
-    sky_correct = config.Field("Correct for sky?", bool, True,
-                               optional=True)
-    extract_ifu1 = config.Field("Is there an object in IFU1?", bool, None,
-                               optional=True)
-    extract_ifu2 = config.Field("Is there an object in IFU2?", bool, None,
-                               optional=True)
+    ifu1 = config.ChoiceField("Status of IFU1", str,
+                              allowed={"object": "Pointed at an object",
+                                       "sky": "Pointed at sky",
+                                       "stowed": "Stowed"},
+                              default=None, optional=True)
+    ifu2 = config.ChoiceField("Status of IFU1", str,
+                              allowed={"object": "Pointed at an object",
+                                       "sky": "Pointed at sky",
+                                       "stowed": "Stowed"},
+                              default=None, optional=True)
+    sky_subtract = config.Field("Sky-subtract object spectra?", bool, True)
+    flat_precorrect = config.Field("Pre-correct by the flat field?", bool, True)
+    snoise = config.RangeField("Fraction of signal to be added to noise estimate for CR flagging",
+                               float, 0.1, min=0, max=1)
+    sigma = config.RangeField("Number of standard deviations at which to flag pixels",
+                              float, 6, min=3)
+    smooth_flat_spatially = config.Field(
+        "Smooth the flat field image before applying?", bool, False)
     seeing = config.RangeField("FWHM of seeing disc if no processed_slit is "
                                "available", float, None, min=0.2, optional=True)
-    smooth_flat_spatially = config.Field(
-        "Smooth the flat field image before applying?", bool, False,
-        optional=True
-    )
-    flat_precorrect = config.Field("Pre-correct by the flat field?", bool, True,
-                                   optional=True)
-    write_result = config.Field("Write primitive output to disk?", bool, False,
-                                optional=True)
+    write_result = config.Field("Write primitive output to disk?", bool, False)
+    debug_cr_order = config.RangeField("Order for CR debugging plot", int, None,
+                                       min=33, max=97, optional=True)
+    debug_cr_pixel = config.RangeField("Pixel for CR debugging plot", int, None,
+                                       min=0, max=6144, optional=True)
 
 
 class interpolateAndCombineConfig(config.Config):
@@ -93,7 +102,6 @@ class interpolateAndCombineConfig(config.Config):
         'linear': 'Linear wavelength scale',
         'loglinear': 'Log-linear wavelength scale'
     }, default='loglinear')
-    skip = config.Field("No-op this primitive?", bool, False, optional=True)
     oversample = config.Field("(Approx.) oversampling of output wavelength "
                               "scale", float, 1.0)
 
@@ -121,7 +129,8 @@ class fitWavelengthConfig(config.Config):
     radius = config.RangeField("Matching distance for lines", int, 12, min=2)
     plot1d = config.Field("Produce 1D plots of each order to inspect fit?",
                           bool, False)
-    plot2d = config.Field("Produce 2D plot to inspect fit?", bool, False)
+    plotrms = config.Field("Produce rms scattergram to inspect fit?", bool, False)
+    debug_plot2d = config.Field("Produce 2D plot to inspect fit?", bool, False)
 
 
 class flatCorrectConfig(config.Config):
@@ -192,6 +201,14 @@ class stackArcsConfig(parameters_stack.core_stacking_config):
 
     def setDefaults(self):
         self.operation = "lmedian"
+
+
+class standardizeSpectralFormatConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_dragons",
+                          optional=True)
+
+
+write1DSpectraConfig = parameters_spect.write1DSpectraConfig
 
 
 class tileArraysConfig(parameters_visualize.tileArraysConfig):
