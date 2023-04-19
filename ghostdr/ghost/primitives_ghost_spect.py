@@ -11,12 +11,9 @@ import warnings
 from copy import deepcopy
 import scipy
 import scipy.signal as signal
-from scipy.optimize import leastsq
 import functools
 from datetime import datetime, date, time, timedelta
-import re
 import astropy.coordinates as astrocoord
-import astropy.io.fits as astropyio
 from astropy.time import Time
 from astropy.io.ascii.core import InconsistentTableError
 from astropy import units as u
@@ -38,10 +35,8 @@ from geminidr.core.primitives_spect import Spect
 from geminidr.gemini.lookups import DQ_definitions as DQ
 from gempy.library import tracing
 from gempy.gemini import gemini_tools as gt
-# from gempy.mosaic.mosaicAD import MosaicAD
 
 from .polyfit import GhostArm, Extractor, SlitView
-from .polyfit.ghost import GhostArm
 from .polyfit.polyspect import WaveModel
 
 from .primitives_ghost import GHOST, filename_updater
@@ -424,7 +419,7 @@ class GHOSTSpect(GHOST):
             log.stdinfo('Applying barycentric correction factor of '
                         f'{cf} to {ad.filename}')
             for ext in ad:
-                ext.WAVL *= cf
+                ext.WAVL *= float(cf)  # remove u.dimensionless_unscaled
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -691,14 +686,12 @@ class GHOSTSpect(GHOST):
             will attempt to pull a slit flat from the calibrations system (or,
             if specified, the --user_cal processed_flat command-line
             option)
-        extract_ifu1: bool/None
-            Denotes whether or not to extract the spectra in IFU1.  Defaults to
-            None in which case the code will read whether or not there was an
-            object in IFU1 from the header.
-        extract_ifu2: bool/None
-            Denotes whether or not to extract the spectra in IFU2.  Defaults to
-            None in which case the code will read whether or not there was an
-            object in IFU2 from the header.
+        ifu1: str('object'|'sky'|'stowed')/None
+            Denotes the status of IFU1. If None, the status is read from the
+            header.
+        ifu2: str('object'|'sky'|'stowed')/None
+            Denotes the status of IFU2. If None, the status is read from the
+            header.
         sky_subtract: bool
             subtract the sky from the object spectra?
         seeing: float/None
@@ -843,10 +836,9 @@ class GHOSTSpect(GHOST):
                 else:
                     ifu2 = "object" if ad.phu.get('THXE') == 1 else "stowed"
 
+            log.stdinfo(f"\nIFU status: {ifu1} and {ifu2}")
             ifu_stowed = [obj for obj, ifu in enumerate([ifu1, ifu2])
                           if ifu == "stowed"]
-            if ifu_stowed:
-                log.stdinfo(f"Stowed IFUs detected: {ifu_stowed}")
 
             # CJS 20220411: We need to know which IFUs contain an object if
             # we need to make a synthetic slit profile so this has moved up
@@ -863,36 +855,6 @@ class GHOSTSpect(GHOST):
                 use_sky = [params["sky_subtract"] if ifu_selection else True]
                 find_crs = [True]
                 sky_correct_profiles = True
-
-            # MJI - Uncomment the lines below for testing in the simplest possible case.
-            # objs_to_use = [[0], ]
-            # use_sky = [False, ]
-
-            # CJS 20220411: We need to know which IFUs contain an object if
-            # we need to make a synthetic slit profile so this has moved up
-            if 'ARC' in ad.tags:
-                objs_to_use = [[], [0, 1], ]
-                use_sky = [True, False, ]
-                find_crs = [False, False, ]
-            else:
-                ifu_selection = []
-
-                if extract_ifu1:
-                    ifu_selection += [0]
-                if extract_ifu2:
-                    ifu_selection += [1]
-
-                if extract_ifu1 or extract_ifu2:
-                    # Need to run use_sky = True first so that the sky profile is
-                    # included during CR identification, otherwise, the CR rejection
-                    # will reject sky lines in the sky fibers.
-                    objs_to_use = [ifu_selection, ifu_selection]
-                    use_sky = [True, False]
-                    find_crs = [True, False]
-                else:
-                    objs_to_use = [ifu_selection]
-                    use_sky = [True]
-                    find_crs = [True]
 
             # MJI - Uncomment the lines below for testing in the simplest possible case.
             # objs_to_use = [[0], ]
@@ -940,14 +902,14 @@ class GHOSTSpect(GHOST):
                     ifus.append('ifu1')
                 slit_data = sview.fake_slitimage(
                     flat_image=slitflat_data, ifus=ifus, seeing=seeing)
-            else:
+            elif not ad.tags.intersection({'FLAT', 'ARC'}):
                 # TODO? This only models IFU0 in SR mode
                 slit_models = sview.model_profile(slit_data, slitflat_data)
                 log.stdinfo("")
                 for k, model in slit_models.items():
                     fwhm, apfrac = model.estimate_seeing()
                     log.stdinfo(f"Estimated seeing in the {k} arm: {fwhm:5.3f}"
-                                f" ({apfrac*100:.1f}% aperture loss)")
+                                f" ({apfrac*100:.1f}% aperture throughput)")
             if slitflat is None:
                 log.stdinfo("Creating synthetic slitflat image")
                 slitflat_data = sview.fake_slitimage()
@@ -959,8 +921,11 @@ class GHOSTSpect(GHOST):
             # Added a kwarg to one_d_extract (the only Extractor method which
             # uses Extractor.vararray), allowing an update to the instance's
             # .vararray attribute
+            # Refactor all this for 3.1
             corrected_data = deepcopy(ad[0].data)
             corrected_var = deepcopy(ad[0].variance)
+            safe_data = deepcopy(ad[0].data)
+            safe_variance = deepcopy(ad[0].variance)
 
             # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
@@ -1042,7 +1007,7 @@ class GHOSTSpect(GHOST):
                     
                     #TODO: These 4 lines (and possibly correction= BLAH) can stay.
                     #the rest to go to findApertures
-                    extractor.vararray[extra_bad] = np.inf
+                    #extractor.vararray[extra_bad] = np.inf  # CJS: this has no effect
                     extractor.badpixmask[extra_bad] |= BAD_FLAT_FLAG
                     
                     # MJI: Pre-correct the data here. 
@@ -1075,7 +1040,12 @@ class GHOSTSpect(GHOST):
                         raise
 
             for i, (o, s, cr) in enumerate(zip(objs_to_use, use_sky, find_crs)):
-                log.stdinfo(f"\nExtracting objects {str(o)}; sky subtraction {str(s)}")
+                if o:
+                    log.stdinfo(f"\nExtracting objects {str(o)}; sky subtraction {str(s)}")
+                elif use_sky:
+                    log.stdinfo("\nExtracting entire slit")
+                else:
+                    raise RuntimeError("No objects for extraction and use_sky=False")
                 # CJS: Makes it clearer that you're throwing the first two
                 # returned objects away (get replaced in the two_d_extract call)
                 
@@ -1083,7 +1053,8 @@ class GHOSTSpect(GHOST):
                 # overwritten with the first extraction pass of this loop
                 # (see the try-except statement at line 925)
                 DUMMY, _, extracted_weights = extractor.one_d_extract(
-                    data=corrected_data, vararray=corrected_var,
+                    #data=corrected_data, vararray=corrected_var,
+                    data=safe_data, vararray=safe_variance,
                     correct_for_sky=sky_correct_profiles,
                     use_sky=s, used_objects=o, find_crs=cr,
                     snoise=snoise, sigma=sigma,
@@ -1217,8 +1188,9 @@ class GHOSTSpect(GHOST):
                 # Create a final spectrum and (inverse) variance to match
                 # (One plane per object)
                 no_obj = ext.data.shape[-1]
-                spec_final = np.zeros(wavl_grid.shape + (no_obj, ))
-                var_final = np.inf * np.ones(wavl_grid.shape + (no_obj, ))
+                spec_final = np.zeros(wavl_grid.shape + (no_obj, ), dtype=np.float32)
+                var_final = np.full_like(spec_final, np.inf)
+                mask_final = np.zeros_like(spec_final, dtype=DQ.datatype)
 
                 # Loop over each input order, making the output spectrum the
                 # result of the weighted average of itself and the order
@@ -1250,9 +1222,13 @@ class GHOSTSpect(GHOST):
                 # pdb.set_trace()
 
                 # Can't use .reset without looping through extensions
+                mask_final[np.logical_or.reduce([np.isnan(spec_final),
+                                                 np.isinf(var_final),
+                                                 var_final == 0])] = DQ.bad_pixel
                 adout.append(astrodata.NDAstroData(data=spec_final,
+                                                   mask=mask_final,
                                                 meta={'header': deepcopy(ext.hdr)}))
-                adout[-1].variance = var_final
+                adout[-1].variance = np.where(np.isinf(var_final), 0, var_final)
                 adout[-1].WAVL = wavl_grid
                 adout[-1].hdr['DATADESC'] = ('Interpolated data',
                                              self.keyword_comments['DATADESC'])
@@ -1426,7 +1402,8 @@ class GHOSTSpect(GHOST):
         max_iters = params["max_iters"]
         radius = params["radius"]
         plot1d = params["plot1d"]
-        plot2d = params["plot2d"]
+        plotrms = params["plotrms"]
+        plot2d = params["debug_plot2d"]
 
         # import pdb; pdb.set_trace()
 
@@ -1496,7 +1473,7 @@ class GHOSTSpect(GHOST):
                 these_peaks = []
                 for x in peaks[0]:
                     good = np.zeros_like(flux, dtype=bool)
-                    good[int(x - radius):int(x + radius + 1)] = True
+                    good[max(int(x - radius), 0):int(x + radius + 1)] = True
                     g_init = models.Gaussian1D(mean=x, amplitude=flux[good].max(),
                                                stddev=1.5)
                     with warnings.catch_warnings():
@@ -1523,7 +1500,8 @@ class GHOSTSpect(GHOST):
             for iter in (0, 1):
                 # Only cross-correlate on the first pass
                 lines_out = extractor.match_lines(all_peaks, arcwaves,
-                                                  hw=radius, xcor=not bool(iter))
+                                                  hw=radius, xcor=not bool(iter),
+                                                  log=(self.log, None)[iter])
                 #lines_out is now a long vector of many parameters, including the
                 #x and y position on the chip of each line, the order, the expected
                 #wavelength, the measured line strength and the measured line width.
@@ -1544,7 +1522,7 @@ class GHOSTSpect(GHOST):
             nlines = y_values.size - mask.sum()
             log.stdinfo(f"Fit residual RMS (Angstroms): {rms:7.4f} ({nlines} lines)")
             if np.any(mask):
-                print("The following lines were rejected:")
+                log.stdinfo("The following lines were rejected:")
                 for yval, order, wave, fitted, m in zip(
                         y_values, orders, waves, fitted_waves, mask):
                     if m:
@@ -1552,6 +1530,7 @@ class GHOSTSpect(GHOST):
                                     f"wave {wave:10.4f} (fitted wave {fitted:10.4f})")
 
             if plot2d:
+                plt.ioff()
                 fig, ax = plt.subplots()
                 xpos = lambda y, ord: arm.szx // 2 + np.interp(
                     y, pixels, arm.x_map[ord])
@@ -1564,12 +1543,14 @@ class GHOSTSpect(GHOST):
                     ax.plot([yval, yval],  xval + np.array([-30, 30]), 'r-')
                     ax.text(yval + 10, xval + 30, str(wave), color='blue', fontsize=10)
                 plt.show()
+                plt.ion()
 
             if plot1d:
                 plot_extracted_spectra(ad, arm, all_peaks, lines_out, mask, nrows=4)
 
-            m_final.plotit(y_values, orders, waves, mask,
-                           filename=ad.filename.replace('.fits', '_2d.pdf'))
+            if plotrms:
+                m_final.plotit(y_values, orders, waves, mask,
+                               filename=ad.filename.replace('.fits', '_2d.pdf'))
 
             # CJS: Append the WFIT as an extension. It will inherit the
             # header from the science plane (including irrelevant/wrong
@@ -2202,9 +2183,13 @@ class GHOSTSpect(GHOST):
                         f"{self.myself()} cannot calibrate the input spectra.")
             return adinputs
 
+        # Let the astrodata routine handle any issues with actually opening
+        # the FITS file
+        ad_std = astrodata.open(std_filename)
+
         # Code duplication from Spect.calculateSensitivity()
         if specphot_file is None:
-            obj_filename = f"{adinputs[0].object().lower().replace(' ', '')}.dat"
+            obj_filename = f"{ad_std.object().lower().replace(' ', '')}.dat"
             for module in (self.inst_lookups, 'geminidr.gemini.lookups',
                            'geminidr.core.lookups'):
                 try:
@@ -2227,10 +2212,6 @@ class GHOSTSpect(GHOST):
             # Let this crash
             spec_table = Spect._get_spectrophotometry(self, specphot_file,
                                                       in_vacuo=True)
-
-        # Let the astrodata routine handle any issues with actually opening
-        # the FITS file
-        ad_std = astrodata.open(std_filename)
 
         # Re-grid the standard reference spectrum onto the wavelength grid of
         # the observed standard

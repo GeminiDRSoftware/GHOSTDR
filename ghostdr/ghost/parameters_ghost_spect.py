@@ -90,8 +90,8 @@ class extractProfileConfig(config.Config):
                                "available", float, None, min=0.2, optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, False)
     debug_cr_order = config.RangeField("Order for CR debugging plot", int, None,
-                                       min=0, max=36, optional=True)
-    debug_cr_pixel = config.RangeField("Order for CR debugging plot", int, None,
+                                       min=33, max=97, optional=True)
+    debug_cr_pixel = config.RangeField("Pixel for CR debugging plot", int, None,
                                        min=0, max=6144, optional=True)
 
 
@@ -129,7 +129,8 @@ class fitWavelengthConfig(config.Config):
     radius = config.RangeField("Matching distance for lines", int, 12, min=2)
     plot1d = config.Field("Produce 1D plots of each order to inspect fit?",
                           bool, False)
-    plot2d = config.Field("Produce 2D plot to inspect fit?", bool, False)
+    plotrms = config.Field("Produce rms scattergram to inspect fit?", bool, False)
+    debug_plot2d = config.Field("Produce 2D plot to inspect fit?", bool, False)
 
 
 class flatCorrectConfig(config.Config):

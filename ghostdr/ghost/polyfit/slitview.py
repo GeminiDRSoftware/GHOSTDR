@@ -400,7 +400,6 @@ class SlitView(object):
 
         slit_models = {}
         for arm in ('blue', 'red'):
-            print(f"Fitting {arm} arm")
             _slice, center = self.get_raw_slit_position(arm)
             init_parameters = {'x_center': center[1] - _slice[1].start,
                                'y_center': center[0] - _slice[0].start,

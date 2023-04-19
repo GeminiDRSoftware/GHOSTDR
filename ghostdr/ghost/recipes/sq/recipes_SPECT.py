@@ -30,7 +30,8 @@ def reduceScience(p):
                      # is subtracted from the object profile. Therefore, we
                      # must apply the BPM of the flat to the object file
                      # separately, before we extract its profile.
-    p.extractProfile(write_result=True, flat_precorrect=True)
+    p.writeOutputs()
+    p.extractProfile(flat_precorrect=True)
     #p.flatCorrect(skip=True)  # Need to write our own, NOT USE GMOS - extract the flat
     #                 # profile, then simple division
     p.addWavelengthSolution()  # should be able to accept multiple input
@@ -38,9 +39,9 @@ def reduceScience(p):
                                # and interpolate in time
     p.barycentricCorrect()  # trivial - multiply wavelength scale
     p.responseCorrect()
-    p.interpolateAndCombine(outstream="combined")
-    p.normalizeSpectralFormat(stream="combined")
-    p.writeOutputs(stream="combined")
+    p.writeOutputs()  # output this data product
+    p.interpolateAndCombine()
+    p.standardizeSpectralFormat()
 
 
 def reduceStandard(p):

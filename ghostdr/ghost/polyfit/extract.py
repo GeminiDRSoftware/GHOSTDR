@@ -3,6 +3,7 @@ Given (x,wave,matrices, slit_profile), extract the flux from each order.
 """
 
 from __future__ import division, print_function
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
@@ -59,15 +60,28 @@ def find_additional_crs(phi, col_data, col_inv_var,
     """
     good = col_inv_var > 0
 
+    iter = 0
     while True:
-        A = phi * col_inv_var
-        b = col_data * col_inv_var
-        result = optimize.lsq_linear(A.T[good], b[good], bounds=(0, np.inf))
-        #result = optimize.lsq_linear(phi.T[good], col_data[good], bounds=(0, np.inf))
+        # CJS problem with using weights and rejecting low pixels
+        # Further investigation needed... can we be sure there are
+        # no low pixels?
+        # Don't use the weights initially because these are smoothed
+        # and small CRs get missed
+        #A = phi * (inv_var_use if iter > 0 else 1)
+        #b = col_data * (inv_var_use if iter > 0 else 1)
+        #result = optimize.lsq_linear(A.T[good], b[good], bounds=(0, np.inf))
+        result = optimize.lsq_linear(phi.T[good], col_data[good], bounds=(0, np.inf))
         model = np.dot(result.x, phi)
-        var_use = noise_model(model) + (snoise * model) ** 2
-        max_deviation = sigma * np.sqrt(np.maximum(var_use, 0))
-        deviation = (col_data - model) / np.sqrt(np.maximum(var_use, 0))
+        if debug:
+            print(col_data)
+            #print(col_inv_var)
+            print(model)
+            print(good)
+            print("-"*60)
+        var_use = np.maximum(noise_model(model) + (snoise * model) ** 2, 0)
+        inv_var_use = np.where(var_use > 0, 1. / var_use, 0)
+        max_deviation = sigma * np.sqrt(var_use)
+        deviation = (col_data - model) * np.sqrt(inv_var_use)
         worst_offender = np.argmax(abs(deviation)[good])
         if abs(deviation[good][worst_offender]) > sigma:
             good[np.where(good)[0][worst_offender]] = False
@@ -78,7 +92,8 @@ def find_additional_crs(phi, col_data, col_inv_var,
             break
         if good.sum() < phi.shape[0]:
             break
-    new_bad = np.where((col_inv_var > 0) & (abs(col_data - model) > max_deviation))[0]
+        iter += 1
+    new_bad = np.where((col_inv_var > 0) & (abs(deviation) > sigma))[0]
 
     # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
     #limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),
@@ -333,8 +348,10 @@ class Extractor(object):
             pixel_model = np.zeros( (nx, ny) )
         
         # Loop through all orders then through all y pixels.        
+        print("    Creating order ", end="")
         for i in range(nm):
-            print("Creating order: {0:d}".format(i))
+            print(f"{self.arm.m_min+i}...", end="")
+            sys.stdout.flush()
 
             # Create an empty model array. Base the size on the largest
             # slit magnification for this order.
@@ -388,7 +405,6 @@ class Extractor(object):
 
                 phi = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
 
-                        
                 # Normalise to the median of the non-zero pixels. This is neater
                 # if it normalises to the median, but normalisation can occur 
                 # later, and shouldn't occur wavelength by wavelength.
@@ -520,9 +536,13 @@ class Extractor(object):
 
         m_init = models.Polynomial1D(degree=1)
         fit_it = fitting.FittingWithOutlierRemoval(fitting.LinearLSQFitter(), sigma_clip)
-        noise_model, _ = fit_it(m_init, data.ravel(), vararray.ravel())
+        good = ~np.isinf(vararray)
+        if self.badpixmask is not None:
+            good &= self.badpixmask == 0
+        noise_model, _ = fit_it(m_init, data[good].ravel(), vararray[good].ravel())
         if noise_model.c0 <= 0:
             print("Problem with read noise estimate!")
+            print(noise_model)
             noise_model.c0 = 4  # just something for now
 
         # Assuming that the data are in photo-electrons, construct a simple
@@ -544,8 +564,8 @@ class Extractor(object):
         # PSFs)
         spec_conv_weights = np.hanning(15)[1:-1]
         spec_conv_weights /= np.sum(spec_conv_weights)
-        
-        # Also convolve in the spatial direction. 
+
+        # Also convolve in the spatial direction.
         # FIXME: The need for this convolution might be that the simulated data is just 
         # too good, and we need to add optical aberrations.
         spat_conv_weights = np.array([0.25, .5, .25])
@@ -564,10 +584,12 @@ class Extractor(object):
         #up being bad for an extraction, then it will fail.
         if self.badpixmask is not None:
             pixel_inv_var[self.badpixmask.astype(bool)] = 0
-            
+
         # Loop through all orders then through all y pixels.
+        print("    Extracting order ", end="")
         for i in range(nm):
-            print("Extracting order: {0:d}".format(i))
+            print(f"{self.arm.m_min+i}...", end="")
+            sys.stdout.flush()
 
             # Create an empty weight array. Base the size on the largest
             # slit magnification
@@ -591,9 +613,6 @@ class Extractor(object):
                 x_ix = int(np.round(
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
-
-                if j == 0:
-                    print(x_ix)
 
                 # CRH 20220825:  Convolve the slit to detector pixels
                 # by interpolating the slit profile and integrating it 
@@ -646,7 +665,7 @@ class Extractor(object):
                     additional_crs = find_additional_crs(
                         phi, col_data, col_inv_var,
                         noise_model=noise_model, snoise=snoise, sigma=sigma,
-                        debug=(i, j) == debug_cr_pixel)
+                        debug=(self.arm.m_min+i, j) == debug_cr_pixel)
                     self.num_additional_crs += len(additional_crs)
                 else:
                     additional_crs = []
@@ -753,6 +772,7 @@ class Extractor(object):
                 extracted_var[i, j, :] = np.dot(
                     1.0 / np.maximum(col_inv_var, 1e-18), pixel_weights ** 2)
 
+        print("\n")
         return extracted_flux, extracted_var, extraction_weights
 
     def two_d_extract(self, data=None, fl=None, extraction_weights=None,
@@ -846,8 +866,10 @@ class Extractor(object):
             pixel_inv_var[self.badpixmask.astype(bool)] = 0.0
 
         # Loop through all orders then through all y pixels.
+        print("    Extracting order ", end="")
         for i in range(nm):
-            print("Extracting order: {0:d}".format(i))
+            print(f"{self.arm.m_min+i}...", end="")
+            sys.stdout.flush()
 
             # Create an empty weight array. Base the size on the largest slit
             # magnification for this order.
@@ -946,6 +968,7 @@ class Extractor(object):
                             col_inv_var[xsub_ix, ysub_ix_hi], 1e-18),
                         col_weights[k, xsub_ix, ysub_ix_hi] ** 2)
 
+        print("\n")
         return extracted_flux, extracted_var
 
     def find_lines(self, flux, arclines, hw=12,
@@ -1094,7 +1117,7 @@ class Extractor(object):
 
         return np.array(lines_out)
 
-    def match_lines(self, all_peaks, arclines, hw=12, xcor=False):
+    def match_lines(self, all_peaks, arclines, hw=12, xcor=False, log=None):
         """
         Match peaks in data to arc lines based on proximity
 
@@ -1112,6 +1135,8 @@ class Extractor(object):
 
         xcor: bool
             Perform initial cross-correlation to find gross shift?
+
+        log: logger/None
 
         Returns
         -------
@@ -1138,7 +1163,9 @@ class Extractor(object):
 
             w_ix = w_ix[ww]
             arclines_to_fit = filtered_arclines[ww]
-            print(f'order {m_ix:2d} with {len(peaks):2d} peaks and {ww.size:2d} arc lines')
+            if log:
+                log.stdinfo(f'order {m_ix:2d} with {len(peaks):2d} peaks and '
+                            f'{ww.size:2d} arc lines')
 
             # Perform cross-correlation if requested
             if xcor:
