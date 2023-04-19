@@ -27,6 +27,10 @@ class processSlitsConfig(config.Config):
                                 optional=True, single=True)
 
 
+class stackBiasesConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_stack", optional=True)
+
+
 class stackFramesConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_stack", optional=True)
     operation = config.ChoiceField("Averaging operation", str,

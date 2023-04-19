@@ -20,7 +20,7 @@ def makeProcessedSlitBias(p):
     p.prepare()
     p.addDQ()
     p.addVAR(read_noise=True)
-    p.stackFrames(operation='median')
+    p.stackBiases()
     p.storeProcessedBias()
     return
 

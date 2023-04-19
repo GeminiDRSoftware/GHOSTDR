@@ -225,8 +225,10 @@ class GHOSTSlit(GHOST):
             try:
                 sciexp = ad.SCIEXP
             except AttributeError:
-                log.warning(f"{ad.filename} has no SCIEXP table so all slit "
-                            "viewer exposures will be combined.")
+                on_sky = 'CAL' not in ad.tags or 'STANDARD' in ad.tags
+                if on_sky:
+                    log.warning(f"{ad.filename} has no SCIEXP table so all "
+                                "slit viewer exposures will be combined.")
                 continue
 
             # check that the binning is equal in x and y
@@ -307,6 +309,26 @@ class GHOSTSlit(GHOST):
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
         return adinputs
+
+    def stackBiases(self, adinputs=None, **params):
+        """
+        Stack (possibly) multiple extensions from (possibly) multiple
+        slitviewer camera bias frames into a single frame. A median is
+        always used.
+
+        Parameters
+        ----------
+         suffix: str
+            suffix to be added to output files
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        adtemp = astrodata.create(adinputs[0].phu)
+        for ad in adinputs:
+            for ext in ad:
+                adtemp.append(ext)
+        return self.stackFrames([adtemp], operation="median")
+
 
     def stackFrames(self, adinputs=None, **params):
         """
