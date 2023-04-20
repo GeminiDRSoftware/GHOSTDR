@@ -1164,8 +1164,8 @@ class Extractor(object):
             w_ix = w_ix[ww]
             arclines_to_fit = filtered_arclines[ww]
             if log:
-                log.stdinfo(f'order {m_ix:2d} with {len(peaks):2d} peaks and '
-                            f'{ww.size:2d} arc lines')
+                log.stdinfo(f'order {m_ix+self.arm.m_min:2d} with '
+                            f'{len(peaks):2d} peaks and {ww.size:2d} arc lines')
 
             # Perform cross-correlation if requested
             if xcor:

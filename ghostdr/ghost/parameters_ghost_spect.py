@@ -89,6 +89,8 @@ class extractProfileConfig(config.Config):
     seeing = config.RangeField("FWHM of seeing disc if no processed_slit is "
                                "available", float, None, min=0.2, optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, False)
+    debug_weight_map = config.Field("Add CR map to output?", bool, False)
+    debug_cr_map = config.Field("Add CR map to output?", bool, False)
     debug_cr_order = config.RangeField("Order for CR debugging plot", int, None,
                                        min=33, max=97, optional=True)
     debug_cr_pixel = config.RangeField("Pixel for CR debugging plot", int, None,
@@ -186,8 +188,7 @@ class responseCorrectConfig(config.Config):
                             optional=True)
     units = config.Field("Units for output spectrum", str, "W m-2 nm-1",
                          check=parameters_spect.flux_units_check)
-    write_result = config.Field("Write primitive output to disk?", bool, True,
-                                optional=True)
+    write_result = config.Field("Write primitive output to disk?", bool, False)
     debug_order = config.RangeField("Order of fit to each echelle order", int,
                                     1, min=1, max=5)
 

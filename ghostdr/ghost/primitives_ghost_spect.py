@@ -648,7 +648,6 @@ class GHOSTSpect(GHOST):
 
         return adinputs_orig
 
-
     def extractProfile(self, adinputs=None, **params):
         """
         Extract the object profile from a slit or flat image.
@@ -717,6 +716,8 @@ class GHOSTSpect(GHOST):
         snoise = params["snoise"]
         sigma = params["sigma"]
         debug_cr_pixel = (params["debug_cr_order"], params["debug_cr_pixel"])
+        add_cr_map = params["debug_cr_map"]
+        add_weight_map = params["debug_weight_map"]
 
         # This primitive modifies the input AD structure, so it must now
         # check if the primitive has already been applied. If so, it must be
@@ -1095,8 +1096,9 @@ class GHOSTSpect(GHOST):
                     ad.append(new_adi[0])
                     ad[i].reset(extracted_flux, mask=None,
                                 variance=extracted_var)
-                ad[i].WGT = extracted_weights
-                if extractor.badpixmask is not None:
+                if add_weight_map:
+                    ad[i].WGT = extracted_weights
+                if add_cr_map and extractor.badpixmask is not None:
                     ad[i].CR = extractor.badpixmask & DQ.cosmic_ray
                 ad[i].hdr['DATADESC'] = (
                     'Order-by-order processed science data - '
@@ -2271,9 +2273,9 @@ class GHOSTSpect(GHOST):
                                        weights=1. / np.sqrt(sens_func_var[od, good_order]))
                 rms = np.std((m_final(wavelengths) - sens_func[od])[good_order][~mask])
                 expected_rms = np.median(np.sqrt(sens_func_var[od, good_order]))
-                if rms > 2 * expected_rms:
-                    log.warning(f"Unexpectedly high rms for row {od} "
-                                f"({min_wave:.1f} - {max_wave:.1f} A)")
+                #if rms > 2 * expected_rms:
+                #    log.warning(f"Unexpectedly high rms for row {od} "
+                #                f"({min_wave:.1f} - {max_wave:.1f} A)")
                 sens_func_fits.append(m_final)
             else:
                 log.warning(f"Cannot determine sensitivity for row {od} "
