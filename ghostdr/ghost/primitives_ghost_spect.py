@@ -2180,6 +2180,7 @@ class GHOSTSpect(GHOST):
         specphot_file = params['specphot_file']
         final_units = params["units"]
         poly_degree = params["debug_order"]
+        debug_plots = params["debug_plots"]
 
         if std_filename is None:
             log.warning("No standard star observation has been provided, so "
@@ -2261,17 +2262,27 @@ class GHOSTSpect(GHOST):
         # import pdb; pdb.set_trace();
         sens_func_fits = []
         good = ~np.logical_or(regrid_std_ref == 0, ad_std[0].variance[:, :, target] == 0)
-        fit_it = fitting.FittingWithOutlierRemoval(fitting.LinearLSQFitter(), sigma_clip)
+        fit_it = fitting.FittingWithOutlierRemoval(fitting.LinearLSQFitter(), sigma_clip,
+                                                   sigma_lower=2, maxiters=10)
+        plt.ioff()
         for od in range(sens_func.shape[0]):
             good_order = good[od]
             wavelengths = ad_std[0].WAVL[od]
             min_wave, max_wave = wavelengths.min(), wavelengths.max()
             if good_order.sum() > poly_degree:
-                m_init = models.Chebyshev1D(degree=poly_degree, c0=sens_func[od, good_order].mean(),
-                                            domain=[min_wave, max_wave])
+                m_init = models.Chebyshev1D(
+                    degree=poly_degree, c0=sens_func[od, good_order].mean(),
+                    domain=[min_wave, max_wave])
                 m_final, mask = fit_it(m_init, wavelengths[good_order],
                                        sens_func[od, good_order],
                                        weights=1. / np.sqrt(sens_func_var[od, good_order]))
+                if debug_plots:
+                    fig, ax = plt.subplots()
+                    ax.plot(ad_std[0].WAVL[od], sens_func[od], 'k-')
+                    ax.plot(ad_std[0].WAVL[od], m_final(ad_std[0].WAVL[od]), 'b-')
+                    ax.plot(ad_std[0].WAVL[od, good_order][~mask],
+                            sens_func[od, good_order][~mask], 'r-')
+                    plt.show()
                 rms = np.std((m_final(wavelengths) - sens_func[od])[good_order][~mask])
                 expected_rms = np.median(np.sqrt(sens_func_var[od, good_order]))
                 #if rms > 2 * expected_rms:
@@ -2282,6 +2293,7 @@ class GHOSTSpect(GHOST):
                 log.warning(f"Cannot determine sensitivity for row {od} "
                             f"({min_wave:.1f} - {max_wave:.1f} A)")
                 sens_func_fits.append(models.Const1D(np.inf))
+        plt.ion()
 
         # import pdb; pdb.set_trace();
 

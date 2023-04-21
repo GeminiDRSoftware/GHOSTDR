@@ -191,6 +191,8 @@ class responseCorrectConfig(config.Config):
     write_result = config.Field("Write primitive output to disk?", bool, False)
     debug_order = config.RangeField("Order of fit to each echelle order", int,
                                     1, min=1, max=5)
+    debug_plots = config.Field("Show response-fitting plots for each order?",
+                               bool, False)
 
 
 class stackArcsConfig(parameters_stack.core_stacking_config):
