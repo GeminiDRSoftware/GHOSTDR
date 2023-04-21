@@ -849,6 +849,7 @@ class GHOSTSpect(GHOST):
                 use_sky = [True, False]
                 find_crs = [False, False]
                 sky_correct_profiles = False
+                add_weight_map = True  # needed for fitWavelength
             else:
                 ifu_selection = [obj for obj, ifu in enumerate([ifu1, ifu2])
                                  if ifu == "object"]
