@@ -39,7 +39,7 @@ def reduceScience(p):
                                # and interpolate in time
     p.barycentricCorrect()  # trivial - multiply wavelength scale
     p.responseCorrect()
-    p.writeOutputs()  # output this data product
+    p.writeOutputs(suffix="_calibrated", strip=True)  # output this data product
     p.interpolateAndCombine()
     p.standardizeSpectralFormat()
 
