@@ -62,12 +62,14 @@ for p in SIMPACKAGES:
 
 setup(
     name='ghostdr',
-    version='0.2.0',
+    version='1.0.0-sv',
     description='GHOST Data Reduction',
-    author='RSAA Software Engineering',
-    author_email='ghostdr@mso.anu.edu.au',
-    url='http://rsaa.anu.edu.au',
-    maintainer='Gemini Data Processing Software Group',
+    author="ANU & Gemini Observatory",
+    url="https://ghost-drtutorial.readthedocs.io/en/release-3.0.x/index.html",
+    #author='RSAA Software Engineering',
+    #author_email='ghostdr@mso.anu.edu.au',
+    #url='http://rsaa.anu.edu.au',
+    maintainer='SUSD',
     classifiers=[
         'Development Status :: Alpha',
         'Intended Audience :: Alpha Testers',
