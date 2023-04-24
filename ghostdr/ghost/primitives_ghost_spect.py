@@ -1422,8 +1422,7 @@ class GHOSTSpect(GHOST):
             # CJS: Since we're not saving the processed_arc before this, we
             # can't check for the tags. Instead, let's look for the WGT extn
             if not hasattr(ad[0], 'WGT'):
-                log.warning("fitWavelength is only run on prepared GHOST arc"
-                            " files - skipping {}".format(ad.filename))
+                log.warning(f"{ad.filename} has no 'WGT' extension - skipping")
                 continue
 
             if self.timestamp_keys["extractProfile"] not in ad.phu:
