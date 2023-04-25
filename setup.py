@@ -72,7 +72,7 @@ for p in SIMPACKAGES:
 
 setup(
     name='ghostdr',
-    version='0.9.0',
+    version='0.9.1',
     description='GHOST Data Reduction',
     author="ANU & Gemini Observatory",
     url="https://ghost-drtutorial.readthedocs.io/en/release-3.0.x/index.html",
