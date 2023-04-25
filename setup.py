@@ -25,6 +25,7 @@ from setuptools import setup, find_packages
 ADLIB_PACKAGES = ['ghostdr']
 gitdir = re.compile('.git')
 fitsfile = re.compile('.fits$')
+txtfile = re.compile('.txt$')
 dotpy = re.compile('.py$')
 dotsh = re.compile('.sh$')
 
@@ -33,11 +34,20 @@ PACKAGE_DATA = {}
 
 for p in ADLIB_PACKAGES:
     PACKAGE_DATA[p] = []
+    fitslist = []
+    txtlist = []
     for root, dirs, files in os.walk(os.path.join(p, 'ghost', 'lookups')):
         if not gitdir.search(root) and len(files) > 0:
-            files = [f for f in files if fitsfile.search(f)]
+            fitsfiles = [f for f in files if fitsfile.search(f)]
             dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
-            PACKAGE_DATA[p].extend( map((lambda f: os.path.join(dest, f)), files) )
+            PACKAGE_DATA[p].extend( map((lambda f: os.path.join(dest, f)), fitsfiles) )
+            fitslist.extend( map((lambda f: os.path.join(dest, f)), fitsfiles) )
+
+            txtfiles = [f for f in files if txtfile.search(f)]
+            dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
+            PACKAGE_DATA[p].extend( map((lambda f: os.path.join(dest, f)), txtfiles) )
+            txtlist.extend( map((lambda f: os.path.join(dest, f)), txtfiles) )
+
 
 # SCRIPTS
 SCRIPTS = [os.path.join('simulator', 'testsim.py')]
