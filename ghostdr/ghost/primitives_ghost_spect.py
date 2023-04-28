@@ -897,10 +897,10 @@ class GHOSTSpect(GHOST):
             if slit is None:
                 log.stdinfo(f"Creating synthetic slit image for seeing={seeing}")
                 ifus = []
-                if extract_ifu1:
+                if ifu1 == 'object':
                     ifus.append('ifu0' if res_mode == 'std' else 'ifu')
                 # "ifu2" is the ThXe cal fiber in HR and has no continuum
-                if extract_ifu2 and res_mode == 'std':
+                if ifu2 == 'object' and res_mode == 'std':
                     ifus.append('ifu1')
                 slit_data = sview.fake_slitimage(
                     flat_image=slitflat_data, ifus=ifus, seeing=seeing)
