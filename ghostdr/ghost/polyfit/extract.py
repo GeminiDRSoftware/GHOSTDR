@@ -60,8 +60,12 @@ def find_additional_crs(phi, col_data, col_inv_var,
     """
     good = col_inv_var > 0
 
+    # If we don't have enough pixels to fit we can't reject
+    if good.sum() < phi.shape[0]:
+        return []
+
     iter = 0
-    while True:
+    while good.sum() >= phi.shape[0]:
         # CJS problem with using weights and rejecting low pixels
         # Further investigation needed... can we be sure there are
         # no low pixels?
@@ -89,8 +93,6 @@ def find_additional_crs(phi, col_data, col_inv_var,
         #if new_bad.any():
         #    good &= ~new_bad
         else:
-            break
-        if good.sum() < phi.shape[0]:
             break
         iter += 1
     new_bad = np.where((col_inv_var > 0) & (abs(deviation) > sigma))[0]
