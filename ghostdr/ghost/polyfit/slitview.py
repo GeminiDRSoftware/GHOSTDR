@@ -334,10 +334,11 @@ class SlitView(object):
         # be formally within the boundaries
         for stowed in self.stowed:
             boundary = self.object_boundaries[arm][stowed]
-            if stowed == 0:
-                profiles[:, :boundary[1]+1] = 0
+            if (stowed == 0) and (self.mode == 'std'):
+                sky_only_boundary = self.sky_pix_only_boundaries[arm]
+                profiles[:, :sky_only_boundary[1]+1] = 0
             else:
-                profiles[:, boundary[0]:] = 0
+                profiles[:, boundary[0]:boundary[1]+1] = 0
 
         # Normalise profiles if requested (not needed if the total flux is what
         # you're after, e.g. for an mean exposure epoch calculation)
