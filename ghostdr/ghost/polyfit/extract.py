@@ -58,34 +58,43 @@ def find_additional_crs(phi, col_data, col_inv_var,
     new_bad: :obj:`numpy.ndarray`
         Array of indices of bad pixels in ``col_data``.
     """
+    spat_conv_weights = np.array([0.25, .5, .25])
     good = col_inv_var > 0
 
     # If we don't have enough pixels to fit we can't reject
     if good.sum() < phi.shape[0]:
         return []
 
-    iter = 0
+    if debug:
+        print("\n")
+        print(phi)
+    # Don't use the weights initially because these are smoothed
+    # and small CRs get missed
+    result = optimize.lsq_linear(phi.T[good], col_data[good], bounds=(0, np.inf))
+    model = np.dot(result.x, phi)
+    inv_var_use = 1. / np.maximum(noise_model(model) + (snoise * model) ** 2, 0)
     while good.sum() >= phi.shape[0]:
         # CJS problem with using weights and rejecting low pixels
         # Further investigation needed... can we be sure there are
         # no low pixels?
-        # Don't use the weights initially because these are smoothed
-        # and small CRs get missed
-        #A = phi * (inv_var_use if iter > 0 else 1)
-        #b = col_data * (inv_var_use if iter > 0 else 1)
-        #result = optimize.lsq_linear(A.T[good], b[good], bounds=(0, np.inf))
-        result = optimize.lsq_linear(phi.T[good], col_data[good], bounds=(0, np.inf))
+        A = phi * np.sqrt(inv_var_use)
+        b = col_data * np.sqrt(inv_var_use)
+        result = optimize.lsq_linear(A.T[good], b[good], bounds=(0, np.inf))
         model = np.dot(result.x, phi)
+
         if debug:
             print(col_data)
-            #print(col_inv_var)
+            print("RESULT", result.x)
             print(model)
             print(good)
-            print("-"*60)
-        var_use = np.maximum(noise_model(model) + (snoise * model) ** 2, 0)
+            print("-" * 60)
+        var_use = ndimage.convolve1d(np.maximum(noise_model(model) + (snoise * model) ** 2, 0), spat_conv_weights)
         inv_var_use = np.where(var_use > 0, 1. / var_use, 0)
         max_deviation = sigma * np.sqrt(var_use)
         deviation = (col_data - model) * np.sqrt(inv_var_use)
+        if debug:
+            print(deviation)
+            print("-" * 60)
         worst_offender = np.argmax(abs(deviation)[good])
         if abs(deviation[good][worst_offender]) > sigma:
             good[np.where(good)[0][worst_offender]] = False
@@ -94,7 +103,6 @@ def find_additional_crs(phi, col_data, col_inv_var,
         #    good &= ~new_bad
         else:
             break
-        iter += 1
     new_bad = np.where((col_inv_var > 0) & (abs(deviation) > sigma))[0]
 
     # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
@@ -601,6 +609,7 @@ class Extractor(object):
             phi = np.empty((profiles.shape[0], nx_cutout))
 
             for j in range(ny):
+                debug_this_pixel = (self.arm.m_min+i, j) == debug_cr_pixel
                 profile_y_pix = profile_y_microns / matrices[i, j, 0, 0]
 
                 # Check for NaNs
@@ -616,6 +625,8 @@ class Extractor(object):
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
 
+                if debug_this_pixel:
+                    print(f"{x_ix}, {j}")
                 # CRH 20220825:  Convolve the slit to detector pixels
                 # by interpolating the slit profile and integrating it 
                 # across the detector pixels
@@ -667,7 +678,7 @@ class Extractor(object):
                     additional_crs = find_additional_crs(
                         phi, col_data, col_inv_var,
                         noise_model=noise_model, snoise=snoise, sigma=sigma,
-                        debug=(self.arm.m_min+i, j) == debug_cr_pixel)
+                        debug=debug_this_pixel)
                     self.num_additional_crs += len(additional_crs)
                 else:
                     additional_crs = []
