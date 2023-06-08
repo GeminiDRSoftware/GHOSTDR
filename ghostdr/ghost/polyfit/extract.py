@@ -72,7 +72,7 @@ def find_additional_crs(phi, col_data, col_inv_var,
     # and small CRs get missed
     result = optimize.lsq_linear(phi.T[good], col_data[good], bounds=(0, np.inf))
     model = np.dot(result.x, phi)
-    inv_var_use = 1. / np.maximum(noise_model(model) + (snoise * model) ** 2, 0)
+    inv_var_use = 1. / (noise_model(abs(model)) + (snoise * model) ** 2)
     while good.sum() >= phi.shape[0]:
         # CJS problem with using weights and rejecting low pixels
         # Further investigation needed... can we be sure there are
@@ -88,7 +88,7 @@ def find_additional_crs(phi, col_data, col_inv_var,
             print(model)
             print(good)
             print("-" * 60)
-        var_use = ndimage.convolve1d(np.maximum(noise_model(model) + (snoise * model) ** 2, 0), spat_conv_weights)
+        var_use = ndimage.convolve1d(noise_model(abs(model)) + (snoise * model) ** 2, spat_conv_weights)
         inv_var_use = np.where(var_use > 0, 1. / var_use, 0)
         max_deviation = sigma * np.sqrt(var_use)
         deviation = (col_data - model) * np.sqrt(inv_var_use)
