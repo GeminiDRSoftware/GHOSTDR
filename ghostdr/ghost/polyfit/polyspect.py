@@ -580,7 +580,7 @@ class Polyspect(object):
         # and make sure the fit is faster.
         image_med = image.reshape((image.shape[0] // decrease_dim,
                                    decrease_dim, image.shape[1]))
-        image_med = np.median(image_med, axis=1)
+        image_med = np.mean(image_med, axis=1)
         order_y = np.meshgrid(np.arange(xbase.shape[1]), # pylint: disable=maybe-no-member
                               np.arange(xbase.shape[0]) + self.m_min)  # pylint: disable=maybe-no-member
         y_values = order_y[0]
@@ -613,10 +613,30 @@ class Polyspect(object):
         # Down weight any regions where the flux peak was less than 0.
         sigma[sigma < 0] = 1E5
 
+        for j in range(x_values.shape[1]):
+            xindices = np.round(x_values[:, j]).astype(int)
+            for i, xind in enumerate(xindices):
+                lpix = max(0, self.szx // 2 + xind - search_pix)
+                rpix = min(self.szx // 2 + xind + search_pix + 1, image_med.shape[1] - 1)
+                peakpix = lpix + np.argmax(image_med[j, lpix:rpix])
+                new_peak = 0.5 * (image_med[j, peakpix+1] - image_med[j, peakpix-1]) / (3 * image_med[j, peakpix] - image_med[j, peakpix-1:peakpix+2].sum())
+                if abs(new_peak) < 1:
+                    x_values[i, j] = new_peak + peakpix - self.szx // 2
+                    sigma[i, j] = 1. / image_med[j, peakpix]
+                else:
+                    sigma[i, j] = 1E5
+                #if i == 12 and sigma[i, j] < 1e5:
+                #    print(j, y_values[i, j], x_values[i, j] + self.szx // 2)
+                #    print(image_med[j, peakpix-1:peakpix+2])
+
+        #print("SHAPE", y_values.shape)
+        #for xx, yy in zip(x_values.flatten(), y_values.flatten()):
+        #    print(f"{yy:6.1f} {xx+self.szx//2:10.4f}")
         # The inspect flag is used if a display of the results is desired.
         if inspect:
+            plt.ioff()
             plt.clf()
-            plt.imshow(data)
+            plt.imshow(data, cmap="gray")
             point_sizes = 36*np.median(sigma)/sigma
             plt.scatter(y_values.T, x_values.T + self.szx // 2,
                         marker = '.',
@@ -639,6 +659,7 @@ class Polyspect(object):
             plt.plot(ygrid, x_int + data.shape[0] // 2,
                      color='green', linestyle='None', marker='.')
             plt.show()
+            plt.ion()
 
         return fitted_params
 
@@ -747,6 +768,15 @@ class Polyspect(object):
         final_resid = self.fit_resid(bestp[0], orders, y_values, x_values,
                                      ydeg=ydeg, xdeg=xdeg, sigma=sigma)
         params = bestp[0].reshape((ydeg + 1, xdeg + 1))
+        x_fitted = x_values - final_resid * sigma
+        for i in range(x_values.size):
+            if sigma[i] < 1e5:
+                # 3080 valid for red only
+                print(f"{y_values[i]:6.1f} {x_values[i]+3080:10.5f} {x_fitted[i]+3080:10.5f} {final_resid[i]*sigma[i]:10.5f}")
+        init_resid = (init_resid * sigma)[sigma < 1e5]
+        final_resid = (final_resid * sigma)[sigma < 1e5]
+        print("RMS", init_resid.std(), '->', final_resid.std())
+        print("MAX", init_resid.max(), '->', final_resid.max())
         print(init_resid, final_resid)
         
         # FIXME: Issues with the high resolution fit here. Why? How to diagnose?

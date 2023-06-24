@@ -1322,7 +1322,7 @@ class GHOSTSpect(GHOST):
             condit = np.where(np.abs(
                 (medfilt - data)/(medfilt+1)) > 200
                               ) and np.where(data > np.average(data))
-            data[condit] = medfilt[condit]
+            #data[condit] = medfilt[condit]
 
             # Convolve the flat field with the slit profile
             flat_conv = ghost_arm.slit_flat_convolve(
@@ -1333,7 +1333,12 @@ class GHOSTSpect(GHOST):
             )
 
             #flat_conv = signal.medfilt2d(flat_conv, (5, 5))
-            flat_conv = nd.gaussian_filter(flat_conv, (5, 0))
+            #flat_conv = nd.gaussian_filter(flat_conv, (5, 0))
+            test_ad = astrodata.create(ad.phu)
+            test_ad.filename = "test_flat_conv.fits"
+            test_ad.append(flat_conv)
+            test_ad.write(overwrite=True)
+            #crash
 
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,

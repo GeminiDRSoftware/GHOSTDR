@@ -107,7 +107,7 @@ def find_additional_crs(phi, col_data, col_inv_var,
         else:
             break
     new_bad = np.where((col_inv_var > 0) & (abs(deviation) > sigma))[0]
-    print("RESULT", result.x)
+    #print("RESULT", result.x)
 
     # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
     #limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),
@@ -317,6 +317,9 @@ class Extractor(object):
                 x_dir_map = np.dot(invmat, [1, 0])
                 self.slit_tilt[i, j] = x_dir_map[1] / x_dir_map[0]
 
+        # Hack to see if this is the only problem
+        #matrices *= 0.99
+
         return x_map, w_map, blaze, matrices
 
     def make_pixel_model(self, input_image=None):
@@ -345,6 +348,9 @@ class Extractor(object):
             x_map, w_map, blaze, matrices = self.bin_models()
         except Exception:
             raise RuntimeError('Extraction failed, unable to bin models.')
+        #print("XMAP")
+        #for i, x in enumerate(x_map[12]):
+        #    print(f"{i:4d} {x + self.arm.szx // 2}")
 
         # Key array constants
         ny = x_map.shape[1]
@@ -355,7 +361,7 @@ class Extractor(object):
         
         n_slitpix = profile.shape[0]
         profile_y_microns = (np.arange(n_slitpix) -
-                             n_slitpix / 2 - 0.5) * self.slitview.microns_pix
+                             n_slitpix / 2 + 0.5) * self.slitview.microns_pix
         
         if self.transpose:
             pixel_model = np.zeros( (ny, nx) ) 
@@ -385,20 +391,20 @@ class Extractor(object):
                 # FIXME: Is "round" most correct on the next line???
                 # FIXME: Profiles should be convolved by a detector pixel,
                 # but binning has to be taken into account properly!
-                x_ix = int(np.round(
-                    x_map[i, j])) - nx_cutout // 2 + \
-                       np.arange(nx_cutout, dtype=int) + nx // 2
+                #x_ix = int(np.round(
+                #    x_map[i, j])) - nx_cutout // 2 + \
+                #       np.arange(nx_cutout, dtype=int) + nx // 2
 
                 # CRH 20220825:  Convolve the slit to detector pixels 
                 # by interpolating the slit profile and integrating it 
                 # across the detector pixels
 
-                n_slit_sample = int(np.round(1.0/(profile_y_pix[1] - \
-                    profile_y_pix[0])))*2
-                x_ix_sample = int(np.round(
-                    x_map[i, j])) - nx_cutout // 2 + \
-                       np.arange(nx_cutout*n_slit_sample, 
-                                 dtype=int)/n_slit_sample + nx // 2
+                #n_slit_sample = int(np.round(1.0/(profile_y_pix[1] - \
+                #    profile_y_pix[0])))*2
+                #x_ix_sample = int(np.round(
+                #    x_map[i, j])) - nx_cutout // 2 + \
+                #       np.arange(nx_cutout*n_slit_sample,
+                #                 dtype=int)/n_slit_sample + nx // 2
 
                 # Remove? These were old interpolations of the slit to the
                 # detector
@@ -414,21 +420,26 @@ class Extractor(object):
                 #        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
                 #        profile)
 
-                interp_prof = np.interp(
-                    x_ix_sample - x_map[i, j] - nx // 2, profile_y_pix,
-                    profile)
+                #interp_prof = np.interp(
+                #    x_ix_sample - x_map[i, j] - nx // 2, profile_y_pix,
+                #    profile)
 
-                phi = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
+                #phi = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
 
                 # Normalise to the median of the non-zero pixels. This is neater
                 # if it normalises to the median, but normalisation can occur 
                 # later, and shouldn't occur wavelength by wavelength.
-                phi /= np.sum(phi[phi != 0])
-                
+                #phi /= np.sum(phi[phi != 0])
+
+                x_ix, phi = resample_slit_profiles_to_detector(
+                    [profile], profile_y_pix, x_map[i, j] + nx // 2)
+
+                # This isn't perfect as it gets the top pixel wrong if the
+                # trace goes over the top but it's OK for this purpose
                 if self.transpose:
-                    pixel_model[j, np.minimum(x_ix,nx-1)] = phi
+                    pixel_model[j, np.minimum(x_ix, nx-1)] = phi[0]
                 else:
-                    pixel_model[np.minimum(x_ix,nx-1), j] = phi
+                    pixel_model[np.minimum(x_ix, nx-1), j] = phi[0]
                     
         return pixel_model
 
@@ -529,7 +540,7 @@ class Extractor(object):
             arm=self.arm.arm, correct_for_sky=correct_for_sky,
             used_objects=used_objects, append_sky=use_sky or find_crs
         )
-                
+
         # Number of "objects" and "slit pixels"
         no = profiles.shape[0]
         if find_crs and not use_sky:
@@ -614,7 +625,7 @@ class Extractor(object):
             phi = np.empty((profiles.shape[0], nx_cutout))
 
             for j in range(ny):
-                print(f"PIXEL {self.arm.m_min+i} {j}")
+                #print(f"PIXEL {self.arm.m_min+i} {j}")
                 debug_this_pixel = (self.arm.m_min+i, j) == debug_cr_pixel
                 profile_y_pix = profile_y_microns / matrices[i, j, 0, 0]
 
@@ -635,8 +646,6 @@ class Extractor(object):
                 #    x_map[i, j])) - nx_cutout // 2 + \
                 #       np.arange(nx_cutout, dtype=int) + nx // 2
 
-                if debug_this_pixel:
-                    print(f"{x_ix}, {j}")
                 # CRH 20220825:  Convolve the slit to detector pixels
                 # by interpolating the slit profile and integrating it 
                 # across the detector pixels
@@ -675,6 +684,17 @@ class Extractor(object):
                     col_data = data[x_ix, j]
                     col_inv_var = pixel_inv_var[x_ix, j]                    
 
+                if debug_this_pixel:
+                    print(f"DEBUGGING {x_ix}, {j}")
+                    print(f"X_MAP  {self.arm.x_map[i, j*self.arm.ybin:(j+1)*self.arm.ybin]} -> {x_map[i, j]}")
+                    print(x_map[i, j] + nx // 2 + profile_y_pix)
+                    plt.ioff()
+                    fig, ax = plt.subplots()
+                    ax.plot(x_ix, phi[0])
+                    ax.plot(profile_y_pix + x_map[i, j] + nx // 2, profiles[0])
+                    ax.plot(x_ix, col_data / col_data.sum())
+                    plt.show()
+                    plt.ion()
                 # Search for additional cosmic rays here, by seeing if the data
                 # look different to the model.
                 if find_crs:
@@ -779,6 +799,7 @@ class Extractor(object):
                 # Actual extraction is simple: Just matrix-multiply the data by
                 # the weights.
                 extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
+                extracted_flux[i, j, 0] = col_data.sum()
 
                 # Rather than trying to understand and
                 # document Equation 17 from Sharp and Birchall, which 
@@ -855,6 +876,8 @@ class Extractor(object):
         # Our profiles... we re-extract these in order to include the centroids.
         profile, centroids = self.slitview.slit_profile(arm=self.arm.arm, \
                                                         return_centroid=True)
+        profile_y_microns = (np.arange(profile.size) -
+                             profile.size / 2 + 0.5) * self.slitview.microns_pix
 
         # Convolve centroids in order to average over sub-pixel effects.
         # also convert the centroids to units of slit plane microns.
@@ -869,6 +892,7 @@ class Extractor(object):
         det_pix /= np.sum(det_pix)
         for c in centroids:
             c = np.convolve(c, det_pix, mode='same') * self.slitview.microns_pix
+        centroids *= self.slitview.microns_pix
 
         # Number of "objects"
         no = extraction_weights.shape[0]
@@ -901,11 +925,17 @@ class Extractor(object):
                     extracted_var[i, j, :] = np.nan
                     continue
 
-                # Create our cutout of columns for the data. 
+                # Create our cutout of columns for the data.
                 x_ix = int(np.round(
                     x_map[i, j])) - nx_cutout // 2 + \
                        np.arange(nx_cutout, dtype=int) + nx // 2
                 y_ix = j + np.arange(ny_cutout, dtype=int) - ny_cutout // 2
+
+                # CJS new resampling stuff
+                profile_y_pix = profile_y_microns / matrices[i, j, 0, 0]
+                x_ix, _ = resample_slit_profiles_to_detector(
+                    [profile], profile_y_pix, x_map[i, j] + nx // 2)
+                nx_cutout = x_ix.size
 
                 # Deal with edge effects...
                 ww_x = np.where((x_ix >= nx) | (x_ix < 0))[0]
@@ -928,8 +958,8 @@ class Extractor(object):
                 # cutout that we'll use for extraction. First - find the pixel
                 # coordinates according to slit tilt:
 
-                ysub_pix = (x_ix - x_map[i, j] - nx // 2) * \
-                           self.slit_tilt[i, j] + ny_cutout // 2
+                ysub_pix = (x_ix - x_map[i, j] - nx / 2 + 0.5) * \
+                           self.slit_tilt[i, j] + ny_cutout / 2 - 0.5
 
                 # DEBUG
                 # if (np.max(col_data) > 1e3):
@@ -938,8 +968,6 @@ class Extractor(object):
                 # viewing camera.
                 # The [1,1] component of the matrix is slit_microns_per_det_
                 # pix_y
-                # Above, slit_ix was called profile_y_pix.
-                slit_ix = np.arange(len(centroids)) - len(centroids) // 2
                 col_ix = np.arange(nx_cutout) - nx_cutout // 2
 
                 # Interpolate onto the slit coordinates
@@ -950,10 +978,12 @@ class Extractor(object):
                                       # CRH:  below was the original version but I think it's
                                       # missing a factor of the microns/pix
                                       # slit_ix / matrices[i, j, 0, 0], \
-                                      slit_ix * self.slitview.microns_pix / matrices[i, j, 0, 0], \
-                                      centroids / matrices[i, j, 1, 1])
+                                      profile_y_pix,
+                                      centroids / matrices[i, j, 1, 1]) + 0.5
 
                 # Make sure this is within the limits of our subarray.
+                # NB We have now defined ysub_pix so that the first pixel
+                # covers 0 to 1, not -0.5 to +0.5 for ease of coding
                 ysub_pix = np.maximum(ysub_pix, 0)
                 ysub_pix = np.minimum(ysub_pix, ny_cutout - 1 - 1e-6)
 
@@ -1206,7 +1236,7 @@ class Extractor(object):
         return np.array(lines_out)
 
 
-def resample_slit_profiles_to_detector(profiles,
+def original_resample_slit_profiles_to_detector(profiles,
                                        profile_y_pix=None,
                                        profile_center=None,
                                        oversample=2):
@@ -1233,7 +1263,7 @@ def resample_slit_profiles_to_detector(profiles,
     x_ix = np.round([pixel_locations.min(), pixel_locations.max() + 1]).astype(int)
     x_ix_sample = np.arange(x_ix[0] - 0.5 + 0.5 / n_slit_sample,
                             x_ix[1] - 0.5, 1. / n_slit_sample)
-    phi = np.zeros((profiles.shape[0], x_ix_sample.size // n_slit_sample))
+    phi = np.zeros((len(profiles), x_ix_sample.size // n_slit_sample))
     for k, profile in enumerate(profiles):
         interp_prof = np.interp(x_ix_sample, pixel_locations, profile)
         #print("PROFILE", k)
@@ -1244,4 +1274,63 @@ def resample_slit_profiles_to_detector(profiles,
         #print("INTERP")
         #print(interp_prof)
         phi[k] = interp_prof.reshape(phi.shape[1], n_slit_sample).sum(axis=1)
+    return np.arange(*x_ix, dtype=int), phi
+
+def resample_slit_profiles_to_detector(profiles,
+                                       profile_y_pix=None,
+                                       profile_center=None):
+    """
+    Parameters
+    ----------
+    profiles: ndarray (M x N)
+        slitviewer profiles of M objects, each N pixels long
+    profile_y_pix: ndarray
+        locations of each slitviewer pixel in detector pixels,
+        relative to slit center
+    profile_center: float
+        detector pixel location of center of slit (from xmap)
+    oversample: int
+        factor by which to oversample
+    """
+    pixel_locations = profile_center + profile_y_pix
+    pixel_edges = pixel_locations[0] + (np.arange(pixel_locations.size + 1) - 0.5) * np.diff(pixel_locations).mean()
+    profiles = np.asarray(profiles)
+    #print("PROFILE CENTRE", profile_center)
+    #print(pixel_locations)
+    # location of *outer edge* of slitviewer edge pixel
+    x_ix = np.round([pixel_edges.min(), pixel_edges.max() + 1]).astype(int)
+    phi = np.zeros((len(profiles), x_ix[1] - x_ix[0]))
+
+    # For ease of coding, we're going to redefine the pixel coordinates so
+    # that integers are the *edges* of pixels. So pixel n covers n to n+1
+    # instead of n-0.5 to n+0.5
+    modified_pixel_edges = pixel_edges + 0.5 - x_ix[0]
+    #print(pixel_locations)
+    #print(pixel_edges)
+    #print(modified_pixel_edges)
+    #print(x_ix)
+    for i, (x1, x2) in enumerate(zip(modified_pixel_edges[:-1], modified_pixel_edges[1:])):
+        j = int(x1)
+        if j == int(x2):
+            phi[:, j] += profiles[:, i]
+        else:
+            f = (x2 - int(x2)) / (x2 - x1)
+            phi[:, j] += (1 - f) * profiles[:, i]
+            phi[:, j+1] += f * profiles[:, i]
+    #from scipy import integrate
+    #print("PIXLOC")
+    #print(pixel_locations)
+    #print(profiles)
+    #for k, profile in enumerate(profiles):
+    #    interp_prof = np.interp(x_ix_sample, pixel_locations, profile)
+    #    #print("PROFILE", k)
+    #    #print(profile)
+    #    #print("X_IX", x_ix)
+    #    #print(x_ix_sample)
+    #    #print(pixel_locations)
+    #    #print("INTERP")
+    #    #print(interp_prof)
+    #    phi[k] = interp_prof.reshape(phi.shape[1], n_slit_sample).sum(axis=1)
+    #    phi[k] = [integrate.quad(lambda x: np.interp(x, x_manhattan, y_manhattan[k], left=0, right=0),
+    #                             xpix-0.5, xpix+0.5)[0] for xpix in range(*x_ix)]
     return np.arange(*x_ix, dtype=int), phi

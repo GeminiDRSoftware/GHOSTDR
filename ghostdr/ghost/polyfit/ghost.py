@@ -354,7 +354,7 @@ class GhostArm(Polyspect):
 
             # The slit coordinate in microns
             slit_coord = (np.arange(len(slit_profile)) -
-                          len(slit_profile) // 2) * microns_pix
+                          len(slit_profile) / 2 + 0.5) * microns_pix
 
             x_map = np.empty((len(mprimes), self.szy))
 
@@ -380,18 +380,42 @@ class GhostArm(Polyspect):
                         slit_coord, slit_profile, left=0, right=0)
                     mod_slit = mod_slit_sample.reshape(xbase,n_slit_sample).sum(axis=1)
 
+                    from .extract import resample_slit_profiles_to_detector
+                    # This will always have an odd number of pixels with the
+                    # central one being the middle of the slit
+                    mod_slit2 = resample_slit_profiles_to_detector(
+                        [slit_profile], profile_y_pix=slit_coord/spat_scale[i],
+                        profile_center=0)[1][0]
+                    mod_slit2_ft = (np.fft.rfft(np.fft.fftshift(mod_slit2), n=flat.shape[0]))
+
                     # Normalise the slit model and Fourier transform for
                     # convolution. This has to be an l2 norm, in order to 
                     # work with variable slit lengths and mean that 
                     # the correlation peak is the least squares fit.
                     #mod_slit /= np.sum(mod_slit)
-                    mod_slit /= np.sqrt(np.sum(mod_slit**2))
+                    mod_slit /= np.sqrt(np.sum(mod_slit ** 2))
                     mod_slit_ft = np.fft.rfft(np.fft.fftshift(mod_slit))
+
                     # FIXME: Remove num_conv on next line and see if it makes
                     # a difference!
                     flat_conv_cube[j, :, i] = np.fft.irfft(
                         (im_fft[:, i] * mod_slit_ft.conj()) / num_conv
                     )
+                    # CJS: Non-Fourier convolution
+                    conv = np.correlate(flat[:, i], mod_slit2, mode="same")
+                    flat_conv_cube[j, :, i] = conv / conv.sum()
+                    #flat_conv_cube[j, :, i] = np.fft.irfft(
+                    #    im_fft[:, i] * mod_slit2_ft.conj()) / num_conv
+
+                    #from matplotlib import pyplot as plt
+                    #if i + j == 0:
+                    #    plt.ioff()
+                    #    fig, ax = plt.subplots()
+                    #    ax.plot(flat[:, i] / flat[:, i].max())
+                    #    ax.plot(flat_conv_cube[j, :, i] / flat_conv_cube[j, :, i].max())
+                    #    #ax.plot(conv)
+                    #    #ax.plot(mod_slit2)
+                    #    plt.show()
 
             # Work through every y coordinate and interpolate between the
             # convolutions with the different slit profiles.
