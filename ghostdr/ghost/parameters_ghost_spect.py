@@ -39,8 +39,8 @@ class applyFlatBPMConfig(config.Config):
 class barycentricCorrectConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_barycentricCorrected",
                           optional=True)
-    correction_factor = config.Field("Barycentric correction factor", float,
-                                     None, optional=True)
+    velocity = config.Field("Radial velocity correction", float,
+                            None, optional=True)
 
 
 class clipSigmaBPMConfig(config.Config):

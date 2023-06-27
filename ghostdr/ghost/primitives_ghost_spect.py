@@ -391,18 +391,20 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        velocity = params["velocity"]
+
+        if velocity == 0.0:
+            log.stdinfo("A radial velocity of 0.0 has been provided - no "
+                        "barycentric correction will be applied")
+            return adinputs
 
         for ad in adinputs:
-
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by barycentricCorrect".
                             format(ad.filename))
                 continue
 
-            # FIXME: It is more pythonic to ask forgiveness than permission,
-            # so a try
-            # statement is preferred.
             if not hasattr(ad[0], 'WAVL'):
                 log.warning("No changes will be made to {}, since it contains "
                             "no wavelength information".
@@ -410,16 +412,19 @@ class GHOSTSpect(GHOST):
                 continue
 
             # Get or compute the correction factor
-            if params['correction_factor'] is None:
-                cf = self._compute_barycentric_correction(ad, return_wavl=True)
+            if velocity is None:
+                rv = self._compute_barycentric_correction(ad).to(u.km / u.s)
             else:
-                cf = params['correction_factor']
+                rv = velocity * u.km / u.s
 
-            # Multiply the wavelength scale by the correction factor
-            log.stdinfo('Applying barycentric correction factor of '
-                        f'{cf} to {ad.filename}')
+            log.stdinfo("Applying radial velocity correction of "
+                        f"{rv.value} km/s to {ad.filename}")
+            cf = float(1 + rv / const.c)  # remove u.dimensionless_unscaled
             for ext in ad:
-                ext.WAVL *= float(cf)  # remove u.dimensionless_unscaled
+                ext.WAVL *= cf
+
+            # Only one correction per AD right now
+            ad.hdr['BERV'] = (rv.value, "Barycentric correction applied (km s-1)")
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -2697,8 +2702,7 @@ class GHOSTSpect(GHOST):
                                                    ad.res_mode(), ad.ut_date(),
                                                    ad.filename, 'slitvmod')
 
-    def _compute_barycentric_correction(self, ad, return_wavl=True,
-                                        loc=GEMINI_SOUTH_LOC):
+    def _compute_barycentric_correction(self, ad, loc=GEMINI_SOUTH_LOC):
         """
         Compute the baycentric correction factor for a given observation and
         location on the Earth.
@@ -2723,26 +2727,20 @@ class GHOSTSpect(GHOST):
             The astrodata object from which to extract time and
             location information. If the ad is multi-extension, a correction
             factor will be returned for each extension.
-        return_wavl : bool
-            Denotes whether to return the correction as a wavelength
-            correction factor (True) or a velocity (False). Defaults to True.
 
         Returns
         -------
-        corr_facts: float
-            The barycentric correction value
+        corr_facts: `Quantity`
+            The barycentric correction velocity
         """
 
         # Set up a SkyCoord for this ad
         if ad.ra() is None or ad.dec() is None:
             print("Unable to compute barycentric correction for "
                   "{} (no sky pos data) - skipping".format(ad.filename))
-            if return_wavl:
-                corr_fact = 1.0
-            else:
-                corr_fact = 0.0
-            return corr_fact
-        print("Computing SkyCoord for {}, {}".format(ad.ra(), ad.dec()))
+            return 0.0
+
+        self.log.stdinfo("Computing SkyCoord for {}, {}".format(ad.ra(), ad.dec()))
         sc = astrocoord.SkyCoord(ad.ra(), ad.dec(),
                                  unit=(u.deg, u.deg, ))
 
@@ -2750,36 +2748,11 @@ class GHOSTSpect(GHOST):
         dt_midp = ad.ut_datetime() + timedelta(seconds=ad.exposure_time() / 2.0)
         dt_midp = Time(dt_midp)
 
-        # Jane Rigby implementation
-        # # ICRS position & vel of Earth geocenter
-        # ep, ev = astrocoord.solar_system.get_body_barycentric_posvel(
-        #     'earth', dt_midp
-        # )
-        # # GCRS position & vel of observatory (loc)
-        # op, ov = loc.get_gcrs_posvel(dt_midp)
-        # # Velocities can be simply added (are axes-aligned)
-        # vel = ev + ov
-        #
-        # # Get unit ICRS vector in direction of observation
-        # sc_cart = sc.icrs.represent_as(
-        #     astrocoord.UnitSphericalRepresentation
-        # ).represent_as(
-        #     astrocoord.CartesianRepresentation
-        # )
-        #
-        # corr_fact = sc_cart.dot(vel).to(u.km/u.s)
-
         # Vanilla AstroPy Implementation
         corr_fact = sc.radial_velocity_correction('barycentric',
                                                   obstime=dt_midp,
                                                   location=GEMINI_SOUTH_LOC)
-
-        if return_wavl:
-            corr_fact = 1.0 + (corr_fact / const.c)
-        else:
-            corr_fact = corr_fact.to(u.m / u.s)
-
-        return corr_fact
+        return corr_fact.to(u.km / u.s)
 
     def _request_bracket_arc(self, ad, before=None):
         """

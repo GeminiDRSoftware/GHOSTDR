@@ -22,15 +22,12 @@ import pytest
 import ghost_instruments
 import astrodata
 from astropy.io import fits
-from astropy import units as u
+from astropy import constants
 import numpy as np
 import copy
 import random
 import datetime
 import itertools
-import os
-import glob
-import shutil
 
 from ghostdr.ghost.primitives_ghost_spect import GHOSTSpect
 
@@ -527,33 +524,14 @@ class TestGhost:
         ad.phu.set('EXPTIME', exp_time_min * 60.)
 
         gs = GHOSTSpect([])
-        corr_fact = gs._compute_barycentric_correction(ad, )
+        rv = gs._compute_barycentric_correction(ad, )
+        corr_fact = (1 + rv / constants.c).value
         assert abs(corr_fact - known_corr) < 1e-6, \
             "_compute_barycentric_correction " \
             "returned an incorrect value " \
             "(expected {}, returned {})".format(
                 known_corr, corr_fact,
             )
-
-    @pytest.mark.parametrize('return_wavl,units', [
-        (True, u.dimensionless_unscaled,),
-        (False, u.m / u.s,),
-    ])
-    def test__compute_barycentric_correction_returnwavl(
-            self, return_wavl, units,
-            data__compute_barycentric_correction):
-        """
-        Check the return units of _compute_barycentric_correction
-        """
-        # ad should be correctly populated from previous test
-        ad = data__compute_barycentric_correction
-
-        gs = GHOSTSpect([])
-        corr_fact = gs._compute_barycentric_correction(
-            ad, return_wavl=return_wavl)
-        assert corr_fact.unit == units, \
-            "_compute_barycentric_correction returned incorrect units " \
-            "(expected {}, got {}) {}".format(units, corr_fact.unit)
 
     @pytest.mark.skip(reason='Requires calibration system - '
                              'will need to be part of all-up testing')
