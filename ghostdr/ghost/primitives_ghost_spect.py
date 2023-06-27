@@ -413,22 +413,44 @@ class GHOSTSpect(GHOST):
 
             # Get or compute the correction factor
             if velocity is None:
-                rv = self._compute_barycentric_correction(ad).to(u.km / u.s)
+                ra, dec = ad.ra(), ad.dec()
+                if ra is None or dec is None:
+                    print("Unable to compute barycentric correction for "
+                          f"{ad.filename} (no sky pos data) - skipping")
+                    rv = None
+                else:
+                    self.log.stdinfo(f"Computing SkyCoord for {ra}, {dec}")
+                    sc = astrocoord.SkyCoord(ra, dec, unit=(u.deg, u.deg,))
+
+                    # Compute central time of observation
+                    dt_midp = ad.ut_datetime() + timedelta(
+                        seconds=ad.exposure_time() / 2.0)
+                    dt_midp = Time(dt_midp)
+                    bjd = dt_midp.jd1 + dt_midp.jd2
+
+                    # Vanilla AstroPy Implementation
+                    rv = sc.radial_velocity_correction(
+                        'barycentric', obstime=dt_midp,
+                        location=GEMINI_SOUTH_LOC).to(u.km / u.s)
             else:
                 rv = velocity * u.km / u.s
+                bjd = None
 
-            log.stdinfo("Applying radial velocity correction of "
-                        f"{rv.value} km/s to {ad.filename}")
-            cf = float(1 + rv / const.c)  # remove u.dimensionless_unscaled
-            for ext in ad:
-                ext.WAVL *= cf
+            if rv is not None:
+                log.stdinfo("Applying radial velocity correction of "
+                            f"{rv.value} km/s to {ad.filename}")
+                cf = float(1 + rv / const.c)  # remove u.dimensionless_unscaled
+                for ext in ad:
+                    ext.WAVL *= cf
 
-            # Only one correction per AD right now
-            ad.hdr['BERV'] = (rv.value, "Barycentric correction applied (km s-1)")
+                # Only one correction per AD right now
+                ad.hdr['BERV'] = (rv.value, "Barycentric correction applied (km s-1)")
+                if bjd is not None:
+                    ad.hdr['BJD'] = (bjd, "Barycentric Julian date")
 
-            # Timestamp and update filename
-            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.update_filename(suffix=params["suffix"], strip=True)
+                # Timestamp and update filename
+                gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+                ad.update_filename(suffix=params["suffix"], strip=True)
 
         return adinputs
 
@@ -2701,58 +2723,6 @@ class GHOSTSpect(GHOST):
         return polyfit_lookup.get_polyfit_filename(self.log, 'slitv',
                                                    ad.res_mode(), ad.ut_date(),
                                                    ad.filename, 'slitvmod')
-
-    def _compute_barycentric_correction(self, ad, loc=GEMINI_SOUTH_LOC):
-        """
-        Compute the baycentric correction factor for a given observation and
-        location on the Earth.
-
-        The barycentric correction compensates for (a) the motion of the Earth
-        around the Sun, and (b) the motion of the Earth's surface due to
-        planetary rotation. It can be returned as a line velocity correction,
-        or a multiplicative factor with which to correct the wavelength scale;
-        the default is the latter.
-
-        The correction will be computed for all extensions of the input
-        AstroData object.
-
-        This method is built using :py:mod:`astropy <astropy>` v2, and is
-        developed from:
-        https://github.com/janerigby/jrr/blob/master/barycen.py
-
-
-        Parameters
-        ----------
-        ad : astrodata.AstroData
-            The astrodata object from which to extract time and
-            location information. If the ad is multi-extension, a correction
-            factor will be returned for each extension.
-
-        Returns
-        -------
-        corr_facts: `Quantity`
-            The barycentric correction velocity
-        """
-
-        # Set up a SkyCoord for this ad
-        if ad.ra() is None or ad.dec() is None:
-            print("Unable to compute barycentric correction for "
-                  "{} (no sky pos data) - skipping".format(ad.filename))
-            return 0.0
-
-        self.log.stdinfo("Computing SkyCoord for {}, {}".format(ad.ra(), ad.dec()))
-        sc = astrocoord.SkyCoord(ad.ra(), ad.dec(),
-                                 unit=(u.deg, u.deg, ))
-
-        # Compute central time of observation
-        dt_midp = ad.ut_datetime() + timedelta(seconds=ad.exposure_time() / 2.0)
-        dt_midp = Time(dt_midp)
-
-        # Vanilla AstroPy Implementation
-        corr_fact = sc.radial_velocity_correction('barycentric',
-                                                  obstime=dt_midp,
-                                                  location=GEMINI_SOUTH_LOC)
-        return corr_fact.to(u.km / u.s)
 
     def _request_bracket_arc(self, ad, before=None):
         """

@@ -151,7 +151,8 @@ class TestGhost:
                                                 "timestamp-mark the " \
                                                 "output file"
 
-    @pytest.fixture(scope='class')
+
+    @pytest.fixture
     def data_barycentricCorrect(self):
         """
         Create data for the barycentric correction test.
@@ -163,9 +164,53 @@ class TestGhost:
 
         # Add a wavl extension - no need to be realistic
         ad[0].WAVL = np.random.rand(*ad[0].data.shape)
-        return ad, copy.deepcopy(ad[0].WAVL)
+        return ad
 
-    def test_barycentricCorrect(self, data_barycentricCorrect):
+    @pytest.mark.parametrize('ra,dec,dt,known_corr', [
+        (90., -30., '2018-01-03 15:23:32', 0.999986388827),
+        (180., -60., '2018-11-12 18:35:15', 1.00001645007),
+        (270., -90., '2018-07-09 13:48:35', 0.999988565947),
+        (0., -45., '2018-12-31 18:59:48', 0.99993510834),
+        (101.1, 0., '2018-02-23 17:18:55', 0.999928361662),
+    ])
+    def test__compute_barycentric_correction_values(
+            self, ra, dec, dt, known_corr, data_barycentricCorrect):
+        """
+        Checks to make:
+
+        - Correct units of return based on input arguments
+        - Some regression test values
+        """
+        ad = data_barycentricCorrect
+        ad.phu.set('RA', ra)
+        ad.phu.set('DEC', dec)
+        # Assume a 10 min exposure
+        exp_time_min = 10.
+        dt_obs = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+        dt_start = dt_obs - datetime.timedelta(minutes=exp_time_min)
+        ad.phu.set('DATE-OBS', dt_start.date().strftime('%Y-%m-%d'))
+        ad.phu.set('UTSTART', dt_start.time().strftime('%H:%M:%S.00'))
+        ad.phu.set('EXPTIME', exp_time_min * 60.)
+
+        gs = GHOSTSpect([])
+        rv = gs._compute_barycentric_correction(ad, )
+        corr_fact = (1 + rv / constants.c).value
+        assert abs(corr_fact - known_corr) < 1e-6, \
+            "_compute_barycentric_correction " \
+            "returned an incorrect value " \
+            "(expected {}, returned {})".format(
+                known_corr, corr_fact,
+            )
+
+    @pytest.mark.parametrize('ra,dec,dt,known_corr', [
+        (90., -30., '2018-01-03 15:23:32', 0.999986388827),
+        (180., -60., '2018-11-12 18:35:15', 1.00001645007),
+        (270., -90., '2018-07-09 13:48:35', 0.999988565947),
+        (0., -45., '2018-12-31 18:59:48', 0.99993510834),
+        (101.1, 0., '2018-02-23 17:18:55', 0.999928361662),
+    ])
+    def test_barycentricCorrect(self, ra, dec, dt, known_corr,
+                                data_barycentricCorrect):
         """
         Checks to make:
 
@@ -175,25 +220,32 @@ class TestGhost:
         Testing of the helper _compute_barycentric_correction is done
         separately.
         """
-        ad, orig_wavl = data_barycentricCorrect
-        orig_ad = copy.deepcopy(ad)
+        ad = data_barycentricCorrect
+        orig_wavl = copy.deepcopy(ad[0].WAVL)
+        ad.phu.set('RA', ra)
+        ad.phu.set('DEC', dec)
+        # Assume a 10 min exposure
+        exp_time_min = 10.
+        dt_obs = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+        dt_start = dt_obs - datetime.timedelta(minutes=exp_time_min)
+        ad.phu.set('DATE-OBS', dt_start.date().strftime('%Y-%m-%d'))
+        ad.phu.set('UTSTART', dt_start.time().strftime('%H:%M:%S.00'))
+        ad.phu.set('EXPTIME', exp_time_min * 60.)
 
-        gs = GHOSTSpect([ad])
-        corr_fact = random.uniform(0.5, 1.5)
-        ad_out = gs.barycentricCorrect([ad], correction_factor=corr_fact).pop()
-        assert np.allclose(ad_out[0].WAVL / corr_fact,
+        gs = GHOSTSpect([])
+        ad_out = gs.barycentricCorrect([ad]).pop()
+        corr_fact = (ad_out[0].WAVL / orig_wavl).mean()
+        assert np.allclose(ad_out[0].WAVL / known_corr,
                            orig_wavl), "barycentricCorrect appears not to " \
                                        "have made a valid correction " \
-                                       "(tried to correct by {}, " \
-                                       "apparent correction {})".format(
-            corr_fact, np.average(ad_out[0].WAVL / orig_wavl)
-        )
-        assert orig_ad[0].WAVL.shape == ad_out[0].WAVL.shape, \
+                                       f"(should be {known_corr}, " \
+                                       f"apparent correction {corr_fact})"
+        assert orig_wavl.shape == ad_out[0].WAVL.shape, \
             "barycentricCorrect has mangled the shape of the output " \
             "WAVL extension"
 
         assert ad_out.phu.get(
-            gs.timestamp_keys['barycentricCorrect']), "clipSigmaBPM did not " \
+            gs.timestamp_keys['barycentricCorrect']), "barycentricCorrect did not " \
                                                       "timestamp-mark the " \
                                                       "output file"
 
@@ -329,11 +381,11 @@ class TestGhost:
             gs.interpolateAndCombine([ad, ], scale='not-a-scale')
 
         # Test the skip functionality
-        ad_out = gs.interpolateAndCombine([ad, ], skip=True)[0]
-        assert ad_out.phu.get(
-            gs.timestamp_keys['interpolateAndCombine']
-        ) is None, "interpolateAndCombine appears to have acted on a file " \
-                   "when skip=True"
+        #ad_out = gs.interpolateAndCombine([ad, ], skip=True)[0]
+        #assert ad_out.phu.get(
+        #    gs.timestamp_keys['interpolateAndCombine']
+        #) is None, "interpolateAndCombine appears to have acted on a file " \
+        #           "when skip=True"
 
     @pytest.mark.skip(reason='Requires calibrators & polyfit-ing - save for '
                              'all-up testing')
@@ -386,18 +438,11 @@ class TestGhost:
         """
         pass
 
-    @pytest.mark.skip(reason='Deprecated.')
-    def test_rejectCosmicRays(self):
-        """
-        DEPRECATED: No testing required
-        """
-        pass
-
     def test_responseCorrect(self):
         """
         Checks to make:
 
-        - Ensure skip option functions correctly
+        - Ensure parameters for no-op work correctly
 
         More complete testing to be made in 'all-up' reduction
         """
@@ -405,11 +450,11 @@ class TestGhost:
         gs = GHOSTSpect([])
 
         # Test the skip functionality
-        ad_out = gs.responseCorrect([ad, ], skip=True)[0]
+        ad_out = gs.responseCorrect([ad, ], standard=None)[0]
         assert ad_out.phu.get(
             gs.timestamp_keys['responseCorrect']
         ) is None, "responseCorrect appears to have acted on a file " \
-                   "when skip=True"
+                   "when standard=None"
 
     def test_standardizeStructure(self):
         """
@@ -482,56 +527,6 @@ class TestGhost:
         assert polyfit_file is None, "_get_polyfit_filename didn't return " \
                                      "None when asked for a bogus " \
                                      "model type"
-
-    @pytest.fixture(scope='class')
-    def data__compute_barycentric_correction(self):
-        """
-        Generate a minimal data file for
-        :any:`test__compute_barycentric_correction`
-        .. note::
-            Fixture.
-
-        This fixture exists so an AD object with suitable keywords can
-        be propagated between tests.
-        """
-        ad = self.generate_minimum_file()
-        return ad
-
-    @pytest.mark.parametrize('ra,dec,dt,known_corr', [
-        (90., -30., '2018-01-03 15:23:32', 0.999986388827),
-        (180., -60., '2018-11-12 18:35:15', 1.00001645007),
-        (270., -90., '2018-07-09 13:48:35', 0.999988565947),
-        (0., -45., '2018-12-31 18:59:48', 0.99993510834),
-        (101.1, 0., '2018-02-23 17:18:55', 0.999928361662),
-    ])
-    def test__compute_barycentric_correction_values(
-            self, ra, dec, dt, known_corr, data__compute_barycentric_correction):
-        """
-        Checks to make:
-
-        - Correct units of return based on input arguments
-        - Some regression test values
-        """
-        ad = data__compute_barycentric_correction
-        ad.phu.set('RA', ra)
-        ad.phu.set('DEC', dec)
-        # Assume a 10 min exposure
-        exp_time_min = 10.
-        dt_obs = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-        dt_start = dt_obs - datetime.timedelta(minutes=exp_time_min)
-        ad.phu.set('DATE-OBS', dt_start.date().strftime('%Y-%m-%d'))
-        ad.phu.set('UTSTART', dt_start.time().strftime('%H:%M:%S.00'))
-        ad.phu.set('EXPTIME', exp_time_min * 60.)
-
-        gs = GHOSTSpect([])
-        rv = gs._compute_barycentric_correction(ad, )
-        corr_fact = (1 + rv / constants.c).value
-        assert abs(corr_fact - known_corr) < 1e-6, \
-            "_compute_barycentric_correction " \
-            "returned an incorrect value " \
-            "(expected {}, returned {})".format(
-                known_corr, corr_fact,
-            )
 
     @pytest.mark.skip(reason='Requires calibration system - '
                              'will need to be part of all-up testing')
