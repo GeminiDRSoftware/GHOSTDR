@@ -111,6 +111,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         log.stdinfo('Re-binning %s' % ad.filename)
         rows = yb
         cols = xb
+        orig_shape = ext.data.shape
         for ext in ad:
             # Do the re-binning
             # Re-bin data
@@ -124,12 +125,12 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             # Re-bin variance
             # These are summed in quadrature
             if ext.variance is not None:
-                binned_var = ext.variance ** 2
-                binned_var = binned_var.reshape(
+                #binned_var = ext.variance ** 2
+                binned_var = ext.variance.reshape(
                     int(ext.variance.shape[0] / rows), rows,
                     int(ext.variance.shape[1] / cols), cols
                 ).sum(axis=1).sum(axis=2)
-                binned_var = np.sqrt(binned_var)
+                #binned_var = np.sqrt(binned_var)
                 reset_kwargs['variance'] = binned_var
 
             # Re-bin mask
@@ -157,6 +158,19 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             # ext.variance = binned_var
             # ext.mask = binned_mask
             ext.reset(binned_array, **reset_kwargs)
+
+            # Rebin other extensions (e.g., PIXELMODEL)
+            for other_name, other_data in ext.nddata.meta['other'].items():
+                try:
+                    rebin_this = other_data.shape == orig_shape
+                except AttributeError:
+                    continue
+                if rebin_this and False:
+                    rebinned_other_data = other_data.reshape(
+                        orig_shape[0] // rows, rows,
+                        orig_shape[1] // cols, cols
+                    ).sum(axis=1).sum(axis=2)
+                    setattr(ext, other_name, rebinned_other_data)
 
             # Update header values
             ext.hdr.set('CCDSUM',

@@ -598,20 +598,20 @@ class Polyspect(object):
         # Do this by searching for the maximum value along the
         # order for search_pix on either side of the initial
         # model pixels in the spatial direction.
-        for i in range(x_values.shape[0]):  # Go through each order...
-            for j in range(x_values.shape[1]): # pylint: disable=maybe-no-member
-                xind = int(np.round(x_values[i, j]))
-                lpix = max(0, self.szx // 2 + xind - search_pix)
-                rpix = min(self.szx // 2 + xind + search_pix + 1, image_med.shape[1] - 1)
-                peakpix = image_med[j, lpix:rpix]
-                if len(peakpix) > 0:
-                    x_values[i, j] += np.argmax(peakpix) - search_pix
-                    # Put a sigma for weighted fit purposes
-                    sigma[i, j] = 1. / np.max(peakpix)
-                else:
-                    sigma[i, j] = 1E5
+        #for i in range(x_values.shape[0]):  # Go through each order...
+        #    for j in range(x_values.shape[1]): # pylint: disable=maybe-no-member
+        #        xind = int(np.round(x_values[i, j]))
+        #        lpix = max(0, self.szx // 2 + xind - search_pix)
+        #        rpix = min(self.szx // 2 + xind + search_pix + 1, image_med.shape[1] - 1)
+        #        peakpix = image_med[j, lpix:rpix]
+        #        if len(peakpix) > 0:
+        #            x_values[i, j] += np.argmax(peakpix) - search_pix
+        #            # Put a sigma for weighted fit purposes
+        #            sigma[i, j] = 1. / np.max(peakpix)
+        #        else:
+        #            sigma[i, j] = 1E5
         # Down weight any regions where the flux peak was less than 0.
-        sigma[sigma < 0] = 1E5
+        #sigma[sigma < 0] = 1E5
 
         for j in range(x_values.shape[1]):
             xindices = np.round(x_values[:, j]).astype(int)
@@ -622,7 +622,7 @@ class Polyspect(object):
                 new_peak = 0.5 * (image_med[j, peakpix+1] - image_med[j, peakpix-1]) / (3 * image_med[j, peakpix] - image_med[j, peakpix-1:peakpix+2].sum())
                 if abs(new_peak) < 1:
                     x_values[i, j] = new_peak + peakpix - self.szx // 2
-                    sigma[i, j] = 1. / image_med[j, peakpix]
+                    sigma[i, j] = 1. / np.sqrt(image_med[j, peakpix])
                 else:
                     sigma[i, j] = 1E5
                 #if i == 12 and sigma[i, j] < 1e5:
@@ -664,7 +664,7 @@ class Polyspect(object):
         return fitted_params
 
     def fit_to_x(self, x_to_fit, init_mod, y_values=None, sigma=None,
-                 decrease_dim=1):
+                 decrease_dim=1, maxiter=5, sigma_rej=3):
         """
         Fit to an (norders, ny) array of x-values.
 
@@ -763,22 +763,31 @@ class Polyspect(object):
         print("Fitting (this can sometimes take a while...)")
         init_resid = self.fit_resid(init_mod, orders, y_values, x_values,
                                     ydeg=ydeg, xdeg=xdeg, sigma=sigma)
-        bestp = op.leastsq(self.fit_resid, init_mod,
-                           args=(orders, y_values, x_values, ydeg, xdeg, sigma))
-        final_resid = self.fit_resid(bestp[0], orders, y_values, x_values,
-                                     ydeg=ydeg, xdeg=xdeg, sigma=sigma)
-        params = bestp[0].reshape((ydeg + 1, xdeg + 1))
-        x_fitted = x_values - final_resid * sigma
-        for i in range(x_values.size):
-            if sigma[i] < 1e5:
-                # 3080 valid for red only
-                print(f"{y_values[i]:6.1f} {x_values[i]+3080:10.5f} {x_fitted[i]+3080:10.5f} {final_resid[i]*sigma[i]:10.5f}")
         init_resid = (init_resid * sigma)[sigma < 1e5]
+        for niter in range(maxiter):
+            bestp = op.leastsq(self.fit_resid, init_mod,
+                               args=(orders, y_values, x_values, ydeg, xdeg, sigma))
+            final_resid = self.fit_resid(bestp[0], orders, y_values, x_values,
+                                         ydeg=ydeg, xdeg=xdeg, sigma=sigma)
+            rms = np.std((final_resid * sigma)[sigma < 1e5])
+            bad = np.where(np.logical_and(abs(final_resid * sigma) > rms * sigma_rej,
+                                          sigma < 1e5))[0]
+            if bad.size:
+                sigma[bad] = 1e5
+                #print("REJECTING ", bad.size)
+            else:
+                break
+
         final_resid = (final_resid * sigma)[sigma < 1e5]
+        params = bestp[0].reshape((ydeg + 1, xdeg + 1))
+        #x_fitted = x_values - final_resid * sigma
+        #for i in range(x_values.size):
+        #    if sigma[i] < 1e5:
+        #        # 3080 valid for red only
+        #        print(f"{y_values[i]:6.1f} {x_values[i]+3080:10.5f} {x_fitted[i]+3080:10.5f} {final_resid[i]*sigma[i]:10.5f}")
         print("RMS", init_resid.std(), '->', final_resid.std())
-        print("MAX", init_resid.max(), '->', final_resid.max())
-        print(init_resid, final_resid)
-        
+        print("MAX", np.max(abs(init_resid)), '->', np.max(abs(final_resid)))
+
         # FIXME: Issues with the high resolution fit here. Why? How to diagnose?
         #import pdb; pdb.set_trace()
 

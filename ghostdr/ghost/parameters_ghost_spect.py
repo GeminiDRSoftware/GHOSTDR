@@ -84,12 +84,17 @@ class extractProfileConfig(config.Config):
                                float, 0.1, min=0, max=1)
     sigma = config.RangeField("Number of standard deviations at which to flag pixels",
                               float, 6, min=3)
-    smooth_flat_spatially = config.Field(
+    weighting = config.ChoiceField("Pixel weighting scheme for extraction", str,
+                                   allowed={"uniform": "uniform weighting",
+                                            "optimal": "optimal extraction"},
+                                   default="optimal")
+    debug_smooth_flat_spatially = config.Field(
         "Smooth the flat field image before applying?", bool, False)
     seeing = config.RangeField("FWHM of seeing disc if no processed_slit is "
                                "available", float, None, min=0.2, optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, False)
-    debug_weight_map = config.Field("Add CR map to output?", bool, False)
+    debug_2d_extraction = config.Field("Perform 2D extraction?", bool, True)
+    debug_weight_map = config.Field("Add weight map to output?", bool, False)
     debug_cr_map = config.Field("Add CR map to output?", bool, False)
     debug_cr_order = config.RangeField("Order for CR debugging plot", int, None,
                                        min=33, max=97, optional=True)
@@ -116,8 +121,8 @@ class findAperturesConfig(config.Config):
                             None, optional=True)
     flat = config.ListField("Flat field", (str, ad), None,
                             optional=True, single=True)
-    skip_pixel_model = config.Field('Skip adding a pixel model to the '
-                                    'flat field?', bool, False)
+    #skip_pixel_model = config.Field('Skip adding a pixel model to the '
+    #                                'flat field?', bool, False)
 
 
 class fitWavelengthConfig(config.Config):

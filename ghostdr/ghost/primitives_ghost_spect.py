@@ -729,6 +729,8 @@ class GHOSTSpect(GHOST):
             linear fraction of signal to add to noise estimate for CR flagging
         sigma: float
             number of standard deviations for identifying discrepant pixels
+        weighting: str ("uniform"/"optimal")
+            weighting scheme for extraction
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
@@ -738,13 +740,14 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
         ifu1 = params["ifu1"]
-        ifu2 = params["ifu1"]
+        ifu2 = params["ifu2"]
         seeing = params["seeing"]
         snoise = params["snoise"]
         sigma = params["sigma"]
         debug_cr_pixel = (params["debug_cr_order"], params["debug_cr_pixel"])
         add_cr_map = params["debug_cr_map"]
         add_weight_map = params["debug_weight_map"]
+        optimal_extraction = params["weighting"] == "optimal"
 
         # This primitive modifies the input AD structure, so it must now
         # check if the primitive has already been applied. If so, it must be
@@ -973,7 +976,7 @@ class GHOSTSpect(GHOST):
                         slitvpars.TABLE[0], mode=res_mode,
                         microns_pix = 4.54 * 180 / 50, **sview_kwargs)
 
-                    binned_flat_extractor = Extractor(arm, flat_sview, 
+                    binned_flat_extractor = Extractor(arm, flat_sview,
                         badpixmask=ad[0].mask,
                         vararray=flat[0].variance)
 
@@ -1018,7 +1021,7 @@ class GHOSTSpect(GHOST):
 
                     # MCW 190912 - converted to option, default is 'False'
                     # TODO: MJI to add description of what this (should) do
-                    if params['smooth_flat_spatially']:
+                    if params['debug_smooth_flat_spatially']:
                         correction_2d = np.zeros_like(flat[0].data)
                         correction_2d[pix_to_correct] = correction
                         smoothed_correction_2d = convolve_with_mask(
@@ -1043,6 +1046,11 @@ class GHOSTSpect(GHOST):
                     corrected_data[pix_to_correct] *= correction
                     corrected_var[pix_to_correct] *= correction**2
 
+                    new_correction = np.ones_like(corrected_data)
+                    new_correction[pix_to_correct] = correction
+                    test_ad = astrodata.create(flat.phu)
+                    test_ad.append(new_correction)
+                    test_ad.write("test_correction.fits", overwrite=True)
                     # Uncomment to bugshoot finding bad pixels for the flat. Should be
                     # repeated once models are reasonable for real data as a sanity
                     # check
@@ -1087,7 +1095,8 @@ class GHOSTSpect(GHOST):
                     correct_for_sky=sky_correct_profiles,
                     use_sky=s, used_objects=o, find_crs=cr,
                     snoise=snoise, sigma=sigma,
-                    debug_cr_pixel=debug_cr_pixel
+                    debug_cr_pixel=debug_cr_pixel,
+                    correction=new_correction, optimal=optimal_extraction
                 )
 
                 # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
@@ -1104,6 +1113,8 @@ class GHOSTSpect(GHOST):
                 #plt.legend()
                 #import pdb; pdb.set_trace()
 
+                #extracted_flux = DUMMY
+                #extracted_var = np.zeros_like(DUMMY, dtype=np.float32)
                 extracted_flux, extracted_var = extractor.two_d_extract(
                     corrected_data,
                     extraction_weights=extracted_weights,
@@ -2714,7 +2725,8 @@ class GHOSTSpect(GHOST):
         str/None:
             Filename (including path) of the required polyfit file
         """
-
+        if caltype == "spatmod" and ad.arm() == "red":
+            return "new_spatmod.fits"
         return polyfit_lookup.get_polyfit_filename(self.log, ad.arm(),
                                                    ad.res_mode(), ad.ut_date(),
                                                    ad.filename, caltype)
