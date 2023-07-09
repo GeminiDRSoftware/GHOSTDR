@@ -11,59 +11,57 @@ Setting up the development DRAGONS system
 
 | Instructions on installing the Gemini DRAGONS system are available here:
 | https://www.gemini.edu/observing/phase-iii/understanding-and-processing-data/data-processing-software
+
 .. note::
-    You do not need Gemini IRAF to use the GHOST DRS. 
+    You do not need Gemini IRAF to use GHOSTDR. 
 
-As the time of writing, the GHOST DRS works with the latest available version
-of DRAGONS (v3.0.1).
+As the time of writing, the GHOST data reduction software does **not** work with the latest available version
+of DRAGONS (v3.1.0). Instead, it must be used with the previous version of DRAGONS (v3.0.x).
+In the near future, the GHOST data reduction software will be updated and integrated within a DRAGONS release.
 
-The remainder of these instructions assume that you've already installed
-a compatible Anaconda Python distribution together with the latest version
-of DRAGONS. We assume that your environment is named ``dragons``.
-Before doing anything further, you'll need to activate the
-environment::
+Brief instructions to install DRAGONS 3.0.x with GHOSTDR
+--------------------------------------------------------
 
-    source activate dragons
+* Install anaconda or miniconda
 
-Furthermore, for the commands given below to work properly, you must:
+* Configure the correct conda channels and create an environment called ``ghost``
 
- #. Add the following to your system ``PATH`` variable::
+::
 
-        GHOSTDR/scripts
+   conda config --add channels conda-forge
+   conda config --add channels http://astroconda.gemini.edu/public
+   conda config --remove channels http://ssb.stsci.edu/astroconda
+   conda create -n ghost python=3.7 dragons=3.0.4 ds9
+   conda activate ghost
 
- #. Add the following paths to your environment ``PYTHONPATH`` variable::
+* Install GHOSTDR, updated calibration manager, and extra dependency
 
-        GHOSTDR
+::
 
-Typical Processing Flows
-========================
+   pip install git+https://github.com/GeminiDRSoftware/GHOSTDR.git@v0.9.2
+   curl -O https://raw.githubusercontent.com/GeminiDRSoftware/GHOSTDR/master/.jenkins/local_calibration_manager/GeminiCalMgr-1.0.2-py3-none-any.whl
+   pip install --force-reinstall GeminiCalMgr-1.0.2-py3-none-any.whl
+   pip install pysynphot
 
-This section describes how to process simulated GHOST data. For information on
-how to use the simulator to generate simulated GHOST data, please refer to
-its documentation: :any:`ghostsim`.
+Now the GHOST DR is ready for use
 
-Setting up the calibrations system
+Getting ready to process data
+=============================
+
+This section describes how to configure the GHOST DR for use.
+
+Setting up the calibration manager
 ----------------------------------
-
-.. COMMENTED OUT - Looks like the calibration manager is packaged with
-   DRAGONS now 
-    At present, we are using a beta version of the Gemini local calibration
-    manager. Assuming that you have access to the current version of this code
-    (at the time of writing, ``GeminiCalMgr-1.0.0-*``), you need to take
-    the following steps to prepare the calibration manager for use:
-
-    #. Activate your ``dragons`` Anaconda environment;
-    #. Install the calibration manager, e.g.::
-
-        pip install GeminiCalMgr-1.0.0-py3-none-any.whl
 
 Before starting a new reduction it is sensible to begin with a fresh
 calibration database:
 
-#. Activate your ``dragons`` Anaconda environment;
+#. Activate your ``ghost`` Anaconda environment;
 
 #. Initialize your local database, something like this (on a Unix system; for
-   MacOSX or Windows, use an appropriate file path for your calibration file)::
+   MacOSX or Windows, use an appropriate file path for your calibration file)
+
+   ::
 
     mkdir /home/you/calmgrdb
     mkdir /home/you/.geminidr
@@ -74,40 +72,11 @@ calibration database:
     HERE
     caldb init -v -w
 
-.. COMMENTED OUT - I DON'T THINK THIS IS NEEDED NOW
-    #. Apply the following GHOST-related patches to the calibration system code:
-
-       - ``/path/to/GeminiCalMgr-0.9.9.6-ghost/src/cal/calibration_ghost``:
-
-            - Remove ``Ghost.nodandshuffle`` from around line 183;
-            - Add the following at around line 345::
-
-                def processed_slitflat(self, howmany=None):
-                    return self.flat(True, howmany)
-
-
-       - ``/path/to/GeminiCalMgr-0.9.9.6-ghost/src/orm/calibration_ghost``:
-            - Add the following around line 15::
-
-                RESOLUTIONS = ['std', 'high']
-                RESOLUTION_ENUM = Enum(*RESOLUTIONS, name='ghost_resolution')
-
-            - Add the following around line 35::
-
-                res_mode = Column(RESOLUTION_ENUM, index=True)
-
-            - Add the following around line 67::
-
-                resolution = ad.res_mode()
-                if resolution in RESOLUTIONS:
-                    self.res_mode = resolution
-
-    #. Deploy the changes you just made to the calibration system::
-
-        python /path/to/GeminiCalMgr-0.9.9.6-ghost/setup.py install
-
+.. note::
     DRAGONS does not currently automatically send its output calibration files to
-    the GeminiCalMgr. You will have to do this manually after each step, e.g.::
+    the GeminiCalMgr. You will have to do this manually after each step, e.g.
+
+    ::
 
         caldb add calibrations/processed_thing/my_processed_thing.fits
 
@@ -122,23 +91,8 @@ calibration database:
 
     You can switch contexts using the ``--context`` flag to ``reduce``.
 
-Bulk-reducing simulated data
-----------------------------
-
-To simplify the end-to-end testing of :any:`ghostdr`, Joao Bento and Lance Luvual
-have contributed a bash script to run the entire reduction sequence in one
-command::
-
-    ./GHOSTDR/utils/reduce_all.sh
-
-The script will run reductions for all combinations of spectrograph arm and
-resolution in sequence. The script will pause between each distinct
-reduction step (e.g. bias reduction, dark reduction, etc.) to allow you to
-review the output. Alternatively, you could choose to run through the steps
-manually yourself, as described below.
-
-Reducing lab data
------------------
+Working with lab data
+---------------------
 
 Data files produced in the lab are saved directly to disk, and are not processed
 by the Gemini data handling service. This means that they may not contain all
@@ -165,6 +119,77 @@ keywords, as these times are used to determine the arc frames that bracket
 each science frame. Without appropriately set times the calibration manager
 will not be able to find the correct arcs to reduce the science frames.
 
+Working with science verification data
+--------------------------------------
+
+The data files from the science verification run have a similar, but lesser problem
+to those from the lab. They are only missing the GEMPRGID, which can be manually
+added or one can use a Gemini-provided script to add just this keyword. The script is
+available here:
+
+`<https://raw.githubusercontent.com/GeminiDRSoftware/GHOSTDR/master/scripts/fixprogid.py>`_
+
+Working with science data
+-------------------------
+
+Data files taken as part of a science program can be reduced without any modification.
+These files will already contain the required headers.
+
+Temporary measures
+------------------
+
+Until GHOSTDR is bundled with Gemini DRAGONS, it is necessary to add command line parameters
+to each DRAGONS command so that it can find the required python modules. To avoid a lot of
+extra typing it is easier to create aliases for all the required commands, including the 
+extra parameters.
+
+::
+
+  alias gtypewalk='typewalk --adpkg=ghost_instruments'
+  alias gdataselect='dataselect --adpkg=ghost_instruments'
+  alias greduce='reduce --adpkg=ghost_instruments --drpkg=ghostdr'
+  alias gshowd='showd --adpkg=ghost_instruments'
+  alias gshowpars='showpars --adpkg=ghost_instruments --drpkg=ghostdr'
+
+Typical processing flows
+========================
+
+This section describes how to process GHOST data from the lab and from the
+science verification run. These instructions may change once GHOST is fully
+integrated into the Gemini operational workflows.
+
+Unbundling data files
+---------------------
+
+The data files for GHOST are stored as MEF bundles. One observation creates one bundle, which comprises
+data from both science cameras and the slit viewing camera. The first step in the data reduction
+process is to unbundle these files. It is possible to unbundle all raw files at once, but you may then
+find it difficult to keep track of all the individual unbundled FITS files. It is often preferable to only
+unbundle a raw file just before using it.
+
+To figure out what kind of observation is contained within a bundle, the ``typewalk`` command is useful.
+This command will show the tags on all FITS files in a given directory. This makes it quick to determine
+which are calibrations (and what kind of calibrations they are) and which are science bundles.
+
+::
+
+  gtypewalk -d /path/to/data/
+
+Once you know which file you want to unbundle, simply use the ``reduce`` command like this:
+
+::
+
+  greduce /path/to/data/file
+
+Once you are working with unbundled FITS files you can still use the ``typewalk`` command with them
+to see the tags they contain. The binning and read_mode associated with each file is not displayed
+by the ``typewalk`` command. Instead you have to use the ``showd`` command, like this:
+
+::
+
+  gshowd --descriptors binning *.fits
+  gshowd --descriptors read_mode *.fits
+
 Data Reduction Steps
 --------------------
 
@@ -184,7 +209,7 @@ stacking, or simply as a convenience for reducing a number of data frames
 with a single command.
 
 The most common usage for ``typewalk`` is to generate a list of files
-with matching :module:`AstroData` tags. For example, to generate a list
+with matching tags. For example, to generate a list
 of all files in the current directory which are red camera biases with 2x4
 binning, and write this list out to a text file called
 ``bias.1x1.red.list``, use the following::

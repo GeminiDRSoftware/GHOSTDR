@@ -6,8 +6,6 @@
 Extraction and Weights
 **********************
 
-.. warning:: This chapter needs significant expansion and further detail.
-
 Weighted Extraction Background
 ==============================
 
@@ -125,7 +123,7 @@ fiber profiles are not quite Gaussian. We avoid the most significant problems wi
 while preserving the need to weight differently at high versus low signal-to-noise by
 convolving the variance array both spatially and spectrally. In the current implementation,
 the spectral weights are convolved by a Hanning window of ~7 pixels FWHM, and the spatial
-variance is convolved by a (Hanning?) function of ~2 pixels FWHM.
+variance is convolved by a function of ~2 pixels FWHM.
 
 Weighted Extraction Principle in 2D
 ===================================
