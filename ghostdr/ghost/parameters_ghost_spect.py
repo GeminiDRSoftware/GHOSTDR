@@ -184,6 +184,16 @@ class rejectCosmicRaysConfig(config.Config):
     n_steps = config.Field("Number of iterations", int, 1)
 
 
+class removeScatteredLightConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_scatteredLightRemoved",
+                          optional=True)
+    skip = config.Field("Skip removal of scattered light?", bool, True)
+    debug_spline_smoothness = config.RangeField(
+        "Scaling factor for spline smoothness", float, default=1, min=0.5)
+    debug_save_model = config.Field("Attach scattered light model to output?",
+                                    bool, False)
+
+
 class responseCorrectConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_responseCorrected",
                           optional=True)

@@ -33,7 +33,7 @@ import astrodata
 
 from geminidr.core.primitives_spect import Spect
 from geminidr.gemini.lookups import DQ_definitions as DQ
-from gempy.library import tracing
+from gempy.library import tracing, astrotools as at
 from gempy.gemini import gemini_tools as gt
 
 from .polyfit import GhostArm, Extractor, SlitView
@@ -760,6 +760,13 @@ class GHOSTSpect(GHOST):
                         '{}'.format(','.join([_.filename for _ in adinputs_orig
                                               if _ not in adinputs])))
 
+        # This check is to head off problems where the same flat is used for
+        # multiple ADs and gets binned but then needs to be rebinned (which
+        # isn't possible because the unbinned flat has been overwritten)
+        binnings = set((ad.detector_x_bin(), ad.detector_y_bin) for ad in adinputs)
+        if len(binnings) > 1:
+            raise ValueError("Not all input files have the same binning")
+
         # CJS: Heavily edited because of the new AD way
         # Get processed slits, slitFlats, and flats (for xmod)
         # slits and slitFlats may be provided as parameters
@@ -963,43 +970,43 @@ class GHOSTSpect(GHOST):
             # FIXME: This really could be done as part of flat processing!
             if params['flat_precorrect']:
                 try:
-                    # Bin the flat to the image binning
-                    if flat.detector_x_bin() != ad.detector_x_bin(
-                    ) or flat.detector_y_bin() != ad.detector_y_bin():
-                        xb = ad.detector_x_bin()
-                        yb = ad.detector_y_bin()
-                        flat = self._rebin_ghost_ad(flat, xb, yb)
+                    if not hasattr(flat[0], 'PIXELMODEL'):
+                        # Make a slit flat SlitView instance for getting a binned
+                        # pixel mask and then initialize this binned slit extractor
+                        flat_sview = SlitView(slitflat_data, slitflat_data,
+                            slitvpars.TABLE[0], mode=res_mode,
+                            microns_pix = 4.54 * 180 / 50, **sview_kwargs)
+                        unbinned_flat_extractor = Extractor(arm, flat_sview,
+                            badpixmask=flat[0].mask,
+                            vararray=flat[0].variance)
+                        flat[0].PIXELMODEL = unbinned_flat_extractor.make_pixel_model()
 
-                    # Make a slit flat SlitView instance for getting a binned
-                    # pixel mask and then initialize this binned slit extractor
-                    flat_sview = SlitView(slitflat_data, slitflat_data,
-                        slitvpars.TABLE[0], mode=res_mode,
-                        microns_pix = 4.54 * 180 / 50, **sview_kwargs)
+                    xbin, ybin = ad.detector_x_bin(), ad.detector_y_bin()
 
-                    binned_flat_extractor = Extractor(arm, flat_sview,
-                        badpixmask=ad[0].mask,
-                        vararray=flat[0].variance)
+                    # Bin the flat to the image binning... see note near
+                    # start of primitive about why this is bad code
+                    if (flat.detector_x_bin() != xbin or
+                            flat.detector_y_bin() != ybin):
+                        flat = self._rebin_ghost_ad(flat, xbin, ybin)
+                    binned_pixmod = flat[0].PIXELMODEL
 
-                    # Recalculate the pixel model with the correct image binning
-                    flat[0].PIXELMODEL = binned_flat_extractor.make_pixel_model()
-
-                    pix_to_correct = flat[0].PIXELMODEL > 0
+                    illuminated_pixels = binned_pixmod > 0
 
                     # Lets find the flat normalisation constant.
                     # FIXME Should this normalisation be done elsewhere?
-                    mean_flat_flux = np.mean(flat[0].data[pix_to_correct])
-                    mean_pixelmod = np.mean(flat[0].PIXELMODEL[pix_to_correct])
+                    mean_flat_flux = np.mean(flat[0].data[illuminated_pixels])
+                    mean_pixelmod = np.mean(binned_pixmod[illuminated_pixels])
 
                     # Now find the correction.
-                    correction = flat[0].PIXELMODEL[pix_to_correct] / \
-                                 flat[0].data[pix_to_correct] * \
+                    correction = binned_pixmod[illuminated_pixels] / \
+                                 flat[0].data[illuminated_pixels] * \
                                  mean_flat_flux/mean_pixelmod
 
                     # Find additional bad pixels where the flat doesn't match PIXELMODEL
                     # This is important to have somewhere, because otherwise any
                     # newly dead pixels will result in divide by 0.
                     smoothed_flat = convolve_with_mask(flat[0].data,
-                                                       pix_to_correct)
+                                                       illuminated_pixels)
                     normalised_flat = flat[0].data / smoothed_flat
 
                     # Extra bad pixels are where the normalied flat differs from the
@@ -1011,9 +1018,9 @@ class GHOSTSpect(GHOST):
                     # data.
                     extra_bad = (
                         np.abs(
-                            normalised_flat - flat[0].PIXELMODEL/mean_pixelmod
+                            normalised_flat - binned_pixmod/mean_pixelmod
                         ) > 0.7
-                    ) & pix_to_correct * (
+                    ) & illuminated_pixels * (
                         smoothed_flat > 0.1 * mean_flat_flux
                     )
 
@@ -1023,16 +1030,16 @@ class GHOSTSpect(GHOST):
                     # TODO: MJI to add description of what this (should) do
                     if params['debug_smooth_flat_spatially']:
                         correction_2d = np.zeros_like(flat[0].data)
-                        correction_2d[pix_to_correct] = correction
+                        correction_2d[illuminated_pixels] = correction
                         smoothed_correction_2d = convolve_with_mask(
-                            correction_2d, pix_to_correct)
+                            correction_2d, illuminated_pixels)
                         smoothed_correction_2d[
-                            pix_to_correct
-                        ] = correction_2d[pix_to_correct]
+                            illuminated_pixels
+                        ] = correction_2d[illuminated_pixels]
                         smoothed_correction_2d = nd.median_filter(
                             smoothed_correction_2d, size=(7, 1)
                         )
-                        correction = smoothed_correction_2d[pix_to_correct]
+                        correction = smoothed_correction_2d[illuminated_pixels]
 
                     # This is where we add the new bad pixels in. It is needed for
                     # computing correct weights.
@@ -1043,11 +1050,11 @@ class GHOSTSpect(GHOST):
                     extractor.badpixmask[extra_bad] |= BAD_FLAT_FLAG
                     
                     # MJI: Pre-correct the data here. 
-                    corrected_data[pix_to_correct] *= correction
-                    corrected_var[pix_to_correct] *= correction**2
+                    corrected_data[illuminated_pixels] *= correction
+                    corrected_var[illuminated_pixels] *= correction**2
 
                     new_correction = np.ones_like(corrected_data)
-                    new_correction[pix_to_correct] = correction
+                    new_correction[illuminated_pixels] = correction
                     test_ad = astrodata.create(flat.phu)
                     test_ad.append(new_correction)
                     test_ad.write("test_correction.fits", overwrite=True)
@@ -1298,6 +1305,7 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        skip_pixel_model = params.get('skip_pixel_model', False)
 
         # Make no attempt to check if primitive has already been run - may
         # have new calibrators we wish to apply.
@@ -1309,7 +1317,7 @@ class GHOSTSpect(GHOST):
             flat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
-        if params['skip_pixel_model']:
+        if skip_pixel_model:
             log.stdinfo('Skipping adding the pixel model to the flat'
                         'step')
 
@@ -1392,7 +1400,7 @@ class GHOSTSpect(GHOST):
 
             #MJI: Compute a pixel-by-pixel model of the flat field from the new XMOD and
             #the slit image.
-            if not params['skip_pixel_model']:
+            if not skip_pixel_model:
                 # FIXME: MJI Copied directly from extractProfile. Is this compliant?
                 try:
                     poly_wave = self._get_polyfit_filename(ad, 'wavemod')
@@ -2181,6 +2189,104 @@ class GHOSTSpect(GHOST):
 
         return adinputs
 
+    def removeScatteredLight(self, adinputs=None, **params):
+        """
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        skip: bool
+            skip primitive entirely?
+        debug_spline_smoothness: float
+            scaling factor for spline smoothness
+        debug_save_model: bool
+            attach scattered light model to output
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+        if params["skip"]:
+            log.stdinfo("Not removing scattered light since skip=True")
+            return adinputs
+
+        smoothness = params["debug_spline_smoothness"]
+        save_model = params["debug_save_model"]
+        is_flat = ['FLAT' in ad.tags for ad in adinputs]
+        self.getProcessedFlat([ad for ad in adinputs if not is_flat])
+        flat_list = [None if this_is_flat else self._get_cal(ad, 'processed_flat')
+                     for ad, this_is_flat in zip(adinputs, is_flat)]
+
+        for ad, flat in zip(*gt.make_lists(adinputs, flat_list, force_ad=True)):
+            if len(ad) > 1:
+                log.warning(f"{ad.filename} has more than one extension - ignoring")
+                continue
+            arm = ad.arm()
+            xbin, ybin = ad.detector_x_bin(), ad.detector_y_bin()
+            # Finer sampling is required vertically to ensure there remains
+            # data between the orders
+            xsampling, ysampling = 16, max(ybin, 4)
+            xrebin, yrebin = xsampling // xbin, ysampling // ybin
+            if xrebin * yrebin > 1:
+                ad_binned = self._rebin_ghost_ad(deepcopy(ad), xsampling, ysampling)
+            else:
+                ad_binned = ad
+            if flat is None:
+                illuminated_pixels = ad_binned[0].PIXELMODEL > 0  # will have been rebinned
+            else:
+                illuminated_pixels = flat[0].PIXELMODEL > 0
+                illuminated_pixels = np.logical_or.reduce(np.logical_or.reduce(
+                    illuminated_pixels.reshape(
+                        illuminated_pixels.shape[0] // ysampling, ysampling,
+                        illuminated_pixels.shape[1] // xsampling, xsampling),
+                    axis=1), axis=2)
+
+            # Keep bad pixels out of the fit
+            if ad_binned.mask is not None:
+                illuminated_pixels |= ad_binned.mask.astype(bool)
+
+            # Mark all pixels outside the topmost/bottommost orders as
+            # illuminated (i.e., do not use in the fit)
+            for ix, iy in enumerate(illuminated_pixels.argmax(axis=0)):
+                illuminated_pixels[:iy, ix] = True
+            for ix, iy in enumerate(illuminated_pixels[::-1].argmax(axis=0)):
+                if iy > 0:
+                    illuminated_pixels[-iy:, ix] = True
+                    if arm == "red":
+                        illuminated_pixels[-iy-768//ysampling:, ix] = True
+
+            # Reinstate some pixels to constrain the spline
+            if arm == "red":
+                illuminated_pixels[:256 // ysampling] = False
+
+            xpts = (np.arange(illuminated_pixels.shape[1]) + 0.5) * xrebin - 0.5
+            ypts = (np.arange(illuminated_pixels.shape[0]) + 0.5) * yrebin - 0.5
+            y, x = np.meshgrid(ypts, xpts, indexing="ij")
+            w = 1 / np.sqrt(ad_binned[0].variance[~illuminated_pixels])
+            zpts = ad_binned[0].data[~illuminated_pixels]
+            #if arm == "red":
+            #    zpts[y[~illuminated_pixels] > 4096 // ysampling] = 0
+            #    w[y[~illuminated_pixels] > 4096 // ysampling] = 2
+            spl = interpolate.SmoothBivariateSpline(
+                x[~illuminated_pixels], y[~illuminated_pixels],
+                zpts, w=w, bbox=[0, ad[0].shape[1]-1, 0, ad[0].shape[0]-1],
+                s=smoothness*np.sum(~illuminated_pixels))
+            scattered_light = spl(np.arange(ad[0].shape[1]),
+                                  np.arange(ad[0].shape[0]), grid=True).T / (xrebin * yrebin)
+            scattered_light[scattered_light < 0] = 0
+            if save_model:
+                ad[0].INPUT = ad_binned[0].data.copy()
+                ad[0].INPUT[illuminated_pixels] = 0
+                scat_bin = spl(xpts, ypts, grid=True).T
+                ad[0].SCATBIN = scat_bin
+                ad[0].SCATTERED = scattered_light
+                ad[0].ILLUM = illuminated_pixels.astype(int)
+            ad[0].subtract(scattered_light)
+
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=params["suffix"], strip=True)
+        return adinputs
+
     def responseCorrect(self, adinputs=None, **params):
         """
         Use a standard star observation and reference spectrum to provide
@@ -2928,3 +3034,36 @@ def plot_extracted_spectra(ad, arm, all_peaks, lines_out, mask=None, nrows=4):
             axes[i].axis('off')
         fig.subplots_adjust(hspace=0)
         pdf.savefig(bbox_inches='tight')
+
+
+def model_scattered_light(data, mask=None, variance=None):
+    """
+    Model scattered light by fitting a surface to the 2D image. The fit is
+    performed as the exponential of a 2D polynomial to ensure it is always
+    non-negative.
+
+    Parameters
+    ----------
+    data: `numpy.ndarray`
+        data which requires a surface fit
+    mask: `numpy.ndarray` (bool)/None
+        mask indicating which pixels to use in the fit
+
+    Returns
+    -------
+    model: `numpy.ndarray`
+        a model fit to the data
+    """
+    from datetime import datetime
+    ny, nx = data.shape
+    y, x = np.mgrid[:ny, :nx]
+    if variance is None:
+        w = np.ones_like(data)
+    else:
+        w = np.sqrt(at.divide0(1., variance))
+    start = datetime.now()
+    tck = interpolate.bisplrep(x[~mask].ravel()[::32], y[~mask].ravel()[::32], data[~mask].ravel()[::32], w=w[~mask].ravel()[::32])
+    print(datetime.now() - start)
+    spl = interpolate.bisplev(np.arange(nx), np.arange(ny), tck)
+    print(datetime.now() - start)
+    return spl
