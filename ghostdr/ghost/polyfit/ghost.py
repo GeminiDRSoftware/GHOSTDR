@@ -350,7 +350,6 @@ class GhostArm(Polyspect):
             # Our orders that we'll evaluate the spatial scale at:
             orders = np.linspace(self.m_min, self.m_max, num_conv).astype(int)
             mprimes = self.m_ref / orders - 1
-            y_values = np.arange(self.szy)
 
             # The slit coordinate in microns
             slit_coord = (np.arange(len(slit_profile)) -
@@ -373,34 +372,34 @@ class GhostArm(Polyspect):
                     #                     slit_profile, left=0, right=0)
 
                     # Create the slit model and convolve it to the detector pixels
-                    n_slit_sample = int(np.round(spat_scale[i]/microns_pix))
-                    profilex_sample = np.arange(xbase*n_slit_sample)/n_slit_sample - xbase // 2
+                    #n_slit_sample = int(np.round(spat_scale[i]/microns_pix))
+                    #profilex_sample = np.arange(xbase*n_slit_sample)/n_slit_sample - xbase // 2
 
-                    mod_slit_sample = np.interp(profilex_sample * spat_scale[i], 
-                        slit_coord, slit_profile, left=0, right=0)
-                    mod_slit = mod_slit_sample.reshape(xbase,n_slit_sample).sum(axis=1)
+                    #mod_slit_sample = np.interp(profilex_sample * spat_scale[i],
+                    #    slit_coord, slit_profile, left=0, right=0)
+                    #mod_slit = mod_slit_sample.reshape(xbase,n_slit_sample).sum(axis=1)
 
                     from .extract import resample_slit_profiles_to_detector
                     # This will always have an odd number of pixels with the
                     # central one being the middle of the slit
                     mod_slit2 = resample_slit_profiles_to_detector(
-                        [slit_profile], profile_y_pix=slit_coord/spat_scale[i],
-                        profile_center=0)[1][0]
-                    mod_slit2_ft = (np.fft.rfft(np.fft.fftshift(mod_slit2), n=flat.shape[0]))
+                        [slit_profile], profile_y_microns=slit_coord,
+                        profile_center=0, detpix_microns=spat_scale[i])[1][0]
+                    #mod_slit2_ft = (np.fft.rfft(np.fft.fftshift(mod_slit2), n=flat.shape[0]))
 
                     # Normalise the slit model and Fourier transform for
                     # convolution. This has to be an l2 norm, in order to 
                     # work with variable slit lengths and mean that 
                     # the correlation peak is the least squares fit.
                     #mod_slit /= np.sum(mod_slit)
-                    mod_slit /= np.sqrt(np.sum(mod_slit ** 2))
-                    mod_slit_ft = np.fft.rfft(np.fft.fftshift(mod_slit))
+                    #mod_slit /= np.sqrt(np.sum(mod_slit ** 2))
+                    #mod_slit_ft = np.fft.rfft(np.fft.fftshift(mod_slit))
 
                     # FIXME: Remove num_conv on next line and see if it makes
                     # a difference!
-                    flat_conv_cube[j, :, i] = np.fft.irfft(
-                        (im_fft[:, i] * mod_slit_ft.conj()) / num_conv
-                    )
+                    #flat_conv_cube[j, :, i] = np.fft.irfft(
+                    #    (im_fft[:, i] * mod_slit_ft.conj()) / num_conv
+                    #)
                     # CJS: Non-Fourier convolution
                     conv = np.correlate(flat[:, i], mod_slit2, mode="same")
                     flat_conv_cube[j, :, i] = conv / conv.sum()

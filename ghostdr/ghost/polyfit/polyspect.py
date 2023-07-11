@@ -493,8 +493,8 @@ class Polyspect(object):
         new_x = old_x + the_shift
         return new_x
 
-    def fit_x_to_image(self, data, xparams, decrease_dim=8, search_pix=15,
-                       inspect=False):
+    def fit_x_to_image(self, data, xparams, decrease_dim=8, sampling=1,
+                       search_pix=15, inspect=False):
         """
         Fit a "tramline" map.
 
@@ -539,6 +539,9 @@ class Polyspect(object):
             Median filter by this amount in the dispersion direction and
             decrease the dimensionality of the problem accordingly.
             This helps with both speed and robustness.
+        sampling: int
+            Further speed up problem by regularly sampling datapoints in
+            the dispersion direction
         search_pix: int, optional
             Search within this many pixels of the initial model.
         inspect: bool, optional
@@ -598,28 +601,15 @@ class Polyspect(object):
         # Do this by searching for the maximum value along the
         # order for search_pix on either side of the initial
         # model pixels in the spatial direction.
-        #for i in range(x_values.shape[0]):  # Go through each order...
-        #    for j in range(x_values.shape[1]): # pylint: disable=maybe-no-member
-        #        xind = int(np.round(x_values[i, j]))
-        #        lpix = max(0, self.szx // 2 + xind - search_pix)
-        #        rpix = min(self.szx // 2 + xind + search_pix + 1, image_med.shape[1] - 1)
-        #        peakpix = image_med[j, lpix:rpix]
-        #        if len(peakpix) > 0:
-        #            x_values[i, j] += np.argmax(peakpix) - search_pix
-        #            # Put a sigma for weighted fit purposes
-        #            sigma[i, j] = 1. / np.max(peakpix)
-        #        else:
-        #            sigma[i, j] = 1E5
-        # Down weight any regions where the flux peak was less than 0.
-        #sigma[sigma < 0] = 1E5
-
         for j in range(x_values.shape[1]):
             xindices = np.round(x_values[:, j]).astype(int)
             for i, xind in enumerate(xindices):
                 lpix = max(0, self.szx // 2 + xind - search_pix)
-                rpix = min(self.szx // 2 + xind + search_pix + 1, image_med.shape[1] - 1)
+                rpix = min(self.szx // 2 + xind + search_pix + 1,
+                           image_med.shape[1] - 1)
                 peakpix = lpix + np.argmax(image_med[j, lpix:rpix])
-                new_peak = 0.5 * (image_med[j, peakpix+1] - image_med[j, peakpix-1]) / (3 * image_med[j, peakpix] - image_med[j, peakpix-1:peakpix+2].sum())
+                new_peak = 0.5 * ((image_med[j, peakpix+1] - image_med[j, peakpix-1]) /
+                                  (3 * image_med[j, peakpix] - image_med[j, peakpix-1:peakpix+2].sum()))
                 if abs(new_peak) < 1:
                     x_values[i, j] = new_peak + peakpix - self.szx // 2
                     sigma[i, j] = 1. / np.sqrt(image_med[j, peakpix])
@@ -644,8 +634,8 @@ class Polyspect(object):
                         color = 'red')
             plt.show()
 
-        fitted_params = self.fit_to_x(x_values, xparams, y_values=y_values,
-                                      sigma=sigma)
+        fitted_params = self.fit_to_x(x_values[:, ::sampling], xparams, y_values=y_values[:, ::sampling],
+                                      sigma=sigma[:, ::sampling])
         if inspect:
             # This will plot the result of the fit once successful so
             # the user can inspect the result.
@@ -761,6 +751,8 @@ class Polyspect(object):
         xdeg = init_mod.shape[1] - 1
         # Do the fit!
         print("Fitting (this can sometimes take a while...)")
+        from datetime import datetime
+        start = datetime.now()
         init_resid = self.fit_resid(init_mod, orders, y_values, x_values,
                                     ydeg=ydeg, xdeg=xdeg, sigma=sigma)
         init_resid = (init_resid * sigma)[sigma < 1e5]
@@ -772,6 +764,7 @@ class Polyspect(object):
             rms = np.std((final_resid * sigma)[sigma < 1e5])
             bad = np.where(np.logical_and(abs(final_resid * sigma) > rms * sigma_rej,
                                           sigma < 1e5))[0]
+            print(f"Time after {niter+1} iteration(s):", datetime.now()-start)
             if bad.size:
                 sigma[bad] = 1e5
                 #print("REJECTING ", bad.size)

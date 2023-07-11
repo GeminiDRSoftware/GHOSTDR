@@ -763,7 +763,7 @@ class GHOSTSpect(GHOST):
         # This check is to head off problems where the same flat is used for
         # multiple ADs and gets binned but then needs to be rebinned (which
         # isn't possible because the unbinned flat has been overwritten)
-        binnings = set((ad.detector_x_bin(), ad.detector_y_bin) for ad in adinputs)
+        binnings = set(ad.binning() for ad in adinputs)
         if len(binnings) > 1:
             raise ValueError("Not all input files have the same binning")
 
@@ -968,6 +968,7 @@ class GHOSTSpect(GHOST):
 
             # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
+            new_correction = None
             if params['flat_precorrect']:
                 try:
                     if not hasattr(flat[0], 'PIXELMODEL'):
@@ -1245,9 +1246,7 @@ class GHOSTSpect(GHOST):
                 # spectrum
                 for order in range(ext.data.shape[0]):
                     for ob in range(ext.data.shape[-1]):
-                        log.stdinfo('Re-gridding order {:2d}, obj {:1d}'.format(
-                            order, ob,
-                        ))
+                        log.debug(f'Re-gridding order {order:2d}, obj {ob:1d}')
                         flux_for_adding = np.interp(wavl_grid,
                                                     ext.WAVL[order],
                                                     ext.data[order, :, ob],
@@ -1355,24 +1354,9 @@ class GHOSTSpect(GHOST):
                                 microns_pix=4.54*180/50,
                                 binning=slit_flat.detector_x_bin())
 
-            # This is an attempt to remove the worse cosmic rays
-            # in the hope that the convolution is not affected by them.
-            # Start by performing a median filter
-            medfilt = signal.medfilt2d(ad[0].data, (5,5))
-            # Now find which pixels have a percentage difference larger than
-            # a defined value between the data and median filter, and replace
-            # those in the data with the median filter values. Also, only
-            # replace values above the data average, so as not to replace low
-            # S/N values at the edges.
-            data = ad[0].data.copy()
-            condit = np.where(np.abs(
-                (medfilt - data)/(medfilt+1)) > 200
-                              ) and np.where(data > np.average(data))
-            #data[condit] = medfilt[condit]
-
             # Convolve the flat field with the slit profile
             flat_conv = ghost_arm.slit_flat_convolve(
-                data,
+                ad[0].data,
                 slit_profile=slitview.slit_profile(arm=arm),
                 spatpars=spatpars[0].data, microns_pix=slitview.microns_pix,
                 xpars=xpars[0].data
@@ -1380,16 +1364,17 @@ class GHOSTSpect(GHOST):
 
             #flat_conv = signal.medfilt2d(flat_conv, (5, 5))
             #flat_conv = nd.gaussian_filter(flat_conv, (5, 0))
-            test_ad = astrodata.create(ad.phu)
-            test_ad.filename = "test_flat_conv.fits"
-            test_ad.append(flat_conv)
-            test_ad.write(overwrite=True)
+            #test_ad = astrodata.create(ad.phu)
+            #test_ad.filename = "test_flat_conv.fits"
+            #test_ad.append(flat_conv)
+            #test_ad.write(overwrite=True)
             #crash
 
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
                                                      xparams=xpars[0].data,
                                                      decrease_dim=8,
+                                                     sampling=2,
                                                      inspect=False)
 
             # CJS: Append the XMOD as an extension. It will inherit the
@@ -2831,8 +2816,6 @@ class GHOSTSpect(GHOST):
         str/None:
             Filename (including path) of the required polyfit file
         """
-        if caltype == "spatmod" and ad.arm() == "red":
-            return "new_spatmod.fits"
         return polyfit_lookup.get_polyfit_filename(self.log, ad.arm(),
                                                    ad.res_mode(), ad.ut_date(),
                                                    ad.filename, caltype)
