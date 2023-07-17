@@ -767,6 +767,7 @@ class Polyspect(object):
             print(f"Time after {niter+1} iteration(s):", datetime.now()-start)
             if bad.size:
                 sigma[bad] = 1e5
+                init_mod = bestp[0]
                 #print("REJECTING ", bad.size)
             else:
                 break

@@ -735,6 +735,8 @@ class GHOSTSpect(GHOST):
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
             quality assurance.
+        extract2d: bool
+            perform 2D extraction to account for slit tilt?
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -748,6 +750,7 @@ class GHOSTSpect(GHOST):
         add_cr_map = params["debug_cr_map"]
         add_weight_map = params["debug_weight_map"]
         optimal_extraction = params["weighting"] == "optimal"
+        extract2d = params["extract2d"]
 
         # This primitive modifies the input AD structure, so it must now
         # check if the primitive has already been applied. If so, it must be
@@ -882,7 +885,7 @@ class GHOSTSpect(GHOST):
             # we need to make a synthetic slit profile so this has moved up
             if 'ARC' in ad.tags:
                 # Extracts entire slit first, and then the two IFUs separately
-                objs_to_use = [[], [0, 1]]
+                objs_to_use = [[], list(set([0, 1]) - set(ifu_stowed))]
                 use_sky = [True, False]
                 find_crs = [False, False]
                 sky_correct_profiles = False
@@ -1097,7 +1100,7 @@ class GHOSTSpect(GHOST):
                 # Need to use corrected_data here; the data in ad[0] is
                 # overwritten with the first extraction pass of this loop
                 # (see the try-except statement at line 925)
-                DUMMY, _, extracted_weights = extractor.one_d_extract(
+                extracted_flux, extracted_var, extracted_weights = extractor.one_d_extract(
                     #data=corrected_data, vararray=corrected_var,
                     data=safe_data, vararray=safe_variance,
                     correct_for_sky=sky_correct_profiles,
@@ -1123,11 +1126,12 @@ class GHOSTSpect(GHOST):
 
                 #extracted_flux = DUMMY
                 #extracted_var = np.zeros_like(DUMMY, dtype=np.float32)
-                extracted_flux, extracted_var = extractor.two_d_extract(
-                    corrected_data,
-                    extraction_weights=extracted_weights,
-                    vararray=corrected_var,
-                )
+                if extract2d:
+                    extracted_flux, extracted_var = extractor.two_d_extract(
+                        corrected_data,
+                        extraction_weights=extracted_weights,
+                        vararray=corrected_var,
+                    )
 
                 # CJS: Since you don't use the input AD any more, I'm going to
                 # modify it in place, in line with your comment that you're

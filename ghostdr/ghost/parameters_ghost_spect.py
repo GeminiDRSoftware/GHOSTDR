@@ -88,12 +88,12 @@ class extractProfileConfig(config.Config):
                                    allowed={"uniform": "uniform weighting",
                                             "optimal": "optimal extraction"},
                                    default="optimal")
+    extract2d = config.Field("Perform 2D extraction?", bool, True)
     debug_smooth_flat_spatially = config.Field(
         "Smooth the flat field image before applying?", bool, False)
     seeing = config.RangeField("FWHM of seeing disc if no processed_slit is "
                                "available", float, None, min=0.2, optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, False)
-    debug_2d_extraction = config.Field("Perform 2D extraction?", bool, True)
     debug_weight_map = config.Field("Add weight map to output?", bool, False)
     debug_cr_map = config.Field("Add CR map to output?", bool, False)
     debug_cr_order = config.RangeField("Order for CR debugging plot", int, None,

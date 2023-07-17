@@ -66,15 +66,16 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
         Array of indices of bad pixels in ``col_data``.
     """
     spat_conv_weights = np.array([0.25, .5, .25])
-    good = col_inv_var > 0
+    # Don't try to fit points which aren't expected to have any signal
+    orig_good = np.logical_and(col_inv_var > 0,
+                               phi.sum(axis=0) > 0)
 
     # If we don't have enough pixels to fit we can't reject
-    if good.sum() < phi.shape[0]:
+    if orig_good.sum() < phi.shape[0]:
         result = optimize.lsq_linear(phi.T, col_data, bounds=(0, np.inf))
-        #print(phi.shape, good)
-        #print("RESULT", *pixel, result.x)
         return [], result.x
 
+    good = orig_good.copy()
     if debug:
         print("\n")
         print("OBJECT PROFILES (phi)")
@@ -89,6 +90,9 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
         for p in phi:
             print([p[good]])
         raise
+    if not reject:  # we have a result, initial VAR array OK for weights
+        return [], result.x
+
     model = np.dot(result.x, phi)
     inv_var_use = 1. / np.maximum(noise_model(model) + (snoise * model) ** 2, 0)
     nit = 0
@@ -124,14 +128,13 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
             print("-" * 60)
         var_use = ndimage.convolve1d(np.maximum(noise_model(model) + (snoise * model) ** 2, 0), spat_conv_weights)
         inv_var_use = np.where(var_use > 0, 1. / var_use, 0)
-        max_deviation = sigma * np.sqrt(var_use)
         deviation = (col_data - model) * np.sqrt(inv_var_use)
         if debug:
             print(np.sqrt(var_use))
             print(deviation)
             print("-" * 60)
         worst_offender = np.argmax(abs(deviation)[good])
-        if abs(deviation[good][worst_offender]) > sigma and reject:
+        if abs(deviation[good][worst_offender]) > sigma:
             good[np.where(good)[0][worst_offender]] = False
         #new_bad = (abs(col_data - model) > max_deviation) & good
         #if new_bad.any():
@@ -140,10 +143,8 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
             break
         nit += 1
 
-    if reject:
-        new_bad = np.where((col_inv_var > 0) & (abs(deviation) > sigma))[0]
-    else:
-        new_bad = []
+    new_bad = np.where(np.logical_and.reduce(
+        [col_inv_var > 0, abs(deviation) > sigma, orig_good]))[0]
     #print("RESULT", *pixel, result.x)
 
     # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
@@ -156,10 +157,12 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
         print("BAD", new_bad, phi.shape)
         # Sky is always last profile in phi?
         summed_fluxes = [np.sum(col_data[p>0]) for p in phi[:-1]]
-        print("SUMMED FLUXES IN OBJECT FIBRES (not sky subtracted)", summed_fluxes)
+        print("SUMMED FLUXES IN OBJECT FIBRES (not sky subtracted)",
+              summed_fluxes)
         plt.ioff()
         plt.plot(col_data, 'k-', label='data')
-        plt.plot(model + max_deviation, 'r-', label='limit')
+        # max allowed value
+        plt.plot(model + sigma * np.sqrt(var_use), 'r-', label='limit')
         plt.plot(model, 'b-', label='model')
         for ppp, amp in zip(phi, result.x):
             plt.plot(ppp * amp, ':')
@@ -676,7 +679,7 @@ class Extractor(object):
 
                 x_ix, phi, profiles = resample_slit_profiles_to_detector(
                     profiles, profile_y_microns, x_map[i, j] + nx // 2,
-                    detpix_microns = matrices[i, j, 0, 0])
+                    detpix_microns=matrices[i, j, 0, 0], debug=debug_this_pixel)
                 phi /= phi.sum(axis=1)[:, np.newaxis]
 
                 # Create our column cutout for the data and the PSF. 
@@ -721,9 +724,11 @@ class Extractor(object):
                 if self.transpose:
                     col_data = data[j, x_ix]
                     col_inv_var = pixel_inv_var[j, x_ix]
+                    corr = 1 if correction is None else correction[j, x_ix]
                 else:
                     col_data = data[x_ix, j]
                     col_inv_var = pixel_inv_var[x_ix, j]                    
+                    corr = 1 if correction is None else correction[x_ix, j]
 
                 if debug_this_pixel:
                     profile_y_pix = profile_y_microns / matrices[i, j, 0, 0]
@@ -849,11 +854,11 @@ class Extractor(object):
                 # any overlapping orders:
                 if debug_this_pixel:
                     if correction is None:
-                        print("SUMS", np.sum(col_data), np.sum(col_data * correction[x_ix, j]))
-                        print("FLATCORR VALUES")
-                        print(correction[x_ix, j])
-                    else:
                         print("SUMS", np.sum(col_data), np.sum(col_data))
+                    else:
+                        print("SUMS", np.sum(col_data), np.sum(col_data * corr))
+                        print("FLATCORR VALUES")
+                        print(corr)
                     print("EXTRACTION WEIGHTS:")
                 for ii, ew_one in enumerate(extraction_weights):
                     ew_one[x_ix, j] += pixel_weights[:, ii]
@@ -863,9 +868,7 @@ class Extractor(object):
                 # Actual extraction is simple: Just matrix-multiply the
                 # (flat-)corrected data by the weights.
                 #extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
-                extracted_flux[i, j, :] = np.dot(
-                    col_data * (1 if correction is None else correction[x_ix, j]),
-                    pixel_weights)
+                extracted_flux[i, j, :] = np.dot(col_data * corr, pixel_weights)
                 if debug_this_pixel:
                     print("EXTRACTED FLUXES", extracted_flux[i, j])
 
@@ -875,7 +878,7 @@ class Extractor(object):
                 # variance in the simple explicit way for a linear combination
                 # of independent pixels.
                 extracted_var[i, j, :] = np.dot(
-                    1.0 / np.maximum(col_inv_var, 1e-18), pixel_weights ** 2)
+                    corr * corr / np.maximum(col_inv_var, 1e-18), pixel_weights ** 2)
 
         print("\n")
         return extracted_flux, extracted_var, extraction_weights
@@ -1307,7 +1310,8 @@ class Extractor(object):
 
 
 def resample_slit_profiles_to_detector(profiles, profile_y_microns=None,
-                                       profile_center=None, detpix_microns=None):
+                                       profile_center=None, detpix_microns=None,
+                                       debug=False):
     """
     This code takes one or more 1D profiles from the slitviewer camera and
     resamples them onto the (coarser) sampling of the echellograms. Because we
@@ -1347,32 +1351,65 @@ def resample_slit_profiles_to_detector(profiles, profile_y_microns=None,
         profiles = list(profiles)
 
     half_slitprof_pixel = 0.5 * np.diff(profile_y_microns).mean()
-    xspline = np.r_[profile_y_microns[0] - half_slitprof_pixel,
-                    profile_y_microns,
-                    profile_y_microns[-1] + half_slitprof_pixel]
 
     # To avoid repeated computations, we recast each profile as a CubicSpline
-    # with x being the separation from the slit center in *microns*
+    # with x being the separation from the slit center in *microns*. The
+    # splines only extend over the region of data, to ensure they're precisely
+    # zero away from this.
     for i, profile in enumerate(profiles):
         if not isinstance(profile, CubicSpline):
-            profiles[i] = CubicSpline(xspline, np.r_[0, profile, 0])
+            #print(f"PROFILE {i}")
+            #print(profile)
+            # There's probably a better way to do this
+            good = np.ones_like(profile, dtype=bool)
+            for j, val in enumerate(profile):
+                if val == 0:
+                    good[j] = False
+                else:
+                    break
+            for j, val in enumerate(profile[::-1], start=1):
+                if val == 0:
+                    good[-j] = False
+                else:
+                    break
+            #print(good)
+            xspline = np.r_[profile_y_microns[good].min() - half_slitprof_pixel,
+                            profile_y_microns[good],
+                            profile_y_microns[good].max() + half_slitprof_pixel]
+            #print("XSPLINE", xspline)
+            profiles[i] = CubicSpline(xspline, np.r_[0, profile[good], 0])
+            #print(profiles[i].x)
+            #print(profiles[i](profiles[i].x))
 
     slitview_pixel_edges = profile_center + np.linspace(
-        xspline[0], xspline[-1], xspline.size-1) / detpix_microns
-    x_ix = np.round([slitview_pixel_edges.min(), slitview_pixel_edges.max() + 1]).astype(int)
-    pixel_edges_microns = (np.arange(x_ix[0], x_ix[1]+0.1) - 0.5 - profile_center) * detpix_microns
+        profile_y_microns[0] - half_slitprof_pixel,
+        profile_y_microns[-1] + half_slitprof_pixel,
+        profile_y_microns.size + 1) / detpix_microns
+    x_ix = np.round([slitview_pixel_edges.min(),
+                     slitview_pixel_edges.max() + 1]).astype(int)
+    pixel_edges_microns = (np.arange(x_ix[0], x_ix[1]+0.1) - 0.5 -
+                           profile_center) * detpix_microns
 
-    #profile_y_pix = profile_y_microns / detpix_microns
-    #pixel_locations = profile_center + profile_y_pix
-    #pixel_edges = pixel_locations[0] + (np.arange(pixel_locations.size + 1) - 0.5) * np.diff(pixel_locations).mean()
-    #profiles = [CubicSpline(np.r_[pixel_edges[0], pixel_locations, pixel_edges[-1]], np.r_[0, profile, 0])
-    #            for profile in profiles]
-    # location of *outer edge* of slitviewer edge pixel
     phi = np.zeros((len(profiles), x_ix[1] - x_ix[0]))
-
     for i in range(phi.shape[1]):
-        phi[:, i] = [profile.integrate(max(pixel_edges_microns[i], profile.x[0]),
-                                       min(pixel_edges_microns[i+1], profile.x[-1]))
+        phi[:, i] = [profile.integrate(min(max(pixel_edges_microns[i], profile.x[0]), profile.x[-1]),
+                                       max(min(pixel_edges_microns[i+1], profile.x[-1]), profile.x[0]))
                      for profile in profiles]
+
+    if debug:
+        for j, profile in enumerate(profiles):
+            print(f"PROFILE {j}")
+            print(profile.x)
+            print(profile(profile.x))
+            print("="*60)
+            print(pixel_edges_microns)
+            print(profile(pixel_edges_microns))
+            print("="*60)
+            for i in range(phi.shape[1]):
+                x1 = min(max(pixel_edges_microns[i], profile.x[0]), profile.x[-1])
+                x2 = max(min(pixel_edges_microns[i+1], profile.x[-1]), profile.x[0])
+                print(x1, x2, profile.integrate(x1, x2))
+            print(phi[j])
+
     phi[phi < 0] = 0
     return np.arange(*x_ix, dtype=int), phi, profiles
