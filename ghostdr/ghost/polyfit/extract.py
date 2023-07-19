@@ -601,9 +601,9 @@ class Extractor(object):
         # code here for now. (code deleted but comment left as reminder)
 
         # Our extracted arrays, and the weights array
-        extracted_flux = np.zeros((nm, ny, no))
-        extracted_var = np.zeros((nm, ny, no))
-        extraction_weights = np.zeros((no, nx, ny))
+        extracted_flux = np.zeros((nm, ny, no), dtype=np.float32)
+        extracted_var = np.zeros((nm, ny, no), dtype=np.float32)
+        extraction_weights = np.zeros((no, nx, ny), dtype=np.float32)
 
         m_init = models.Polynomial1D(degree=1)
         fit_it = fitting.FittingWithOutlierRemoval(fitting.LinearLSQFitter(), sigma_clip)
@@ -651,22 +651,11 @@ class Extractor(object):
             pixel_inv_var = 1.0/ndimage.convolve1d(1.0/pixel_inv_var,
                                                    spat_conv_weights, axis=0)
         
-        #Set the inverse variance to zero for bad pixels. Note that if all pixels end
-        #up being bad for an extraction, then it will fail.
-        if self.badpixmask is not None:
-            pixel_inv_var[self.badpixmask.astype(bool)] = 0
-
         # Loop through all orders then through all y pixels.
         print("    Extracting order ", end="")
         for i in range(nm):
             print(f"{self.arm.m_min+i}...", end="")
             sys.stdout.flush()
-
-            # Create an empty weight array. Base the size on the largest
-            # slit magnification
-            # for this order.
-            nx_cutout = int(np.ceil(self.slitview.slit_length / np.min(
-                matrices[i, :, 0, 0])))
 
             for j in range(ny):
                 #print(f"PIXEL {self.arm.m_min+i} {j}")
@@ -725,16 +714,21 @@ class Extractor(object):
                     col_data = data[j, x_ix]
                     col_inv_var = pixel_inv_var[j, x_ix]
                     corr = 1 if correction is None else correction[j, x_ix]
+                    badpix = (np.zeros_like(col_data, dtype=bool)
+                              if self.badpixmask is None else self.badpixmask[j, x_ix].astype(bool))
                 else:
                     col_data = data[x_ix, j]
                     col_inv_var = pixel_inv_var[x_ix, j]                    
                     corr = 1 if correction is None else correction[x_ix, j]
+                    badpix = (np.zeros_like(col_data, dtype=bool)
+                              if self.badpixmask is None else self.badpixmask[x_ix, j].astype(bool))
 
                 if debug_this_pixel:
                     profile_y_pix = profile_y_microns / matrices[i, j, 0, 0]
                     print(f"DEBUGGING {x_ix}, {j}")
                     print(f"X_MAP  {self.arm.x_map[i, j*self.arm.ybin:(j+1)*self.arm.ybin]} -> {x_map[i, j]}")
-                    print(x_map[i, j] + nx // 2 + profile_y_pix)
+                    #print(x_map[i, j] + nx // 2 + profile_y_pix)
+                    print(badpix)
                     plt.ioff()
                     fig, ax = plt.subplots()
                     ax.plot(x_ix, phi[0])
@@ -743,8 +737,10 @@ class Extractor(object):
                     ax.plot(x_ix, col_data / col_data.sum())
                     plt.show()
                     plt.ion()
+
                 # Search for additional cosmic rays here, by seeing if the data
                 # look different to the model.
+                col_inv_var[badpix] = 0
                 additional_crs, model_amps = find_additional_crs(
                     phi, col_data, col_inv_var,
                     noise_model=noise_model, snoise=snoise, sigma=sigma,
@@ -774,7 +770,7 @@ class Extractor(object):
                         minimum_variance[good_pix,:])
 
                 if len(additional_crs) > 0:
-                    col_inv_var[additional_crs] = 0
+                    badpix[additional_crs] = True
                     if self.badpixmask is not None:
                         if self.transpose:
                             self.badpixmask[j, x_ix[additional_crs]] |= \
@@ -838,8 +834,7 @@ class Extractor(object):
                 sum_models = phi_scaled.sum(axis=0)
                 col_var = noise_model(sum_models)
                 col_inv_var = astrotools.divide0(1., col_var)
-                if len(additional_crs) > 0:
-                    col_inv_var[additional_crs] = 0
+                col_inv_var[badpix] = 1e-18
                 for ii in np.arange(no):  # for each object
                     # Avoid NaNs if there is no flux at all in a pixel
                     frac = phi_scaled[ii] / (sum_models + 1e-10)
@@ -849,19 +844,25 @@ class Extractor(object):
                     else:
                         pixel_weights[:, ii] = (np.where(col_inv_var == 0, 0, frac) /
                                                 np.sum(phi[ii][col_inv_var > 0]))
+                    pixel_weights[badpix, ii] = 0
 
                 # FIXME: Search here for weights that are non-zero for
                 # any overlapping orders:
                 if debug_this_pixel:
                     if correction is None:
-                        print("SUMS", np.sum(col_data), np.sum(col_data))
+                        print("SUM", np.sum(col_data))
                     else:
                         print("SUMS", np.sum(col_data), np.sum(col_data * corr))
                         print("FLATCORR VALUES")
                         print(corr)
+                    print("INVERSE VARIANCE")
+                    print(col_inv_var)
                     print("EXTRACTION WEIGHTS:")
                 for ii, ew_one in enumerate(extraction_weights):
+                    if debug_this_pixel:
+                        print(ew_one[x_ix, j])
                     ew_one[x_ix, j] += pixel_weights[:, ii]
+                    ew_one[x_ix, j][badpix] = 0
                     if debug_this_pixel:
                         print(ew_one[x_ix, j])
 
@@ -869,8 +870,6 @@ class Extractor(object):
                 # (flat-)corrected data by the weights.
                 #extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
                 extracted_flux[i, j, :] = np.dot(col_data * corr, pixel_weights)
-                if debug_this_pixel:
-                    print("EXTRACTED FLUXES", extracted_flux[i, j])
 
                 # Rather than trying to understand and
                 # document Equation 17 from Sharp and Birchall, which 
@@ -879,6 +878,9 @@ class Extractor(object):
                 # of independent pixels.
                 extracted_var[i, j, :] = np.dot(
                     corr * corr / np.maximum(col_inv_var, 1e-18), pixel_weights ** 2)
+                if debug_this_pixel:
+                    print("EXTRACTED FLUXES", extracted_flux[i, j])
+                    print("EXTRACTED VAR", extracted_var[i, j])
 
         print("\n")
         return extracted_flux, extracted_var, extraction_weights
@@ -1402,9 +1404,9 @@ def resample_slit_profiles_to_detector(profiles, profile_y_microns=None,
             print(profile.x)
             print(profile(profile.x))
             print("="*60)
-            print(pixel_edges_microns)
-            print(profile(pixel_edges_microns))
-            print("="*60)
+            #print(pixel_edges_microns)
+            #print(profile(pixel_edges_microns))
+            #print("="*60)
             for i in range(phi.shape[1]):
                 x1 = min(max(pixel_edges_microns[i], profile.x[0]), profile.x[-1])
                 x2 = max(min(pixel_edges_microns[i+1], profile.x[-1]), profile.x[0])

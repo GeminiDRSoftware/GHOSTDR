@@ -10,9 +10,8 @@ import math
 import warnings
 from copy import deepcopy
 import scipy
-import scipy.signal as signal
 import functools
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, timedelta
 import astropy.coordinates as astrocoord
 from astropy.time import Time
 from astropy.io.ascii.core import InconsistentTableError
@@ -28,6 +27,7 @@ from gwcs.wcs import WCS as gWCS
 from pysynphot import observation, spectrum
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from importlib import import_module
 
 import astrodata
 
@@ -97,6 +97,39 @@ class GHOSTSpect(GHOST):
         super(GHOSTSpect, self).__init__(adinputs, **kwargs)
         self._param_update(parameters_ghost_spect)
         self.keyword_comments.update(keyword_comments.keyword_comments)
+
+    def addDQ(self, adinputs=None, **params):
+        """
+        Quick'n'dirty addition of known bad pixels to FLATs only
+        """
+        log = self.log
+        adinputs = super().addDQ(adinputs, **params)
+        for ad in adinputs:
+            if 'FLAT' in ad.tags:
+                xbin, ybin = ad.detector_x_bin(), ad.detector_y_bin()
+                arm = ad.arm()
+                ut_date = ad.ut_date().strftime("%Y-%m-%d")
+                bpm_module = import_module(f'.BPM.badpix_{arm}', self.inst_lookups)
+                try:
+                    regions = [v for k, v in sorted(bpm_module.bpm_dict.items())
+                               if k < ut_date][-1]
+                except IndexError:
+                    log.warning(f"Cannot find BPM information for {ad.filename}")
+                    continue
+                log.stdinfo(f"Adding bad pixels to mask of {ad.filename}")
+                # TODO: rewrite with Section and contains, etc.
+                for (x1, x2, y1, y2) in regions:
+                    for i, (ext, datsec, detsec) in enumerate(
+                            zip(ad, ad.data_section(), ad.detector_section())):
+                        ix1 = (max(x1, detsec.x1) - detsec.x1) // xbin
+                        ix2 = (min(x2, detsec.x2-1) - detsec.x1) // xbin + 1
+                        iy1 = (max(y1, detsec.y1) - detsec.y1) // ybin
+                        iy2 = (min(y2, detsec.y2-1) - detsec.y1) // ybin + 1
+                        if 0 <= ix1 < ix2 and 0 <= iy1 < iy2:
+                            ext.mask[iy1+datsec.y1:iy2+datsec.y1,
+                            ix1+datsec.x1:ix2+datsec.x1] |= DQ.bad_pixel
+
+        return adinputs
 
     def addWavelengthSolution(self, adinputs=None, **params):
         """
@@ -1059,9 +1092,9 @@ class GHOSTSpect(GHOST):
 
                     new_correction = np.ones_like(corrected_data)
                     new_correction[illuminated_pixels] = correction
-                    test_ad = astrodata.create(flat.phu)
-                    test_ad.append(new_correction)
-                    test_ad.write("test_correction.fits", overwrite=True)
+                    #test_ad = astrodata.create(flat.phu)
+                    #test_ad.append(new_correction)
+                    #test_ad.write("test_correction.fits", overwrite=True)
                     # Uncomment to bugshoot finding bad pixels for the flat. Should be
                     # repeated once models are reasonable for real data as a sanity
                     # check
@@ -1140,12 +1173,14 @@ class GHOSTSpect(GHOST):
                 # extractions, where necessary
                 # import pdb; pdb.set_trace()
                 try:
-                    ad[i].reset(extracted_flux, mask=None,
+                    ad[i].reset(extracted_flux,
+                                mask=(extracted_var == 0).astype(DQ.datatype),
                                 variance=extracted_var)
                 except IndexError:
                     new_adi = deepcopy(ad[i - 1])
                     ad.append(new_adi[0])
-                    ad[i].reset(extracted_flux, mask=None,
+                    ad[i].reset(extracted_flux,
+                                mask=(extracted_var == 0).astype(DQ.datatype),
                                 variance=extracted_var)
                 if add_weight_map:
                     ad[i].WGT = extracted_weights
@@ -1153,7 +1188,7 @@ class GHOSTSpect(GHOST):
                     ad[i].CR = extractor.badpixmask & DQ.cosmic_ray
                 ad[i].hdr['DATADESC'] = (
                     'Order-by-order processed science data - '
-                    'objects {}, subtration = {}'.format(
+                    'objects {}, subtraction = {}'.format(
                         str(o), str(use_sky)),
                     self.keyword_comments['DATADESC'])
 
@@ -1257,12 +1292,12 @@ class GHOSTSpect(GHOST):
                                                     left=0, right=0)
                         ivar_for_adding = np.interp(wavl_grid,
                                                     ext.WAVL[order],
-                                                    1.0 /
-                                                    ext.variance[order, :, ob],
+                                                    at.divide0(1.0,
+                                                    ext.variance[order, :, ob]),
                                                     left=0, right=0)
                         spec_comp, ivar_comp = np.ma.average(
                             np.asarray([spec_final[:, ob], flux_for_adding]),
-                            weights=np.asarray([1.0 / var_final[:, ob],
+                            weights=np.asarray([at.divide0(1.0, var_final[:, ob]),
                                                 ivar_for_adding]),
                             returned=True, axis=0,
                         )
@@ -1276,10 +1311,12 @@ class GHOSTSpect(GHOST):
                 mask_final[np.logical_or.reduce([np.isnan(spec_final),
                                                  np.isinf(var_final),
                                                  var_final == 0])] = DQ.bad_pixel
+                spec_final[np.isnan(spec_final)] = 0
+                var_final[np.isinf(var_final)] = 0
                 adout.append(astrodata.NDAstroData(data=spec_final,
                                                    mask=mask_final,
                                                 meta={'header': deepcopy(ext.hdr)}))
-                adout[-1].variance = np.where(np.isinf(var_final), 0, var_final)
+                adout[-1].variance = var_final
                 adout[-1].WAVL = wavl_grid
                 adout[-1].hdr['DATADESC'] = ('Interpolated data',
                                              self.keyword_comments['DATADESC'])
