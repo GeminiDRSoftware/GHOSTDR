@@ -43,7 +43,7 @@ def get_polyfit_filename(log, arm, mode, date_obs, filename, caltype):
     date_obs = date_obs.strftime("%y%m%d")
     calfile = None
     for av in available:
-        if av.split(os.path.sep)[-2] < date_obs:
+        if av.split(os.path.sep)[-2] <= date_obs:
             calfile = av
 
     if not calfile:
