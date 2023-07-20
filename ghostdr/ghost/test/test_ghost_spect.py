@@ -151,7 +151,6 @@ class TestGhost:
                                                 "timestamp-mark the " \
                                                 "output file"
 
-
     @pytest.fixture
     def data_barycentricCorrect(self):
         """
@@ -165,42 +164,6 @@ class TestGhost:
         # Add a wavl extension - no need to be realistic
         ad[0].WAVL = np.random.rand(*ad[0].data.shape)
         return ad
-
-    @pytest.mark.parametrize('ra,dec,dt,known_corr', [
-        (90., -30., '2018-01-03 15:23:32', 0.999986388827),
-        (180., -60., '2018-11-12 18:35:15', 1.00001645007),
-        (270., -90., '2018-07-09 13:48:35', 0.999988565947),
-        (0., -45., '2018-12-31 18:59:48', 0.99993510834),
-        (101.1, 0., '2018-02-23 17:18:55', 0.999928361662),
-    ])
-    def test__compute_barycentric_correction_values(
-            self, ra, dec, dt, known_corr, data_barycentricCorrect):
-        """
-        Checks to make:
-
-        - Correct units of return based on input arguments
-        - Some regression test values
-        """
-        ad = data_barycentricCorrect
-        ad.phu.set('RA', ra)
-        ad.phu.set('DEC', dec)
-        # Assume a 10 min exposure
-        exp_time_min = 10.
-        dt_obs = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-        dt_start = dt_obs - datetime.timedelta(minutes=exp_time_min)
-        ad.phu.set('DATE-OBS', dt_start.date().strftime('%Y-%m-%d'))
-        ad.phu.set('UTSTART', dt_start.time().strftime('%H:%M:%S.00'))
-        ad.phu.set('EXPTIME', exp_time_min * 60.)
-
-        gs = GHOSTSpect([])
-        rv = gs._compute_barycentric_correction(ad, )
-        corr_fact = (1 + rv / constants.c).value
-        assert abs(corr_fact - known_corr) < 1e-6, \
-            "_compute_barycentric_correction " \
-            "returned an incorrect value " \
-            "(expected {}, returned {})".format(
-                known_corr, corr_fact,
-            )
 
     @pytest.mark.parametrize('ra,dec,dt,known_corr', [
         (90., -30., '2018-01-03 15:23:32', 0.999986388827),
