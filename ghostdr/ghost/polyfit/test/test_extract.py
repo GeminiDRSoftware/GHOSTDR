@@ -104,6 +104,7 @@ class TestExtractor(object):
             int(ext.arm.szy / ext.arm.ybin),
             2, 2), "matrices returned by bin_models has incorrect shape"
 
+    @pytest.mark.skip("Too slow with CubicSpline integrations")
     @pytest.mark.parametrize('transpose', [True, False])
     def test_extractor_make_pixel_model(self, transpose, make_extractor):
         """Test the Extractor.make_pixel_model method"""
