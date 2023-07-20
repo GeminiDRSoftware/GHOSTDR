@@ -30,6 +30,7 @@ def reduceScience(p):
                      # is subtracted from the object profile. Therefore, we
                      # must apply the BPM of the flat to the object file
                      # separately, before we extract its profile.
+    p.removeScatteredLight()
     p.writeOutputs()
     p.extractProfile(flat_precorrect=True)
     #p.flatCorrect(skip=True)  # Need to write our own, NOT USE GMOS - extract the flat

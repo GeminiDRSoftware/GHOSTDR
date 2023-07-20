@@ -22,16 +22,14 @@ def makeProcessedFlat(p):
     p.addDQ()
     p.addVAR(read_noise=True)
     p.overscanCorrect()
-    # p.tileArrays()
     p.biasCorrect()
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
     p.darkCorrect()
-    # p.rejectCosmicRays()
     p.stackFrames(operation='median')
     p.tileArrays()
-    #p.findApertures(skip_pixel_model=True)
     p.findApertures()
+    p.removeScatteredLight()
     p.storeProcessedFlat()
     return
 

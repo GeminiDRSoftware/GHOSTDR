@@ -10,12 +10,13 @@ import math
 import warnings
 from copy import deepcopy
 import scipy
-import scipy.signal as signal
 import functools
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, timedelta
 import astropy.coordinates as astrocoord
 from astropy.time import Time
+from astropy.io import fits
 from astropy.io.ascii.core import InconsistentTableError
+from astropy.table import Table
 from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
@@ -28,12 +29,13 @@ from gwcs.wcs import WCS as gWCS
 from pysynphot import observation, spectrum
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from importlib import import_module
 
 import astrodata
 
 from geminidr.core.primitives_spect import Spect
 from geminidr.gemini.lookups import DQ_definitions as DQ
-from gempy.library import tracing
+from gempy.library import tracing, astrotools as at
 from gempy.gemini import gemini_tools as gt
 
 from .polyfit import GhostArm, Extractor, SlitView
@@ -97,6 +99,39 @@ class GHOSTSpect(GHOST):
         super(GHOSTSpect, self).__init__(adinputs, **kwargs)
         self._param_update(parameters_ghost_spect)
         self.keyword_comments.update(keyword_comments.keyword_comments)
+
+    def addDQ(self, adinputs=None, **params):
+        """
+        Quick'n'dirty addition of known bad pixels to FLATs only
+        """
+        log = self.log
+        adinputs = super().addDQ(adinputs, **params)
+        for ad in adinputs:
+            if 'FLAT' in ad.tags:
+                xbin, ybin = ad.detector_x_bin(), ad.detector_y_bin()
+                arm = ad.arm()
+                ut_date = ad.ut_date().strftime("%Y-%m-%d")
+                bpm_module = import_module(f'.BPM.badpix_{arm}', self.inst_lookups)
+                try:
+                    regions = [v for k, v in sorted(bpm_module.bpm_dict.items())
+                               if k < ut_date][-1]
+                except IndexError:
+                    log.warning(f"Cannot find BPM information for {ad.filename}")
+                    continue
+                log.stdinfo(f"Adding bad pixels to mask of {ad.filename}")
+                # TODO: rewrite with Section and contains, etc.
+                for (x1, x2, y1, y2) in regions:
+                    for i, (ext, datsec, detsec) in enumerate(
+                            zip(ad, ad.data_section(), ad.detector_section())):
+                        ix1 = (max(x1, detsec.x1) - detsec.x1) // xbin
+                        ix2 = (min(x2, detsec.x2-1) - detsec.x1) // xbin + 1
+                        iy1 = (max(y1, detsec.y1) - detsec.y1) // ybin
+                        iy2 = (min(y2, detsec.y2-1) - detsec.y1) // ybin + 1
+                        if 0 <= ix1 < ix2 and 0 <= iy1 < iy2:
+                            ext.mask[iy1+datsec.y1:iy2+datsec.y1,
+                            ix1+datsec.x1:ix2+datsec.x1] |= DQ.bad_pixel
+
+        return adinputs
 
     def addWavelengthSolution(self, adinputs=None, **params):
         """
@@ -391,18 +426,20 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        velocity = params["velocity"]
+
+        if velocity == 0.0:
+            log.stdinfo("A radial velocity of 0.0 has been provided - no "
+                        "barycentric correction will be applied")
+            return adinputs
 
         for ad in adinputs:
-
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by barycentricCorrect".
                             format(ad.filename))
                 continue
 
-            # FIXME: It is more pythonic to ask forgiveness than permission,
-            # so a try
-            # statement is preferred.
             if not hasattr(ad[0], 'WAVL'):
                 log.warning("No changes will be made to {}, since it contains "
                             "no wavelength information".
@@ -410,20 +447,45 @@ class GHOSTSpect(GHOST):
                 continue
 
             # Get or compute the correction factor
-            if params['correction_factor'] is None:
-                cf = self._compute_barycentric_correction(ad, return_wavl=True)
+            if velocity is None:
+                ra, dec = ad.ra(), ad.dec()
+                if ra is None or dec is None:
+                    print("Unable to compute barycentric correction for "
+                          f"{ad.filename} (no sky pos data) - skipping")
+                    rv = None
+                else:
+                    self.log.stdinfo(f"Computing SkyCoord for {ra}, {dec}")
+                    sc = astrocoord.SkyCoord(ra, dec, unit=(u.deg, u.deg,))
+
+                    # Compute central time of observation
+                    dt_midp = ad.ut_datetime() + timedelta(
+                        seconds=ad.exposure_time() / 2.0)
+                    dt_midp = Time(dt_midp)
+                    bjd = dt_midp.jd1 + dt_midp.jd2
+
+                    # Vanilla AstroPy Implementation
+                    rv = sc.radial_velocity_correction(
+                        'barycentric', obstime=dt_midp,
+                        location=GEMINI_SOUTH_LOC).to(u.km / u.s)
             else:
-                cf = params['correction_factor']
+                rv = velocity * u.km / u.s
+                bjd = None
 
-            # Multiply the wavelength scale by the correction factor
-            log.stdinfo('Applying barycentric correction factor of '
-                        f'{cf} to {ad.filename}')
-            for ext in ad:
-                ext.WAVL *= float(cf)  # remove u.dimensionless_unscaled
+            if rv is not None:
+                log.stdinfo("Applying radial velocity correction of "
+                            f"{rv.value} km/s to {ad.filename}")
+                cf = float(1 + rv / const.c)  # remove u.dimensionless_unscaled
+                for ext in ad:
+                    ext.WAVL *= cf
 
-            # Timestamp and update filename
-            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.update_filename(suffix=params["suffix"], strip=True)
+                # Only one correction per AD right now
+                ad.hdr['BERV'] = (rv.value, "Barycentric correction applied (km s-1)")
+                if bjd is not None:
+                    ad.hdr['BJD'] = (bjd, "Barycentric Julian date")
+
+                # Timestamp and update filename
+                gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+                ad.update_filename(suffix=params["suffix"], strip=True)
 
         return adinputs
 
@@ -702,22 +764,28 @@ class GHOSTSpect(GHOST):
             linear fraction of signal to add to noise estimate for CR flagging
         sigma: float
             number of standard deviations for identifying discrepant pixels
+        weighting: str ("uniform"/"optimal")
+            weighting scheme for extraction
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
             quality assurance.
+        extract2d: bool
+            perform 2D extraction to account for slit tilt?
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
         ifu1 = params["ifu1"]
-        ifu2 = params["ifu1"]
+        ifu2 = params["ifu2"]
         seeing = params["seeing"]
         snoise = params["snoise"]
         sigma = params["sigma"]
         debug_cr_pixel = (params["debug_cr_order"], params["debug_cr_pixel"])
         add_cr_map = params["debug_cr_map"]
         add_weight_map = params["debug_weight_map"]
+        optimal_extraction = params["weighting"] == "optimal"
+        extract2d = params["extract2d"]
 
         # This primitive modifies the input AD structure, so it must now
         # check if the primitive has already been applied. If so, it must be
@@ -729,6 +797,13 @@ class GHOSTSpect(GHOST):
                         'already have extracted profiles: '
                         '{}'.format(','.join([_.filename for _ in adinputs_orig
                                               if _ not in adinputs])))
+
+        # This check is to head off problems where the same flat is used for
+        # multiple ADs and gets binned but then needs to be rebinned (which
+        # isn't possible because the unbinned flat has been overwritten)
+        binnings = set(ad.binning() for ad in adinputs)
+        if len(binnings) > 1:
+            raise ValueError("Not all input files have the same binning")
 
         # CJS: Heavily edited because of the new AD way
         # Get processed slits, slitFlats, and flats (for xmod)
@@ -845,7 +920,7 @@ class GHOSTSpect(GHOST):
             # we need to make a synthetic slit profile so this has moved up
             if 'ARC' in ad.tags:
                 # Extracts entire slit first, and then the two IFUs separately
-                objs_to_use = [[], [0, 1]]
+                objs_to_use = [[], list(set([0, 1]) - set(ifu_stowed))]
                 use_sky = [True, False]
                 find_crs = [False, False]
                 sky_correct_profiles = False
@@ -931,45 +1006,46 @@ class GHOSTSpect(GHOST):
 
             # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
+            new_correction = None
             if params['flat_precorrect']:
                 try:
-                    # Bin the flat to the image binning
-                    if flat.detector_x_bin() != ad.detector_x_bin(
-                    ) or flat.detector_y_bin() != ad.detector_y_bin():
-                        xb = ad.detector_x_bin()
-                        yb = ad.detector_y_bin()
-                        flat = self._rebin_ghost_ad(flat, xb, yb)
+                    if not hasattr(flat[0], 'PIXELMODEL'):
+                        # Make a slit flat SlitView instance for getting a binned
+                        # pixel mask and then initialize this binned slit extractor
+                        flat_sview = SlitView(slitflat_data, slitflat_data,
+                            slitvpars.TABLE[0], mode=res_mode,
+                            microns_pix = 4.54 * 180 / 50, **sview_kwargs)
+                        unbinned_flat_extractor = Extractor(arm, flat_sview,
+                            badpixmask=flat[0].mask,
+                            vararray=flat[0].variance)
+                        flat[0].PIXELMODEL = unbinned_flat_extractor.make_pixel_model()
 
-                    # Make a slit flat SlitView instance for getting a binned
-                    # pixel mask and then initialize this binned slit extractor
-                    flat_sview = SlitView(slitflat_data, slitflat_data,
-                        slitvpars.TABLE[0], mode=res_mode,
-                        microns_pix = 4.54 * 180 / 50, **sview_kwargs)
+                    xbin, ybin = ad.detector_x_bin(), ad.detector_y_bin()
 
-                    binned_flat_extractor = Extractor(arm, flat_sview, 
-                        badpixmask=ad[0].mask,
-                        vararray=flat[0].variance)
+                    # Bin the flat to the image binning... see note near
+                    # start of primitive about why this is bad code
+                    if (flat.detector_x_bin() != xbin or
+                            flat.detector_y_bin() != ybin):
+                        flat = self._rebin_ghost_ad(flat, xbin, ybin)
+                    binned_pixmod = flat[0].PIXELMODEL
 
-                    # Recalculate the pixel model with the correct image binning
-                    flat[0].PIXELMODEL = binned_flat_extractor.make_pixel_model()
-
-                    pix_to_correct = flat[0].PIXELMODEL > 0
+                    illuminated_pixels = binned_pixmod > 0
 
                     # Lets find the flat normalisation constant.
                     # FIXME Should this normalisation be done elsewhere?
-                    mean_flat_flux = np.mean(flat[0].data[pix_to_correct])
-                    mean_pixelmod = np.mean(flat[0].PIXELMODEL[pix_to_correct])
+                    mean_flat_flux = np.mean(flat[0].data[illuminated_pixels])
+                    mean_pixelmod = np.mean(binned_pixmod[illuminated_pixels])
 
                     # Now find the correction.
-                    correction = flat[0].PIXELMODEL[pix_to_correct] / \
-                                 flat[0].data[pix_to_correct] * \
+                    correction = binned_pixmod[illuminated_pixels] / \
+                                 flat[0].data[illuminated_pixels] * \
                                  mean_flat_flux/mean_pixelmod
 
                     # Find additional bad pixels where the flat doesn't match PIXELMODEL
                     # This is important to have somewhere, because otherwise any
                     # newly dead pixels will result in divide by 0.
                     smoothed_flat = convolve_with_mask(flat[0].data,
-                                                       pix_to_correct)
+                                                       illuminated_pixels)
                     normalised_flat = flat[0].data / smoothed_flat
 
                     # Extra bad pixels are where the normalied flat differs from the
@@ -981,9 +1057,9 @@ class GHOSTSpect(GHOST):
                     # data.
                     extra_bad = (
                         np.abs(
-                            normalised_flat - flat[0].PIXELMODEL/mean_pixelmod
+                            normalised_flat - binned_pixmod/mean_pixelmod
                         ) > 0.7
-                    ) & pix_to_correct * (
+                    ) & illuminated_pixels * (
                         smoothed_flat > 0.1 * mean_flat_flux
                     )
 
@@ -991,18 +1067,18 @@ class GHOSTSpect(GHOST):
 
                     # MCW 190912 - converted to option, default is 'False'
                     # TODO: MJI to add description of what this (should) do
-                    if params['smooth_flat_spatially']:
+                    if params['debug_smooth_flat_spatially']:
                         correction_2d = np.zeros_like(flat[0].data)
-                        correction_2d[pix_to_correct] = correction
+                        correction_2d[illuminated_pixels] = correction
                         smoothed_correction_2d = convolve_with_mask(
-                            correction_2d, pix_to_correct)
+                            correction_2d, illuminated_pixels)
                         smoothed_correction_2d[
-                            pix_to_correct
-                        ] = correction_2d[pix_to_correct]
+                            illuminated_pixels
+                        ] = correction_2d[illuminated_pixels]
                         smoothed_correction_2d = nd.median_filter(
                             smoothed_correction_2d, size=(7, 1)
                         )
-                        correction = smoothed_correction_2d[pix_to_correct]
+                        correction = smoothed_correction_2d[illuminated_pixels]
 
                     # This is where we add the new bad pixels in. It is needed for
                     # computing correct weights.
@@ -1013,9 +1089,14 @@ class GHOSTSpect(GHOST):
                     extractor.badpixmask[extra_bad] |= BAD_FLAT_FLAG
                     
                     # MJI: Pre-correct the data here. 
-                    corrected_data[pix_to_correct] *= correction
-                    corrected_var[pix_to_correct] *= correction**2
+                    corrected_data[illuminated_pixels] *= correction
+                    corrected_var[illuminated_pixels] *= correction**2
 
+                    new_correction = np.ones_like(corrected_data)
+                    new_correction[illuminated_pixels] = correction
+                    #test_ad = astrodata.create(flat.phu)
+                    #test_ad.append(new_correction)
+                    #test_ad.write("test_correction.fits", overwrite=True)
                     # Uncomment to bugshoot finding bad pixels for the flat. Should be
                     # repeated once models are reasonable for real data as a sanity
                     # check
@@ -1054,13 +1135,14 @@ class GHOSTSpect(GHOST):
                 # Need to use corrected_data here; the data in ad[0] is
                 # overwritten with the first extraction pass of this loop
                 # (see the try-except statement at line 925)
-                DUMMY, _, extracted_weights = extractor.one_d_extract(
+                extracted_flux, extracted_var, extracted_weights = extractor.one_d_extract(
                     #data=corrected_data, vararray=corrected_var,
                     data=safe_data, vararray=safe_variance,
                     correct_for_sky=sky_correct_profiles,
                     use_sky=s, used_objects=o, find_crs=cr,
                     snoise=snoise, sigma=sigma,
-                    debug_cr_pixel=debug_cr_pixel
+                    debug_cr_pixel=debug_cr_pixel,
+                    correction=new_correction, optimal=optimal_extraction
                 )
 
                 # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
@@ -1077,11 +1159,14 @@ class GHOSTSpect(GHOST):
                 #plt.legend()
                 #import pdb; pdb.set_trace()
 
-                extracted_flux, extracted_var = extractor.two_d_extract(
-                    corrected_data,
-                    extraction_weights=extracted_weights,
-                    vararray=corrected_var,
-                )
+                #extracted_flux = DUMMY
+                #extracted_var = np.zeros_like(DUMMY, dtype=np.float32)
+                if extract2d:
+                    extracted_flux, extracted_var = extractor.two_d_extract(
+                        corrected_data,
+                        extraction_weights=extracted_weights,
+                        vararray=corrected_var,
+                    )
 
                 # CJS: Since you don't use the input AD any more, I'm going to
                 # modify it in place, in line with your comment that you're
@@ -1090,12 +1175,14 @@ class GHOSTSpect(GHOST):
                 # extractions, where necessary
                 # import pdb; pdb.set_trace()
                 try:
-                    ad[i].reset(extracted_flux, mask=None,
+                    ad[i].reset(extracted_flux,
+                                mask=(extracted_var == 0).astype(DQ.datatype),
                                 variance=extracted_var)
                 except IndexError:
                     new_adi = deepcopy(ad[i - 1])
                     ad.append(new_adi[0])
-                    ad[i].reset(extracted_flux, mask=None,
+                    ad[i].reset(extracted_flux,
+                                mask=(extracted_var == 0).astype(DQ.datatype),
                                 variance=extracted_var)
                 if add_weight_map:
                     ad[i].WGT = extracted_weights
@@ -1103,7 +1190,7 @@ class GHOSTSpect(GHOST):
                     ad[i].CR = extractor.badpixmask & DQ.cosmic_ray
                 ad[i].hdr['DATADESC'] = (
                     'Order-by-order processed science data - '
-                    'objects {}, subtration = {}'.format(
+                    'objects {}, subtraction = {}'.format(
                         str(o), str(use_sky)),
                     self.keyword_comments['DATADESC'])
 
@@ -1200,21 +1287,19 @@ class GHOSTSpect(GHOST):
                 # spectrum
                 for order in range(ext.data.shape[0]):
                     for ob in range(ext.data.shape[-1]):
-                        log.stdinfo('Re-gridding order {:2d}, obj {:1d}'.format(
-                            order, ob,
-                        ))
+                        log.debug(f'Re-gridding order {order:2d}, obj {ob:1d}')
                         flux_for_adding = np.interp(wavl_grid,
                                                     ext.WAVL[order],
                                                     ext.data[order, :, ob],
                                                     left=0, right=0)
                         ivar_for_adding = np.interp(wavl_grid,
                                                     ext.WAVL[order],
-                                                    1.0 /
-                                                    ext.variance[order, :, ob],
+                                                    at.divide0(1.0,
+                                                    ext.variance[order, :, ob]),
                                                     left=0, right=0)
                         spec_comp, ivar_comp = np.ma.average(
                             np.asarray([spec_final[:, ob], flux_for_adding]),
-                            weights=np.asarray([1.0 / var_final[:, ob],
+                            weights=np.asarray([at.divide0(1.0, var_final[:, ob]),
                                                 ivar_for_adding]),
                             returned=True, axis=0,
                         )
@@ -1228,10 +1313,12 @@ class GHOSTSpect(GHOST):
                 mask_final[np.logical_or.reduce([np.isnan(spec_final),
                                                  np.isinf(var_final),
                                                  var_final == 0])] = DQ.bad_pixel
+                spec_final[np.isnan(spec_final)] = 0
+                var_final[np.isinf(var_final)] = 0
                 adout.append(astrodata.NDAstroData(data=spec_final,
                                                    mask=mask_final,
                                                 meta={'header': deepcopy(ext.hdr)}))
-                adout[-1].variance = np.where(np.isinf(var_final), 0, var_final)
+                adout[-1].variance = var_final
                 adout[-1].WAVL = wavl_grid
                 adout[-1].hdr['DATADESC'] = ('Interpolated data',
                                              self.keyword_comments['DATADESC'])
@@ -1260,6 +1347,7 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        skip_pixel_model = params.get('skip_pixel_model', False)
 
         # Make no attempt to check if primitive has already been run - may
         # have new calibrators we wish to apply.
@@ -1271,7 +1359,7 @@ class GHOSTSpect(GHOST):
             flat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
 
-        if params['skip_pixel_model']:
+        if skip_pixel_model:
             log.stdinfo('Skipping adding the pixel model to the flat'
                         'step')
 
@@ -1309,36 +1397,27 @@ class GHOSTSpect(GHOST):
                                 microns_pix=4.54*180/50,
                                 binning=slit_flat.detector_x_bin())
 
-            # This is an attempt to remove the worse cosmic rays
-            # in the hope that the convolution is not affected by them.
-            # Start by performing a median filter
-            medfilt = signal.medfilt2d(ad[0].data, (5,5))
-            # Now find which pixels have a percentage difference larger than
-            # a defined value between the data and median filter, and replace
-            # those in the data with the median filter values. Also, only
-            # replace values above the data average, so as not to replace low
-            # S/N values at the edges.
-            data = ad[0].data.copy()
-            condit = np.where(np.abs(
-                (medfilt - data)/(medfilt+1)) > 200
-                              ) and np.where(data > np.average(data))
-            data[condit] = medfilt[condit]
-
             # Convolve the flat field with the slit profile
             flat_conv = ghost_arm.slit_flat_convolve(
-                data,
+                ad[0].data,
                 slit_profile=slitview.slit_profile(arm=arm),
                 spatpars=spatpars[0].data, microns_pix=slitview.microns_pix,
                 xpars=xpars[0].data
             )
 
             #flat_conv = signal.medfilt2d(flat_conv, (5, 5))
-            flat_conv = nd.gaussian_filter(flat_conv, (5, 0))
+            #flat_conv = nd.gaussian_filter(flat_conv, (5, 0))
+            #test_ad = astrodata.create(ad.phu)
+            #test_ad.filename = "test_flat_conv.fits"
+            #test_ad.append(flat_conv)
+            #test_ad.write(overwrite=True)
+            #crash
 
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
                                                      xparams=xpars[0].data,
                                                      decrease_dim=8,
+                                                     sampling=2,
                                                      inspect=False)
 
             # CJS: Append the XMOD as an extension. It will inherit the
@@ -1349,7 +1428,7 @@ class GHOSTSpect(GHOST):
 
             #MJI: Compute a pixel-by-pixel model of the flat field from the new XMOD and
             #the slit image.
-            if not params['skip_pixel_model']:
+            if not skip_pixel_model:
                 # FIXME: MJI Copied directly from extractProfile. Is this compliant?
                 try:
                     poly_wave = self._get_polyfit_filename(ad, 'wavemod')
@@ -2138,6 +2217,104 @@ class GHOSTSpect(GHOST):
 
         return adinputs
 
+    def removeScatteredLight(self, adinputs=None, **params):
+        """
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        skip: bool
+            skip primitive entirely?
+        debug_spline_smoothness: float
+            scaling factor for spline smoothness
+        debug_save_model: bool
+            attach scattered light model to output
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+        if params["skip"]:
+            log.stdinfo("Not removing scattered light since skip=True")
+            return adinputs
+
+        smoothness = params["debug_spline_smoothness"]
+        save_model = params["debug_save_model"]
+        is_flat = ['FLAT' in ad.tags for ad in adinputs]
+        self.getProcessedFlat([ad for ad in adinputs if not is_flat])
+        flat_list = [None if this_is_flat else self._get_cal(ad, 'processed_flat')
+                     for ad, this_is_flat in zip(adinputs, is_flat)]
+
+        for ad, flat in zip(*gt.make_lists(adinputs, flat_list, force_ad=True)):
+            if len(ad) > 1:
+                log.warning(f"{ad.filename} has more than one extension - ignoring")
+                continue
+            arm = ad.arm()
+            xbin, ybin = ad.detector_x_bin(), ad.detector_y_bin()
+            # Finer sampling is required vertically to ensure there remains
+            # data between the orders
+            xsampling, ysampling = 16, max(ybin, 4)
+            xrebin, yrebin = xsampling // xbin, ysampling // ybin
+            if xrebin * yrebin > 1:
+                ad_binned = self._rebin_ghost_ad(deepcopy(ad), xsampling, ysampling)
+            else:
+                ad_binned = ad
+            if flat is None:
+                illuminated_pixels = ad_binned[0].PIXELMODEL > 0  # will have been rebinned
+            else:
+                illuminated_pixels = flat[0].PIXELMODEL > 0
+                illuminated_pixels = np.logical_or.reduce(np.logical_or.reduce(
+                    illuminated_pixels.reshape(
+                        illuminated_pixels.shape[0] // ysampling, ysampling,
+                        illuminated_pixels.shape[1] // xsampling, xsampling),
+                    axis=1), axis=2)
+
+            # Keep bad pixels out of the fit
+            if ad_binned.mask is not None:
+                illuminated_pixels |= ad_binned.mask.astype(bool)
+
+            # Mark all pixels outside the topmost/bottommost orders as
+            # illuminated (i.e., do not use in the fit)
+            for ix, iy in enumerate(illuminated_pixels.argmax(axis=0)):
+                illuminated_pixels[:iy, ix] = True
+            for ix, iy in enumerate(illuminated_pixels[::-1].argmax(axis=0)):
+                if iy > 0:
+                    illuminated_pixels[-iy:, ix] = True
+                    if arm == "red":
+                        illuminated_pixels[-iy-768//ysampling:, ix] = True
+
+            # Reinstate some pixels to constrain the spline
+            if arm == "red":
+                illuminated_pixels[:256 // ysampling] = False
+
+            xpts = (np.arange(illuminated_pixels.shape[1]) + 0.5) * xrebin - 0.5
+            ypts = (np.arange(illuminated_pixels.shape[0]) + 0.5) * yrebin - 0.5
+            y, x = np.meshgrid(ypts, xpts, indexing="ij")
+            w = 1 / np.sqrt(ad_binned[0].variance[~illuminated_pixels])
+            zpts = ad_binned[0].data[~illuminated_pixels]
+            #if arm == "red":
+            #    zpts[y[~illuminated_pixels] > 4096 // ysampling] = 0
+            #    w[y[~illuminated_pixels] > 4096 // ysampling] = 2
+            spl = interpolate.SmoothBivariateSpline(
+                x[~illuminated_pixels], y[~illuminated_pixels],
+                zpts, w=w, bbox=[0, ad[0].shape[1]-1, 0, ad[0].shape[0]-1],
+                s=smoothness*np.sum(~illuminated_pixels))
+            scattered_light = spl(np.arange(ad[0].shape[1]),
+                                  np.arange(ad[0].shape[0]), grid=True).T / (xrebin * yrebin)
+            scattered_light[scattered_light < 0] = 0
+            if save_model:
+                ad[0].INPUT = ad_binned[0].data.copy()
+                ad[0].INPUT[illuminated_pixels] = 0
+                scat_bin = spl(xpts, ypts, grid=True).T
+                ad[0].SCATBIN = scat_bin
+                ad[0].SCATTERED = scattered_light
+                ad[0].ILLUM = illuminated_pixels.astype(int)
+            ad[0].subtract(scattered_light)
+
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.update_filename(suffix=params["suffix"], strip=True)
+        return adinputs
+
     def responseCorrect(self, adinputs=None, **params):
         """
         Use a standard star observation and reference spectrum to provide
@@ -2546,8 +2723,6 @@ class GHOSTSpect(GHOST):
 
         Parameters
         ----------
-        adinputs : list of :class:`~astrodata.AstroData`
-            Science data as 2D spectral images.
         format : str
             format for writing output files
         header : bool
@@ -2575,6 +2750,78 @@ class GHOSTSpect(GHOST):
                 ext.hdr['APERTURE'] = i
         Spect.write1DSpectra(self, adinputs, **params)
         return adinputs
+
+    def createFITSWCS(self, adinputs=None, **params):
+        """
+        DRAGONS/AstroData v3.0.x does not write FITS keywords correctly for
+        a log-linear wavelength scale. This primitive creates such files and
+        writes them to disk, returning an empty adinputs list.
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        iraf: bool
+            write WCS in IRAF format?
+        angstroms: bool
+            write new wavelength keywords in Angstroms (rather than nm)?
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        suffix = params["suffix"]
+        iraf = params["iraf"]
+        angstroms = params["angstroms"]
+
+        for ad in adinputs:
+            log.stdinfo(f"Processing {ad.filename}")
+            hdulist = ad.to_hdulist()
+            for ext, ver in zip(ad, ad.hdr['EXTVER']):
+                if len(ext.shape) != 1:
+                    log.stdinfo(f"    EXTVER {ver} has non-1D data... "
+                                f"continuing")
+                    continue
+                m = ext.wcs.forward_transform
+                if not isinstance(m, models.Exponential1D):
+                    log.stdinfo(f"    EXTVER {ver}'s dispersion is not "
+                                f"log-linear... continuing")
+                    continue
+                amp, tau = m.parameters
+                if angstroms:
+                    amp *= 10
+                if iraf:
+                    # IRAF/NOAO, according to Valdes (1993, ASP 52, 467)
+                    dw = np.log10(m(1) / m(0))
+                    new_kws = {"CTYPE1": "WAVE-LOG", "CRPIX1": 1,
+                               "CRVAL1": np.log10(amp),
+                               "CDELT1": dw, "CD1_1": dw, "DC-FLAG": 1}
+                else:
+                    # FITS standard, according to Eqn (5) of
+                    # Greisen et al. (2006; A&A 446, 747)
+                    dw = np.log(m(1) / m(0)) * amp
+                    new_kws = {"CTYPE1": "WAVE-LOG", "CRPIX1": 1, "CRVAL1": amp,
+                               "CDELT1": dw, "CD1_1": dw}
+                if angstroms:
+                    new_kws['CUNIT1'] = 'Angstrom'
+
+                wcs_index = None
+                for i, hdu in enumerate(hdulist):
+                    if hdu.header.get('EXTVER') == ver:
+                        if isinstance(hdu, fits.ImageHDU) and len(hdu.data.shape) == 1:
+                            hdu.header.update(new_kws)
+                            try:
+                                del hdu.header['FITS-WCS']
+                            except KeyError:
+                                pass
+                    elif hdu.header.get('EXTNAME') == "WCS":
+                        wcs_index = i
+                if wcs_index is not None:
+                    del hdulist[wcs_index]
+
+            ad.update_filename(suffix=suffix, strip=True)
+            log.stdinfo(f"Writing {ad.filename}")
+            hdulist.writeto(ad.filename, overwrite=True)
+
+        return []
 
     # CJS: Primitive has been renamed for consistency with other instruments
     # The geometry_conf.py file is not needed; all you're doing is tiling
@@ -2682,7 +2929,6 @@ class GHOSTSpect(GHOST):
         str/None:
             Filename (including path) of the required polyfit file
         """
-
         return polyfit_lookup.get_polyfit_filename(self.log, ad.arm(),
                                                    ad.res_mode(), ad.ut_date(),
                                                    ad.filename, caltype)
@@ -2691,90 +2937,6 @@ class GHOSTSpect(GHOST):
         return polyfit_lookup.get_polyfit_filename(self.log, 'slitv',
                                                    ad.res_mode(), ad.ut_date(),
                                                    ad.filename, 'slitvmod')
-
-    def _compute_barycentric_correction(self, ad, return_wavl=True,
-                                        loc=GEMINI_SOUTH_LOC):
-        """
-        Compute the baycentric correction factor for a given observation and
-        location on the Earth.
-
-        The barycentric correction compensates for (a) the motion of the Earth
-        around the Sun, and (b) the motion of the Earth's surface due to
-        planetary rotation. It can be returned as a line velocity correction,
-        or a multiplicative factor with which to correct the wavelength scale;
-        the default is the latter.
-
-        The correction will be computed for all extensions of the input
-        AstroData object.
-
-        This method is built using :py:mod:`astropy <astropy>` v2, and is
-        developed from:
-        https://github.com/janerigby/jrr/blob/master/barycen.py
-
-
-        Parameters
-        ----------
-        ad : astrodata.AstroData
-            The astrodata object from which to extract time and
-            location information. If the ad is multi-extension, a correction
-            factor will be returned for each extension.
-        return_wavl : bool
-            Denotes whether to return the correction as a wavelength
-            correction factor (True) or a velocity (False). Defaults to True.
-
-        Returns
-        -------
-        corr_facts: float
-            The barycentric correction value
-        """
-
-        # Set up a SkyCoord for this ad
-        if ad.ra() is None or ad.dec() is None:
-            print("Unable to compute barycentric correction for "
-                  "{} (no sky pos data) - skipping".format(ad.filename))
-            if return_wavl:
-                corr_fact = 1.0
-            else:
-                corr_fact = 0.0
-            return corr_fact
-        print("Computing SkyCoord for {}, {}".format(ad.ra(), ad.dec()))
-        sc = astrocoord.SkyCoord(ad.ra(), ad.dec(),
-                                 unit=(u.deg, u.deg, ))
-
-        # Compute central time of observation
-        dt_midp = ad.ut_datetime() + timedelta(seconds=ad.exposure_time() / 2.0)
-        dt_midp = Time(dt_midp)
-
-        # Jane Rigby implementation
-        # # ICRS position & vel of Earth geocenter
-        # ep, ev = astrocoord.solar_system.get_body_barycentric_posvel(
-        #     'earth', dt_midp
-        # )
-        # # GCRS position & vel of observatory (loc)
-        # op, ov = loc.get_gcrs_posvel(dt_midp)
-        # # Velocities can be simply added (are axes-aligned)
-        # vel = ev + ov
-        #
-        # # Get unit ICRS vector in direction of observation
-        # sc_cart = sc.icrs.represent_as(
-        #     astrocoord.UnitSphericalRepresentation
-        # ).represent_as(
-        #     astrocoord.CartesianRepresentation
-        # )
-        #
-        # corr_fact = sc_cart.dot(vel).to(u.km/u.s)
-
-        # Vanilla AstroPy Implementation
-        corr_fact = sc.radial_velocity_correction('barycentric',
-                                                  obstime=dt_midp,
-                                                  location=GEMINI_SOUTH_LOC)
-
-        if return_wavl:
-            corr_fact = 1.0 + (corr_fact / const.c)
-        else:
-            corr_fact = corr_fact.to(u.m / u.s)
-
-        return corr_fact
 
     def _request_bracket_arc(self, ad, before=None):
         """
@@ -2968,3 +3130,36 @@ def plot_extracted_spectra(ad, arm, all_peaks, lines_out, mask=None, nrows=4):
             axes[i].axis('off')
         fig.subplots_adjust(hspace=0)
         pdf.savefig(bbox_inches='tight')
+
+
+def model_scattered_light(data, mask=None, variance=None):
+    """
+    Model scattered light by fitting a surface to the 2D image. The fit is
+    performed as the exponential of a 2D polynomial to ensure it is always
+    non-negative.
+
+    Parameters
+    ----------
+    data: `numpy.ndarray`
+        data which requires a surface fit
+    mask: `numpy.ndarray` (bool)/None
+        mask indicating which pixels to use in the fit
+
+    Returns
+    -------
+    model: `numpy.ndarray`
+        a model fit to the data
+    """
+    from datetime import datetime
+    ny, nx = data.shape
+    y, x = np.mgrid[:ny, :nx]
+    if variance is None:
+        w = np.ones_like(data)
+    else:
+        w = np.sqrt(at.divide0(1., variance))
+    start = datetime.now()
+    tck = interpolate.bisplrep(x[~mask].ravel()[::32], y[~mask].ravel()[::32], data[~mask].ravel()[::32], w=w[~mask].ravel()[::32])
+    print(datetime.now() - start)
+    spl = interpolate.bisplev(np.arange(nx), np.arange(ny), tck)
+    print(datetime.now() - start)
+    return spl

@@ -98,25 +98,27 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         log = self.log
 
         # Input checking
-        xb = int(xb)
-        yb = int(yb)
         if not isinstance(ad, astrodata.AstroData):
             raise ValueError('ad is not a valid AstroData instance')
-        for ext in ad:
-            if ext.hdr.get('CCDSUM') != '1 1':
-                raise ValueError(
-                    'Cannot re-bin data that has already been binned')
+
+        xbin, ybin = int(xb), int(yb)
+        xrebin, yrebin = xbin // ad.detector_x_bin(), ybin // ad.detector_y_bin()
+        if xrebin < 1 or yrebin < 1:
+            raise ValueError('Attempt to rebin to less coarse binning')
+        #for ext in ad:
+        #    if ext.hdr.get('CCDSUM') != '1 1':
+        #        raise ValueError(
+        #            'Cannot re-bin data that has already been binned')
 
         # Re-binning
         log.stdinfo('Re-binning %s' % ad.filename)
-        rows = yb
-        cols = xb
         for ext in ad:
+            orig_shape = ext.data.shape
             # Do the re-binning
             # Re-bin data
             binned_array = ext.data.reshape(
-                int(ext.data.shape[0] / rows), rows,
-                int(ext.data.shape[1] / cols), cols
+                int(ext.data.shape[0] / yrebin), yrebin,
+                int(ext.data.shape[1] / xrebin), xrebin
             ).sum(axis=1).sum(axis=2)
 
             reset_kwargs = {'check': True, }
@@ -124,12 +126,12 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             # Re-bin variance
             # These are summed in quadrature
             if ext.variance is not None:
-                binned_var = ext.variance ** 2
-                binned_var = binned_var.reshape(
-                    int(ext.variance.shape[0] / rows), rows,
-                    int(ext.variance.shape[1] / cols), cols
+                #binned_var = ext.variance ** 2
+                binned_var = ext.variance.reshape(
+                    int(ext.variance.shape[0] / yrebin), yrebin,
+                    int(ext.variance.shape[1] / xrebin), xrebin
                 ).sum(axis=1).sum(axis=2)
-                binned_var = np.sqrt(binned_var)
+                #binned_var = np.sqrt(binned_var)
                 reset_kwargs['variance'] = binned_var
 
             # Re-bin mask
@@ -138,15 +140,15 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             # unitary array a la, e.g. sum
             if ext.mask is not None:
                 reshaped_mask = ext.mask.reshape(
-                    int(ext.mask.shape[0] / rows), rows,
-                    int(ext.mask.shape[1] / cols), cols
+                    int(ext.mask.shape[0] / yrebin), yrebin,
+                    int(ext.mask.shape[1] / xrebin), xrebin
                 )
                 binned_mask_r = reshaped_mask[:, 0, :, :]
-                for i in range(1, rows):
+                for i in range(1, yrebin):
                     binned_mask_r = np.bitwise_or(binned_mask_r,
                                                   reshaped_mask[:, i, :, :])
                 binned_mask = binned_mask_r[:, :, 0]
-                for j in range(1, cols):
+                for j in range(1, xrebin):
                     binned_mask = np.bitwise_or(binned_mask,
                                                 binned_mask_r[:, :, j])
                 reset_kwargs['mask'] = binned_mask
@@ -158,42 +160,55 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             # ext.mask = binned_mask
             ext.reset(binned_array, **reset_kwargs)
 
+            # Rebin other extensions (e.g., PIXELMODEL)
+            for other_name, other_data in ext.nddata.meta['other'].items():
+                try:
+                    rebin_this = other_data.shape == orig_shape
+                except AttributeError:
+                    continue
+                if rebin_this:
+                    rebinned_other_data = other_data.reshape(
+                        orig_shape[0] // yrebin, yrebin,
+                        orig_shape[1] // xrebin, xrebin
+                    ).sum(axis=1).sum(axis=2)
+                    setattr(ext, other_name, rebinned_other_data)
+
             # Update header values
             ext.hdr.set('CCDSUM',
-                        value='%d %d' % (cols, rows,),
-                        comment='Re-binned to %dx%d' % (cols, rows,))
+                        value=f'{xbin} {ybin}',
+                        comment=f'Re-binned to {xbin} {ybin}')
 
             old_datasec = ext.hdr.get('DATASEC')
             if old_datasec:
                 datasec_values = _HDR_SIZE_REGEX.match(old_datasec)
                 ext.hdr.set('DATASEC',
                             value='[%d:%d,%d:%d]' %
-                                  (max(int(datasec_values.group('x1')) / cols,
+                                  (max(int(datasec_values.group('x1')) / xrebin,
                                        1),
-                                   max(int(datasec_values.group('x2')) / cols,
+                                   max(int(datasec_values.group('x2')) / xrebin,
                                        1),
-                                   max(int(datasec_values.group('y1')) / rows,
+                                   max(int(datasec_values.group('y1')) / yrebin,
                                        1),
-                                   max(int(datasec_values.group('y2')) / rows,
+                                   max(int(datasec_values.group('y2')) / yrebin,
                                        1),
                                    ),
-                            comment='Re-binned to %dx%d' % (cols, rows,),
+                            comment=f'Re-binned to {xbin}x{ybin}',
                             )
             old_trimsec = ext.hdr.get('TRIMSEC')
             if old_trimsec:
                 trimsec_values = _HDR_SIZE_REGEX.match(old_trimsec)
                 ext.hdr.set('TRIMSEC',
                             value='[%d:%d,%d:%d]' %
-                                  (max(int(trimsec_values.group('x1')) / cols,
+                                  (max(int(trimsec_values.group('x1')) / xrebin,
                                        1),
-                                   max(int(trimsec_values.group('x2')) / cols,
+                                   max(int(trimsec_values.group('x2')) / xrebin,
                                        1),
-                                   max(int(trimsec_values.group('y1')) / rows,
+                                   max(int(trimsec_values.group('y1')) / yrebin,
                                        1),
-                                   max(int(trimsec_values.group('y2')) / rows,
+                                   max(int(trimsec_values.group('y2')) / yrebin,
                                        1),
                                    ),
-                            comment='Re-binned to %dx%d' % (cols, rows,),
+                            comment=f'Re-binned to {xbin}x{ybin}',
                             )
 
             old_ampsize = ext.hdr.get('AMPSIZE')
@@ -201,16 +216,16 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                 ampsize_values = _HDR_SIZE_REGEX.match(old_ampsize)
                 ext.hdr.set('AMPSIZE',
                             value='[%d:%d,%d:%d]' %
-                                  (max(int(ampsize_values.group('x1')) / cols,
+                                  (max(int(ampsize_values.group('x1')) / xrebin,
                                        1),
-                                   max(int(ampsize_values.group('x2')) / cols,
+                                   max(int(ampsize_values.group('x2')) / xrebin,
                                        1),
-                                   max(int(ampsize_values.group('y1')) / rows,
+                                   max(int(ampsize_values.group('y1')) / yrebin,
                                        1),
-                                   max(int(ampsize_values.group('y2')) / rows,
+                                   max(int(ampsize_values.group('y2')) / yrebin,
                                        1),
                                    ),
-                            comment='Re-binned to %dx%d' % (cols, rows,),
+                            comment=f'Re-binned to {xbin}x{ybin}',
                             )
 
         log.stdinfo('Re-binning complete')

@@ -1,109 +1,11 @@
-# This is a dictionary containing the assignments of initial Polyfit models
-# to various GHOST frame types
-
-# Keys are of the format
-# instrument_detectorXBin_detectorYBin_Arm_ResMode
 import os
-from datetime import datetime
-
-xmod_dict = {
-    # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'red/std/161120/xmod.fits',
-    'GHOST_1_1_red_high_161120': 'red/high/161120/xmod.fits',
-    'GHOST_1_1_blue_std_161120': 'blue/std/161120/xmod.fits',
-    'GHOST_1_1_blue_high_161120': 'blue/high/161120/xmod.fits',
-    'GHOST_1_1_red_std_220501': 'red/std/220501/xmod.fits',
-    'GHOST_1_1_red_high_220501': 'red/high/220501/xmod.fits',
-    'GHOST_1_1_blue_std_220501': 'blue/std/220501/xmod.fits',
-    'GHOST_1_1_blue_high_220501': 'blue/high/220501/xmod.fits',
-    'GHOST_1_1_red_std_220620': 'red/std/220620/xmod.fits',
-    'GHOST_1_1_red_high_220620': 'red/high/220620/xmod.fits',
-    'GHOST_1_1_blue_std_220620': 'blue/std/220620/xmod.fits',
-    'GHOST_1_1_blue_high_220620': 'blue/high/220620/xmod.fits',
-    #'GHOST_1_1_blue_high_170801': 'blue/high/170801/xmod.fits',
-}
-
-wavemod_dict = {
-    # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'red/std/161120/wavemod.fits',
-    'GHOST_1_1_red_high_161120': 'red/high/161120/wavemod.fits',
-    'GHOST_1_1_blue_std_161120': 'blue/std/161120/wavemod.fits',
-    'GHOST_1_1_blue_high_161120': 'blue/high/161120/wavemod.fits',
-    'GHOST_1_1_red_std_220501': 'red/std/220501/wavemod.fits',
-    'GHOST_1_1_red_high_220501': 'red/high/220501/wavemod.fits',
-    'GHOST_1_1_blue_std_220501': 'blue/std/220501/wavemod.fits',
-    'GHOST_1_1_blue_high_220501': 'blue/high/220501/wavemod.fits',
-    'GHOST_1_1_red_std_220620': 'red/std/220620/wavemod.fits',
-    'GHOST_1_1_red_high_220620': 'red/high/220620/wavemod.fits',
-    'GHOST_1_1_blue_std_220620': 'blue/std/220620/wavemod.fits',
-    'GHOST_1_1_blue_high_220620': 'blue/high/220620/wavemod.fits',
-}
-
-spatmod_dict = {
-    # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'red/std/161120/spatmod.fits',
-    'GHOST_1_1_red_high_161120': 'red/high/161120/spatmod.fits',
-    'GHOST_1_1_blue_std_161120': 'blue/std/161120/spatmod.fits',
-    'GHOST_1_1_blue_high_161120': 'blue/high/161120/spatmod.fits',
-    'GHOST_1_1_red_std_220501': 'red/std/220501/spatmod.fits',
-    'GHOST_1_1_red_high_220501': 'red/high/220501/spatmod.fits',
-    'GHOST_1_1_blue_std_220501': 'blue/std/220501/spatmod.fits',
-    'GHOST_1_1_blue_high_220501': 'blue/high/220501/spatmod.fits',
-    'GHOST_1_1_red_std_220620': 'red/std/220620/spatmod.fits',
-    'GHOST_1_1_red_high_220620': 'red/high/220620/spatmod.fits',
-    'GHOST_1_1_blue_std_220620': 'blue/std/220620/spatmod.fits',
-    'GHOST_1_1_blue_high_220620': 'blue/high/220620/spatmod.fits',
-}
-
-specmod_dict = {
-    # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'red/std/161120/specmod.fits',
-    'GHOST_1_1_red_high_161120': 'red/high/161120/specmod.fits',
-    'GHOST_1_1_blue_std_161120': 'blue/std/161120/specmod.fits',
-    'GHOST_1_1_blue_high_161120': 'blue/high/161120/specmod.fits',
-    'GHOST_1_1_red_std_220501': 'red/std/220501/specmod.fits',
-    'GHOST_1_1_red_high_220501': 'red/high/220501/specmod.fits',
-    'GHOST_1_1_blue_std_220501': 'blue/std/220501/specmod.fits',
-    'GHOST_1_1_blue_high_220501': 'blue/high/220501/specmod.fits',
-    'GHOST_1_1_red_std_220620': 'red/std/220620/specmod.fits',
-    'GHOST_1_1_red_high_220620': 'red/high/220620/specmod.fits',
-    'GHOST_1_1_blue_std_220620': 'blue/std/220620/specmod.fits',
-    'GHOST_1_1_blue_high_220620': 'blue/high/220620/specmod.fits',
-}
-
-rotmod_dict = {
-    # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'red/std/161120/rotmod.fits',
-    'GHOST_1_1_red_high_161120': 'red/high/161120/rotmod.fits',
-    'GHOST_1_1_blue_std_161120': 'blue/std/161120/rotmod.fits',
-    'GHOST_1_1_blue_high_161120': 'blue/high/161120/rotmod.fits',
-    'GHOST_1_1_red_std_220501': 'red/std/220501/rotmod.fits',
-    'GHOST_1_1_red_high_220501': 'red/high/220501/rotmod.fits',
-    'GHOST_1_1_blue_std_220501': 'blue/std/220501/rotmod.fits',
-    'GHOST_1_1_blue_high_220501': 'blue/high/220501/rotmod.fits',
-    'GHOST_1_1_red_std_220620': 'red/std/220620/rotmod.fits',
-    'GHOST_1_1_red_high_220620': 'red/high/220620/rotmod.fits',
-    'GHOST_1_1_blue_std_220620': 'blue/std/220620/rotmod.fits',
-    'GHOST_1_1_blue_high_220620': 'blue/high/220620/rotmod.fits',
-}
-
-slitvmod_dict = {
-    # 'key': 'relative_dir',
-    'GHOST_1_1_slitv_std_161120': 'slitv/std/161120/slitvmod.fits',
-    'GHOST_1_1_slitv_high_161120': 'slitv/high/161120/slitvmod.fits',
-    'GHOST_1_1_slitv_std_220501': 'slitv/std/220501/slitvmod.fits',
-    'GHOST_1_1_slitv_high_220501': 'slitv/high/220501/slitvmod.fits',
-    'GHOST_1_1_slitv_std_220620': 'slitv/std/220620/slitvmod.fits',
-    'GHOST_1_1_slitv_high_220620': 'slitv/high/220620/slitvmod.fits',
-    'GHOST_1_1_slitv_std_230101': 'slitv/std/230101/slitvmod.fits',
-    'GHOST_1_1_slitv_high_230101': 'slitv/high/230101/slitvmod.fits',
-}
-
+import glob
 
 def get_polyfit_filename(log, arm, mode, date_obs, filename, caltype):
     """
     Gets the filename of the relevant initial polyfit file for this
-    input GHOST science image
+    input GHOST science image by searching for files in directories of
+    a known structure.
 
     This primitive uses the arm, resolution mode and observing epoch
     of the input AstroData object to determine the correct initial
@@ -131,38 +33,22 @@ def get_polyfit_filename(log, arm, mode, date_obs, filename, caltype):
     polyfit_dir = os.path.join(os.path.dirname(__file__),
                                'Polyfit')
 
-    # CJS: This is a method that only exists *if* the input is of type
-    # GHOST, so no need to check
-    key = 'GHOST_1_1_{}_{}'.format(arm, mode)
-
-    try:
-        poly_dict = globals()['{}_dict'.format(caltype)]
-    except KeyError:
+    available = sorted(glob.glob(os.path.join(polyfit_dir, arm, mode, "*",
+                                              f"{caltype}.fits")))
+    if not available:
         if not log is None:
-            log.warning("Invalid polyfit calibration type ({}) requested for "
-                        "{}".format(caltype, filename))
+            log.warning(f"Cannot find any {caltype} files for {filename}")
         return None
 
-    #FIXME: Restrict search to correct res and arm (all not necessarily
-    #updated at once!)
-    dates_avail = set([k.split('_')[-1] for k in poly_dict.keys()])
-    
-    # Safe to assume instrument won't be used after 2099...
-    dates_avail = [datetime.strptime('20{}'.format(x),
-                                        '%Y%m%d').date() for x in dates_avail]
-    dates_avail.sort()
+    date_obs = date_obs.strftime("%y%m%d")
+    calfile = None
+    for av in available:
+        if av.split(os.path.sep)[-2] < date_obs:
+            calfile = av
 
-    # Determine the latest data that precedes the observing date
-    try:
-        date_req = [_ for _ in dates_avail if _ <= date_obs][-1]
-    except IndexError:
+    if not calfile:
         if not log is None:
-            log.warning("No polyfit available for {}".format(filename))
+            log.warning(f"Cannot find a {caltype} for {filename} {date_obs}")
         return None
-    key += '_{}'.format(date_req.strftime('%y%m%d'))
 
-    polyfit_file = poly_dict[key]
-    # Prepend standard path if the filename doesn't start with '/'
-    return polyfit_file if polyfit_file.startswith(os.path.sep) else \
-        os.path.join(polyfit_dir, polyfit_file)
-
+    return calfile

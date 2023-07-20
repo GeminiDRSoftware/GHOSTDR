@@ -39,8 +39,8 @@ class applyFlatBPMConfig(config.Config):
 class barycentricCorrectConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_barycentricCorrected",
                           optional=True)
-    correction_factor = config.Field("Barycentric correction factor", float,
-                                     None, optional=True)
+    velocity = config.Field("Radial velocity correction", float,
+                            None, optional=True)
 
 
 class clipSigmaBPMConfig(config.Config):
@@ -84,12 +84,17 @@ class extractProfileConfig(config.Config):
                                float, 0.1, min=0, max=1)
     sigma = config.RangeField("Number of standard deviations at which to flag pixels",
                               float, 6, min=3)
-    smooth_flat_spatially = config.Field(
+    weighting = config.ChoiceField("Pixel weighting scheme for extraction", str,
+                                   allowed={"uniform": "uniform weighting",
+                                            "optimal": "optimal extraction"},
+                                   default="optimal")
+    extract2d = config.Field("Perform 2D extraction?", bool, True)
+    debug_smooth_flat_spatially = config.Field(
         "Smooth the flat field image before applying?", bool, False)
     seeing = config.RangeField("FWHM of seeing disc if no processed_slit is "
                                "available", float, None, min=0.2, optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, False)
-    debug_weight_map = config.Field("Add CR map to output?", bool, False)
+    debug_weight_map = config.Field("Add weight map to output?", bool, False)
     debug_cr_map = config.Field("Add CR map to output?", bool, False)
     debug_cr_order = config.RangeField("Order for CR debugging plot", int, None,
                                        min=33, max=97, optional=True)
@@ -116,8 +121,8 @@ class findAperturesConfig(config.Config):
                             None, optional=True)
     flat = config.ListField("Flat field", (str, ad), None,
                             optional=True, single=True)
-    skip_pixel_model = config.Field('Skip adding a pixel model to the '
-                                    'flat field?', bool, False)
+    #skip_pixel_model = config.Field('Skip adding a pixel model to the '
+    #                                'flat field?', bool, False)
 
 
 class fitWavelengthConfig(config.Config):
@@ -179,6 +184,16 @@ class rejectCosmicRaysConfig(config.Config):
     n_steps = config.Field("Number of iterations", int, 1)
 
 
+class removeScatteredLightConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_scatteredLightRemoved",
+                          optional=True)
+    skip = config.Field("Skip removal of scattered light?", bool, True)
+    debug_spline_smoothness = config.RangeField(
+        "Scaling factor for spline smoothness", float, default=1, min=0.5)
+    debug_save_model = config.Field("Attach scattered light model to output?",
+                                    bool, False)
+
+
 class responseCorrectConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_responseCorrected",
                           optional=True)
@@ -212,6 +227,13 @@ class standardizeSpectralFormatConfig(config.Config):
 
 
 write1DSpectraConfig = parameters_spect.write1DSpectraConfig
+
+
+class createFITSWCSConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_wfits",
+                          optional=True)
+    iraf = config.Field("Use IRAF (non-standard) format?", bool, False)
+    angstroms = config.Field("Write wavelength as Angstroms?", bool, False)
 
 
 class tileArraysConfig(parameters_visualize.tileArraysConfig):

@@ -18,4 +18,5 @@ timestamp_keys = {
     "processSlits": "PROCSLIT",
     "splitBundle": "SPLTBNDL",
     "responseCorrect": "RESPCORR",
+    "removeScatteredLight": "SCATCORR",
     }
