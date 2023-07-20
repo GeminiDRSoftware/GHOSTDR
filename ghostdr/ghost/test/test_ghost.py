@@ -37,11 +37,12 @@ def test_rebin_ghost_ad(binning):
     """
     # Create a test data frame to operate on
     phu = fits.PrimaryHDU()
+    phu.header['OBSERVAT'] = "GEMINI-SOUTH"
     hdu = fits.ImageHDU(data=np.zeros((1024, 1024,)), name='SCI')
     hdu.header['CCDSUM'] = '1 1'
-    hdu.header['DATASEC'] = '[0:1024,0:1024]'
-    hdu.header['TRIMSEC'] = '[0:1024,0:1024]'
-    hdu.header['AMPSIZE'] = '[0:1024,0:1024]'
+    hdu.header['DATASEC'] = '[1:1024,1:1024]'
+    hdu.header['TRIMSEC'] = '[1:1024,1:1024]'
+    hdu.header['AMPSIZE'] = '[1:1024,1:1024]'
     ad = astrodata.create(phu, [hdu, ])
 
     # Rebin the data a bunch of different ways, run tests on each
