@@ -14,7 +14,9 @@ import functools
 from datetime import datetime, timedelta
 import astropy.coordinates as astrocoord
 from astropy.time import Time
+from astropy.io import fits
 from astropy.io.ascii.core import InconsistentTableError
+from astropy.table import Table
 from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
@@ -2721,8 +2723,6 @@ class GHOSTSpect(GHOST):
 
         Parameters
         ----------
-        adinputs : list of :class:`~astrodata.AstroData`
-            Science data as 2D spectral images.
         format : str
             format for writing output files
         header : bool
@@ -2750,6 +2750,78 @@ class GHOSTSpect(GHOST):
                 ext.hdr['APERTURE'] = i
         Spect.write1DSpectra(self, adinputs, **params)
         return adinputs
+
+    def createFITSWCS(self, adinputs=None, **params):
+        """
+        DRAGONS/AstroData v3.0.x does not write FITS keywords correctly for
+        a log-linear wavelength scale. This primitive creates such files and
+        writes them to disk, returning an empty adinputs list.
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        iraf: bool
+            write WCS in IRAF format?
+        angstroms: bool
+            write new wavelength keywords in Angstroms (rather than nm)?
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        suffix = params["suffix"]
+        iraf = params["iraf"]
+        angstroms = params["angstroms"]
+
+        for ad in adinputs:
+            log.stdinfo(f"Processing {ad.filename}")
+            hdulist = ad.to_hdulist()
+            for ext, ver in zip(ad, ad.hdr['EXTVER']):
+                if len(ext.shape) != 1:
+                    log.stdinfo(f"    EXTVER {ver} has non-1D data... "
+                                f"continuing")
+                    continue
+                m = ext.wcs.forward_transform
+                if not isinstance(m, models.Exponential1D):
+                    log.stdinfo(f"    EXTVER {ver}'s dispersion is not "
+                                f"log-linear... continuing")
+                    continue
+                amp, tau = m.parameters
+                if angstroms:
+                    amp *= 10
+                if iraf:
+                    # IRAF/NOAO, according to Valdes (1993, ASP 52, 467)
+                    dw = np.log10(m(1) / m(0))
+                    new_kws = {"CTYPE1": "WAVE-LOG", "CRPIX1": 1,
+                               "CRVAL1": np.log10(amp),
+                               "CDELT1": dw, "CD1_1": dw, "DC-FLAG": 1}
+                else:
+                    # FITS standard, according to Eqn (5) of
+                    # Greisen et al. (2006; A&A 446, 747)
+                    dw = np.log(m(1) / m(0)) * amp
+                    new_kws = {"CTYPE1": "WAVE-LOG", "CRPIX1": 1, "CRVAL1": amp,
+                               "CDELT1": dw, "CD1_1": dw}
+                if angstroms:
+                    new_kws['CUNIT1'] = 'Angstrom'
+
+                wcs_index = None
+                for i, hdu in enumerate(hdulist):
+                    if hdu.header.get('EXTVER') == ver:
+                        if isinstance(hdu, fits.ImageHDU) and len(hdu.data.shape) == 1:
+                            hdu.header.update(new_kws)
+                            try:
+                                del hdu.header['FITS-WCS']
+                            except KeyError:
+                                pass
+                    elif hdu.header.get('EXTNAME') == "WCS":
+                        wcs_index = i
+                if wcs_index is not None:
+                    del hdulist[wcs_index]
+
+            ad.update_filename(suffix=suffix, strip=True)
+            log.stdinfo(f"Writing {ad.filename}")
+            hdulist.writeto(ad.filename, overwrite=True)
+
+        return []
 
     # CJS: Primitive has been renamed for consistency with other instruments
     # The geometry_conf.py file is not needed; all you're doing is tiling

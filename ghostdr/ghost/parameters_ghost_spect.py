@@ -229,6 +229,13 @@ class standardizeSpectralFormatConfig(config.Config):
 write1DSpectraConfig = parameters_spect.write1DSpectraConfig
 
 
+class createFITSWCSConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_wfits",
+                          optional=True)
+    iraf = config.Field("Use IRAF (non-standard) format?", bool, False)
+    angstroms = config.Field("Write wavelength as Angstroms?", bool, False)
+
+
 class tileArraysConfig(parameters_visualize.tileArraysConfig):
     def setDefaults(self):
         self.suffix = "_arraysTiled"
