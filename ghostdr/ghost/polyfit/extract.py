@@ -1360,8 +1360,6 @@ def resample_slit_profiles_to_detector(profiles, profile_y_microns=None,
     # zero away from this.
     for i, profile in enumerate(profiles):
         if not isinstance(profile, CubicSpline):
-            #print(f"PROFILE {i}")
-            #print(profile)
             # There's probably a better way to do this
             good = np.ones_like(profile, dtype=bool)
             for j, val in enumerate(profile):
@@ -1374,14 +1372,11 @@ def resample_slit_profiles_to_detector(profiles, profile_y_microns=None,
                     good[-j] = False
                 else:
                     break
-            #print(good)
             xspline = np.r_[profile_y_microns[good].min() - half_slitprof_pixel,
                             profile_y_microns[good],
                             profile_y_microns[good].max() + half_slitprof_pixel]
-            #print("XSPLINE", xspline)
-            profiles[i] = CubicSpline(xspline, np.r_[0, profile[good], 0])
-            #print(profiles[i].x)
-            #print(profiles[i](profiles[i].x))
+            # Apparently the antiderivative is also a CubicSpline object
+            profiles[i] = CubicSpline(xspline, np.r_[0, profile[good], 0]).antiderivative()
 
     slitview_pixel_edges = profile_center + np.linspace(
         profile_y_microns[0] - half_slitprof_pixel,
@@ -1393,10 +1388,10 @@ def resample_slit_profiles_to_detector(profiles, profile_y_microns=None,
                            profile_center) * detpix_microns
 
     phi = np.zeros((len(profiles), x_ix[1] - x_ix[0]))
-    for i in range(phi.shape[1]):
-        phi[:, i] = [profile.integrate(min(max(pixel_edges_microns[i], profile.x[0]), profile.x[-1]),
-                                       max(min(pixel_edges_microns[i+1], profile.x[-1]), profile.x[0]))
-                     for profile in profiles]
+    for i, profile in enumerate(profiles):
+        left = np.minimum(np.maximum(pixel_edges_microns[:-1], profile.x[0]), profile.x[-1])
+        boundaries = np.r_[left, max(min(pixel_edges_microns[-1], profile.x[-1]), profile.x[0])]
+        phi[i] = np.diff(profile(boundaries))
 
     if debug:
         for j, profile in enumerate(profiles):
