@@ -48,10 +48,6 @@ for p in ADLIB_PACKAGES:
             PACKAGE_DATA[p].extend( map((lambda f: os.path.join(dest, f)), txtfiles) )
             txtlist.extend( map((lambda f: os.path.join(dest, f)), txtfiles) )
 
-            pyfiles = [f for f in files if dotpy.search(f)]
-            dest = root.split('/',1)[1] if len(root.split('/',1)) > 1 else ""
-            PACKAGE_DATA[p].extend( map((lambda f: os.path.join(dest, f)), pyfiles) )
-
 
 # SCRIPTS
 SCRIPTS = [os.path.join('simulator', 'testsim.py')]
@@ -63,6 +59,7 @@ for root, dirs, files in os.walk('utils'):
 
 # PACKAGES
 PACKAGES = find_packages(where='.', exclude=['ghostdr.ghost.test', 'ghostdr.ghost.recipes.test'])
+PACKAGES.append('ghostdr.lookups.BPM')
 PACKAGE_DIR = {"": "."}
 SIMPACKAGES = find_packages(where=os.path.join('.', 'simulator'))
 PACKAGES.extend(SIMPACKAGES)
