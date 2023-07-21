@@ -59,7 +59,7 @@ for root, dirs, files in os.walk('utils'):
 
 # PACKAGES
 PACKAGES = find_packages(where='.', exclude=['ghostdr.ghost.test', 'ghostdr.ghost.recipes.test'])
-PACKAGES.append('ghostdr.lookups.BPM')
+PACKAGES.append('ghostdr.ghost.lookups.BPM')
 PACKAGE_DIR = {"": "."}
 SIMPACKAGES = find_packages(where=os.path.join('.', 'simulator'))
 PACKAGES.extend(SIMPACKAGES)
