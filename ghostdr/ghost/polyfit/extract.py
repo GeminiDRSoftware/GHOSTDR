@@ -485,6 +485,95 @@ class Extractor(object):
                     
         return pixel_model
 
+    def new_extract(self, data=None, correct_for_sky=True, use_sky=True,
+                    optimal=False, find_crs=True, snoise=0.1, sigma=6,
+                    used_objects=[0, 1], debug_cr_pixel=None,
+                    correction=None):
+        from .extractum import Extractum
+
+        try:
+            x_map, w_map, blaze, matrices = self.bin_models()
+        except Exception:
+            raise RuntimeError('Extraction failed, unable to bin models.')
+
+        # Set up convenience local variables
+        ny = x_map.shape[1]
+        nm = x_map.shape[0]
+        nx = int(self.arm.szx / self.arm.xbin)
+
+        # Our profiles... we re-extract these in order to include the centroids
+        # Centroids is the offset in pixels along the short axis of the pseudoslit
+        profile, centroids = self.slitview.slit_profile(arm=self.arm.arm,
+                                                        return_centroid=True)
+
+        # Allow us to compute flux-weighted transverse position
+        slitview_profiles = [profile, profile*centroids]
+
+        def transverse_positions(slitview_profiles, profile_center=None,
+                                 detpix_microns=None):
+            """Returns offset along short axis of pseudoslit in microns"""
+            x_ix, phi, _ = resample_slit_profiles_to_detector(
+                slitview_profiles, profile_y_microns=profile_y_microns,
+                profile_center=profile_center, detpix_microns=detpix_microns)
+            return x_ix, astrotools.divide0(phi[1] / phi[0]) * self.slitview.microns_pix
+
+        profiles = self.slitview.object_slit_profiles(
+            arm=self.arm.arm, correct_for_sky=correct_for_sky,
+            used_objects=used_objects, append_sky=use_sky or find_crs
+        )
+
+        # Number of "objects" and "slit pixels"
+        no = profiles.shape[0]
+        if find_crs and not use_sky:
+            no -= 1
+        n_slitpix = profiles.shape[1]
+        profile_y_microns = (np.arange(n_slitpix) -
+                             n_slitpix / 2 + 0.5) * self.slitview.microns_pix
+
+        m_init = models.Polynomial1D(degree=1)
+        fit_it = fitting.FittingWithOutlierRemoval(fitting.LinearLSQFitter(), sigma_clip)
+        good = ~np.isinf(self.vararray)
+        if self.badpixmask is not None:
+            good &= (self.badpixmask & DQ.not_signal) == 0
+        noise_model, _ = fit_it(m_init, data[good].ravel(), self.vararray[good].ravel())
+        if noise_model.c0 <= 0:
+            print("Problem with read noise estimate!")
+            print(noise_model)
+            noise_model.c0 = 4  # just something for now
+
+        pixel_inv_var = 1. / self.vararray
+
+        #### STUFF ABOUT CONVOLUTION HERE ####
+
+        # Loop through all orders then through all y pixels.
+        if find_crs:
+            print("    Extracting order ", end="")
+            for i in range(nm):
+                print(f"{self.arm.m_min+i}...", end="")
+                sys.stdout.flush()
+
+                for j in range(ny):
+                    debug_this_pixel = debug_cr_pixel in [(self.arm.m_min+i, j)]
+
+                    x_ix, phi, profiles = resample_slit_profiles_to_detector(
+                        profiles, profile_y_microns, x_map[i, j] + nx // 2,
+                        detpix_microns=matrices[i, j, 0, 0], debug=debug_this_pixel)
+
+                    # Deal with edge effects...
+                    ww = np.logical_or(x_ix >= nx, x_ix < 0)
+                    x_ix[ww] = 0
+                    phi /= phi.sum(axis=1)[:, np.newaxis]
+
+                    _slice = (j, x_ix) if self.transpose else (x_ix, j)
+                    col_data = data[_slice]
+                    col_inv_var = pixel_inv_var[_slice]
+                    badpix = (np.zeros_like(col_data, dtype=bool)
+                              if self.badpixmask is None else self.badpixmask[_slice].astype(bool))
+                    badpix[ww] = True
+                    xtr = Extractum(phi, col_data, col_inv_var, badpix,
+                                    noise_model=noise_model, pixel=(self.arm.m_min+i, j))
+
+
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,
                       use_sky=True, optimal=False, find_crs=True,
                       snoise=0.1, sigma=6,
@@ -659,7 +748,7 @@ class Extractor(object):
 
             for j in range(ny):
                 #print(f"PIXEL {self.arm.m_min+i} {j}")
-                debug_this_pixel = debug_cr_pixel in [(self.arm.m_min+i, j), (self.arm.m_min+i, j-0)]
+                debug_this_pixel = debug_cr_pixel in [(self.arm.m_min+i, j)]
 
                 # Check for NaNs
                 if x_map[i, j] != x_map[i, j]:
