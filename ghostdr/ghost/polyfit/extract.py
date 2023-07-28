@@ -70,20 +70,25 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
     orig_good = np.logical_and(col_inv_var > 0,
                                phi.sum(axis=0) > 0)
 
+    if debug:
+        print("\nOBJECT PROFILES (phi)")
+        print(phi)
+        print(orig_good)
+
     # If we don't have enough pixels to fit we can't reject
     if orig_good.sum() < phi.shape[0]:
-        result = optimize.lsq_linear(phi.T, col_data, bounds=(0, np.inf))
-        return [], result.x
+        x, _ = optimize.nnls(phi.T, col_data)
+        if debug:
+            print("NOT ENOUGH GOOD PIXELS. RESULT", x)
+            for c, p in zip(col_data, phi.T):
+                print(c, x * p)
+        return [], x
 
     good = orig_good.copy()
-    if debug:
-        print("\n")
-        print("OBJECT PROFILES (phi)")
-        print(phi)
     # Don't use the weights initially because these are smoothed
     # and small CRs get missed
     try:
-        result = optimize.lsq_linear(phi.T[good], col_data[good], bounds=(0, np.inf))
+        x, _ = optimize.nnls(phi.T[good], col_data[good])
     except:
         print(f"INITIAL FITTING FAILURE AT PIXEL {pixel}")
         print(col_data[good])
@@ -91,9 +96,9 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
             print([p[good]])
         raise
     if not reject:  # we have a result, initial VAR array OK for weights
-        return [], result.x
+        return [], x
 
-    model = np.dot(result.x, phi)
+    model = np.dot(x, phi)
     inv_var_use = 1. / np.maximum(noise_model(model) + (snoise * model) ** 2, 0)
     nit = 0
     while good.sum() >= phi.shape[0]:
@@ -103,7 +108,7 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
         A = phi * np.sqrt(inv_var_use)
         b = col_data * np.sqrt(inv_var_use)
         try:
-            result = optimize.lsq_linear(A.T[good], b[good], bounds=(0, np.inf))
+            x, _ = optimize.nnls(A.T[good], b[good])
         except:
             print(f"FITTING FAILURE AT PIXEL {pixel} ITERATION {nit}")
             print(col_data[good])
@@ -118,11 +123,11 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
                 print(p[good])
             raise
 
-        model = np.dot(result.x, phi)
+        model = np.dot(x, phi)
         if debug:
             print("RAW COLUMN DATA")
             print(col_data)
-            print("RESULT", result.x)
+            print("RESULT", x)
             print(model)
             print(good)
             print("-" * 60)
@@ -136,16 +141,25 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
         worst_offender = np.argmax(abs(deviation)[good])
         if abs(deviation[good][worst_offender]) > sigma:
             good[np.where(good)[0][worst_offender]] = False
-        #new_bad = (abs(col_data - model) > max_deviation) & good
-        #if new_bad.any():
-        #    good &= ~new_bad
         else:
             break
         nit += 1
 
     new_bad = np.where(np.logical_and.reduce(
         [col_inv_var > 0, abs(deviation) > sigma, orig_good]))[0]
-    #print("RESULT", *pixel, result.x)
+
+    # Refit using weights without the CR "snoise" thing
+    if debug:
+        print("BAD", new_bad, phi.shape)
+        print("DATA AND MODEL CONTRIBUTIONS (CR fitting)", x)
+        for c, p in zip(col_data, phi.T):
+            print(c, x * p)
+
+    inv_var_use = 1. / ndimage.convolve1d(noise_model(model), spat_conv_weights)
+    A = phi * np.sqrt(inv_var_use)
+    b = col_data * np.sqrt(inv_var_use)
+    #result = optimize.lsq_linear(A.T[good], b[good], bounds=(-np.inf, np.inf))
+    x = np.linalg.lstsq(A.T[good], b[good])[0]
 
     # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
     #limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),
@@ -154,7 +168,9 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
     #new_bad = np.where(col_data > limit)[0]
     #if debug and len(new_bad) > 0:
     if debug:
-        print("BAD", new_bad, phi.shape)
+        print("DATA AND MODEL CONTRIBUTIONS (without snoise)", x)
+        for c, p in zip(col_data, phi.T):
+            print(c, x * p)
         # Sky is always last profile in phi?
         summed_fluxes = [np.sum(col_data[p>0]) for p in phi[:-1]]
         print("SUMMED FLUXES IN OBJECT FIBRES (not sky subtracted)",
@@ -164,12 +180,12 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
         # max allowed value
         plt.plot(model + sigma * np.sqrt(var_use), 'r-', label='limit')
         plt.plot(model, 'b-', label='model')
-        for ppp, amp in zip(phi, result.x):
+        for ppp, amp in zip(phi, x):
             plt.plot(ppp * amp, ':')
         plt.show()
         plt.ion()
 
-    return new_bad, result.x
+    return new_bad, x
 
 
 def subtract_scattered_light(data, mask):
@@ -610,11 +626,12 @@ class Extractor(object):
         good = ~np.isinf(vararray)
         if self.badpixmask is not None:
             good &= (self.badpixmask & DQ.not_signal) == 0
-        noise_model, _ = fit_it(m_init, data[good].ravel(), vararray[good].ravel())
-        if noise_model.c0 <= 0:
+        m_noise, _ = fit_it(m_init, data[good].ravel(), vararray[good].ravel())
+        if m_noise.c0 <= 0:
             print("Problem with read noise estimate!")
-            print(noise_model)
-            noise_model.c0 = 4  # just something for now
+            print(m_noise)
+            m_noise.c0 = 4  # just something for now
+        noise_model = lambda x: m_noise.c0 + m_noise.c1 * abs(x)
 
         # Assuming that the data are in photo-electrons, construct a simple
         # model for the pixel inverse variance.
@@ -732,8 +749,9 @@ class Extractor(object):
                     plt.ioff()
                     fig, ax = plt.subplots()
                     ax.plot(x_ix, phi[0])
-                    ax.plot(profiles[0].x / matrices[i, j, 0, 0] + x_map[i, j] + nx // 2,
-                            profiles[0](profiles[0].x))
+                    xx = 0.5 * (profiles[0].x[:-1] + profiles[0].x[1:])
+                    ax.plot(xx / matrices[i, j, 0, 0] + x_map[i, j] + nx // 2,
+                            np.diff(profiles[0](profiles[0].x)))
                     ax.plot(x_ix, col_data / col_data.sum())
                     plt.show()
                     plt.ion()
@@ -829,7 +847,7 @@ class Extractor(object):
                 # really matter, and has to be re-tested once the fitted
                 # spatial scale and tilt is more robust.
 
-                pixel_weights = np.zeros((x_ix.size, no))
+                pixel_weights = np.zeros((no, x_ix.size))
                 phi_scaled = phi * model_amps[:, np.newaxis]
                 sum_models = phi_scaled.sum(axis=0)
                 col_var = noise_model(sum_models)
@@ -837,14 +855,16 @@ class Extractor(object):
                 col_inv_var[badpix] = 1e-18
                 for ii in np.arange(no):  # for each object
                     # Avoid NaNs if there is no flux at all in a pixel
-                    frac = phi_scaled[ii] / (sum_models + 1e-10)
+                    frac = astrotools.divide0(col_data - phi_scaled.sum(axis=0) + phi_scaled[ii], col_data)
+                    if debug_this_pixel:
+                        print(f"OBJECT {ii}", frac)
                     if optimal:
-                        pixel_weights[:, ii] = (phi[ii] * col_inv_var * frac /
-                                                np.sum(phi[ii]**2 * col_inv_var))
+                        pixel_weights[ii] = (phi[ii] * col_inv_var * frac /
+                                             np.sum(phi[ii]**2 * col_inv_var))
                     else:
-                        pixel_weights[:, ii] = (np.where(col_inv_var == 0, 0, frac) /
-                                                np.sum(phi[ii][col_inv_var > 0]))
-                    pixel_weights[badpix, ii] = 0
+                        pixel_weights[ii] = (np.where(col_inv_var == 0, 0, frac) /
+                                             np.sum(phi[ii][col_inv_var > 0]))
+                    pixel_weights[ii, badpix] = 0
 
                 # FIXME: Search here for weights that are non-zero for
                 # any overlapping orders:
@@ -859,9 +879,7 @@ class Extractor(object):
                     print(col_inv_var)
                     print("EXTRACTION WEIGHTS:")
                 for ii, ew_one in enumerate(extraction_weights):
-                    if debug_this_pixel:
-                        print(ew_one[x_ix, j])
-                    ew_one[x_ix, j] += pixel_weights[:, ii]
+                    ew_one[x_ix, j] += pixel_weights[ii]
                     ew_one[x_ix, j][badpix] = 0
                     if debug_this_pixel:
                         print(ew_one[x_ix, j])
@@ -869,15 +887,19 @@ class Extractor(object):
                 # Actual extraction is simple: Just matrix-multiply the
                 # (flat-)corrected data by the weights.
                 #extracted_flux[i, j, :] = np.dot(col_data, pixel_weights)
-                extracted_flux[i, j, :] = np.dot(col_data * corr, pixel_weights)
+                extracted_flux[i, j, :] = np.dot(col_data * corr, pixel_weights.T)
 
                 # Rather than trying to understand and
                 # document Equation 17 from Sharp and Birchall, which 
                 # doesn't make a lot of sense...  lets just calculate the
                 # variance in the simple explicit way for a linear combination
                 # of independent pixels.
-                extracted_var[i, j, :] = np.dot(
-                    corr * corr / np.maximum(col_inv_var, 1e-18), pixel_weights ** 2)
+                #extracted_var[i, j, :] = np.dot(
+                #    corr * corr / np.maximum(col_inv_var, 1e-18), pixel_weights.T ** 2)
+                # This is a bit more like Eqn 14 from Sharp & Birchall,
+                # accounting for masked pixels
+                extracted_var[i, j, :] = np.dot(astrotools.divide0(pixel_weights, pixel_weights.sum(axis=0)),
+                                                corr * corr * col_var)
                 if debug_this_pixel:
                     print("EXTRACTED FLUXES", extracted_flux[i, j])
                     print("EXTRACTED VAR", extracted_var[i, j])
@@ -1394,11 +1416,12 @@ def resample_slit_profiles_to_detector(profiles, profile_y_microns=None,
         phi[i] = np.diff(profile(boundaries))
 
     if debug:
+        print("\nRESAMPLING")
         for j, profile in enumerate(profiles):
             print(f"PROFILE {j}")
             print(profile.x)
             print(profile(profile.x))
-            print("="*60)
+            print("-"*60)
             #print(pixel_edges_microns)
             #print(profile(pixel_edges_microns))
             #print("="*60)
@@ -1407,6 +1430,7 @@ def resample_slit_profiles_to_detector(profiles, profile_y_microns=None,
                 x2 = max(min(pixel_edges_microns[i+1], profile.x[-1]), profile.x[0])
                 print(x1, x2, profile.integrate(x1, x2))
             print(phi[j])
+        print("="*60)
 
     phi[phi < 0] = 0
     return np.arange(*x_ix, dtype=int), phi, profiles
