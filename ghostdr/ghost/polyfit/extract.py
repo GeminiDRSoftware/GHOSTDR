@@ -501,6 +501,9 @@ class Extractor(object):
         nm = x_map.shape[0]
         nx = int(self.arm.szx / self.arm.xbin)
 
+        if self.badpixmask is None:
+            self.badpixmask = np.zeros_like(data, dtype=DQ.datatype)
+
         # Our profiles... we re-extract these in order to include the centroids
         # Centroids is the offset in pixels along the short axis of the pseudoslit
         profile, centroids = self.slitview.slit_profile(arm=self.arm.arm,
@@ -512,10 +515,10 @@ class Extractor(object):
         def transverse_positions(slitview_profiles, profile_center=None,
                                  detpix_microns=None):
             """Returns offset along short axis of pseudoslit in microns"""
-            x_ix, phi, _ = resample_slit_profiles_to_detector(
+            ix, p, _ = resample_slit_profiles_to_detector(
                 slitview_profiles, profile_y_microns=profile_y_microns,
                 profile_center=profile_center, detpix_microns=detpix_microns)
-            return x_ix, astrotools.divide0(phi[1] / phi[0]) * self.slitview.microns_pix
+            return ix, astrotools.divide0(p[1] / p[0]) * self.slitview.microns_pix
 
         profiles = self.slitview.object_slit_profiles(
             arm=self.arm.arm, correct_for_sky=correct_for_sky,
@@ -532,9 +535,7 @@ class Extractor(object):
 
         m_init = models.Polynomial1D(degree=1)
         fit_it = fitting.FittingWithOutlierRemoval(fitting.LinearLSQFitter(), sigma_clip)
-        good = ~np.isinf(self.vararray)
-        if self.badpixmask is not None:
-            good &= (self.badpixmask & DQ.not_signal) == 0
+        good = ~np.isinf(self.vararray) & ((self.badpixmask & DQ.not_signal) == 0)
         noise_model, _ = fit_it(m_init, data[good].ravel(), self.vararray[good].ravel())
         if noise_model.c0 <= 0:
             print("Problem with read noise estimate!")
@@ -545,9 +546,9 @@ class Extractor(object):
 
         #### STUFF ABOUT CONVOLUTION HERE ####
 
-        # Loop through all orders then through all y pixels.
+        # Identify CRs
         if find_crs:
-            print("    Extracting order ", end="")
+            print("    Finding CRs in order ", end="")
             for i in range(nm):
                 print(f"{self.arm.m_min+i}...", end="")
                 sys.stdout.flush()
@@ -567,11 +568,50 @@ class Extractor(object):
                     _slice = (j, x_ix) if self.transpose else (x_ix, j)
                     col_data = data[_slice]
                     col_inv_var = pixel_inv_var[_slice]
-                    badpix = (np.zeros_like(col_data, dtype=bool)
-                              if self.badpixmask is None else self.badpixmask[_slice].astype(bool))
+                    badpix = self.badpixmask[_slice].astype(bool)
                     badpix[ww] = True
                     xtr = Extractum(phi, col_data, col_inv_var, badpix,
                                     noise_model=noise_model, pixel=(self.arm.m_min+i, j))
+
+                    xtr.find_cosmic_rays(snoise=snoise, sigma=sigma, debug=debug_this_pixel)
+                    self.badpixmask |= (xtr.cr * DQ.cosmic_ray)
+
+        # Now do the extraction
+        print("    Extracting order ", end="")
+        for i in range(nm):
+            print(f"{self.arm.m_min+i}...", end="")
+            sys.stdout.flush()
+
+            extracta = []
+            for j in range(ny):
+                debug_this_pixel = debug_cr_pixel in [(self.arm.m_min+i, j)]
+
+                slit_center = x_map[i, j] + nx // 2
+                x_ix, phi, profiles = resample_slit_profiles_to_detector(
+                    profiles, profile_y_microns, slit_center,
+                    detpix_microns=matrices[i, j, 0, 0], debug=debug_this_pixel)
+
+                # Deal with edge effects...
+                ww = np.logical_or(x_ix >= nx, x_ix < 0)
+                x_ix[ww] = 0
+                phi /= phi.sum(axis=1)[:, np.newaxis]
+
+                # Calculate extraction location for each spatial pixel by
+                # including contributions from non-collinear slit and slit tilt
+                ix, xvpos = transverse_positions(slitview_profiles, slit_center,
+                                                detpix_microns=matrices[i, j, 0, 0])
+                assert np.array_equal(x_ix, ix)
+                ytilt = (x_ix - slit_center) * self.slit_tilt[i, j]
+                y_ix = j + xvpos / matrices[i, j, 1, 1] + ytilt
+                extracta.append(Extractum(phi, None, noise_model=noise_model,
+                                          x=x_ix, y=y_ix))
+
+            for j in range(ny):
+                for k, v in coords.items():
+                    np.interp(data[k], v)
+                    np.interp(self.badpixmask[k], v) > 0
+
+
 
 
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,

@@ -14,14 +14,16 @@ class Extractum:
     spat_conv_weights = np.array([0.25, .5, .25])
 
     def __init__(self, phi, data, inv_var=None, mask=None,
-                 noise_model=None, pixel=None):
+                 noise_model=None, x=None, y=None, pixel=None):
         self.phi = phi
         self.nprof, self.npix = phi.shape
         self.data = data
         self.badpix = np.zeros((self.npix,), dtype=bool) if mask is None else mask
         self.noise_model = noise_model
-        self.inv_var = at.divide0(1., noise_model(data)) if inv_var is None else inv_var
+        self.inv_var = at.divide0(1., noise_model(data)) if inv_var is None and data is not None else inv_var
         self.cr = np.zeros_like(self.badpix)
+        self.x = x  # spatial pixel index (integer)
+        self.y = y  # dispersion pixel index (possibly float)
         self.pixel = pixel
 
     def fit(self, good=None, coeffs=None):
