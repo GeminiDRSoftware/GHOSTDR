@@ -1004,6 +1004,22 @@ class GHOSTSpect(GHOST):
             safe_data = deepcopy(ad[0].data)
             safe_variance = deepcopy(ad[0].variance)
 
+            extracted_flux, extracted_var = extractor.new_extract(
+                data=safe_data,
+                correct_for_sky=sky_correct_profiles,
+                use_sky=s, used_objects=o, find_crs=cr,
+                snoise=snoise, sigma=sigma,
+                debug_cr_pixel=debug_cr_pixel,
+                correction=None, optimal=optimal_extraction
+            )
+
+            test_ad = astrodata.create(ad.phu)
+            test_ad.append(extracted_flux)
+            test_ad[-1].variance = extracted_var
+            test_ad[-1].CR = (extractor.badpixmask | DQ.cosmic_ray).astype(DQ.datatype)
+            test_ad = self.addWavelengthSolution([test_ad]).pop()
+            test_ad.write("new_extract_test.fits", overwrite=True)
+
             # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
             new_correction = None

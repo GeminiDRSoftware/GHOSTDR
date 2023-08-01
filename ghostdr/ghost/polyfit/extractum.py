@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.ndimage import convolve1d
-from scipy.optimize import lsq_linear
+from scipy import optimize
 from amtplotlib import pyplot as plt
 
 from gempy.gemini.library import astrotools as at
@@ -14,7 +14,7 @@ class Extractum:
     spat_conv_weights = np.array([0.25, .5, .25])
 
     def __init__(self, phi, data, inv_var=None, mask=None,
-                 noise_model=None, x=None, y=None, pixel=None):
+                 noise_model=None, pixel=None):
         self.phi = phi
         self.nprof, self.npix = phi.shape
         self.data = data
@@ -22,8 +22,6 @@ class Extractum:
         self.noise_model = noise_model
         self.inv_var = at.divide0(1., noise_model(data)) if inv_var is None and data is not None else inv_var
         self.cr = np.zeros_like(self.badpix)
-        self.x = x  # spatial pixel index (integer)
-        self.y = y  # dispersion pixel index (possibly float)
         self.pixel = pixel
 
     def fit(self, good=None, coeffs=None):
@@ -32,54 +30,62 @@ class Extractum:
         if good.sum() < self.nprof:
             good = None
 
+        # Iterate?
+
         # Don't use the weights initially because these are smoothed
         # and small CRs get missed
         if coeffs is None:
-            result = lsq_linear(self.phi.T[good], self.data[good],
-                                bounds=(0, np.inf))
+            result = optimize.lsq_linear(self.phi.T[good], self.data[good],
+                                         bounds=(-np.inf, np.inf))
             coeffs = result.x
         model = np.dot(coeffs, self.phi)
-        inv_var_use = convolve1d(at.divide0(1., self.noise_model(model)),
-                                 self.spat_conv_weights)
+        #inv_var_use = convolve1d(at.divide0(1., self.noise_model(model)),
+        #                         self.spat_conv_weights)
+        inv_var_use = at.divide0(1., self.noise_model(model))
         A = self.phi * np.sqrt(inv_var_use)
         b = self.data * np.sqrt(inv_var_use)
-        result = lsq_linear(A.T[good], b[good], bounds=(0, np.inf))
+        result = optimize.lsq_linear(A.T[good], b[good], bounds=(-np.inf, np.inf))
         return result.x
 
     def find_cosmic_rays(self, snoise=0.1, sigma=6, debug=False):
         sigmasq = sigma * sigma
 
         # Don't try to fit points which aren't expected to have any signal
-        orig_good = np.logical_and.reduce([self.inv_var > 0,
-                                          self.phi.sum(axis=0) > 0,
-                                          ~self.badpix, ~self.cr])
+        good = np.logical_and.reduce([self.inv_var > 0,
+                                      self.phi.sum(axis=0) > 0,
+                                      ~self.badpix, ~self.cr])
+
+        # If we don't have enough pixels to fit we can't reject
+        if good.sum() < self.nprof:
+            return []
 
         try:
-            coeffs = self.fit(good=orig_good)
+            coeffs, _ = optimize.nnls(self.phi.T[good], self.col_data[good])
         except:
             print(f"INITIAL FITTING FAILURE AT PIXEL {self.pixel}")
             print(self.data)
             for p in self.phi:
                 print(p)
-            print(orig_good)
+            print(good)
             raise
-        # If we don't have enough pixels to fit we can't reject
-        if orig_good.sum() < self.nprof:
-            return coeffs, []
 
-        good = orig_good.copy()
+        orig_good = good.copy()
         if debug:
             print("\n")
             print("OBJECT PROFILES (phi)")
             print(self.phi)
 
+        model = np.dot(coeffs, self.phi)
+        inv_var_use = 1. / np.maximum(self.noise_model(model) + (snoise * model) ** 2, 0)
         nit = 0
         while good.sum() >= self.nprof:
             # CJS problem with using weights and rejecting low pixels
             # Further investigation needed... can we be sure there are
             # no low pixels?
+            A = self.phi * np.sqrt(inv_var_use)
+            b = self.col_data * np.sqrt(inv_var_use)
             try:
-                coeffs = self.fit(good=good, coeffs=coeffs)
+                x, _ = optimize.nnls(A.T[good], b[good])
             except:
                 print(f"FITTING FAILURE AT PIXEL {self.pixel} ITERATION {nit}")
                 model = np.dot(coeffs, self.phi)
@@ -149,4 +155,4 @@ class Extractum:
             plt.show()
             plt.ion()
 
-        return coeffs, new_bad
+        return new_bad
