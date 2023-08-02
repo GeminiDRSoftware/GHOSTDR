@@ -908,7 +908,7 @@ class Extractor(object):
         return extracted_flux, extracted_var, extraction_weights
 
     def two_d_extract(self, data=None, fl=None, extraction_weights=None,
-                      vararray=None):
+                      vararray=None, apply_centroids=False):
         """
         Perform two-dimensional flux extraction.
 
@@ -938,6 +938,10 @@ class Extractor(object):
         extraction_weights: :obj:`numpy.ndarray`, optional
             Extraction weights created from a call to one_d_extract. Separating
             this makes the code more readable, but is not speed optimised.
+
+        apply_centroids: bool
+            calculate the centres-of-light perpendicular to the slit long axis
+            in order to "improve" the extraction (seems to require very high SNR)
         """
 
         # FIXME: Much of this code is doubled-up with one_d_extract.
@@ -1070,17 +1074,17 @@ class Extractor(object):
                 # FIXME: See 1d code for how this was done for profiles...
                 # PRV: This is only absolutely needed for PRV mode, with 
                 # matrices[i,j,1,1] coming from "specmod.fits".
-                ysub_pix += np.interp(x_ix - x_map[i, j] - nx // 2,
-                                      # CRH:  below was the original version but I think it's
-                                      # missing a factor of the microns/pix
-                                      # slit_ix / matrices[i, j, 0, 0], \
-                                      profile_y_microns / matrices[i, j, 0, 0],
-                                      centroids / matrices[i, j, 1, 1])
+                if apply_centroids:
+                    ysub_pix += np.interp(x_ix - x_map[i, j] - nx // 2,
+                                          # CRH:  below was the original version but I think it's
+                                          # missing a factor of the microns/pix
+                                          # slit_ix / matrices[i, j, 0, 0], \
+                                          profile_y_microns / matrices[i, j, 0, 0],
+                                          centroids / matrices[i, j, 1, 1])
 
                 # Make sure this is within the limits of our subarray.
                 # NB We have will define ysub_pix so that the first pixel
                 # covers 0 to 1, not -0.5 to +0.5 for ease of coding
-                ysub_pix += 0.5
                 ysub_pix = np.maximum(ysub_pix, 0)
                 ysub_pix = np.minimum(ysub_pix, ny_cutout - 1 - 1e-6)
 

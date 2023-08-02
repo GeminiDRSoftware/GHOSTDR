@@ -786,6 +786,7 @@ class GHOSTSpect(GHOST):
         add_weight_map = params["debug_weight_map"]
         optimal_extraction = params["weighting"] == "optimal"
         extract2d = params["extract2d"]
+        apply_centroids = params["apply_centroids"]
 
         # This primitive modifies the input AD structure, so it must now
         # check if the primitive has already been applied. If so, it must be
@@ -1166,6 +1167,7 @@ class GHOSTSpect(GHOST):
                         corrected_data,
                         extraction_weights=extracted_weights,
                         vararray=corrected_var,
+                        apply_centroids=apply_centroids
                     )
 
                 # CJS: Since you don't use the input AD any more, I'm going to
