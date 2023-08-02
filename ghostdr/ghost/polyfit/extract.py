@@ -159,7 +159,7 @@ def find_additional_crs(phi, col_data, col_inv_var, snoise=0.1, sigma=6,
     A = phi * np.sqrt(inv_var_use)
     b = col_data * np.sqrt(inv_var_use)
     #result = optimize.lsq_linear(A.T[good], b[good], bounds=(-np.inf, np.inf))
-    x = np.linalg.lstsq(A.T[good], b[good])[0]
+    x = np.linalg.lstsq(A.T[good], b[good], rcond=-1)[0]
 
     # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
     #limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),

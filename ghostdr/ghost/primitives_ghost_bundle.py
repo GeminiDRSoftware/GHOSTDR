@@ -7,9 +7,8 @@ from collections import Counter
 import copy
 import itertools
 from datetime import timedelta
-import numpy as np
 
-import astrodata
+import astrodata, ghost_instruments
 from .primitives_ghost import GHOST
 from . import parameters_ghost_bundle
 
@@ -268,6 +267,9 @@ def _write_newfile(extns, suffix, base, log):
     n.phu['DATALAB'] += f"-{n.phu['CAMERA']}"
     if n.phu['CAMERA'] != "SLITV":
         n.phu['DATALAB'] += f"-{suffix[-3:]}"  # sequence number
+
+    # And add GHOSTDR version number
+    n.phu['GHOSTDR'] = (ghost_instruments.__version__, "GHOSTDR version")
 
     return n
 
