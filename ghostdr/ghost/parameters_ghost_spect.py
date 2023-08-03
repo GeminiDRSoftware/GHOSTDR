@@ -89,6 +89,7 @@ class extractProfileConfig(config.Config):
                                             "optimal": "optimal extraction"},
                                    default="optimal")
     extract2d = config.Field("Perform 2D extraction?", bool, True)
+    apply_centroids = config.Field("Apply slit center-of-light offsets?", bool, False)
     debug_smooth_flat_spatially = config.Field(
         "Smooth the flat field image before applying?", bool, False)
     seeing = config.RangeField("FWHM of seeing disc if no processed_slit is "
