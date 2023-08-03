@@ -79,7 +79,7 @@ class extractProfileConfig(config.Config):
                                        "stowed": "Stowed"},
                               default=None, optional=True)
     sky_subtract = config.Field("Sky-subtract object spectra?", bool, True)
-    flat_precorrect = config.Field("Pre-correct by the flat field?", bool, True)
+    flat_correct = config.Field("Flatfield the data?", bool, True)
     snoise = config.RangeField("Fraction of signal to be added to noise estimate for CR flagging",
                                float, 0.1, min=0, max=1)
     sigma = config.RangeField("Number of standard deviations at which to flag pixels",
@@ -122,8 +122,8 @@ class findAperturesConfig(config.Config):
                             None, optional=True)
     flat = config.ListField("Flat field", (str, ad), None,
                             optional=True, single=True)
-    #skip_pixel_model = config.Field('Skip adding a pixel model to the '
-    #                                'flat field?', bool, False)
+    skip_pixel_model = config.Field('Skip adding a pixel model to the '
+                                    'flat field?', bool, False)
 
 
 class fitWavelengthConfig(config.Config):
@@ -163,6 +163,13 @@ class formatOutputConfig(config.Config):
         'flat_profile': 'Include flat profile',
         'sensitivity_curve': 'Include computed sensitivity curve',
     }, default='default')
+
+
+class measureBlazeConfig(config.Config):
+    suffix = config.Field("Filename suffix", str, "_blazeMeasured",
+                          optional=True)
+    slitflat = config.ListField("Slit viewer flat field", (str, ad), None,
+                                optional=True, single=True)
 
 
 class overscanCorrectConfig(parameters_ccd.overscanCorrectConfig):

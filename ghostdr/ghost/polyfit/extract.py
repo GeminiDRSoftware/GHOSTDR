@@ -407,9 +407,6 @@ class Extractor(object):
             x_map, w_map, blaze, matrices = self.bin_models()
         except Exception:
             raise RuntimeError('Extraction failed, unable to bin models.')
-        #print("XMAP")
-        #for i, x in enumerate(x_map[12]):
-        #    print(f"{i:4d} {x + self.arm.szx // 2}")
 
         # Key array constants
         ny = x_map.shape[1]
@@ -439,55 +436,6 @@ class Extractor(object):
                 matrices[i, :, 0, 0])))
 
             for j in range(ny):
-                # Create an array of y pixels based on the scale for this
-                # order and pixel.
-
-                # Create our column cutout for the data and the PSF, then put
-                # it back into our 2D array. 
-                
-                # FIXME: Is "round" most correct on the next line???
-                # FIXME: Profiles should be convolved by a detector pixel,
-                # but binning has to be taken into account properly!
-                #x_ix = int(np.round(
-                #    x_map[i, j])) - nx_cutout // 2 + \
-                #       np.arange(nx_cutout, dtype=int) + nx // 2
-
-                # CRH 20220825:  Convolve the slit to detector pixels 
-                # by interpolating the slit profile and integrating it 
-                # across the detector pixels
-
-                #n_slit_sample = int(np.round(1.0/(profile_y_pix[1] - \
-                #    profile_y_pix[0])))*2
-                #x_ix_sample = int(np.round(
-                #    x_map[i, j])) - nx_cutout // 2 + \
-                #       np.arange(nx_cutout*n_slit_sample,
-                #                 dtype=int)/n_slit_sample + nx // 2
-
-                # Remove? These were old interpolations of the slit to the
-                # detector
-
-                # Depending on the slit orientation, we have to make sure 
-                # that np.interp is fed a monotonically increasing x vector.
-                #if matrices[i, j, 0, 0] < 0:
-                #    phi = np.interp(
-                #        x_ix - x_map[i, j] - nx // 2, profile_y_pix[::-1],
-                #        profile[::-1])
-                #else:
-                #    phi = np.interp(
-                #        x_ix - x_map[i, j] - nx // 2, profile_y_pix,
-                #        profile)
-
-                #interp_prof = np.interp(
-                #    x_ix_sample - x_map[i, j] - nx // 2, profile_y_pix,
-                #    profile)
-
-                #phi = interp_prof.reshape(x_ix.shape[0],n_slit_sample).sum(axis=1)
-
-                # Normalise to the median of the non-zero pixels. This is neater
-                # if it normalises to the median, but normalisation can occur 
-                # later, and shouldn't occur wavelength by wavelength.
-                #phi /= np.sum(phi[phi != 0])
-
                 x_ix, phi, profiles = resample_slit_profiles_to_detector(
                     profiles, profile_y_microns, x_map[i, j] + nx // 2,
                     detpix_microns=matrices[i, j, 0, 0])
@@ -504,7 +452,7 @@ class Extractor(object):
     def new_extract(self, data=None, correct_for_sky=True, use_sky=True,
                     optimal=False, find_crs=True, snoise=0.1, sigma=6,
                     used_objects=[0, 1], debug_cr_pixel=None,
-                    correction=None):
+                    apply_centroids=False, correction=None):
         from .extractum import Extractum
 
         try:
@@ -534,7 +482,7 @@ class Extractor(object):
             ix, p, _ = resample_slit_profiles_to_detector(
                 slitview_profiles, profile_y_microns=profile_y_microns,
                 profile_center=profile_center, detpix_microns=detpix_microns)
-            return ix, astrotools.divide0(p[1] / p[0]) * self.slitview.microns_pix
+            return ix, astrotools.divide0(p[1], p[0]) * self.slitview.microns_pix
 
         profiles = self.slitview.object_slit_profiles(
             arm=self.arm.arm, correct_for_sky=correct_for_sky,
@@ -552,11 +500,13 @@ class Extractor(object):
         m_init = models.Polynomial1D(degree=1)
         fit_it = fitting.FittingWithOutlierRemoval(fitting.LinearLSQFitter(), sigma_clip)
         good = ~np.isinf(self.vararray) & ((self.badpixmask & DQ.not_signal) == 0)
-        noise_model, _ = fit_it(m_init, data[good].ravel(), self.vararray[good].ravel())
-        if noise_model.c0 <= 0:
+        m_noise, _ = fit_it(m_init, data[good].ravel(), self.vararray[good].ravel())
+        if m_noise.c0 <= 0:
             print("Problem with read noise estimate!")
-            print(noise_model)
-            noise_model.c0 = 4  # just something for now
+            print(m_noise)
+            m_noise.c0 = 4  # just something for now
+            m_noise.c1 = 1
+        noise_model = lambda x: m_noise.c0 + m_noise.c1 * abs(x)
 
         pixel_inv_var = 1. / self.vararray
 
@@ -588,13 +538,20 @@ class Extractor(object):
                     badpix[ww] = True
                     xtr = Extractum(phi, col_data, col_inv_var, badpix,
                                     noise_model=noise_model, pixel=(self.arm.m_min+i, j))
+                    if debug_this_pixel:
+                        print("ROWS", x_ix)
                     xtr.find_cosmic_rays(snoise=snoise, sigma=sigma, debug=debug_this_pixel)
-                    self.badpixmask |= (xtr.cr * DQ.cosmic_ray)
+                    self.badpixmask[_slice] |= (xtr.cr * DQ.cosmic_ray)
+                    if debug_this_pixel:
+                        print("ADDING CRs", _slice)
+                        print(self.badpixmask[_slice])
 
-        # Now do the extraction
+        print(f"\n{(self.badpixmask & DQ.cosmic_ray).astype(bool).sum()} CRs found")
+
+        # Now do the extraction. First determine *where* to extract
         extracted_flux = np.zeros((nm, ny, no), dtype=np.float32)
         extracted_var = np.zeros((nm, ny, no), dtype=np.float32)
-        print("    Extracting order ", end="")
+        print("\n\n    Extracting order ", end="")
         for i in range(nm):
             print(f"{self.arm.m_min+i}...", end="")
             sys.stdout.flush()
@@ -604,69 +561,101 @@ class Extractor(object):
                 slit_center = x_map[i, j] + nx // 2
                 x_ix, phi, profiles = resample_slit_profiles_to_detector(
                     profiles, profile_y_microns, slit_center,
-                    detpix_microns=matrices[i, j, 0, 0], debug=debug_this_pixel)
+                    detpix_microns=matrices[i, j, 0, 0])
                 if j == 0:
-                    xmin = x_ix.min()
+                    limits = (x_ix.min(), x_ix.max())
+                elif x_ix.min() < limits[0]:
+                    xmin, xmax = x_ix.min(), limits[1]
                 else:
-                    xmax = x_ix.max()
+                    xmin, xmax = limits[0], x_ix.max()
+
+            # xmin can be <0, xmax can be >= nx
             nrows = xmax - xmin + 1
             pixel_array = np.zeros((ny, nrows))
             mask_array = np.zeros_like(pixel_array, dtype=bool)
-            all_phi = np.empty((ny, *phi.shape))
+            all_phi = []
+            if debug_cr_pixel:
+                print(f"ROW LIMITS: {xmin} {xmax}")
 
             # Code is written in this way to minimize the number of calls to
             # np.interp -- calling for each pixel is very slow
             for j in range(ny):
                 debug_this_pixel = debug_cr_pixel in [(self.arm.m_min+i, j)]
-
                 slit_center = x_map[i, j] + nx // 2
                 x_ix, phi, profiles = resample_slit_profiles_to_detector(
                     profiles, profile_y_microns, slit_center,
-                    detpix_microns=matrices[i, j, 0, 0], debug=debug_this_pixel)
+                    detpix_microns=matrices[i, j, 0, 0])
 
                 # Deal with edge effects...
                 on_array = np.logical_and(x_ix >=0, x_ix < nx)
-                x_ix[~on_array] = 0
                 phi /= phi.sum(axis=1)[:, np.newaxis]
 
                 # Calculate extraction location for each spatial pixel by
                 # including contributions from non-collinear slit and slit tilt
-                ix, xvpos = transverse_positions(slitview_profiles, slit_center,
-                                                detpix_microns=matrices[i, j, 0, 0])
-                assert np.array_equal(x_ix, ix)
                 ytilt = (x_ix - slit_center) * self.slit_tilt[i, j]
-                y_ix = j + xvpos / matrices[i, j, 1, 1] + ytilt
-                pixel_array[j, x_ix.min()-xmin:x_ix.max()-xmin+1] = y_ix[on_array]
-                mask_array[j] |= ~on_array
-                all_phi[j] = phi
+                y_ix = j + ytilt
+                if apply_centroids:
+                    ix, xvpos = transverse_positions(slitview_profiles, slit_center,
+                                                     detpix_microns=matrices[i, j, 0, 0])
+                    assert np.array_equal(x_ix, ix)
+                    y_ix += xvpos / matrices[i, j, 1, 1] + ytilt
+                pixel_array[j, x_ix.min()-xmin:x_ix.max()-xmin+1] = y_ix
+                if debug_this_pixel:
+                    y_locations = y_ix
+                    print("\nY LOCATIONS",
+                          [(xx, yy) for xx, yy in zip(x_ix, y_locations)])
+                mask_array[j, x_ix.min()-xmin:x_ix.max()-xmin+1] |= ~on_array
+                all_phi.append((x_ix.min()-xmin, phi))
 
+            # Do the interpolation for all wavelengths in this order
             # Save memory by overwriting the array of pixel locations with values
+            mask_array |= np.logical_or(pixel_array < 0, pixel_array >= ny)
             for ix in range(max(xmin, 0), min(xmax+1, nx)):
                 # Flag any virtual pixel that is partly off the edge of the array
-                mask_array |= np.logical_or(pixel_array < 0, pixel_array >= ny)
-                pixel_array[ix-xmin] = np.interp(
-                    pixel_array[ix-xmin], np.arange(ny), data[xmin])
-                mask_array[ix-xmin] |= np.interp(
-                    pixel_array[ix-xmin], np.arange(ny), self.badpixmask[xmin]) > 0
+                mask_array[:, ix-xmin] |= np.interp(
+                    pixel_array[:, ix-xmin], np.arange(ny), self.badpixmask[ix]) > 0
+                if correction is None:
+                    pixel_array[:, ix-xmin] = np.interp(
+                        pixel_array[:, ix-xmin], np.arange(ny), data[ix])
+                else:
+                    pixel_array[:, ix-xmin] = np.interp(
+                        pixel_array[:, ix-xmin],
+                        np.arange(ny), data[ix] * correction[i])
 
-            for j in range(ny):
+            if debug_cr_pixel[0] == self.arm.m_min+i:
+                yy = debug_cr_pixel[1]
+                x1, phi = all_phi[yy]
+                print(f"Badpix around ({x1+xmin}:{x1+xmin+phi.shape[1]}, {yy})")
+                print(self.badpixmask[x1+xmin:x1+xmin+phi.shape[1], yy-1:yy+2])
+                for ix, y in enumerate(y_locations):
+                    print(ix+x1+xmin, y,  pixel_array[yy, ix+x1], mask_array[yy, ix+x1])
+
+            for j, (x_ix_min, phi) in enumerate(all_phi):  # range(ny)
                 debug_this_pixel = debug_cr_pixel in [(self.arm.m_min+i, j)]
+                # Preserves the S/N
+                if correction is not None:
+                    noise_model = lambda x: correction[i, j] ** 2 * (
+                            m_noise.c0 + m_noise.c1 * abs(x))
 
-                xtr = Extractum(all_phi[j], pixel_array[j, j],
-                                mask=mask_array[j], noise_model=noise_model,
+                _slice = (j, slice(x_ix_min, x_ix_min+phi.shape[1]))
+                xtr = Extractum(phi, pixel_array[_slice],
+                                mask=mask_array[_slice], noise_model=noise_model,
                                 pixel=(self.arm.m_min+i, j))
-                model_amps = xtr.fit()
+                model_amps = xtr.fit(debug=debug_this_pixel)
 
-                pixel_weights = np.zeros((no, x_ix.size))
+                pixel_weights = np.zeros((no, phi.shape[1]))
                 phi_scaled = phi * model_amps[:, np.newaxis]
                 sum_models = phi_scaled.sum(axis=0)
                 col_var = noise_model(sum_models)
                 col_inv_var = astrotools.divide0(1., col_var)
-                col_inv_var[badpix] = 1e-18
+                col_inv_var[xtr.mask] = 1e-18
                 for ii in np.arange(no):  # for each object
                     # Avoid NaNs if there is no flux at all in a pixel
-                    frac = astrotools.divide0(col_data - phi_scaled.sum(axis=0) + phi_scaled[ii], col_data)
+                    frac = astrotools.divide0(xtr.data - phi_scaled.sum(axis=0)
+                                              + phi_scaled[ii], xtr.data)
                     if debug_this_pixel:
+                        if correction is not None:
+                            print("FLATFIELD CORRECTION (multiplicative)", correction[i, j])
                         print(f"OBJECT {ii}", frac)
                     if optimal:
                         pixel_weights[ii] = (phi[ii] * col_inv_var * frac /
@@ -674,10 +663,10 @@ class Extractor(object):
                     else:
                         pixel_weights[ii] = (np.where(col_inv_var == 0, 0, frac) /
                                              np.sum(phi[ii][col_inv_var > 0]))
-                    pixel_weights[ii, badpix] = 0
+                    pixel_weights[ii, xtr.mask] = 0
 
                 if debug_this_pixel:
-                    print("SUM", np.sum(col_data))
+                    print("SUM", np.sum(xtr.data))
                     print("INVERSE VARIANCE")
                     print(col_inv_var)
                     print("EXTRACTION WEIGHTS:")
@@ -686,7 +675,7 @@ class Extractor(object):
 
                 # Actual extraction is simple: Just matrix-multiply the
                 # (flat-)corrected data by the weights.
-                extracted_flux[i, j, :] = np.dot(col_data, pixel_weights.T)
+                extracted_flux[i, j, :] = np.dot(xtr.data, pixel_weights.T)
 
                 # This is a bit more like Eqn 14 from Sharp & Birchall,
                 # accounting for masked pixels
@@ -695,9 +684,53 @@ class Extractor(object):
                 if debug_this_pixel:
                     print("EXTRACTED FLUXES", extracted_flux[i, j])
                     print("EXTRACTED VAR", extracted_var[i, j])
-            print("\n")
+        print("\n")
 
         return extracted_flux, extracted_var
+
+    def quick_extract(self, data=None):
+        """
+        Extract flux by simply summing all the pixels at each column
+        in each order.
+        """
+        try:
+            x_map, w_map, blaze, matrices = self.bin_models()
+        except Exception:
+            raise RuntimeError('Extraction failed, unable to bin models.')
+
+        # Set up convenience local variables
+        nm, ny = x_map.shape
+        nx = int(self.arm.szx / self.arm.xbin)
+
+        extracted_flux = np.zeros((nm, ny), dtype=np.float32)
+        extracted_mask = np.zeros_like(extracted_flux, dtype=DQ.datatype)
+        extracted_var = np.zeros_like(extracted_flux)
+
+        profiles = [self.slitview.slit_profile(arm=self.arm.arm)]
+        n_slitpix = profiles[0].size
+        profile_y_microns = (np.arange(n_slitpix) -
+                             n_slitpix / 2 + 0.5) * self.slitview.microns_pix
+
+        # Loop through all orders then through all y pixels.
+        print("    Extracting order ", end="")
+        for i in range(nm):
+            print(f"{self.arm.m_min+i}...", end="")
+            sys.stdout.flush()
+
+            for j in range(ny):
+                x_ix, phi, profiles = resample_slit_profiles_to_detector(
+                    profiles, profile_y_microns, x_map[i, j] + nx // 2,
+                    detpix_microns=matrices[i, j, 0, 0])
+                _slice = (j, x_ix) if self.transpose else (x_ix, j)
+                if x_ix.min() < 0 or x_ix.max() >= nx:
+                    extracted_mask[i, j] = DQ.no_data
+                else:
+                    extracted_flux[i, j] = data[_slice].sum()
+                    extracted_var[i, j] = self.vararray[_slice].sum()
+                    extracted_mask[i, j] = np.logical_or.reduce(self.badpixmask[_slice])
+
+        print("\n")
+        return extracted_flux, extracted_var, extracted_mask
 
     def one_d_extract(self, data=None, fl=None, correct_for_sky=True,
                       use_sky=True, optimal=False, find_crs=True,
@@ -1171,7 +1204,7 @@ class Extractor(object):
         nx = int(self.arm.szx / self.arm.xbin)
 
         # Our profiles... we re-extract these in order to include the centroids.
-        profile, centroids = self.slitview.slit_profile(arm=self.arm.arm, \
+        profile, centroids = self.slitview.slit_profile(arm=self.arm.arm,
                                                         return_centroid=True)
         profiles = [profile]
         profile_y_microns = (np.arange(profile.size) -
@@ -1630,7 +1663,7 @@ def resample_slit_profiles_to_detector(profiles, profile_y_microns=None,
             for i in range(phi.shape[1]):
                 x1 = min(max(pixel_edges_microns[i], profile.x[0]), profile.x[-1])
                 x2 = max(min(pixel_edges_microns[i+1], profile.x[-1]), profile.x[0])
-                print(x1, x2, profile.integrate(x1, x2))
+                #print(x1, x2, profile.integrate(x1, x2))
             print(phi[j])
         print("="*60)
 

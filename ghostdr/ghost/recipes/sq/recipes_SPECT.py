@@ -32,7 +32,7 @@ def reduceScience(p):
                      # separately, before we extract its profile.
     p.removeScatteredLight()
     p.writeOutputs()
-    p.extractProfile(flat_precorrect=True)
+    p.extractProfile()
     #p.flatCorrect(skip=True)  # Need to write our own, NOT USE GMOS - extract the flat
     #                 # profile, then simple division
     p.addWavelengthSolution()  # should be able to accept multiple input

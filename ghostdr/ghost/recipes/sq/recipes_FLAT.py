@@ -30,6 +30,7 @@ def makeProcessedFlat(p):
     p.tileArrays()
     p.findApertures()
     p.removeScatteredLight()
+    p.measureBlaze()
     p.storeProcessedFlat()
     return
 

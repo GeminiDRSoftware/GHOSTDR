@@ -15,6 +15,7 @@ timestamp_keys = {
     "fitWavelength": "FITWAVLN",
     "flatCorrect": "FLATCORR",
     "formatOutput": "FMTOUTPT",
+    "measureBlaze": "MEASBLZE",
     "processSlits": "PROCSLIT",
     "splitBundle": "SPLTBNDL",
     "responseCorrect": "RESPCORR",

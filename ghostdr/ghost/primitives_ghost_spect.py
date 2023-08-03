@@ -758,7 +758,7 @@ class GHOSTSpect(GHOST):
         seeing: float/None
             can be used to create a synthetic slitviewer image (and synthetic
             slitflat image) if, for some reason, one is not available
-        flat_precorrect: bool
+        flat_correct: bool
             remove the reponse function from each order before extraction?
         snoise: float
             linear fraction of signal to add to noise estimate for CR flagging
@@ -776,6 +776,7 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        flat_correct = params["flat_correct"]
         ifu1 = params["ifu1"]
         ifu2 = params["ifu2"]
         seeing = params["seeing"]
@@ -934,10 +935,6 @@ class GHOSTSpect(GHOST):
                 find_crs = [True]
                 sky_correct_profiles = True
 
-            # MJI - Uncomment the lines below for testing in the simplest possible case.
-            # objs_to_use = [[0], ]
-            # use_sky = [False, ]
-
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
             # simultaneously.
@@ -1000,144 +997,24 @@ class GHOSTSpect(GHOST):
             # uses Extractor.vararray), allowing an update to the instance's
             # .vararray attribute
             # Refactor all this for 3.1
-            corrected_data = deepcopy(ad[0].data)
-            corrected_var = deepcopy(ad[0].variance)
-            safe_data = deepcopy(ad[0].data)
-            safe_variance = deepcopy(ad[0].variance)
-
-            extracted_flux, extracted_var = extractor.new_extract(
-                data=safe_data,
-                correct_for_sky=sky_correct_profiles,
-                use_sky=s, used_objects=o, find_crs=cr,
-                snoise=snoise, sigma=sigma,
-                debug_cr_pixel=debug_cr_pixel,
-                correction=None, optimal=optimal_extraction
-            )
-
-            test_ad = astrodata.create(ad.phu)
-            test_ad.append(extracted_flux)
-            test_ad[-1].variance = extracted_var
-            test_ad[-1].CR = (extractor.badpixmask | DQ.cosmic_ray).astype(DQ.datatype)
-            test_ad = self.addWavelengthSolution([test_ad]).pop()
-            test_ad.write("new_extract_test.fits", overwrite=True)
 
             # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
-            new_correction = None
-            if params['flat_precorrect']:
+            correction = None
+            if flat_correct:
                 try:
-                    if not hasattr(flat[0], 'PIXELMODEL'):
-                        # Make a slit flat SlitView instance for getting a binned
-                        # pixel mask and then initialize this binned slit extractor
-                        flat_sview = SlitView(slitflat_data, slitflat_data,
-                            slitvpars.TABLE[0], mode=res_mode,
-                            microns_pix = 4.54 * 180 / 50, **sview_kwargs)
-                        unbinned_flat_extractor = Extractor(arm, flat_sview,
-                            badpixmask=flat[0].mask,
-                            vararray=flat[0].variance)
-                        flat[0].PIXELMODEL = unbinned_flat_extractor.make_pixel_model()
-
-                    xbin, ybin = ad.detector_x_bin(), ad.detector_y_bin()
-
-                    # Bin the flat to the image binning... see note near
-                    # start of primitive about why this is bad code
-                    if (flat.detector_x_bin() != xbin or
-                            flat.detector_y_bin() != ybin):
-                        flat = self._rebin_ghost_ad(flat, xbin, ybin)
-                    binned_pixmod = flat[0].PIXELMODEL
-
-                    illuminated_pixels = binned_pixmod > 0
-
-                    # Lets find the flat normalisation constant.
-                    # FIXME Should this normalisation be done elsewhere?
-                    mean_flat_flux = np.mean(flat[0].data[illuminated_pixels])
-                    mean_pixelmod = np.mean(binned_pixmod[illuminated_pixels])
-
-                    # Now find the correction.
-                    correction = binned_pixmod[illuminated_pixels] / \
-                                 flat[0].data[illuminated_pixels] * \
-                                 mean_flat_flux/mean_pixelmod
-
-                    # Find additional bad pixels where the flat doesn't match PIXELMODEL
-                    # This is important to have somewhere, because otherwise any
-                    # newly dead pixels will result in divide by 0.
-                    smoothed_flat = convolve_with_mask(flat[0].data,
-                                                       illuminated_pixels)
-                    normalised_flat = flat[0].data / smoothed_flat
-
-                    # Extra bad pixels are where the normalied flat differs from the
-                    # PIXELMODEL, where PIXELMODEL is non-zero and there is a
-                    # non-negligible amount of smoothed flat flux.
-                    
-                    # FIXME: the 0.7 on the next line should be significantly lower, but
-                    # requires a model that fits the data well. Re-examine with real 
-                    # data.
-                    extra_bad = (
-                        np.abs(
-                            normalised_flat - binned_pixmod/mean_pixelmod
-                        ) > 0.7
-                    ) & illuminated_pixels * (
-                        smoothed_flat > 0.1 * mean_flat_flux
-                    )
-
-                    # import pdb; pdb.set_trace()
-
-                    # MCW 190912 - converted to option, default is 'False'
-                    # TODO: MJI to add description of what this (should) do
-                    if params['debug_smooth_flat_spatially']:
-                        correction_2d = np.zeros_like(flat[0].data)
-                        correction_2d[illuminated_pixels] = correction
-                        smoothed_correction_2d = convolve_with_mask(
-                            correction_2d, illuminated_pixels)
-                        smoothed_correction_2d[
-                            illuminated_pixels
-                        ] = correction_2d[illuminated_pixels]
-                        smoothed_correction_2d = nd.median_filter(
-                            smoothed_correction_2d, size=(7, 1)
-                        )
-                        correction = smoothed_correction_2d[illuminated_pixels]
-
-                    # This is where we add the new bad pixels in. It is needed for
-                    # computing correct weights.
-                    
-                    #TODO: These 4 lines (and possibly correction= BLAH) can stay.
-                    #the rest to go to findApertures
-                    #extractor.vararray[extra_bad] = np.inf  # CJS: this has no effect
-                    extractor.badpixmask[extra_bad] |= BAD_FLAT_FLAG
-                    
-                    # MJI: Pre-correct the data here. 
-                    corrected_data[illuminated_pixels] *= correction
-                    corrected_var[illuminated_pixels] *= correction**2
-
-                    new_correction = np.ones_like(corrected_data)
-                    new_correction[illuminated_pixels] = correction
-                    #test_ad = astrodata.create(flat.phu)
-                    #test_ad.append(new_correction)
-                    #test_ad.write("test_correction.fits", overwrite=True)
-                    # Uncomment to bugshoot finding bad pixels for the flat. Should be
-                    # repeated once models are reasonable for real data as a sanity
-                    # check
-                    #import matplotlib.pyplot as plt
-                    #plt.ion()
-                    #plt.clf()
-                    #plt.imshow(corrected_data, vmin=0, vmax=4*np.percentile(corrected_data,75))
-                    #plt.imshow(plotit)
-                    #import pdb; pdb.set_trace()
-
-                except AttributeError as e:  # Catch if no PIXELMODEL
-                    if 'PIXELMODEL' in e.message:
-                        e.message = 'The flat {} has no PIXELMODEL extension ' \
-                                    '- either run extractProfile without the ' \
-                                    'flat_precorrect option, or re-generate ' \
-                                    'your flat field without the ' \
-                                    'skip_pixel_model option.\n' \
-                                    '(Original error message: {})'.format(
-                            flat.filename,
-                            e.message,
-                        )
-                        raise e
-                    else:
-                        raise
+                    blaze = flat[0].BLAZE
+                except AttributeError:
+                    log.warning(f"Flatfield {flat.filename} has no BLAZE, so"
+                                "cannot perform flatfield correction")
+                else:
+                    ny, nx = blaze.shape
+                    xbin = ad.detector_x_bin()
+                    print("BLAZE", blaze.min(), blaze.max())
+                    binned_blaze = blaze.reshape(ny, nx // xbin, xbin).mean(axis=-1)
+                    correction = np.where(binned_blaze < 0.01, 0, 1. / binned_blaze)
+                    weak_signal = binned_blaze < 0.0001
+                    print("CORRECTION", correction.min(), correction.max(), weak_signal.sum())
 
             for i, (o, s, cr) in enumerate(zip(objs_to_use, use_sky, find_crs)):
                 if o:
@@ -1148,43 +1025,44 @@ class GHOSTSpect(GHOST):
                     raise RuntimeError("No objects for extraction and use_sky=False")
                 # CJS: Makes it clearer that you're throwing the first two
                 # returned objects away (get replaced in the two_d_extract call)
-                
-                # Need to use corrected_data here; the data in ad[0] is
-                # overwritten with the first extraction pass of this loop
-                # (see the try-except statement at line 925)
-                extracted_flux, extracted_var, extracted_weights = extractor.one_d_extract(
-                    #data=corrected_data, vararray=corrected_var,
-                    data=safe_data, vararray=safe_variance,
+
+                extracted_flux, extracted_var = extractor.new_extract(
+                    data=ad[0].data.copy(),
                     correct_for_sky=sky_correct_profiles,
                     use_sky=s, used_objects=o, find_crs=cr,
                     snoise=snoise, sigma=sigma,
                     debug_cr_pixel=debug_cr_pixel,
-                    correction=new_correction, optimal=optimal_extraction
+                    correction=correction, optimal=optimal_extraction,
+                    apply_centroids=apply_centroids
                 )
 
-                # DEBUG - see Mike's notes.txt, where we want to look at DUMMY
-                #import matplotlib.pyplot as plt
-                #import pickle
-                #pickle.dump( (DUMMY), open( "dummy.p", "wb" ) )
-                #plt.ion()
-                #plt.figure(1)
-                ##plt.plot(DUMMY[1,3510:3720,0])
-                ##plt.plot(np.sum(corrected_data[340:410,3510:3720], axis=0))
-                #plt.plot(np.sum(corrected_data[540:645,2380:3280], axis=0))
-                #plt.plot(DUMMY[2,2380:3280], label='Extracted')
-                #plt.ylim([0,6e4])
-                #plt.legend()
-                #import pdb; pdb.set_trace()
+                #test_ad = deepcopy(ad)
+                #test_ad[0].reset(extracted_flux, mask=None,
+                #                 variance=extracted_var)
+                #test_ad[0].CR = (extractor.badpixmask & DQ.cosmic_ray).astype(DQ.datatype)
+                #test_ad = self.addWavelengthSolution([test_ad]).pop()
+                #test_ad.write("new_extract_test.fits", overwrite=True)
 
-                #extracted_flux = DUMMY
-                #extracted_var = np.zeros_like(DUMMY, dtype=np.float32)
-                if extract2d:
-                    extracted_flux, extracted_var = extractor.two_d_extract(
-                        corrected_data,
-                        extraction_weights=extracted_weights,
-                        vararray=corrected_var,
-                        apply_centroids=apply_centroids
-                    )
+                # Need to use corrected_data here; the data in ad[0] is
+                # overwritten with the first extraction pass of this loop
+                # (see the try-except statement at line 925)
+                #extracted_flux, extracted_var, extracted_weights = extractor.one_d_extract(
+                #    #data=corrected_data, vararray=corrected_var,
+                #    data=safe_data, vararray=safe_variance,
+                #    correct_for_sky=sky_correct_profiles,
+                #    use_sky=s, used_objects=o, find_crs=cr,
+                #    snoise=snoise, sigma=sigma,
+                #    debug_cr_pixel=debug_cr_pixel,
+                #    correction=new_correction, optimal=optimal_extraction
+                #)
+
+                #if extract2d:
+                #    extracted_flux, extracted_var = extractor.two_d_extract(
+                #        corrected_data,
+                #        extraction_weights=extracted_weights,
+                #        vararray=corrected_var,
+                #        apply_centroids=apply_centroids
+                #    )
 
                 # CJS: Since you don't use the input AD any more, I'm going to
                 # modify it in place, in line with your comment that you're
@@ -1422,14 +1300,6 @@ class GHOSTSpect(GHOST):
                 spatpars=spatpars[0].data, microns_pix=slitview.microns_pix,
                 xpars=xpars[0].data
             )
-
-            #flat_conv = signal.medfilt2d(flat_conv, (5, 5))
-            #flat_conv = nd.gaussian_filter(flat_conv, (5, 0))
-            #test_ad = astrodata.create(ad.phu)
-            #test_ad.filename = "test_flat_conv.fits"
-            #test_ad.append(flat_conv)
-            #test_ad.write(overwrite=True)
-            #crash
 
             # Fit the initial model to the data being considered
             fitted_params = ghost_arm.fit_x_to_image(flat_conv,
@@ -1991,247 +1861,86 @@ class GHOSTSpect(GHOST):
 
         return adinputs
 
-    def rejectCosmicRays(self, adinputs=None, **params):
+    def measureBlaze(self, adinputs=None, **params):
         """
-        Reject cosmic rays from GHOST data.
 
-        .. warning::
-            This primitive is now deprecated - cosmic ray rejection is now
-            handled as part of the profile extraction process.
-        
         Parameters
         ----------
-        n_steps: int
-            The number of iterations that the LACosmic algorithm will make.
-        subsampling: int
-            The image subsampling factor LACosmic will use to generate the
-            input images for the algorithm. There is really no reason to
-            change this value from the default.
-        sigma_lim: float
-            The sigma-clipping limit to be applied to the noise map.
-        f_lim: float
-            The clipping limit for the fine-structure image.
-        """
-        raise DeprecationWarning('Cosmic ray rejections is now handled '
-                                 'as part of the profile extraction process. '
-                                 'rejectCosmicRays is *not* being maintained.')
 
+        """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
+        sfx = params['suffix']
+        order = params.get('order')
+        sigma = 3
+        max_iters = 5
 
+        slitflat_list = params["slitflat"]
+        if slitflat_list is None:
+            self.getProcessedSlitFlat(adinputs)
+            slitflat_list = [self._get_cal(ad, 'processed_slitflat')
+                             for ad in adinputs]
 
-        n_steps = params["n_steps"]
-        subsampling = params["subsampling"]
-        sigma_lim = params["sigma_lim"]
-        f_lim = params["f_lim"]
+        for ad, slitflat in zip(*gt.make_lists(adinputs, slitflat_list, force_ad=True)):
+            res_mode = ad.res_mode()
+            arm = GhostArm(arm=ad.arm(), mode=res_mode,
+                           detector_x_bin=ad.detector_x_bin(),
+                           detector_y_bin=ad.detector_y_bin())
 
-        # Define the Laplacian and growth kernels for L.A.Cosmic
-        laplace_kernel = np.array([
-            [0.0, -1.0, 0.0],
-            [-1.0, 4.0, -1.0],
-            [0.0, -1.0, 0.0],
-        ])
-        growth_kernel = np.ones((3, 3), dtype=np.float64)
+            try:
+                poly_wave = self._get_polyfit_filename(ad, 'wavemod')
+                poly_spat = self._get_polyfit_filename(ad, 'spatmod')
+                poly_spec = self._get_polyfit_filename(ad, 'specmod')
+                poly_rot = self._get_polyfit_filename(ad, 'rotmod')
+                slitv_fn = self._get_slitv_polyfit_filename(ad)
+                wpars = astrodata.open(poly_wave)
+                spatpars = astrodata.open(poly_spat)
+                specpars = astrodata.open(poly_spec)
+                rotpars = astrodata.open(poly_rot)
+                slitvpars = astrodata.open(slitv_fn)
+            except IOError:
+                raise RuntimeError("Cannot open required initial model files "
+                                   f"for {ad.filename}; skipping")
 
-        for ad in adinputs:
-            if ad.phu.get(timestamp_key):
-                log.warning("No changes will be made to {}, since it has "
-                            "already been processed by rejectCosmicRays".
-                            format(ad.filename))
-                continue
+            arm.spectral_format_with_matrix(ad[0].XMOD, wpars[0].data,
+                        spatpars[0].data, specpars[0].data, rotpars[0].data)
+            sview = SlitView(slitflat[0].data, slitflat[0].data,
+                             slitvpars.TABLE[0], mode=res_mode,
+                             microns_pix=4.54 * 180 / 50,
+                             binning=slitflat.detector_x_bin())
+            extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
+                                  vararray=ad[0].variance)
+            extracted_flux, extracted_var, extracted_mask = extractor.quick_extract(ad[0].data)
+            med_flux = np.median(extracted_flux[extracted_mask == 0])
+            extracted_flux /= med_flux
 
-            # Define the function for performing the median-replace of cosmic
-            # ray pixels
-            # Note that this is different from a straight median filter, as we
-            # *don't* want to include the central pixel
-            fp = [[1, 1, 1],
-                  [1, 0, 1],
-                  [1, 1, 1]]
-            median_replace = functools.partial(scipy.ndimage.generic_filter,
-                                               function=np.median, footprint=fp,
-                                               mode='constant',
-                                               cval=np.nan)
+            # Due to poorly-determined gains, we can't fit a function and use
+            # that: there's a jump at the middle of each order. But I'll leave
+            # this code here, in case that changes.
+            if order is not None:
+                for i, (flux, var, mask) in enumerate(
+                        zip(extracted_flux, extracted_var, extracted_mask)):
+                    ny = extracted_flux.shape[1]
+                    m_init = models.Chebyshev1D(degree=order, domain=[0, ny-1])
+                    fit_it = fitting.FittingWithOutlierRemoval(
+                        fitting.LinearLSQFitter(), sigma_clip, sigma=sigma,
+                        maxiters=max_iters)
+                    m_final, _ = fit_it(m_init, np.arange(ny),
+                                        np.ma.masked_where(mask, flux),
+                                        weights=at.divide0(1., np.sqrt(var)))
+                    print(f"Plotting {arm.m_min+i}")
+                    fig, ax = plt.subplots()
+                    ally = np.arange(ny)
+                    ax.plot(ally[mask==0], flux[mask==0], 'bo')
+                    ax.plot(ally[_], flux[_], 'ro')
+                    ax.plot(ally, m_final(ally), 'k-')
+                    plt.show()
 
-            log.stdinfo("Doing CR removal for {}".format(ad.filename))
-
-            for ext in ad:
-                # CJS: Added forced creation of DQ plane
-                if ext.mask is None:
-                    ext.mask = np.zeros_like(ext.data, dtype=np.uint16)
-                log.stdinfo('-----')
-                log.stdinfo("EXTVER {}".format(ext.hdr['EXTVER']))
-                log.stdinfo('-----')
-
-                # Define an array that will hold the cosmic ray flagging
-                # Note that we're deliberately not using the BPM at this stage,
-                # otherwise the algorithm will start searching for cosmic rays
-                # around pixels that have been flagged bad for another reason.
-                cosmic_bpm = np.zeros_like(ext.data, dtype=np.int16)
-
-                # Start with a fresh copy of the data
-                # Use numpy NaN to cover up any data detected bad so far
-                # (i.e. 0 < BPM < 8)
-                clean_data = np.copy(ext.data)
-                clean_data[ext.mask > 0] = np.nan
-
-                no_passes = 0
-                new_crs = 1
-                new_cr_pix = None
-
-                while new_crs > 0 and no_passes < n_steps:
-                    no_passes += 1
-                    curr_crs = np.count_nonzero(cosmic_bpm)
-                    if curr_crs > 0 and new_cr_pix is not None:
-                        # Median out the pixels already defined as cosmic rays
-                        log.stdinfo('Pass {}: Median over previously '
-                                    'found CR pix'.format(no_passes))
-
-                        # One pass option - slow
-                        # clean_data[new_cr_pix > 0] = median_replace(
-                        #     clean_data)[new_cr_pix > 0]
-
-                        # Loop option - faster for the number of CR (~ few k
-                        # we expect for realistic data
-                        inds = np.argwhere(new_cr_pix)
-                        pad_data = np.pad(clean_data, 1, 'constant',
-                                          constant_values=(np.nan, ))
-                        # log.stdinfo('Padded array size: %s' %
-                        #             str(pad_data.shape))
-                        # log.stdinfo(
-                        #     'Data array size: %s' % str(clean_data.shape))
-                        # log.stdinfo(
-                        #     'CR array size: %s' % str(new_cr_pix.shape))
-                        for ind in inds:
-                            # log.stdinfo(str(ind))
-                            # Using nanmedian stops nan values being considered
-                            # in the ordering of median values
-                            clean_data[zip(ind)] = np.nanmedian(
-                                fp * pad_data[
-                                     ind[0]:ind[0] + 3,
-                                     ind[1]:ind[1] + 3
-                                     ]
-                            )
-
-                    # Actually do the cosmic ray subtraction here
-                    # ------
-                    # STEP 1
-                    # Construct a model for sky lines to subtract
-                    # TODO: Add option for 'wave' keyword, which parametrizes
-                    # an input wavelength solution function
-                    # ------
-                    log.stdinfo('Pass {}: Building sky model'.format(no_passes))
-                    sky_model = scipy.ndimage.median_filter(clean_data,
-                                                            size=[7, 1],
-                                                            mode='constant',
-                                                            cval=np.nan)
-                    m5_model = scipy.ndimage.median_filter(clean_data,
-                                                           size=[5, 5],
-                                                           mode='constant',
-                                                           cval=np.nan)
-                    subbed_data = clean_data - sky_model
-
-                    # ------
-                    # STEP 2
-                    # Remove object spectra
-                    # FIXME: Waiting on working find apertures routine
-                    # ------
-
-                    # ------
-                    # STEP 3
-                    # Compute 2nd-order Laplacian of input frame
-                    # This is 'curly L' in van Dokkum 2001
-                    # ------
-                    # Subsample the data
-                    log.stdinfo('Pass {}: Computing Laplacian'.format(
-                        no_passes)
-                    )
-                    data_shape = ext.data.shape
-                    # log.stdinfo(
-                    #     'data array size: %s' % str(data_shape))
-                    subsampl_data = np.repeat(np.repeat(
-                        ext.data, subsampling, axis=1),
-                        subsampling, axis=0
-                    )
-                    # Convolve the subsampled data with the Laplacian kernel,
-                    # trimming off the edges this introduces
-                    # Bring any negative values up to 0
-                    init_conv_data = scipy.signal.convolve2d(
-                        subsampl_data, laplace_kernel)[1:-1, 1:-1]
-                    init_conv_data[np.nonzero(init_conv_data <= 0.)] = 0.
-                    # Reverse the subsampling, returning the
-                    # correctly-convolved image
-                    conv_data = np.reshape(init_conv_data,
-                                           (
-                                               data_shape[0],
-                                               init_conv_data.shape[0] //
-                                               data_shape[0],
-                                               data_shape[1],
-                                               init_conv_data.shape[1] //
-                                               data_shape[1],
-                                           )).mean(axis=3).mean(axis=1)
-
-                    # ------
-                    # STEP 4
-                    # Construct noise model, and use it to generate the
-                    # 'sigma_map' S
-                    # This is the equivalent of equation (11) of van Dokkum 2001
-                    # ------
-                    log.stdinfo('Pass {}: Constructing sigma map'.format(
-                        no_passes
-                    ))
-                    gain = ext.gain()
-                    read_noise = ext.read_noise()
-                    noise = (1.0 / gain) * ((gain * m5_model +
-                                             read_noise**2)**0.5)
-                    noise_min = 0.00001
-                    noise[np.nonzero(noise <= noise_min)] = noise_min
-                    # div by 2 to correct convolution counting
-                    sigmap = conv_data / (subsampling * noise)
-                    # Remove large structure with a 5x5 median filter
-                    # Equation (13) of van Dokkum 2001, generates S'
-                    sig_smooth = scipy.ndimage.median_filter(sigmap,
-                                                             size=[5, 5],
-                                                             mode='constant',
-                                                             cval=np.nan)
-                    sig_detrend = sigmap - sig_smooth
-
-                    # ------
-                    # STEP 5
-                    # Identify the potential cosmic rays
-                    # ------
-                    log.stdinfo('Pass {}: Flagging cosmic rays'.format(
-                        no_passes
-                    ))
-                    # Construct the fine-structure image
-                    # (F, eqn 14 of van Dokkum)
-                    m3 = scipy.ndimage.median_filter(subbed_data, size=[3, 3],
-                                            mode='constant', cval=np.nan)
-                    fine_struct = m3 - scipy.ndimage.median_filter(m3,
-                                size=[7, 7], mode='constant', cval=np.nan)
-                    # Pixels are flagged as being cosmic rays if:
-                    # - The sig_detrend image (S') is > sigma_lim
-                    # - The contrast between the Laplacian image (L+) and the
-                    #   fine-structure image (F) is greater than f_lim
-                    new_cr_pix = np.logical_and(sig_detrend > sigma_lim,
-                                            (conv_data/fine_struct) > f_lim)
-                    cosmic_bpm[new_cr_pix] = np.uint16(DQ.cosmic_ray)
-                    new_crs = np.count_nonzero(cosmic_bpm) - curr_crs
-                    log.stdinfo('Pass {}: Found {} CR pixels'.format(no_passes,
-                                                                     new_crs))
-
-                # For the moment, go with Mike Ireland's suggestion to require
-                # a BPM update
-                ext.mask |= cosmic_bpm
-
-                log.debug('Flagged pix in BPM: {}'.format(
-                    np.count_nonzero(ext.mask)))
-
-            # CJS: Added this because you check for the keyword in
-            # this primitive!
-            # Timestamp and update filename
+            ad[0].BLAZE = extracted_flux
+            ad[0].BLAZE[extracted_mask.astype(bool)] = 0
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.update_filename(suffix=params["suffix"], strip=True)
+            ad.update_filename(suffix=sfx, strip=True)
 
         return adinputs
 
@@ -2841,82 +2550,6 @@ class GHOSTSpect(GHOST):
 
         return []
 
-    # CJS: Primitive has been renamed for consistency with other instruments
-    # The geometry_conf.py file is not needed; all you're doing is tiling
-    # extensions according to their DETSEC keywords, without gaps or rotations
-    # so this shouldn't need any extra information.
-    # def tileArrays(self, adinputs=None, **params):
-    #     """
-    #     Tile GHOST data into a single frame.
-    #
-    #     This primitive will tile the SCI frames of the input images, along
-    #     with the VAR and DQ frames if they exist.
-    #
-    #     The tiling for GHOST is much simpler than for most Gemini
-    #     instruments, as there are no tile gaps to account for. Data from the
-    #     four camera amplifiers are simply stiched together, using the
-    #     :class:`gempy.mosaic.mosaicData.MosaicData` and
-    #     :class:`gempy.mosaic.mosaicGeometry.MosaicGeometry` classes.
-    #
-    #     This primitive takes no additional parameters.
-    #     """
-    #
-    #     def simple_mosaic_function(ad):
-    #         """
-    #         This will go into MosaicAD as the default function.
-    #         Being discussed within the SUSD team.
-    #         """
-    #         from gempy.mosaic.mosaicData import MosaicData
-    #         from gempy.mosaic.mosaicGeometry import MosaicGeometry
-    #
-    #         # Calling trim_to_data_section() corrects the WCS if the overscan
-    #         # regions haven't been trimmed yet
-    #         ad = gt.trim_to_data_section(ad, keyword_comments=self.keyword_comments)
-    #
-    #         md = MosaicData()  # Creates an empty object
-    #         md.data_list = []  # Not needed
-    #
-    #         x_bin = ad.detector_x_bin()
-    #         y_bin = ad.detector_y_bin()
-    #         detsecs = [(k[0]//x_bin, k[1]//x_bin, k[2]//y_bin, k[3]//y_bin)
-    #                    for k in ad.detector_section()]
-    #         # One output block
-    #         md.coords = {'amp_mosaic_coord': detsecs,
-    #                      'amp_block_coord': detsecs}
-    #         nxout = max(k[1] for k in detsecs)
-    #         nyout = max(k[3] for k in detsecs)
-    #         mg = MosaicGeometry({'blocksize': (nxout, nyout),
-    #                              'mosaic_grid': (1,1)})
-    #         return md, mg
-    #
-    #     log = self.log
-    #     log.debug(gt.log_message("primitive", self.myself(), "starting"))
-    #     timestamp_key = self.timestamp_keys[self.myself()]
-    #
-    #     adoutputs = []
-    #     for ad in adinputs:
-    #         if ad.phu.get(timestamp_key):
-    #             log.warning("No changes will be made to {}, since it has "
-    #                         "already been processed by tileArrays".
-    #                         format(ad.filename))
-    #             adoutputs.append(ad)
-    #             continue
-    #
-    #         mo = MosaicAD(ad, mosaic_ad_function=simple_mosaic_function)
-    #         ad_mos = mo.as_astrodata(tile=True)
-    #
-    #         gt.mark_history(ad_mos, primname=self.myself(),
-    #                         keyword=timestamp_key)
-    #         ad_mos.update_filename(suffix=params["suffix"],
-    #                                strip=True)
-    #         adoutputs.append(ad_mos)
-    #
-    #         ad_mos.write(overwrite=True)
-    #         # ad_mos.write(overwrite=True)
-    #
-    #     return adoutputs
-
-    # validateData() removed since inherited Standardize method will handle it
 
 ##############################################################################
 # Below are the helper functions for the user level functions in this module #
