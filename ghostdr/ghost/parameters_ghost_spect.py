@@ -60,7 +60,7 @@ class darkCorrectConfig(parameters_preprocess.darkCorrectConfig):
 
 
 class extractProfileConfig(config.Config):
-    suffix = config.Field("Filename suffix", str, "_extractedProfile",
+    suffix = config.Field("Filename suffix", str, "_extracted",
                           optional=True)
     slit = config.ListField("Slit viewer exposure", (str, ad), None,
                             optional=True, single=True)
@@ -88,19 +88,18 @@ class extractProfileConfig(config.Config):
                                    allowed={"uniform": "uniform weighting",
                                             "optimal": "optimal extraction"},
                                    default="optimal")
-    extract2d = config.Field("Perform 2D extraction?", bool, True)
+    tolerance = config.RangeField("Fractional tolerance for convergence",
+                                  float, 0.001, min=1e-8, max=0.05)
     apply_centroids = config.Field("Apply slit center-of-light offsets?", bool, False)
-    debug_smooth_flat_spatially = config.Field(
-        "Smooth the flat field image before applying?", bool, False)
     seeing = config.RangeField("FWHM of seeing disc if no processed_slit is "
                                "available", float, None, min=0.2, optional=True)
     write_result = config.Field("Write primitive output to disk?", bool, False)
-    debug_weight_map = config.Field("Add weight map to output?", bool, False)
     debug_cr_map = config.Field("Add CR map to output?", bool, False)
-    debug_cr_order = config.RangeField("Order for CR debugging plot", int, None,
+    debug_order = config.RangeField("Order for CR debugging plot", int, None,
                                        min=33, max=97, optional=True)
-    debug_cr_pixel = config.RangeField("Pixel for CR debugging plot", int, None,
+    debug_pixel = config.RangeField("Pixel for CR debugging plot", int, None,
                                        min=0, max=6144, optional=True)
+    debug_timing = config.Field("Output time per order?", bool, False)
 
 
 class interpolateAndCombineConfig(config.Config):
@@ -115,29 +114,32 @@ class interpolateAndCombineConfig(config.Config):
 
 
 class findAperturesConfig(config.Config):
-    suffix = config.Field("Filename suffix", str, "_findAper",
+    suffix = config.Field("Filename suffix", str, "_aperturesFound",
                           optional=True)
     slitflat = config.Field("Slit viewer flat field",
                             (str, ad),
                             None, optional=True)
     flat = config.ListField("Flat field", (str, ad), None,
                             optional=True, single=True)
-    skip_pixel_model = config.Field('Skip adding a pixel model to the '
-                                    'flat field?', bool, False)
+    make_pixel_model = config.Field('Add a pixel model to the flat field?',
+                                    bool, False)
 
 
 class fitWavelengthConfig(config.Config):
-    suffix = config.Field("Filename suffix", str, "_fitWavl",
+    suffix = config.Field("Filename suffix", str, "_wavelengthFitted",
                           optional=True)
     flat = config.ListField("Flat field", (str, ad), None,
                             optional=True, single=True)
-    min_snr = config.RangeField("Minimum S/N for peak detection", float, 20, min=10)
-    sigma = config.RangeField("Number of standard deviations for rejecting lines", float, 3, min=1)
+    min_snr = config.RangeField("Minimum S/N for peak detection",
+                                float, 20, min=10)
+    sigma = config.RangeField("Number of standard deviations for rejecting lines",
+                              float, 3, min=1)
     max_iters = config.RangeField("Maximum number of iterations", int, 1, min=1)
     radius = config.RangeField("Matching distance for lines", int, 12, min=2)
     plot1d = config.Field("Produce 1D plots of each order to inspect fit?",
                           bool, False)
-    plotrms = config.Field("Produce rms scattergram to inspect fit?", bool, False)
+    plotrms = config.Field("Produce rms scattergram to inspect fit?",
+                           bool, False)
     debug_plot2d = config.Field("Produce 2D plot to inspect fit?", bool, False)
 
 
@@ -183,15 +185,6 @@ class overscanCorrectConfig(parameters_ccd.overscanCorrectConfig):
         self.order = 0
 
 
-class rejectCosmicRaysConfig(config.Config):
-    suffix = config.Field("Filename suffix", str, "_cosmicRaysRejected",
-                          optional=True)
-    subsampling = config.Field("Subsampling factor", int, 2)
-    sigma_lim = config.Field("Sigma clipping value", float, 15.0)
-    f_lim = config.Field("lacosmicx f_lim value", float, 5.0)
-    n_steps = config.Field("Number of iterations", int, 1)
-
-
 class removeScatteredLightConfig(config.Config):
     suffix = config.Field("Filename suffix", str, "_scatteredLightRemoved",
                           optional=True)
@@ -212,8 +205,8 @@ class responseCorrectConfig(config.Config):
     units = config.Field("Units for output spectrum", str, "W m-2 nm-1",
                          check=parameters_spect.flux_units_check)
     write_result = config.Field("Write primitive output to disk?", bool, False)
-    debug_order = config.RangeField("Order of fit to each echelle order", int,
-                                    1, min=1, max=5)
+    order = config.RangeField("Order of polynomial fit to each echelle order", int,
+                              1, min=1, max=5)
     debug_plots = config.Field("Show response-fitting plots for each order?",
                                bool, False)
 

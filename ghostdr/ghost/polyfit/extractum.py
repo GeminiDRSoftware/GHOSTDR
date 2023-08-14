@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.ndimage import convolve1d
-from scipy import optimize
+from scipy import ndimage, optimize
 from matplotlib import pyplot as plt
 
 from gempy.library import astrotools as at
@@ -24,9 +24,17 @@ class Extractum:
         self.cr = np.zeros_like(self.mask)
         self.pixel = pixel
 
-    def fit(self, good=None, coeffs=None, debug=False):
+    # Making this a static method that doesn't access attributes seems to
+    # be marginally faster than other setups
+    # It is >10% faster to use c0 and c1 directly rather than noise_model()
+    @staticmethod
+    def func(x, phi, data, c0, c1):
+        model = np.dot(x, phi)
+        return ((model - data) ** 2 / (c0 + c1 * np.maximum(model, 0))).sum()
+
+    def fit(self, good=None, coeffs=None, debug=False, ftol=0.001, c0=0, c1=1):
         if good is None:
-            good = ~(self.mask | self.cr)
+            good = ~(self.mask | self.cr | (self.phi.sum(axis=0) == 0))
         if good.sum() < self.nprof:
             good = np.ones((self.npix,), dtype=bool)
 
@@ -38,38 +46,30 @@ class Extractum:
             print(self.data)
             print(good)
 
-        # Iterate?
-
-        # Don't use the weights initially because these are smoothed
-        # and small CRs get missed
         if coeffs is None:
             coeffs = np.linalg.lstsq(self.phi.T[good], self.data[good],
                                      rcond=-1)[0]
-        model = np.dot(coeffs, self.phi)
         if debug:
-            print("RESULT", coeffs)
+            model = np.dot(coeffs, self.phi)
+            print("INITIAL RESULT", coeffs)
             print(model)
             print("-" * 60)
-        #inv_var_use = convolve1d(at.divide0(1., self.noise_model(model)),
-        #                         self.spat_conv_weights)
-        inv_var_use = at.divide0(1., self.noise_model(model))
-        A = self.phi * np.sqrt(inv_var_use)
-        b = self.data * np.sqrt(inv_var_use)
-        try:
-            coeffs = np.linalg.lstsq(A.T[good], b[good], rcond=-1)[0]
-        except np.linalg.LinAlgError:
-            print("ERROR!")
-            print("DATA", self.data[good])
-            print(self.phi.T[good].T)
-            print("INV VAR", inv_var_use[good])
-            print(A)
-            print(b)
-            raise
+
+        result = optimize.minimize(self.func, coeffs, (self.phi[:, good], self.data[good], c0, c1),
+                                   method='Nelder-Mead', options={'xtol': ftol * min(abs(coeffs[:max(1, len(coeffs)-1)]))})
+        coeffs = result.x
 
         if debug:
-            print("RESULT AGAIN", coeffs)
+            # Model only needs to be recalculated for plotting
+            model = np.dot(coeffs, self.phi)
+            print("FINAL", coeffs)
             print(model)
             print(good)
+            print("-" * 60)
+            print("STDDEVs")
+            print(np.sqrt(c0 + c1 * abs(model)))
+            print("DEVIATIONS in SIGMA")
+            print((model - self.data) / np.sqrt(c0 + c1 * abs(model)))
             print("-" * 60)
             plt.ioff()
             plt.plot(self.data, 'k-', label='data')
@@ -83,10 +83,11 @@ class Extractum:
 
     def find_cosmic_rays(self, snoise=0.1, sigma=6, debug=False):
         sigmasq = sigma * sigma
+        illuminated = self.phi.sum(axis=0) > 0
 
         # Don't try to fit points which aren't expected to have any signal
         good = np.logical_and.reduce([self.inv_var > 0,
-                                      self.phi.sum(axis=0) > 0,
+                                      illuminated,
                                       ~self.mask, ~self.cr])
 
         # If we don't have enough pixels to fit we can't reject
@@ -163,7 +164,8 @@ class Extractum:
 
         new_bad = np.where(np.logical_and.reduce(
             [self.inv_var > 0, abs(deviation) > sigmasq, orig_good]))[0]
-        self.cr[new_bad] = True
+        self.cr = np.logical_and.reduce([self.inv_var > 0,
+                                         abs(deviation) > sigmasq, illuminated])
 
         # CJS 20230120: this allows a little extra leeway for vertical CCD bleed
         # limit = ndimage.maximum_filter(y_hat + nsigma * np.sqrt(var_use),

@@ -4,26 +4,21 @@
 #                                                      primitives_ghost_spect.py
 # ------------------------------------------------------------------------------
 import os
-from importlib import import_module
 import numpy as np
 import math
 import warnings
 from copy import deepcopy
-import scipy
-import functools
 from datetime import datetime, timedelta
 import astropy.coordinates as astrocoord
 from astropy.time import Time
 from astropy.io import fits
 from astropy.io.ascii.core import InconsistentTableError
-from astropy.table import Table
 from astropy import units as u
 from astropy import constants as const
 from astropy.stats import sigma_clip
 from astropy.modeling import fitting, models
 from astropy.modeling.tabular import Tabular1D
 from scipy import interpolate
-import scipy.ndimage as nd
 from gwcs import coordinate_frames as cf
 from gwcs.wcs import WCS as gWCS
 from pysynphot import observation, spectrum
@@ -385,11 +380,14 @@ class GHOSTSpect(GHOST):
                             "skipping".format(ad.filename))
                 continue
 
+            # We don't want to copy over non-linear/saturated pixels from
+            # the flat's DQ since these will be from CR hits and will have
+            # been handled by the median combining
             for ext, flat_ext in zip(ad, flat):
                 if ext.mask is None:
-                    ext.mask = flat_ext.mask
+                    ext.mask = flat_ext.mask & DQ.not_signal
                 else:
-                    ext.mask |= flat_ext.mask
+                    ext.mask |= flat_ext.mask & DQ.not_signal
 
             ad.phu.set('FLATBPM', os.path.abspath(flat.path),
                        self.keyword_comments['FLATBPM'])
@@ -782,12 +780,12 @@ class GHOSTSpect(GHOST):
         seeing = params["seeing"]
         snoise = params["snoise"]
         sigma = params["sigma"]
-        debug_cr_pixel = (params["debug_cr_order"], params["debug_cr_pixel"])
+        debug_pixel = (params["debug_order"], params["debug_pixel"])
         add_cr_map = params["debug_cr_map"]
-        add_weight_map = params["debug_weight_map"]
         optimal_extraction = params["weighting"] == "optimal"
-        extract2d = params["extract2d"]
+        ftol = params["tolerance"]
         apply_centroids = params["apply_centroids"]
+        timing = params["debug_timing"]
 
         # This primitive modifies the input AD structure, so it must now
         # check if the primitive has already been applied. If so, it must be
@@ -926,7 +924,6 @@ class GHOSTSpect(GHOST):
                 use_sky = [True, False]
                 find_crs = [False, False]
                 sky_correct_profiles = False
-                add_weight_map = True  # needed for fitWavelength
             else:
                 ifu_selection = [obj for obj, ifu in enumerate([ifu1, ifu2])
                                  if ifu == "object"]
@@ -992,13 +989,6 @@ class GHOSTSpect(GHOST):
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
                         
-            # FIXED - MCW 190906
-            # Added a kwarg to one_d_extract (the only Extractor method which
-            # uses Extractor.vararray), allowing an update to the instance's
-            # .vararray attribute
-            # Refactor all this for 3.1
-
-            # Compute the flat correction, and add to bad pixels based on this.
             # FIXME: This really could be done as part of flat processing!
             correction = None
             if flat_correct:
@@ -1010,11 +1000,8 @@ class GHOSTSpect(GHOST):
                 else:
                     ny, nx = blaze.shape
                     xbin = ad.detector_x_bin()
-                    print("BLAZE", blaze.min(), blaze.max())
                     binned_blaze = blaze.reshape(ny, nx // xbin, xbin).mean(axis=-1)
-                    correction = np.where(binned_blaze < 0.01, 0, 1. / binned_blaze)
-                    weak_signal = binned_blaze < 0.0001
-                    print("CORRECTION", correction.min(), correction.max(), weak_signal.sum())
+                    correction = np.where(binned_blaze < 0.0001, 0, 1. / binned_blaze)
 
             for i, (o, s, cr) in enumerate(zip(objs_to_use, use_sky, find_crs)):
                 if o:
@@ -1023,79 +1010,38 @@ class GHOSTSpect(GHOST):
                     log.stdinfo("\nExtracting entire slit")
                 else:
                     raise RuntimeError("No objects for extraction and use_sky=False")
-                # CJS: Makes it clearer that you're throwing the first two
-                # returned objects away (get replaced in the two_d_extract call)
 
                 extracted_flux, extracted_var = extractor.new_extract(
                     data=ad[0].data.copy(),
                     correct_for_sky=sky_correct_profiles,
                     use_sky=s, used_objects=o, find_crs=cr,
                     snoise=snoise, sigma=sigma,
-                    debug_cr_pixel=debug_cr_pixel,
+                    debug_pixel=debug_pixel,
                     correction=correction, optimal=optimal_extraction,
-                    apply_centroids=apply_centroids
+                    apply_centroids=apply_centroids, ftol=ftol,
+                    timing=timing
                 )
 
-                #test_ad = deepcopy(ad)
-                #test_ad[0].reset(extracted_flux, mask=None,
-                #                 variance=extracted_var)
-                #test_ad[0].CR = (extractor.badpixmask & DQ.cosmic_ray).astype(DQ.datatype)
-                #test_ad = self.addWavelengthSolution([test_ad]).pop()
-                #test_ad.write("new_extract_test.fits", overwrite=True)
-
-                # Need to use corrected_data here; the data in ad[0] is
-                # overwritten with the first extraction pass of this loop
-                # (see the try-except statement at line 925)
-                #extracted_flux, extracted_var, extracted_weights = extractor.one_d_extract(
-                #    #data=corrected_data, vararray=corrected_var,
-                #    data=safe_data, vararray=safe_variance,
-                #    correct_for_sky=sky_correct_profiles,
-                #    use_sky=s, used_objects=o, find_crs=cr,
-                #    snoise=snoise, sigma=sigma,
-                #    debug_cr_pixel=debug_cr_pixel,
-                #    correction=new_correction, optimal=optimal_extraction
-                #)
-
-                #if extract2d:
-                #    extracted_flux, extracted_var = extractor.two_d_extract(
-                #        corrected_data,
-                #        extraction_weights=extracted_weights,
-                #        vararray=corrected_var,
-                #        apply_centroids=apply_centroids
-                #    )
-
-                # CJS: Since you don't use the input AD any more, I'm going to
-                # modify it in place, in line with your comment that you're
-                # considering this.
-                # MCW now going to add extra EXTVARs to account for different
-                # extractions, where necessary
-                # import pdb; pdb.set_trace()
-                try:
-                    ad[i].reset(extracted_flux,
-                                mask=(extracted_var == 0).astype(DQ.datatype),
-                                variance=extracted_var)
-                except IndexError:
-                    new_adi = deepcopy(ad[i - 1])
-                    ad.append(new_adi[0])
-                    ad[i].reset(extracted_flux,
-                                mask=(extracted_var == 0).astype(DQ.datatype),
-                                variance=extracted_var)
-                if add_weight_map:
-                    ad[i].WGT = extracted_weights
+                # Append the extraction as a new extension... we don't
+                # replace ad[0] since that will still be needed if we have
+                # another iteration of the extraction loop
+                ad.append(extracted_flux)
+                ad[-1].mask = (extracted_var == 0).astype(DQ.datatype)
+                ad[-1].variance = extracted_var
+                ad[-1].nddata.meta['header'] = ad[0].hdr.copy()
                 if add_cr_map and extractor.badpixmask is not None:
-                    ad[i].CR = extractor.badpixmask & DQ.cosmic_ray
-                ad[i].hdr['DATADESC'] = (
+                    ad[-1].CR = extractor.badpixmask & DQ.cosmic_ray
+                ad[-1].hdr['DATADESC'] = (
                     'Order-by-order processed science data - '
                     'objects {}, subtraction = {}'.format(
-                        str(o), str(use_sky)),
+                        str(o), str(s)),
                     self.keyword_comments['DATADESC'])
 
+            del ad[0]   # Remove original echellogram data
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
             ad.update_filename(suffix=params["suffix"], strip=True)
             ad.phu.set("FLATIM", flat.filename, self.keyword_comments["FLATIM"])
-            # ad[0].hdr['DATADESC'] = ('Order-by-order processed science data',
-            #                          self.keyword_comments['DATADESC'])
             if params["write_result"]:
                 ad.write(overwrite=True)
 
@@ -1174,8 +1120,10 @@ class GHOSTSpect(GHOST):
                 # Create a final spectrum and (inverse) variance to match
                 # (One plane per object)
                 no_obj = ext.data.shape[-1]
-                spec_final = np.zeros(wavl_grid.shape + (no_obj, ), dtype=np.float32)
-                var_final = np.full_like(spec_final, np.inf)
+                # We can easily get underflows for the VAR in np.float32
+                # for flux-calibrated data
+                spec_final = np.zeros(wavl_grid.shape + (no_obj, ), dtype=np.float64)
+                var_final = np.zeros_like(spec_final)
                 mask_final = np.zeros_like(spec_final, dtype=DQ.datatype)
 
                 # Loop over each input order, making the output spectrum the
@@ -1188,11 +1136,22 @@ class GHOSTSpect(GHOST):
                                                     ext.WAVL[order],
                                                     ext.data[order, :, ob],
                                                     left=0, right=0)
+                        # again, float64 to avoid VAR underflows
                         ivar_for_adding = np.interp(wavl_grid,
                                                     ext.WAVL[order],
                                                     at.divide0(1.0,
-                                                    ext.variance[order, :, ob]),
+                                                    ext.variance[order, :, ob].astype(np.float64)),
                                                     left=0, right=0)
+                        # Ensure we don't interpolate masked pixels
+                        try:
+                            mask_for_adding = np.interp(wavl_grid,
+                                                        ext.WAVL[order],
+                                                        ext.mask[order, :, ob] & DQ.not_signal,
+                                                        left=0, right=0)
+                        except TypeError:  # ext.mask is None
+                            pass
+                        else:
+                            ivar_for_adding[mask_for_adding > 0] = 0
                         spec_comp, ivar_comp = np.ma.average(
                             np.asarray([spec_final[:, ob], flux_for_adding]),
                             weights=np.asarray([at.divide0(1.0, var_final[:, ob]),
@@ -1211,10 +1170,10 @@ class GHOSTSpect(GHOST):
                                                  var_final == 0])] = DQ.bad_pixel
                 spec_final[np.isnan(spec_final)] = 0
                 var_final[np.isinf(var_final)] = 0
-                adout.append(astrodata.NDAstroData(data=spec_final,
+                adout.append(astrodata.NDAstroData(data=spec_final.astype(np.float32),
                                                    mask=mask_final,
                                                 meta={'header': deepcopy(ext.hdr)}))
-                adout[-1].variance = var_final
+                adout[-1].variance = var_final.astype(np.float32)
                 adout[-1].WAVL = wavl_grid
                 adout[-1].hdr['DATADESC'] = ('Interpolated data',
                                              self.keyword_comments['DATADESC'])
@@ -1243,7 +1202,7 @@ class GHOSTSpect(GHOST):
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
-        skip_pixel_model = params.get('skip_pixel_model', False)
+        make_pixel_model = params.get('make_pixel_model', False)
 
         # Make no attempt to check if primitive has already been run - may
         # have new calibrators we wish to apply.
@@ -1254,10 +1213,6 @@ class GHOSTSpect(GHOST):
             self.getProcessedSlitFlat(adinputs)
             flat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
-
-        if skip_pixel_model:
-            log.stdinfo('Skipping adding the pixel model to the flat'
-                        'step')
 
         for ad, slit_flat in zip(*gt.make_lists(adinputs, flat_list,
                                                 force_ad=True)):
@@ -1316,7 +1271,7 @@ class GHOSTSpect(GHOST):
 
             #MJI: Compute a pixel-by-pixel model of the flat field from the new XMOD and
             #the slit image.
-            if not skip_pixel_model:
+            if make_pixel_model:
                 # FIXME: MJI Copied directly from extractProfile. Is this compliant?
                 try:
                     poly_wave = self._get_polyfit_filename(ad, 'wavemod')
@@ -1386,12 +1341,6 @@ class GHOSTSpect(GHOST):
             flat_list = [self._get_cal(ad, 'processed_flat') for ad in adinputs]
 
         for ad, flat in zip(*gt.make_lists(adinputs, flat_list, force_ad=True)):
-            # CJS: Since we're not saving the processed_arc before this, we
-            # can't check for the tags. Instead, let's look for the WGT extn
-            if not hasattr(ad[0], 'WGT'):
-                log.warning(f"{ad.filename} has no 'WGT' extension - skipping")
-                continue
-
             if self.timestamp_keys["extractProfile"] not in ad.phu:
                 log.warning("extractProfile has not been run on {} - "
                             "skipping".format(ad.filename))
@@ -1575,8 +1524,7 @@ class GHOSTSpect(GHOST):
         sfx = params["suffix"]
 
         if params['skip']:
-            log.stdinfo('Skipping the flat field correction '
-                        'step')
+            log.stdinfo('Skipping the flat field correction step')
             return adinputs
 
         adinputs_orig = list(adinputs)
@@ -2074,6 +2022,7 @@ class GHOSTSpect(GHOST):
             in which case a Gemini-provided file will be searched for based
             on the object() descriptor.
         units: str, the flux density units of the output file
+        order: int, polynomial order for the fit to each echelle order
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -2082,7 +2031,7 @@ class GHOSTSpect(GHOST):
         std_filename = params['standard']
         specphot_file = params['specphot_file']
         final_units = params["units"]
-        poly_degree = params["debug_order"]
+        poly_degree = params["order"]
         debug_plots = params["debug_plots"]
 
         if std_filename is None:
@@ -2111,6 +2060,7 @@ class GHOSTSpect(GHOST):
                 except (FileNotFoundError, InconsistentTableError):
                     pass
                 else:
+                    log.stdinfo(f"Read spectrophotometry file {full_path}")
                     break
             else:
                 raise RuntimeError("Cannot find/read spectrophotometric data "
@@ -2126,7 +2076,7 @@ class GHOSTSpect(GHOST):
         for od in range(ad_std[0].data.shape[0]):
             regrid_std_ref[od] = self._regrid_spect(
                 spec_table['FLUX'].value,
-                spec_table['WAVELENGTH_VACUUM'].to(u.AA).value,
+                spec_table['WAVELENGTH_AIR'].to(u.AA).value,
                 ad_std[0].WAVL[od, :],
                 waveunits='angstrom'
             )
@@ -2165,6 +2115,10 @@ class GHOSTSpect(GHOST):
         # import pdb; pdb.set_trace();
         sens_func_fits = []
         good = ~np.logical_or(regrid_std_ref == 0, ad_std[0].variance[:, :, target] == 0)
+        # Try to mask out deep atmospheric absorption features and unreasonable
+        # measurements from low counts at the extreme orders
+        ratio = sens_func / np.percentile(sens_func, 60, axis=1)[:, np.newaxis]
+        good &= np.logical_and(ratio >= 0.2, ratio <= 5)
         fit_it = fitting.FittingWithOutlierRemoval(fitting.LinearLSQFitter(), sigma_clip,
                                                    sigma_lower=2, maxiters=10)
         plt.ioff()
@@ -2182,9 +2136,9 @@ class GHOSTSpect(GHOST):
                 if debug_plots:
                     fig, ax = plt.subplots()
                     ax.plot(ad_std[0].WAVL[od], sens_func[od], 'k-')
-                    ax.plot(ad_std[0].WAVL[od], m_final(ad_std[0].WAVL[od]), 'b-')
                     ax.plot(ad_std[0].WAVL[od, good_order][~mask],
                             sens_func[od, good_order][~mask], 'r-')
+                    ax.plot(ad_std[0].WAVL[od], m_final(ad_std[0].WAVL[od]), 'b-')
                     plt.show()
                 rms = np.std((m_final(wavelengths) - sens_func[od])[good_order][~mask])
                 expected_rms = np.median(np.sqrt(sens_func_var[od, good_order]))
@@ -2195,13 +2149,16 @@ class GHOSTSpect(GHOST):
             else:
                 log.warning(f"Cannot determine sensitivity for row {od} "
                             f"({min_wave:.1f} - {max_wave:.1f} A)")
+                if debug_plots:
+                    fig, ax = plt.subplots()
+                    ax.plot(ad_std[0].WAVL[od], sens_func[od], 'k-')
+                    plt.show()
                 sens_func_fits.append(models.Const1D(np.inf))
         plt.ion()
 
         # import pdb; pdb.set_trace();
 
         for ad in adinputs:
-
             if ad.phu.get(timestamp_key):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by responseCorrect".
@@ -2226,17 +2183,20 @@ class GHOSTSpect(GHOST):
             sens_func_ad = deepcopy(ad)
             sens_func_ad.update_filename(suffix='_sensFunc', strip=True)
 
+            # Do the response correction -- can't just ad.divide(sens_func_ad)
+            # because overflows mess up the variance plane
             for i, ext in enumerate(ad):
                 sens_func_regrid = np.empty_like(ext.data)
                 for od, sensfunc in enumerate(sens_func_fits):
                     sens_func_regrid[od] = sensfunc(ext.WAVL[od])[:, np.newaxis]
                 sens_func_ad[i].data = sens_func_regrid * ad.exposure_time()
                 sens_func_ad[i].variance = None
-
-            # Do the response correction
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                ad /= sens_func_ad
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    ad[i].data /= sens_func_ad[i].data
+                    # has overflows if we square sens_func_data first!
+                    ad[i].variance /= sens_func_ad[i].data
+                    ad[i].variance /= sens_func_ad[i].data
 
             # Make the relevant header update
             ad.hdr['BUNIT'] = final_units

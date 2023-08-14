@@ -29,7 +29,7 @@ def makeProcessedArc(p):
     p.darkCorrect()
     p.tileArrays()
     p.stackArcs()
-    p.extractProfile(flat_precorrect=False, write_result=True)
+    p.extractProfile(flat_correct=False, write_result=True)
     p.fitWavelength()
     p.storeProcessedArc()
     return
