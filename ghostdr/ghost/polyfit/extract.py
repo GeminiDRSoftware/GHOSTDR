@@ -403,7 +403,7 @@ class Extractor(object):
             print(f"\n{(self.badpixmask & DQ.cosmic_ray).astype(bool).sum()} CRs found")
             if self.arm.mode == 'high':
                 print("(due to scattered light, the topmost pixel in HR is "
-                      "often incorectly flagged)")
+                      "often incorrectly flagged)")
 
         # Now do the extraction. First determine *where* to extract
         extracted_flux = np.zeros((nm, ny, no), dtype=np.float32)
