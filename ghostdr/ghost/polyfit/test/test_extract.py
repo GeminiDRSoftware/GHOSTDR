@@ -3,7 +3,6 @@ import os
 import datetime
 import itertools
 
-import ghostdr.ghost.polyfit as polyfit
 from ghostdr.ghost.lookups.polyfit_lookup import get_polyfit_filename
 import numpy as np
 import astrodata
@@ -13,22 +12,6 @@ from ghostdr.ghost.polyfit import extract, ghost, slitview
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              'testdata')
-
-
-@pytest.mark.skip(reason='No test to run')
-def test_find_additional_crs():
-    """Test extract.find_additional_crs"""
-    pass
-
-
-@pytest.mark.ghostunit
-def test_subtract_scattered_light():
-    """Test extract.subtract_scattered_light"""
-    data_arr = np.ones((2, 2, ))
-    mask_arr = np.zeros((1, 1, ))
-    assert np.array_equal(polyfit.extract.subtract_scattered_light(
-        data_arr, mask_arr), data_arr), "extract.subtract_scattered_light " \
-                                        "is no longer a no-op function"
 
 
 def idfn(fixture_value):
