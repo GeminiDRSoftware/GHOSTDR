@@ -409,6 +409,7 @@ class Extractor(object):
         extracted_flux = np.zeros((nm, ny, no), dtype=np.float32)
         extracted_var = np.zeros((nm, ny, no), dtype=np.float32)
         start = datetime.now()
+        profiles = profiles[:no]
         print("\n\n    Extracting order ", end="")
         c0, c1 = m_noise.parameters
         for i in range(nm):
