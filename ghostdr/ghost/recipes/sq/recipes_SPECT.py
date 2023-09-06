@@ -39,7 +39,6 @@ def reduceScience(p):
                                # arcs, e.g. from start and end of night,
                                # and interpolate in time
     p.barycentricCorrect()  # trivial - multiply wavelength scale
-    p.writeOutputs()
     p.responseCorrect()
     p.writeOutputs(suffix="_calibrated", strip=True)  # output this data product
     p.interpolateAndCombine()
