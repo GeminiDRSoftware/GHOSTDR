@@ -4,15 +4,20 @@ Unit tests for :any:`ghostdr.ghost.primitives_ghost_bundle`.
 
 This is a suite of tests to be run with pytest.
 """
+import os
 import pytest
+from pytest_dragons.fixtures import *
+
 import astrodata, ghost_instruments
 from astrodata.testing import download_from_archive
+from geminidr.core.tests import ad_compare
 
 from ghostdr.ghost.primitives_ghost_bundle import GHOSTBundle
 
 
+@pytest.mark.dragons_remote_data
 @pytest.mark.ghostbundle
-def test_split_bundle(change_working_dir):
+def test_split_bundle(change_working_dir, path_to_refs):
     """
     This test ensures that splitBundle() produces the correct outputs
 
@@ -40,3 +45,7 @@ def test_split_bundle(change_working_dir):
     # There should be one entry for each red/blue file
     sciexp = slit_files[0].SCIEXP
     assert len(sciexp) == 4
+
+    for adout in blue_files + red_files + slit_files:
+        adref = astrodata.open(os.path.join(path_to_refs, adout.filename))
+        ad_compare(adref, adout)
