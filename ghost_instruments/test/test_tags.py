@@ -3,59 +3,27 @@ Perform a series of regression tests across GHOST-specific AstroData tags.
 """
 
 import pytest
-import astrodata
-import ghost_instruments
+from pytest_dragons.fixtures import *
+import astrodata, ghost_instruments
 import os
 
 THIS_DIR = os.path.dirname(__file__)
 
 from .lut_tags import fixture_data as tags_fixture_data
-tags_fixture_data = {}
+#tags_fixture_data = {}
 
 # ---
 # REGRESSION TESTING
 # ---
 
 
-class FixtureIterator(object):
+@pytest.mark.ghostunit
+@pytest.mark.parametrize("data, tags", tags_fixture_data)
+def test_descriptor(data, tags, path_to_inputs):
     """
-    Iterate over all files in a directory, returning each attached tagset.
+    Ensure that the values returned by AstroData descriptors are as expected.
     """
-    def __init__(self, data_dict):
-        """
-        Parameters
-        ----------
-        data_dict : dict
-            A dictionary, of the form::
+    instrument, filename = data
+    ad = astrodata.open(os.path.join(path_to_inputs, instrument, filename))
 
-                {
-                    ('GHOST', 'filename.fits'): ['tag', 'set', 'in', 'full', ],
-                    ...
-                }
-
-            This dictionary is imported from :any:`test.lut_tags`.
-        """
-        self._data = data_dict
-
-    def __iter__(self):
-        for key in sorted(self._data.keys()):
-            (instr, filename) = key
-            # ad = astrodata.open(os.path.join(THIS_DIR,
-            #                                  'test_data', instr, filename
-            #                                  ))
-            ad = astrodata.open(os.path.join(
-                # '/Users/marc/Documents/ghost/testdata-181121',
-                THIS_DIR,
-                'testdata',
-                filename
-            ))
-            yield filename, ad, set(self._data[key])
-
-
-@pytest.mark.skip(reason='Needs Checking')
-@pytest.mark.parametrize("fn,ad,tag_set", FixtureIterator(tags_fixture_data))
-def test_tag(fn, ad, tag_set):
-    """
-    Ensure the tag set returned from each test file is as expected.
-    """
-    assert ad.tags == tag_set
+    assert set(tags) == set(ad.tags)

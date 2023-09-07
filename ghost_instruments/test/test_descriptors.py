@@ -5,6 +5,7 @@ descriptors.
 
 import pytest
 import pytest_dragons
+from pytest_dragons.fixtures import *
 import astrodata, ghost_instruments
 import os
 
