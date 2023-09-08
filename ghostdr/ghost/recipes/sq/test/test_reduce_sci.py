@@ -40,7 +40,8 @@ def input_filename(request):
 @pytest.mark.parametrize("input_filename, caldict", datasets,
                          indirect=["input_filename"])
 @pytest.mark.parametrize("arm", ("blue", "red"))
-def test_reduce_science(input_filename, caldict, arm, path_to_inputs,
+@pytest.mark.parametrize("skysub", (True, False))
+def test_reduce_science(input_filename, caldict, arm, skysub, path_to_inputs,
                         path_to_outputs, path_to_refs, change_working_dir):
     """Reduce both arms of a science bundle"""
     adinputs = input_filename[arm]
@@ -71,7 +72,8 @@ def test_reduce_science(input_filename, caldict, arm, path_to_inputs,
     uparms = {"flat": processed_flat,
               "extractProfile:slit": processed_slit,
               "extractProfile:slitflat": processed_slitflat,
-              "addWavelengthSolution:arc_before": processed_arc}
+              "addWavelengthSolution:arc_before": processed_arc,
+              "extractProfile:sky_subtract": skysub}
     standard = caldict.get('standard')
     if standard:
         standard = standard.replace(".fits", f"_{arm}001_standard.fits")
@@ -82,11 +84,13 @@ def test_reduce_science(input_filename, caldict, arm, path_to_inputs,
         assert len(p.streams['main']) == 1
         adout = p.streams['main'].pop()
         output_filename = adout.filename
-        adref = astrodata.open(os.path.join(path_to_refs, output_filename))
+        adref = astrodata.open(os.path.join(
+            path_to_refs, f"skysub_{skysub}", output_filename))
         ad_compare(adref, adout)
 
         # Now compare the _calibrated.fits files (not order-combined)
         intermediate_filename = output_filename.replace("_dragons", "_calibrated")
         adout = astrodata.open(os.path.join(path_to_outputs, "outputs", intermediate_filename))
-        adref = astrodata.open(os.path.join(path_to_refs, intermediate_filename))
+        adref = astrodata.open(os.path.join(
+            path_to_refs, f"skysub_{skysub}", intermediate_filename))
         ad_compare(adref, adout)
