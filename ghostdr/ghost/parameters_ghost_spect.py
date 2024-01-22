@@ -174,8 +174,6 @@ class measureBlazeConfig(config.Config):
                           optional=True)
     slitflat = config.ListField("Slit viewer flat field", (str, ad), None,
                                 optional=True, single=True)
-    smoothing = config.RangeField("Gaussian smoothing of slit profile", float,
-                                  None, min=0, optional=True)
 
 
 class overscanCorrectConfig(parameters_ccd.overscanCorrectConfig):

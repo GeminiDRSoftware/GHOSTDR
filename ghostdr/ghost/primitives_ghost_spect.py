@@ -1840,7 +1840,6 @@ class GHOSTSpect(GHOST):
         timestamp_key = self.timestamp_keys[self.myself()]
         sfx = params['suffix']
         order = params.get('order')
-        smoothing = params['smoothing']
         sigma = 3
         max_iters = 5
 
@@ -1871,6 +1870,7 @@ class GHOSTSpect(GHOST):
                 raise RuntimeError("Cannot open required initial model files "
                                    f"for {ad.filename}; skipping")
 
+            smoothing = ad.phu.get('SMOOTH', 0)
             arm.spectral_format_with_matrix(ad[0].XMOD, wpars[0].data,
                         spatpars[0].data, specpars[0].data, rotpars[0].data)
             sview = SlitView(slitflat[0].data, slitflat[0].data,
