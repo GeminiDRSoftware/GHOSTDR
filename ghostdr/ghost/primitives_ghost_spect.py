@@ -890,6 +890,10 @@ class GHOSTSpect(GHOST):
             log.stdinfo(f"   processed_slitflat: {slitflat_filename}")
             log.stdinfo(f"   processed_flat: {flat.filename}")
 
+            smoothing = flat.phu.get('SMOOTH', 0)
+            if smoothing:
+                log.stdinfo(f"      Flat was smoothed by {smoothing} pixels")
+
             res_mode = ad.res_mode()
             arm = GhostArm(arm=ad.arm(), mode=res_mode,
                            detector_x_bin=ad.detector_x_bin(),
@@ -959,7 +963,8 @@ class GHOSTSpect(GHOST):
             sview = SlitView(slit_data, slitflat_data,
                              slitvpars.TABLE[0], mode=res_mode,
                              microns_pix=4.54 * 180 / 50,
-                             stowed=ifu_stowed, **sview_kwargs)
+                             stowed=ifu_stowed, smoothing=smoothing,
+                             **sview_kwargs)
 
             # There's no point in creating a fake slitflat first, since that
             # will case the code to use it to determine the fibre positions,
@@ -1088,6 +1093,16 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
+        # Put all outputs on the same wavelength scale
+        min_wavl = np.min([ext.WAVL.min() if hasattr(ext, "WAVL") else np.inf
+                           for ad in adinputs for ext in ad])
+        max_wavl = np.max([ext.WAVL.max() if hasattr(ext, "WAVL") else 0
+                           for ad in adinputs for ext in ad])
+        logspacing = np.nanmedian([
+            np.log(ext.WAVL[:, 1:] / ext.WAVL[:, :-1]) if hasattr(ext, "WAVL") else np.nan
+            for ad in adinputs for ext in ad]
+        )
+
         adoutputs = []
         for ad in adinputs:
             if ad.phu.get(timestamp_key):
@@ -1100,10 +1115,10 @@ class GHOSTSpect(GHOST):
             adout = astrodata.create(ad.phu)
             for ext in ad:
                 # Determine the wavelength bounds of the file
-                min_wavl, max_wavl = np.min(ext.WAVL), np.max(ext.WAVL)
-                logspacing = np.median(
-                    np.log(ext.WAVL[:, 1:]) - np.log(ext.WAVL[:, :-1])
-                )
+                #min_wavl, max_wavl = np.min(ext.WAVL), np.max(ext.WAVL)
+                #logspacing = np.median(
+                #    np.log(ext.WAVL[:, 1:]) - np.log(ext.WAVL[:, :-1])
+                #)
                 # Form a new wavelength scale based on these extremes
                 if params['scale'] == 'loglinear':
                     wavl_grid = np.exp(
@@ -1203,6 +1218,7 @@ class GHOSTSpect(GHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
         make_pixel_model = params.get('make_pixel_model', False)
+        smoothing = params["smoothing"]
 
         # Make no attempt to check if primitive has already been run - may
         # have new calibrators we wish to apply.
@@ -1246,7 +1262,8 @@ class GHOSTSpect(GHOST):
             slitview = SlitView(slit_flat[0].data, slit_flat[0].data,
                                 slitvpars.TABLE[0], mode=res_mode,
                                 microns_pix=4.54*180/50,
-                                binning=slit_flat.detector_x_bin())
+                                binning=slit_flat.detector_x_bin(),
+                                smoothing=smoothing)
 
             # Convolve the flat field with the slit profile
             flat_conv = ghost_arm.slit_flat_convolve(
@@ -1296,6 +1313,8 @@ class GHOSTSpect(GHOST):
                 pixel_model = extractor.make_pixel_model()
                 ad[0].PIXELMODEL = pixel_model
 
+            if smoothing:
+                ad.phu['SMOOTH'] = (smoothing, "Pixel FWHM of SVC smoothing kernel")
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
 
         return adinputs
@@ -1821,6 +1840,7 @@ class GHOSTSpect(GHOST):
         timestamp_key = self.timestamp_keys[self.myself()]
         sfx = params['suffix']
         order = params.get('order')
+        smoothing = params['smoothing']
         sigma = 3
         max_iters = 5
 
@@ -1856,7 +1876,8 @@ class GHOSTSpect(GHOST):
             sview = SlitView(slitflat[0].data, slitflat[0].data,
                              slitvpars.TABLE[0], mode=res_mode,
                              microns_pix=4.54 * 180 / 50,
-                             binning=slitflat.detector_x_bin())
+                             binning=slitflat.detector_x_bin(),
+                             smoothing=smoothing)
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
             extracted_flux, extracted_var, extracted_mask = extractor.quick_extract(ad[0].data)
@@ -2172,9 +2193,8 @@ class GHOSTSpect(GHOST):
             if ad.arm() != ad_std.arm():
                 raise ValueError('Spectrograph arms do not match for '
                                  '{} and {}'.format(ad.filename, ad_std.filename))
-            if ad.detector_y_bin() != ad_std.detector_y_bin() or \
-                    ad.detector_x_bin() != ad_std.detector_x_bin():
-                raise ValueError('Binning does not match for '
+            if ad.detector_x_bin() != ad_std.detector_x_bin():
+                raise ValueError('Spectral binning does not match for '
                                  '{} and {}'.format(ad.filename, ad_std.filename))
 
             # Easiest way to response correct is to stand up a new AstroData

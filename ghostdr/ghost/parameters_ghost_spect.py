@@ -123,6 +123,8 @@ class findAperturesConfig(config.Config):
                             optional=True, single=True)
     make_pixel_model = config.Field('Add a pixel model to the flat field?',
                                     bool, False)
+    smoothing = config.RangeField("Gaussian smoothing of slit profile (unbinned pixels)",
+                                  float, 0, min=0, optional=False)
 
 
 class fitWavelengthConfig(config.Config):
@@ -172,6 +174,8 @@ class measureBlazeConfig(config.Config):
                           optional=True)
     slitflat = config.ListField("Slit viewer flat field", (str, ad), None,
                                 optional=True, single=True)
+    smoothing = config.RangeField("Gaussian smoothing of slit profile", float,
+                                  None, min=0, optional=True)
 
 
 class overscanCorrectConfig(parameters_ccd.overscanCorrectConfig):

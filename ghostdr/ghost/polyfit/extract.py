@@ -398,7 +398,7 @@ class Extractor(object):
                                    (DQ.cosmic_ray | DQ.saturated | DQ.bad_pixel) == DQ.saturated)):
                         print("WARNING: There are saturated pixels that have "
                               "not been flagged as cosmic rays")
-                        print(x_ix)
+                        print(j, x_ix)
                         saturation_warning = True
             print(f"\n{(self.badpixmask & DQ.cosmic_ray).astype(bool).sum()} CRs found")
             if self.arm.mode == 'high':
@@ -481,9 +481,9 @@ class Extractor(object):
             # Save memory by overwriting the array of pixel locations with values
             mask_array |= np.logical_or(pixel_array < 0, pixel_array >= ny)
             for ix in range(max(xmin, 0), min(xmax+1, nx)):
-                # Flag any virtual pixel that is partly off the edge of the array
+                # Flag any virtual pixel that is partly flagged in the mask
                 mask_array[:, ix-xmin] |= np.interp(
-                    pixel_array[:, ix-xmin], np.arange(ny), self.badpixmask[ix]) > 0
+                    pixel_array[:, ix-xmin], np.arange(ny), self.badpixmask[ix].astype(float)) > 0
                 if correction is None:
                     pixel_array[:, ix-xmin] = np.interp(
                         pixel_array[:, ix-xmin], np.arange(ny), data[ix])
