@@ -702,6 +702,16 @@ class AstroDataGhost(AstroDataGemini):
         return None
 
     @astro_data_descriptor
+    def saturation_level(self):
+        """Patch because SATURATE=0 for the blue spectrograph"""
+        retval = super().saturation_level()
+        if 'PREPARED' in self.tags:
+            return retval
+        if self.is_single and retval == 0:
+            return 65535
+        return [None if v is None else v if v > 0 else 65535 for v in retval]
+
+    @astro_data_descriptor
     @use_nascent_phu_for_bundle
     def ut_datetime(self, *args, **kwargs):
         return AstroDataGemini.ut_datetime(self, *args, **kwargs)

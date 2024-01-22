@@ -2328,6 +2328,17 @@ class GHOSTSpect(GHOST):
 
         return clusters_flat
 
+    def standardizeInstrumentHeaders(self, adinputs=None, **params):
+        """
+        This primitive updates the SATURATE keyword in the headers, because
+        it is (erroneously) set to 0 for the blue spectrograph
+        """
+        kw = adinputs[0]._keyword_for('saturation_level')
+        for ad in adinputs:
+            for ext, sat_level in zip(ad, ad.saturation_level()):
+                ext.hdr[kw] = sat_level
+        return adinputs
+
     def standardizeStructure(self, adinputs=None, **params):
         """
         The Gemini-level version of this primitive
