@@ -109,7 +109,7 @@ class SlitView(object):
         # center_shift is the number of additional pixels padded onto the
         # ends of the rotated slit image so the smoothed slit profile can be
         # large enough
-        center_shift = int(smoothing)
+        center_shift = int(smoothing * 1.5)
         self.rota = slitvpars['rota']
         self.center = [slitvpars['rotyc'] // binning, slitvpars['rotxc'] // binning]
         self.central_pix = {
