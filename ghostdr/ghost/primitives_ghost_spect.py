@@ -764,6 +764,9 @@ class GHOSTSpect(GHOST):
             number of standard deviations for identifying discrepant pixels
         weighting: str ("uniform"/"optimal")
             weighting scheme for extraction
+        min_flux_frac: float (0-1)
+            flag the output pixel if the unmasked flux of an object falls
+            below this fractional threshold
         writeResult: bool
             Denotes whether or not to write out the result of profile
             extraction to disk. This is useful for both debugging, and data
@@ -781,6 +784,7 @@ class GHOSTSpect(GHOST):
         snoise = params["snoise"]
         sigma = params["sigma"]
         debug_pixel = (params["debug_order"], params["debug_pixel"])
+        min_flux_frac = params["min_flux_frac"]
         add_cr_map = params["debug_cr_map"]
         optimal_extraction = params["weighting"] == "optimal"
         ftol = params["tolerance"]
@@ -1016,7 +1020,7 @@ class GHOSTSpect(GHOST):
                 else:
                     raise RuntimeError("No objects for extraction and use_sky=False")
 
-                extracted_flux, extracted_var = extractor.new_extract(
+                extracted_flux, extracted_mask, extracted_var = extractor.new_extract(
                     data=ad[0].data.copy(),
                     correct_for_sky=sky_correct_profiles,
                     use_sky=s, used_objects=o, find_crs=cr,
@@ -1024,14 +1028,14 @@ class GHOSTSpect(GHOST):
                     debug_pixel=debug_pixel,
                     correction=correction, optimal=optimal_extraction,
                     apply_centroids=apply_centroids, ftol=ftol,
-                    timing=timing
+                    min_flux_frac=min_flux_frac, timing=timing
                 )
 
                 # Append the extraction as a new extension... we don't
                 # replace ad[0] since that will still be needed if we have
                 # another iteration of the extraction loop
                 ad.append(extracted_flux)
-                ad[-1].mask = (extracted_var == 0).astype(DQ.datatype)
+                ad[-1].mask = (extracted_var == 0).astype(DQ.datatype) | extracted_mask
                 ad[-1].variance = extracted_var
                 ad[-1].nddata.meta['header'] = ad[0].hdr.copy()
                 if add_cr_map and extractor.badpixmask is not None:

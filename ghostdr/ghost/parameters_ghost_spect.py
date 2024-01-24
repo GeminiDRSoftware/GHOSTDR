@@ -88,6 +88,8 @@ class extractProfileConfig(config.Config):
                                    allowed={"uniform": "uniform weighting",
                                             "optimal": "optimal extraction"},
                                    default="optimal")
+    min_flux_frac = config.RangeField("Minimum fraction of object flux to not flag extracted pixel",
+                                      float, 0., min=0, max=1, inclusiveMax=True)
     tolerance = config.RangeField("Fractional tolerance for convergence",
                                   float, 0.001, min=1e-8, max=0.05)
     apply_centroids = config.Field("Apply slit center-of-light offsets?", bool, False)
