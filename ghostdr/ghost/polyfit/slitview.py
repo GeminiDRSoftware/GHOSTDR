@@ -106,6 +106,7 @@ class SlitView(object):
         self.smoothing = smoothing
         # extra_pixels is the increase in extraction region for the objects
         extra_pixels = int(smoothing * 1.5)
+        self.extra_pixels = extra_pixels
         # center_shift is the number of additional pixels padded onto the
         # ends of the rotated slit image so the smoothed slit profile can be
         # large enough
@@ -362,9 +363,9 @@ class SlitView(object):
             boundary = self.object_boundaries[arm][stowed]
             if (stowed == 0) and (self.mode == 'std'):
                 sky_only_boundary = self.sky_pix_only_boundaries[arm]
-                profiles[:, :sky_only_boundary[1]+1] = 0
+                profiles[:, :sky_only_boundary[1]-self.extra_pixels+1] = 0
             else:
-                profiles[:, boundary[0]:boundary[1]+1] = 0
+                profiles[:, boundary[0]+self.extra_pixels:boundary[1]-self.extra_pixels+1] = 0
 
         # Normalise profiles if requested (not needed if the total flux is what
         # you're after, e.g. for an mean exposure epoch calculation)
